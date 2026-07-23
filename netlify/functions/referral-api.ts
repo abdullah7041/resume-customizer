@@ -39,7 +39,6 @@ function isHttpError(error: unknown): error is ReferralError {
 
 function normalizeReferralError(error: unknown, fallbackCode: string, fallbackMessage: string): ReferralError {
     if (isHttpError(error)) return error;
-    if (error instanceof Error) return httpError(500, fallbackCode, error.message);
     return httpError(500, fallbackCode, fallbackMessage);
 }
 
@@ -92,19 +91,23 @@ async function getAuthenticatedUser(event: Parameters<Handler>[0]): Promise<Auth
 }
 
 // Postgres "undefined column" — the referral migrations were not applied to
-// this database. Surface a precise message instead of a generic failure so the
-// Netlify function log (and the error details) say exactly what to run.
+// this database. Keep the actionable diagnosis in server logs only.
 const PG_UNDEFINED_COLUMN = '42703';
 
 function describeDbError(prefix: string, dbError: { code?: string; message?: string }): ReferralError {
     if (dbError.code === PG_UNDEFINED_COLUMN) {
+        console.error('[referral-api] Referral schema unavailable:', {
+            operation: prefix,
+            code: PG_UNDEFINED_COLUMN,
+            migration: 'supabase/migrations/20260713000000_ensure_referral_schema.sql'
+        });
         return httpError(
             500,
             'referral/db-undefined-column',
-            `${prefix} (db code: ${PG_UNDEFINED_COLUMN}): the user_credits referral columns are missing. Apply the referral migrations in supabase/migrations (see 20260713000000_ensure_referral_schema.sql).`
+            'Referral data unavailable'
         );
     }
-    return httpError(500, 'referral/db-error', `${prefix} (db code: ${dbError.code || 'unknown'})`);
+    return httpError(500, 'referral/db-error', 'Referral data unavailable');
 }
 
 /**
@@ -142,6 +145,7 @@ async function handleGetLink(email: string) {
             .from('user_credits')
             .update({ referral_code: referralCode })
             .eq('email', email)
+            .is('referral_code', null)
             .select('referral_code')
             .maybeSingle();
 
@@ -151,12 +155,29 @@ async function handleGetLink(email: string) {
         }
 
         if (!savedRow) {
+            const { data: concurrentRow, error: concurrentFetchError } = await supabase
+                .from('user_credits')
+                .select('referral_code')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (concurrentFetchError) {
+                console.error('[referral-api] Concurrent code fetch error:', summarizeErrorForLog(concurrentFetchError));
+                throw describeDbError('Failed to fetch concurrent referral code', concurrentFetchError);
+            }
+
+            if (concurrentRow?.referral_code) {
+                referralCode = concurrentRow.referral_code;
+                // A concurrent request persisted the code after our initial read.
+                // Return that durable winner instead of treating it as a missing profile.
+            } else {
             console.error(`[referral-api] No user_credits row for ${redactForLog(email)} — cannot persist referral code.`);
             throw httpError(
                 500,
                 'referral/profile-not-found',
                 'Referral profile not found. Your credits account may still be initializing — try again shortly.'
             );
+            }
         }
 
         console.log(`[referral-api] Generated new code for user ${redactForLog(email)}: ${referralCode}`);
@@ -245,7 +266,8 @@ async function handleTrack(body: { referral_code: string }, refereeEmail: string
     const result = await trackReferral(referral_code, refereeEmail, refereeUserId);
 
     if (!result.success) {
-        throw httpError(400, 'referral/track-failed', result.error || 'Failed to track referral');
+        console.error('[referral-api] Track failed:', summarizeErrorForLog(result.error || 'Failed to track referral'));
+        throw httpError(400, 'referral/track-failed', 'Failed to track referral');
     }
 
     return { success: true, message: 'Referral tracked successfully' };
@@ -355,7 +377,7 @@ const handler: Handler = async (event) => {
             statusCode: 500,
             body: JSON.stringify({
                 error: 'Referral operation failed',
-                details: error instanceof Error ? error.message : 'Unknown error',
+                code: 'referral/unexpected',
             }),
         };
     }

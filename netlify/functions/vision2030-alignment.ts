@@ -105,6 +105,21 @@ const baseHandler: Handler = async (event) => {
     // on empty/unusable output, so garbage results never reach this point.
     const creditResult = await consumeCredits(userEmail, 'vision2030');
 
+    if (creditResult.success === false) {
+      console.warn('[vision2030-alignment] Credit consumption failed post-generation - balance raced to insufficient');
+      const creditsAvailable = creditResult.creditsRemaining ?? 0;
+      return {
+        statusCode: 403,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error: 'Insufficient credits',
+          creditsRequired: 2,
+          creditsAvailable,
+          creditsNeeded: Math.max(0, 2 - creditsAvailable),
+        })
+      };
+    }
+
     // Fail-safe: once charged, any failure to deliver the result must refund.
     let responseBody: string;
     try {

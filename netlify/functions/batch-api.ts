@@ -99,12 +99,12 @@ async function executeTask(task: BatchTask, authHeader?: string): Promise<BatchR
       data,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("[batch-api] Task execution failed:", summarizeErrorForLog(error));
     return {
       id: task.id,
       type: task.type,
       status: "error",
-      error: `Task execution failed: ${message}`,
+      error: "Batch item failed",
     };
   }
 }
@@ -253,17 +253,16 @@ const baseHandler: Handler = async (event) => {
     };
   } catch (error) {
     console.error("[batch-api] Fatal error:", summarizeErrorForLog(error));
-    const message = error instanceof Error ? error.message : "Batch processing failed";
     captureError(error, {
       function: 'batch-api',
-      errorMessage: message,
+      errorMessage: error instanceof Error ? error.message : "Batch processing failed",
     });
 
     return {
       statusCode: 500,
       headers: HEADERS,
       body: JSON.stringify({
-        error: message,
+        error: "Batch processing failed",
         hint: "Check that all task payloads are valid for their respective endpoints",
       }),
     };

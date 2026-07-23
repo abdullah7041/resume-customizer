@@ -15,6 +15,7 @@ node_modules/.vite
 dist
 dist-ssr
 build
+outputs/
 .tsbuildinfo
 
 # Bundle analyzer output (npm run build:analyze)

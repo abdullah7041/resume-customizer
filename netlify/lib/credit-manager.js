@@ -74,11 +74,18 @@ async function checkIPAbuse(ipAddress) {
   // Threshold 10 (was 3): carrier CGNAT means many legit users share an IP —
   // 3 penalized real signups on launch day. 10 still caps farm abuse at ~200 credits/IP/day (~$0.50 AI cost).
   if (accountsFromIP >= 10) {
-    console.warn(`[CreditManager] IP ${ipAddress} has ${accountsFromIP} accounts (suspicious)`);
+    console.warn(`[CreditManager] Suspicious IP has ${accountsFromIP} accounts (suspicious)`);
     return true;
   }
 
   return false;
+}
+
+function createCreditManagerError(status, code, message) {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  return error;
 }
 
 /**
@@ -87,10 +94,10 @@ async function checkIPAbuse(ipAddress) {
  * @param {Object} options - Additional options
  * @param {string} options.ipAddress - User's IP address for abuse detection
  * @param {boolean} options.emailVerified - Whether user's email is verified
- * @returns {Promise<{credits_remaining: number, credits_total: number, last_reset_date: string} | null>}
+ * @returns {Promise<{credits_remaining: number, credits_total: number, feedback_credits_earned: number, referral_credits_earned: number | null, last_reset_date: string, signup_metadata: ({pending_initial_grant?: boolean} | null)} | null>}
  */
 export async function getUserCredits(email, options = {}) {
-  const { ipAddress, emailVerified = true } = options;
+  const { ipAddress, emailVerified } = options;
   const supabase = getSupabaseClient();
 
   const { data, error } = await supabase
@@ -172,6 +179,53 @@ export async function getUserCredits(email, options = {}) {
 
     console.error('[CreditManager] Failed to get user credits:', summarizeErrorForLog(error));
     throw new Error('Failed to retrieve user credits');
+  }
+
+  if (data?.signup_metadata?.pending_initial_grant === true) {
+    if (!emailVerified) {
+      return data;
+    }
+
+    const isIPSuspicious = await checkIPAbuse(ipAddress);
+    const creditsToGive = isIPSuspicious ? SUSPICIOUS_IP_CREDITS : FREE_TIER_CREDITS;
+    const { data: grantData, error: grantError } = await supabase.rpc('grant_initial_credits', {
+      p_email: email,
+      p_amount: creditsToGive,
+      p_ip_address: ipAddress ?? null,
+    });
+
+    if (grantError?.code === '42883') {
+      console.warn('[CreditManager] Initial grant RPC unavailable:', summarizeErrorForLog(grantError));
+      return data;
+    }
+
+    if (grantError) {
+      console.error('[CreditManager] Failed to apply initial grant:', summarizeErrorForLog(grantError));
+      throw createCreditManagerError(500, 'INITIAL_GRANT_FAILED', 'Failed to apply initial credit grant');
+    }
+
+    const grant = Array.isArray(grantData) ? grantData[0] : grantData;
+    if (grant?.granted) {
+      console.log(`[CreditManager] Initial grant applied for ${redactForLog(email)}`);
+      return {
+        ...data,
+        credits_remaining: grant.credits_remaining,
+        credits_total: creditsToGive,
+      };
+    }
+
+    const { data: winnerData, error: refetchError } = await supabase
+      .from('user_credits')
+      .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
+      .eq('email', email)
+      .single();
+
+    if (refetchError) {
+      console.error('[CreditManager] Failed to re-fetch initial grant:', summarizeErrorForLog(refetchError));
+      throw createCreditManagerError(500, 'INITIAL_GRANT_REFETCH_FAILED', 'Failed to retrieve user credits');
+    }
+
+    return winnerData;
   }
 
   return data;
@@ -321,6 +375,27 @@ export async function consumeCredits(email, feature, amount = null) {
  */
 export async function addCredits(email, amount, type, metadata = {}) {
   const supabase = getSupabaseClient();
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc('add_credits', {
+    p_email: email,
+    p_amount: amount,
+    p_description: metadata.description || type,
+    p_transaction_type: type,
+  });
+
+  if (!rpcError) {
+    const result = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    const creditsRemaining = result?.remaining;
+    console.log(`[CreditManager] Added ${amount} credits (${type}) atomically. Balance: ${creditsRemaining}`);
+    return { success: true, creditsRemaining };
+  }
+
+  if (rpcError.code !== '42883') {
+    console.error('[CreditManager] Failed to add credits:', summarizeErrorForLog(rpcError));
+    throw createCreditManagerError(500, 'ADD_CREDITS_RPC_FAILED', 'Failed to add credits');
+  }
+
+  console.warn('[CreditManager] Add credits RPC unavailable, using direct update');
 
   // Get current balance
   const credits = await getUserCredits(email);

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HandlerContext, HandlerEvent, HandlerResponse } from '@netlify/functions';
 
 const {
@@ -39,6 +39,7 @@ vi.mock('nanoid', () => ({
 const { handler } = await import('../referral-api.js');
 
 const context = {} as HandlerContext;
+const sensitiveManagerError = 'connection to referral-db.internal failed with sk_1234567890abcdef';
 
 function makeEvent(event: Partial<HandlerEvent>): HandlerEvent {
   return {
@@ -61,6 +62,10 @@ describe('referral-api auth binding', () => {
       data: { user: { id: 'real-user-id', email: 'real-user@example.com' } },
       error: null,
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('requires authentication for referral stats', async () => {
@@ -119,6 +124,52 @@ describe('referral-api auth binding', () => {
 
     expect(response.statusCode).toBe(200);
     expect(trackReferralMock).toHaveBeenCalledWith('REF12345', 'real-user@example.com', 'real-user-id');
+  });
+
+  it('returns a generic coded track failure while retaining sanitized diagnostics in server logs', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    trackReferralMock.mockResolvedValue({ success: false, error: sensitiveManagerError });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'POST',
+        headers: { Authorization: 'Bearer token' },
+        body: JSON.stringify({ action: 'track', referral_code: 'REF12345' }),
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body!)).toEqual({
+      status: 400,
+      code: 'referral/track-failed',
+      message: 'Failed to track referral',
+      error: 'Failed to track referral',
+    });
+    expect(response.body).not.toContain(sensitiveManagerError);
+    expect(response.body).not.toContain('referral-db.internal');
+
+    const logOutput = JSON.stringify(consoleError.mock.calls);
+    expect(logOutput).toContain('referral-db.internal');
+    expect(logOutput).toContain('[REDACTED]');
+    expect(logOutput).not.toContain('sk_1234567890abcdef');
+  });
+
+  it('returns a stable generic envelope for unexpected failures', async () => {
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'POST',
+        body: '{"action":',
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body!)).toEqual({
+      error: 'Referral operation failed',
+      code: 'referral/unexpected',
+    });
+    expect(response.body).not.toContain('Unexpected end of JSON input');
   });
 
   it('uses authenticated email for referral link generation', async () => {
@@ -188,7 +239,7 @@ describe('referral-api auth binding', () => {
     expect(response.body).toContain('"creditsEarned":10');
   });
 
-  it('returns stats with a linkError instead of failing the whole summary when the link leg breaks', async () => {
+  it('returns stats with a generic coded linkError instead of database details', async () => {
     getReferralStatsMock.mockResolvedValue({
       total: 3,
       completed: 2,
@@ -221,14 +272,50 @@ describe('referral-api auth binding', () => {
     expect(body.success).toBe(true);
     expect(body.creditsEarned).toBe(10);
     expect(body.referralUrl).toBeUndefined();
-    expect(body.linkError).toContain('referral columns are missing');
-    expect(body.linkError).toContain('42703');
+    expect(body.linkError).toBe('Referral data unavailable');
     expect(body.linkErrorCode).toBe('referral/db-undefined-column');
     expect(body.linkErrorStatus).toBe(500);
+    expect(response.body).not.toContain('42703');
+    expect(response.body).not.toContain('20260713000000_ensure_referral_schema.sql');
+    expect(response.body).not.toContain('column user_credits.referral_code does not exist');
+  });
+
+  it('returns a generic coded envelope when referral columns are unavailable', async () => {
+    supabaseFromMock.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: null,
+            error: { code: '42703', message: 'column user_credits.referral_code does not exist' },
+          }),
+        }),
+      }),
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-link' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body!)).toEqual({
+      error: 'Failed to generate referral link',
+      status: 500,
+      code: 'referral/db-undefined-column',
+      message: 'Referral data unavailable',
+      details: 'Referral data unavailable',
+    });
+    expect(response.body).not.toContain('42703');
+    expect(response.body).not.toContain('20260713000000_ensure_referral_schema.sql');
   });
 
   it('keeps failed stats distinguishable from a genuine zero-referral summary', async () => {
-    getReferralStatsMock.mockRejectedValue(new Error('stats query unavailable'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    getReferralStatsMock.mockRejectedValue(new Error(sensitiveManagerError));
     supabaseFromMock.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -253,11 +340,18 @@ describe('referral-api auth binding', () => {
     expect(JSON.parse(response.body!)).toMatchObject({
       success: true,
       referralCode: 'REALCODE',
-      statsError: 'stats query unavailable',
+      statsError: 'Failed to load referral statistics',
       statsErrorCode: 'referral/stats-failed',
       statsErrorStatus: 500,
     });
+    expect(response.body).not.toContain(sensitiveManagerError);
+    expect(response.body).not.toContain('referral-db.internal');
     expect(response.body).not.toContain('"totalReferrals":0');
+
+    const logOutput = JSON.stringify(consoleError.mock.calls);
+    expect(logOutput).toContain('referral-db.internal');
+    expect(logOutput).toContain('[REDACTED]');
+    expect(logOutput).not.toContain('sk_1234567890abcdef');
   });
 
   it('does not hand out a referral code that could not be persisted', async () => {
@@ -271,8 +365,10 @@ describe('referral-api auth binding', () => {
       // …and the update matches no user_credits row (row not initialized yet).
       update: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          select: vi.fn().mockReturnValue({
-            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          is: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            }),
           }),
         }),
       }),
@@ -295,5 +391,52 @@ describe('referral-api auth binding', () => {
       code: 'referral/profile-not-found',
       message: expect.stringContaining('Referral profile not found'),
     });
+  });
+
+  it('returns a concurrently saved code when the guarded save loses the race', async () => {
+    const guardedUpdateIsMock = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    });
+    const guardedUpdate = {
+      update: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          is: guardedUpdateIsMock,
+        }),
+      }),
+    };
+    supabaseFromMock
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      })
+      .mockReturnValueOnce(guardedUpdate)
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: { referral_code: 'CONCURRENTCODE' },
+              error: null,
+            }),
+          }),
+        }),
+      });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-link' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toContain('CONCURRENTCODE');
+    expect(guardedUpdateIsMock).toHaveBeenCalledWith('referral_code', null);
   });
 });

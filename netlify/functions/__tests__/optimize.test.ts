@@ -29,7 +29,7 @@ vi.mock('../../lib/supabase-client', () => ({
     getSupabaseClient: vi.fn(() => ({
         auth: {
             getUser: vi.fn().mockResolvedValue({
-                data: { user: { id: 'test-user-123', email: 'user@example.com', email_confirmed_at: '2026-01-01T00:00:00.000Z' } },
+                data: { user: { id: '11111111-1111-4111-8111-111111111111', email: 'user@example.com', email_confirmed_at: '2026-01-01T00:00:00.000Z' } },
                 error: null
             })
         }
@@ -40,7 +40,7 @@ vi.mock('@supabase/supabase-js', () => ({
     createClient: vi.fn(() => ({
         auth: {
             getUser: vi.fn().mockResolvedValue({
-                data: { user: { id: 'test-user-123', email: 'user@example.com', email_confirmed_at: '2026-01-01T00:00:00.000Z' } },
+                data: { user: { id: '11111111-1111-4111-8111-111111111111', email: 'user@example.com', email_confirmed_at: '2026-01-01T00:00:00.000Z' } },
                 error: null
             })
         }
@@ -193,6 +193,10 @@ describe('optimize function', () => {
             [],
             undefined,
             ['Excel'],
+            {
+                userRef: '11111111-1111-4111-8111-111111111111',
+                jdFingerprint: '425d6a527a609f1d',
+            },
         );
     });
 

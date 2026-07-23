@@ -1,3 +1,5 @@
+import './hr-super-saud.css';
+
 import { Eye, EyeOff, MessageCircle, Minus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';

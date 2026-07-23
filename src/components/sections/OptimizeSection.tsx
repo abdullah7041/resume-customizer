@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
@@ -108,6 +108,7 @@ interface OptimizeSectionProps {
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
 const FREE_OPTIMIZE_STORAGE_KEY = 'watheq:freeOptimizeUsed';
+const REFINABLE_SECTIONS = new Set(['summary', 'headline', 'experience', 'projects', 'education']);
 
 const hasFreePreviewRun = () =>
   typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
@@ -231,25 +232,23 @@ export function OptimizeSection({
   const { isRateLimited, retryAfter, handleError: handleRateLimitError, clearRateLimit } = useRateLimit();
 
   // Get data from store
-  const {
-    originalResume,
-    parsedResumeText,
-    optimizations: storeOptimizations,
-    setOptimizations,
-    applyOptimization,
-    applyAllOptimizations,
-    revertOptimization,
-    revertAllOptimizations,
-    refineOptimization,
-    keywordSuggestions,
-    optimizationMetrics,
-    setOptimizationMetrics,
-    resetOptimizationMetrics,
-    getCachedAnalysis,
-    setCachedAnalysis,
-    baselineMatchScore,
-    variantRestoreNonce,
-  } = useResumeStore();
+  const originalResume = useResumeStore((state) => state.originalResume);
+  const parsedResumeText = useResumeStore((state) => state.parsedResumeText);
+  const storeOptimizations = useResumeStore((state) => state.optimizations);
+  const setOptimizations = useResumeStore((state) => state.setOptimizations);
+  const applyOptimization = useResumeStore((state) => state.applyOptimization);
+  const applyAllOptimizations = useResumeStore((state) => state.applyAllOptimizations);
+  const revertOptimization = useResumeStore((state) => state.revertOptimization);
+  const revertAllOptimizations = useResumeStore((state) => state.revertAllOptimizations);
+  const refineOptimization = useResumeStore((state) => state.refineOptimization);
+  const keywordSuggestions = useResumeStore((state) => state.keywordSuggestions);
+  const optimizationMetrics = useResumeStore((state) => state.optimizationMetrics);
+  const setOptimizationMetrics = useResumeStore((state) => state.setOptimizationMetrics);
+  const resetOptimizationMetrics = useResumeStore((state) => state.resetOptimizationMetrics);
+  const getCachedAnalysis = useResumeStore((state) => state.getCachedAnalysis);
+  const setCachedAnalysis = useResumeStore((state) => state.setCachedAnalysis);
+  const baselineMatchScore = useResumeStore((state) => state.baselineMatchScore);
+  const variantRestoreNonce = useResumeStore((state) => state.variantRestoreNonce);
 
   // Use props or store
   const resumeText = propResumeText || parsedResumeText;
@@ -1121,12 +1120,8 @@ export function OptimizeSection({
     setSessionId(null);
   };
 
-  // Sections whose cards map to real, editable resume text (skills are
-  // recommendation-only and certifications are display-only, so they cannot be refined).
-  const REFINABLE_SECTIONS = new Set(['summary', 'headline', 'experience', 'projects', 'education']);
-
-  const handleRefineBullet = async (opt: OptimizationResult) => {
-    const instruction = refineInstruction.trim();
+  const handleRefineBullet = useCallback(async (opt: OptimizationResult, instructionValue: string) => {
+    const instruction = instructionValue.trim();
     if (!instruction) return;
 
     const resumeForGrounding = resumeText || (originalResume ? JSON.stringify(originalResume) : '');
@@ -1162,9 +1157,9 @@ export function OptimizeSection({
     } finally {
       setRefineLoadingId(null);
     }
-  };
+  }, [i18n.language, originalResume, refineOptimization, resumeText, t]);
 
-  const toggleCard = (sectionId: string) => {
+  const toggleCard = useCallback((sectionId: string) => {
     setExpandedCards(prev => {
       const newSet = new Set(prev);
       if (newSet.has(sectionId)) {
@@ -1174,7 +1169,7 @@ export function OptimizeSection({
       }
       return newSet;
     });
-  };
+  }, []);
 
   const toggleScoreCategory = (category: keyof CategoryScoresData) => {
     setExpandedScoreCategories(prev => {
@@ -1279,7 +1274,7 @@ export function OptimizeSection({
       .map(({ order: _order, ...group }) => group);
   }, [optimizations, originalResume?.work, t]);
 
-  const filteredQueueGroups = queueGroups.reduce<QueueGroup[]>((acc, group) => {
+  const filteredQueueGroups = useMemo(() => queueGroups.reduce<QueueGroup[]>((acc, group) => {
     // Pending/Applied are implementation-progress filters — recommendation-only
     // groups have no applied state, so they remain visible until the Applied filter.
     if (queueFilter === 'applied' && group.kind === 'recommendation') return acc;
@@ -1290,9 +1285,12 @@ export function OptimizeSection({
     });
     if (items.length > 0) acc.push({ ...group, items });
     return acc;
-  }, []);
+  }, []), [queueFilter, queueGroups]);
 
-  const visibleQueueOptimizations = filteredQueueGroups.flatMap((group) => group.items);
+  const visibleQueueOptimizations = useMemo(
+    () => filteredQueueGroups.flatMap((group) => group.items),
+    [filteredQueueGroups],
+  );
   const hasOptimizationResults = optimizations.length > 0;
   const hasKeywordData = keywordBuckets.add.length + keywordBuckets.neutral.length + keywordBuckets.remove.length > 0;
   const queueFilters = [
@@ -1305,38 +1303,38 @@ export function OptimizeSection({
   const mirroredPhrases = (optimizationMetrics.keywordStrategy?.mirroredPhrases as string[] | undefined) || [];
   const structuralChanges = (optimizationMetrics.keywordStrategy?.structuralChanges as string[] | undefined) || [];
 
-  const handleApplyOptimization = (opt: OptimizationResult) => {
+  const handleApplyOptimization = useCallback((opt: OptimizationResult) => {
     analytics.trackOptimization('applied', { section_type: opt.sectionType });
     applyOptimization(opt.sectionId);
-  };
+  }, [applyOptimization]);
 
-  const handleApplyQueueGroup = (ids: string[]) => {
+  const handleApplyQueueGroup = useCallback((ids: string[]) => {
     ids.forEach((sectionId) => applyOptimization(sectionId));
-  };
+  }, [applyOptimization]);
 
-  const handleRevertQueueGroup = (ids: string[]) => {
+  const handleRevertQueueGroup = useCallback((ids: string[]) => {
     ids.forEach((sectionId) => revertOptimization(sectionId));
-  };
+  }, [revertOptimization]);
 
-  const handleApplyAll = () => {
+  const handleApplyAll = useCallback(() => {
     analytics.trackOptimization('applied_all');
     applyAllOptimizations();
-  };
+  }, [applyAllOptimizations]);
 
-  const handleUnapplyAll = () => {
+  const handleUnapplyAll = useCallback(() => {
     analytics.trackOptimization('reverted_all');
     revertAllOptimizations();
-  };
+  }, [revertAllOptimizations]);
 
-  const handleToggleCompare = (sectionId: string) => {
-    setCompareMode(compareMode === sectionId ? null : sectionId);
-  };
+  const handleToggleCompare = useCallback((sectionId: string) => {
+    setCompareMode((currentSectionId) => currentSectionId === sectionId ? null : sectionId);
+  }, []);
 
-  const handleStartRefine = (sectionId: string) => {
+  const handleStartRefine = useCallback((sectionId: string) => {
     setRefineError(null);
     setRefineInstruction('');
-    setRefiningCardId(refiningCardId === sectionId ? null : sectionId);
-  };
+    setRefiningCardId((currentSectionId) => currentSectionId === sectionId ? null : sectionId);
+  }, []);
 
   const handleContinue = () => {
     if (onContinueToExport) {
@@ -1699,7 +1697,7 @@ export function OptimizeSection({
                   size="sm"
                   onClick={handleUnapplyAll}
                   leftIcon={<RotateCcw className="w-3.5 h-3.5" />}
-                  className="hover:bg-red-500/10 hover:text-red-400"
+                  className="hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                 >
                   {t('sections.optimize.results.unapplyAll', {
                     defaultValue: 'Unapply All ({{count}} applied)',
@@ -1739,31 +1737,35 @@ export function OptimizeSection({
 
         {filteredQueueGroups.length > 0 ? (
           <div className="grid gap-4">
-            {filteredQueueGroups.map((group) => (
-              <JobGroupCard
-                key={group.id}
-                group={group}
-                viewMode={viewMode}
-                expandedCards={expandedCards}
-                compareMode={compareMode}
-                refiningCardId={refiningCardId}
-                refineInstruction={refineInstruction}
-                refineLoadingId={refineLoadingId}
-                refineError={refineError}
-                refinableSections={REFINABLE_SECTIONS}
-                isArabic={isArabic}
-                onToggleCard={toggleCard}
-                onToggleCompare={handleToggleCompare}
-                onApply={handleApplyOptimization}
-                onRevert={revertOptimization}
-                onApplyGroup={handleApplyQueueGroup}
-                onRevertGroup={handleRevertQueueGroup}
-                onCopy={onCopy}
-                onStartRefine={handleStartRefine}
-                onRefineInstructionChange={setRefineInstruction}
-                onSubmitRefine={handleRefineBullet}
-              />
-            ))}
+            {filteredQueueGroups.map((group) => {
+              const isRefiningHere = group.items.some((item) => item.sectionId === refiningCardId);
+
+              return (
+                <JobGroupCard
+                  key={group.id}
+                  group={group}
+                  viewMode={viewMode}
+                  expandedCards={expandedCards}
+                  compareMode={compareMode}
+                  refiningCardId={isRefiningHere ? refiningCardId : null}
+                  refineInstruction={isRefiningHere ? refineInstruction : ''}
+                  refineLoadingId={isRefiningHere ? refineLoadingId : null}
+                  refineError={isRefiningHere ? refineError : null}
+                  refinableSections={REFINABLE_SECTIONS}
+                  isArabic={isArabic}
+                  onToggleCard={toggleCard}
+                  onToggleCompare={handleToggleCompare}
+                  onApply={handleApplyOptimization}
+                  onRevert={revertOptimization}
+                  onApplyGroup={handleApplyQueueGroup}
+                  onRevertGroup={handleRevertQueueGroup}
+                  onCopy={onCopy}
+                  onStartRefine={handleStartRefine}
+                  onRefineInstructionChange={setRefineInstruction}
+                  onSubmitRefine={handleRefineBullet}
+                />
+              );
+            })}
           </div>
         ) : hasOptimizationResults ? (
           <GlassCard padding="sm" className="border-dashed border-[color:var(--glass-border-strong)] dark:border-white/10">

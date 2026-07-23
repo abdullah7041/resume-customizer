@@ -89,6 +89,8 @@ async function recordUsageEvent({
     latency_ms: Date.now() - startTime,
     success,
     error_code: errorCode,
+    user_ref: options.userRef || null,
+    jd_fingerprint: options.jdFingerprint || null,
   });
 }
 

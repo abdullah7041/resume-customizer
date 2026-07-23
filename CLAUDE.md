@@ -23,7 +23,7 @@ Use the single-context domain-documentation layout. See `docs/agents/domain.md`.
 
 ```bash
 npm run dev                # Vite dev server (port 5173)
-npm run dev:netlify        # Netlify dev with functions (port 8888)
+npm run dev:netlify        # Netlify dev with functions (port 8888); OOMs esbuild on low-RAM (~8GB) machines — test functions via a `tsx` handler harness instead (see `netlify.toml` per-function `external_node_modules` note)
 npm run build              # Production build
 npm run quality:parallel   # Broad gate (lint+types+tests). Timeout-prone in-agent — see Quality. Prefer focused checks for small edits.
 npm run quality:full       # Fast quality gate + production build + i18n validation
@@ -96,7 +96,7 @@ IMPORTANT: Diagnose root cause BEFORE writing fix code. Trace full data flow: fr
 - **AI client**: `netlify/lib/openrouter-client.js` — `callOpenRouter('lite'|'flash', messages, schema?, options?)`
 - **Templates**: `src/components/templates/` — registry pattern, 4 templates (DOM/React, not PDF primitives)
 - **PDF generation**: primary = server `netlify/functions/generate-pdf.ts` (Puppeteer `page.pdf()` → real selectable text PDF); fallback = `handleDownloadPdf` catch-block in `TemplatesSection.tsx` (html-to-image → jsPDF raster). Bulk compare export = jspdf + jspdf-autotable (text) in `BulkAnalysisSection.tsx`. `pdfjs-dist` is for **parsing uploads** (text extraction), not generation.
-- **Netlify functions**: `netlify/functions/` — parse-resume, extract-resume-json, ai-match, optimize, predict-questions, generate-cover-letter, generate-pdf, batch-api, user-data-api, referral-api
+- **Netlify functions**: `netlify/functions/` — 25 TypeScript functions, grouped as parsing (`parse-resume`, `extract-resume-json`, `onboard-extract`); match/optimize (`ai-match`, `optimize`, `optimize-stream`, `refine-bullet`, `resume-truth-check`, `vision2030-alignment`); job import (`import-job-url`, `extract-job-metadata`); generation (`generate-cover-letter`, `generate-pdf`, `predict-questions`, `generate-clarifications`); accounts/growth (`user-data-api`, `referral-api`, `feedback-api`, `batch-api`, `notify-waitlist`, `waitlist-confirm`); scheduled (`cron-monthly-summary`, `cron-reset-credits`); and dev utilities (`dev-celebration-bonus`, `dev-reset-credits`).
 
 ## References (read on demand, not every session)
 

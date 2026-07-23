@@ -35,6 +35,7 @@ describe('ai-usage-logger', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     mocks.getSupabaseClient.mockReset();
     delete process.env.BENCHMARK_DISABLE_USAGE_LOGGING;
+    delete process.env.AI_USAGE_USER_ATTRIBUTION;
   });
 
   afterEach(() => {
@@ -78,6 +79,45 @@ describe('ai-usage-logger', () => {
     await Promise.resolve();
 
     expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('strips user attribution fields when the deployment gate is off', async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    mocks.getSupabaseClient.mockReturnValue({
+      from: vi.fn(() => ({ insert })),
+    });
+
+    const { recordAiUsageEvent } = await import('../ai-usage-logger.js');
+    await recordAiUsageEvent({
+      ...baseEvent,
+      user_ref: '11111111-1111-4111-8111-111111111111',
+      jd_fingerprint: '34ed4647ad9866d5',
+    });
+
+    expect(insert).toHaveBeenCalledWith(expect.not.objectContaining({
+      user_ref: expect.anything(),
+      jd_fingerprint: expect.anything(),
+    }));
+  });
+
+  it('passes user attribution fields when the deployment gate is on', async () => {
+    process.env.AI_USAGE_USER_ATTRIBUTION = 'true';
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    mocks.getSupabaseClient.mockReturnValue({
+      from: vi.fn(() => ({ insert })),
+    });
+
+    const { recordAiUsageEvent } = await import('../ai-usage-logger.js');
+    await recordAiUsageEvent({
+      ...baseEvent,
+      user_ref: '11111111-1111-4111-8111-111111111111',
+      jd_fingerprint: '34ed4647ad9866d5',
+    });
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({
+      user_ref: '11111111-1111-4111-8111-111111111111',
+      jd_fingerprint: '34ed4647ad9866d5',
+    }));
   });
 
   it('returns after a bounded wait when telemetry persistence stalls', async () => {

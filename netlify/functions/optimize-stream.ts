@@ -13,6 +13,7 @@
  *   6. event: error   → { error, retryable } (on failure)
  */
 
+import { createHash } from 'crypto';
 import { optimizeResume } from "../lib/gemini-client.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
@@ -27,7 +28,7 @@ import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
-import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
+import { buildOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
 import { MODELS } from "../lib/model-registry.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
@@ -294,6 +295,8 @@ export default async function handler(request: Request): Promise<Response> {
 
         const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
+          userRef: user?.id || null,
+          jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
         });
 
         const aiDuration = Date.now() - startTime;
@@ -315,8 +318,11 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 4: Build response (reuses the same card-mapping logic as optimize.ts)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "building_response" })));
 
-        const cards = buildOptimizationCards(optimization);
-        const { beforeScore, estimatedImprovement } = calculateScores(optimization, cards);
+        const cards = buildOptimizationCards(optimization, { logPrefix: "[optimize-stream]" });
+        const { beforeScore, estimatedImprovement } = calculateScores(optimization, {
+          cards,
+          logPrefix: "[optimize-stream]",
+        });
 
         const addKeywords = optimization?.missing_keywords || [];
         const matchedKeywords = optimization?.keywords_to_keep || [];
@@ -479,153 +485,6 @@ export default async function handler(request: Request): Promise<Response> {
   });
 
   return new Response(stream, { headers: SSE_HEADERS });
-}
-
-// ============================================
-// Card building logic (mirrors optimize.ts exactly)
-// ============================================
-
-function hasContent(value: unknown): boolean {
-  if (!value) return false;
-  if (typeof value === "string") return value.trim().length > 0;
-  return true;
-}
-
-function getString(value: unknown, fallback: string): string {
-  if (typeof value === "string" && value.trim().length > 0) return value;
-  return fallback;
-}
-
-function buildOptimizationCards(optimization: any) {
-  const cards: Array<{
-    section: string;
-    issue: string;
-    suggestion: string;
-    exampleBefore: string;
-    exampleAfter: string;
-  }> = [];
-
-  // Headline
-  const suggestedHeadline = optimization?.suggested_headline || null;
-  const originalHeadline = optimization?.original_headline || null;
-  if (hasContent(suggestedHeadline) && hasContent(originalHeadline)) {
-    cards.push({
-      section: "Headline",
-      issue: "Headline could be more targeted.",
-      suggestion: "Align headline with the job title and key requirements.",
-      exampleBefore: getString(originalHeadline, "Current headline not available"),
-      exampleAfter: getString(suggestedHeadline, ""),
-    });
-  }
-
-  // Summary
-  const summaryRewrite = optimization?.summary_rewrite || null;
-  const originalSummary = optimization?.original_summary || null;
-  if (hasContent(summaryRewrite) && hasContent(originalSummary)) {
-    cards.push({
-      section: "Summary",
-      issue: "Summary could be more action-oriented.",
-      suggestion: "Rewrite summary to better align with the job description.",
-      exampleBefore: getString(originalSummary, "Original summary not available"),
-      exampleAfter: getString(summaryRewrite, ""),
-    });
-  }
-
-  // Experience bullets
-  // Optional `source_span` (verbatim grounding phrase) rides along on each
-  // bullet_improvement; the card type omits it, so it is safely ignored here and
-  // remains available on the raw optimization object for a future hover-proof UX.
-  const bulletImprovements = optimization?.bullet_improvements || [];
-  if (bulletImprovements.length > 0) {
-    bulletImprovements.forEach(
-      (item: {
-        original?: string;
-        improved?: string;
-        suggestion?: string;
-        issue?: string;
-        rationale?: string;
-      }) => {
-        const originalText = item.original;
-        const improvedText = item.improved || item.suggestion;
-
-        const isNAResponse =
-          typeof improvedText === "string" &&
-          (improvedText.trim().toLowerCase().startsWith("n/a") ||
-            improvedText.toLowerCase().includes("not relevant to the target role") ||
-            improvedText.toLowerCase().includes("not relevant to this role"));
-
-        if (hasContent(originalText) && hasContent(improvedText) && !isNAResponse) {
-          cards.push({
-            section: "Experience",
-            issue: item.issue || "Bullet point lacks impact.",
-            suggestion: item.rationale || "Use stronger action verbs and metrics.",
-            exampleBefore: getString(originalText, "Original not provided"),
-            exampleAfter: getString(improvedText, "Improvement not provided"),
-          });
-        }
-      }
-    );
-  }
-
-  // Skills
-  const skillsToAdd = optimization?.missing_keywords || [];
-  if (skillsToAdd.length > 0) {
-    cards.push({
-      section: "Skills",
-      issue: "Consider adding these skills if you have them.",
-      suggestion:
-        "If you have experience with these skills, consider adding them to improve ATS matching. Only add skills you actually possess.",
-      exampleBefore: "Current resume skills",
-      exampleAfter: `Consider: ${skillsToAdd.slice(0, 8).join(", ")}${skillsToAdd.length > 8 ? "..." : ""}`,
-    });
-  }
-
-  // Fallback
-  if (cards.length === 0) {
-    console.warn("[optimize-stream] No cards generated, adding fallback guidance");
-    const missingKeywords = optimization?.missing_keywords || [];
-    if (missingKeywords.length > 0) {
-      cards.push({
-        section: "Skills",
-        issue: "Missing keywords detected",
-        suggestion: "Add these skills if you have them: " + missingKeywords.slice(0, 5).join(", "),
-        exampleBefore: "Current resume skills",
-        exampleAfter: "Add relevant skills from job description",
-      });
-    } else {
-      cards.push({
-        section: "General",
-        issue: "AI optimization incomplete",
-        suggestion:
-          "The AI couldn't generate specific improvements. Try with a clearer job description or check resume formatting.",
-        exampleBefore: "Your current resume",
-        exampleAfter: "Consider manual review or retry",
-      });
-    }
-  }
-
-  return cards;
-}
-
-function calculateScores(optimization: any, cards: any[]) {
-  let beforeScore: number | null = null;
-  if (optimization?.match_score != null) {
-    beforeScore = normalizeScore(optimization.match_score, "match_score");
-  }
-
-  if (beforeScore === null && optimization?.category_scores) {
-    beforeScore = scoreFromCategoryScores(optimization.category_scores);
-    console.log("[optimize-stream] Calculated match_score from category_scores:", beforeScore);
-  }
-
-  if (beforeScore === null) {
-    throw new Error("AI optimization failed to calculate match score");
-  }
-
-  const fallbackImprovement = Math.min(cards.length * 2, 15);
-  const estimatedImprovement = normalizeEstimatedImprovement(beforeScore, optimization?.after_score, fallbackImprovement);
-
-  return { beforeScore, estimatedImprovement };
 }
 
 // Export config for Netlify Functions v2

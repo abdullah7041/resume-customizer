@@ -19,6 +19,8 @@ const AI_USAGE_PERSIST_TIMEOUT_MS = 1500;
  * @param {number} event.latency_ms
  * @param {boolean} event.success
  * @param {string|null} event.error_code
+ * @param {string|null} [event.user_ref]
+ * @param {string|null} [event.jd_fingerprint]
  */
 export async function recordAiUsageEvent(event) {
   try {
@@ -26,15 +28,21 @@ export async function recordAiUsageEvent(event) {
       return;
     }
 
+    const eventToInsert = { ...event };
+    if (process.env.AI_USAGE_USER_ATTRIBUTION !== 'true') {
+      delete eventToInsert.user_ref;
+      delete eventToInsert.jd_fingerprint;
+    }
+
     const client = getSupabaseClient();
     if (!client) {
-      console.warn('[AI Usage] Supabase unavailable, structured log:', JSON.stringify(event));
+      console.warn('[AI Usage] Supabase unavailable, structured log:', JSON.stringify(eventToInsert));
       return;
     }
     // Supabase query builder returns PromiseLike, so wrap with Promise.resolve
     // before awaiting per project conventions.
     let timeoutId;
-    const insertPromise = Promise.resolve(client.from('ai_usage_events').insert(event));
+    const insertPromise = Promise.resolve(client.from('ai_usage_events').insert(eventToInsert));
     const timedInsert = Promise.race([
       insertPromise,
       new Promise((resolve) => {

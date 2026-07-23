@@ -128,8 +128,47 @@ describe('openrouter-client fallback and timeout behavior', () => {
       feature_name: 'parse_resume',
       provider: 'gemini',
       model: 'gemini-2.5-flash-lite',
+      user_ref: null,
+      jd_fingerprint: null,
       success: true,
       error_code: null,
+    }));
+  });
+
+  it('preserves pseudonymous attribution through the contract executor', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: JSON.stringify({
+        clarifications: [{
+          id: 'excelExperience',
+          theme: 'Excel',
+          rationale: 'The job requires Excel evidence.',
+          question: 'Which Excel work can you verify?',
+          type: 'multi',
+          options: [
+            { value: 'dashboards', label: 'Built Excel dashboards' },
+            { value: 'no_excel', label: "I don't have Excel experience", isHardStop: true },
+          ],
+          allowOther: true,
+        }],
+      }) } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await importClient({ geminiKey: '' });
+    const { executeAiContract } = await import('../ai-contracts/executor.js');
+    await executeAiContract('clarification_questions', {
+      resumeText: 'Analyst resume',
+      jobText: 'Excel analyst job',
+      language: 'en',
+    }, {
+      userRef: '11111111-1111-4111-8111-111111111111',
+      jdFingerprint: '34ed4647ad9866d5',
+    });
+
+    expect(mocks.recordAiUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      user_ref: '11111111-1111-4111-8111-111111111111',
+      jd_fingerprint: '34ed4647ad9866d5',
     }));
   });
 

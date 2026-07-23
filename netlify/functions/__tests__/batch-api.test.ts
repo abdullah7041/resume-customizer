@@ -22,7 +22,8 @@ function buildEvent(
   return {
     httpMethod: 'POST',
     headers,
-    body: JSON.stringify(body),
+    // A string body is passed through verbatim so tests can send malformed JSON.
+    body: typeof body === 'string' ? body : JSON.stringify(body),
   } as HandlerEvent;
 }
 
@@ -50,6 +51,39 @@ describe('batch-api request handling', () => {
     expect(JSON.parse(result.body || '{}')).toEqual({
       error: 'tasks array cannot be empty',
     });
+  });
+
+  it('returns a generic error for a failed batch item without leaking the exception message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('connect ECONNREFUSED internal.service:8888'));
+    const body = {
+      tasks: [{ id: 'task-1', type: 'optimize', payload: { resumeText: 'text' } }],
+    };
+
+    const result = await handler(buildEvent({}, body), context, () => undefined) as HandlerResponse;
+
+    expect(result.statusCode).toBe(200);
+    expect(JSON.parse(result.body || '{}')).toEqual({
+      results: [{
+        id: 'task-1',
+        type: 'optimize',
+        status: 'error',
+        error: 'Batch item failed',
+      }],
+      summary: { total: 1, successful: 0, failed: 1 },
+    });
+    expect(result.body).not.toContain('ECONNREFUSED');
+    expect(result.body).not.toContain('internal.service');
+  });
+
+  it('returns a generic fatal error envelope without leaking parser details', async () => {
+    const result = await handler(buildEvent({}, '{"tasks":'), context, () => undefined) as HandlerResponse;
+
+    expect(result.statusCode).toBe(500);
+    expect(JSON.parse(result.body || '{}')).toEqual({
+      error: 'Batch processing failed',
+      hint: 'Check that all task payloads are valid for their respective endpoints',
+    });
+    expect(result.body).not.toContain('Unexpected end of JSON input');
   });
 
   it('preserves the successful batch response when rate limiting fails open', async () => {

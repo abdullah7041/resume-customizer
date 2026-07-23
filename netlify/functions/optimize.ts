@@ -1,4 +1,5 @@
 import { Handler } from '@netlify/functions';
+import { createHash } from 'crypto';
 import { optimizeResume } from "../lib/gemini-client.js";
 import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
@@ -8,7 +9,7 @@ import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
-import { normalizeEstimatedImprovement, normalizeScore, scoreFromCategoryScores } from "../lib/score-utils.js";
+import { buildOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
 import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
@@ -188,6 +189,10 @@ const baseHandler: Handler = async (event) => {
       vulnerabilities,
       userClarifications,
       userHardStops,
+      {
+        userRef: user?.id || null,
+        jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
+      },
     );
 
     console.log(`[optimize] Gemini call took ${Date.now() - startTime}ms`);
@@ -215,126 +220,7 @@ const baseHandler: Handler = async (event) => {
     }
 
     // Map to frontend expected format (Cards)
-    const cards: Array<{
-      section: string;
-      issue: string;
-      suggestion: string;
-      exampleBefore: string;
-      exampleAfter: string;
-    }> = [];
-
-    // Helper to validate content exists and extract string value
-    const hasContent = (value: unknown): boolean => {
-      if (!value) return false;
-      if (typeof value === 'string') return value.trim().length > 0;
-      return true;
-    };
-
-    // Helper to safely get string value
-    const getString = (value: unknown, fallback: string): string => {
-      if (typeof value === 'string' && value.trim().length > 0) return value;
-      return fallback;
-    };
-
-    // Safe extraction with explicit fallbacks
-    const suggestedHeadline = optimization?.suggested_headline || null;
-    const originalHeadline = optimization?.original_headline || null;
-
-    // Only generate card if we have BOTH original and improved
-    if (hasContent(suggestedHeadline) && hasContent(originalHeadline)) {
-      cards.push({
-        section: "Headline",
-        issue: "Headline could be more targeted.",
-        suggestion: "Align headline with the job title and key requirements.",
-        exampleBefore: getString(originalHeadline, "Current headline not available"),
-        exampleAfter: getString(suggestedHeadline, "")
-      });
-    }
-
-    // Card 2: Summary
-    const summaryRewrite = optimization?.summary_rewrite || null;
-    const originalSummary = optimization?.original_summary || null;
-
-    if (hasContent(summaryRewrite) && hasContent(originalSummary)) {
-      cards.push({
-        section: "Summary",
-        issue: "Summary could be more action-oriented.",
-        suggestion: "Rewrite summary to better align with the job description.",
-        exampleBefore: getString(originalSummary, "Original summary not available"),
-        exampleAfter: getString(summaryRewrite, "")
-      });
-    }
-
-    // Cards for bullets (Experience)
-    // Note: bullet_improvements may carry an optional `source_span` (the verbatim
-    // resume phrase that grounds each rewrite). It is intentionally not surfaced in
-    // the card here — it stays available on the raw optimization object for a future
-    // "proof on hover" UX. The card type omits it, so it is safely ignored.
-    const bulletImprovements = optimization?.bullet_improvements || [];
-
-    if (bulletImprovements && bulletImprovements.length > 0) {
-      bulletImprovements.forEach((item: { original?: string; improved?: string; suggestion?: string; issue?: string; rationale?: string }) => {
-        const originalText = item.original;
-        const improvedText = item.improved || item.suggestion;
-
-        // Safety filter: skip any bullet the AI marked as N/A or "not relevant"
-        const isNAResponse = typeof improvedText === 'string' && (
-          improvedText.trim().toLowerCase().startsWith('n/a') ||
-          improvedText.toLowerCase().includes('not relevant to the target role') ||
-          improvedText.toLowerCase().includes('not relevant to this role')
-        );
-
-        // Only add card if we have BOTH original and improved, and it's not an N/A placeholder
-        if (hasContent(originalText) && hasContent(improvedText) && !isNAResponse) {
-          cards.push({
-            section: "Experience",
-            issue: item.issue || "Bullet point lacks impact.",
-            suggestion: item.rationale || "Use stronger action verbs and metrics.",
-            exampleBefore: getString(originalText, "Original not provided"),
-            exampleAfter: getString(improvedText, "Improvement not provided")
-          });
-        }
-      });
-    }
-
-    // Cards for Skills - IMPORTANT: These are SUGGESTIONS, not auto-additions
-    const skillsToAdd = optimization?.missing_keywords || [];
-
-    if (skillsToAdd.length > 0) {
-      cards.push({
-        section: "Skills",
-        issue: "Consider adding these skills if you have them.",
-        suggestion: "If you have experience with these skills, consider adding them to improve ATS matching. Only add skills you actually possess.",
-        exampleBefore: "Current resume skills",
-        exampleAfter: `Consider: ${skillsToAdd.slice(0, 8).join(', ')}${skillsToAdd.length > 8 ? '...' : ''}`
-      });
-    }
-
-    // If still no cards after all processing, add fallback
-    if (cards.length === 0) {
-      console.warn('[optimize] No cards generated, adding fallback guidance');
-
-      // Check if we have raw data to provide some value
-      const missingKeywords = optimization?.missing_keywords || [];
-
-      if (missingKeywords.length > 0) {
-        cards.push({
-          section: "Skills",
-          issue: "Missing keywords detected",
-          suggestion: "Add these skills if you have them: " + missingKeywords.slice(0, 5).join(', '),
-          exampleBefore: "Current resume skills",
-          exampleAfter: "Add relevant skills from job description"
-        });
-      } else {
-        cards.push({
-          section: "General",
-          issue: "AI optimization incomplete",
-          suggestion: "The AI couldn't generate specific improvements. Try with a clearer job description or check resume formatting.",
-          exampleBefore: "Your current resume",
-          exampleAfter: "Consider manual review or retry"
-        });
-      }
-    }
+    const cards = buildOptimizationCards(optimization, { logPrefix: '[optimize]' });
 
     // Log processing summary
     console.log('[optimize] Processing complete:', {
@@ -343,28 +229,19 @@ const baseHandler: Handler = async (event) => {
     });
 
     // Use AI-calculated match score, or calculate from category_scores as fallback
-    let beforeScore: number | null = null;
-    if (optimization?.match_score != null) {
-      beforeScore = normalizeScore(optimization.match_score, 'match_score');
+    let scores: ReturnType<typeof calculateScores>;
+    try {
+      scores = calculateScores(optimization, { cards, logPrefix: '[optimize]' });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'AI optimization failed to calculate match score') {
+        console.error('[optimize] AI did not return match_score or category_scores');
+      }
+      throw error;
     }
+    const { beforeScore, estimatedImprovement } = scores;
 
-    // Fallback: Calculate from category_scores if match_score is missing
-    if (beforeScore === null && optimization?.category_scores) {
-      beforeScore = scoreFromCategoryScores(optimization.category_scores);
-      console.log('[optimize] Calculated match_score from category_scores:', beforeScore);
-    }
-
-    if (beforeScore === null) {
-      console.error('[optimize] AI did not return match_score or category_scores');
-      throw new Error('AI optimization failed to calculate match score');
-    }
-
-    // Estimated improvement is now explicitly calculated by the AI using the ATS-aligned strict rubric
+    const bulletImprovements = optimization?.bullet_improvements || [];
     const addKeywords = optimization?.missing_keywords || [];
-    
-    // Fallback logic in case after_score is omitted or hallucinated lower than beforeScore
-    const fallbackImprovement = Math.min(cards.length * 2, 15);
-    const estimatedImprovement = normalizeEstimatedImprovement(beforeScore, optimization?.after_score, fallbackImprovement);
 
     // Extract JD-matched keywords (keywords resume already has that match JD)
     const matchedKeywords = optimization?.keywords_to_keep || [];

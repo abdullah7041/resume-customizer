@@ -117,7 +117,6 @@ export default defineConfig({
             // ===== UI UTILITIES (lazy loaded) =====
             if (
               id.includes("lucide-react") ||
-              id.includes("mixpanel-browser") ||
               id.includes("file-saver")
             ) {
               return "vendor-ui";

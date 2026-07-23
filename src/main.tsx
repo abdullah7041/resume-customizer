@@ -45,7 +45,7 @@ import "./lib/i18n";
 import "./index.css";
 
 // Initialize analytics (respects consent)
-analytics.init();
+void analytics.init();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
