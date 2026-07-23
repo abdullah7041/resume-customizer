@@ -72,8 +72,13 @@ begin
     updated_at = now()
   where email = p_email;
 
+  -- `feature` is NOT NULL. Non-consumption rows repeat the transaction type
+  -- there, matching the existing feedback_reward / referral_reward entries.
+  -- 'initial_grant' is only accepted once 20260723000000 widens the
+  -- transaction_type CHECK, so apply that migration together with this one.
   insert into public.credit_transactions (
     email,
+    feature,
     transaction_type,
     credits_before,
     credits_after,
@@ -81,6 +86,7 @@ begin
     metadata
   ) values (
     p_email,
+    'initial_grant',
     'initial_grant',
     v_current_remaining,
     p_amount,
