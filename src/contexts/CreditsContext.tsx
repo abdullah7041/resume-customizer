@@ -29,6 +29,15 @@ interface UserCreditsRow {
     feedback_credits_earned: number;
     referral_credits_earned: number | null;
     last_reset_date: string;
+    signup_metadata: { pending_initial_grant?: boolean } | null;
+}
+
+interface UserCreditsApiResponse {
+    creditsRemaining: number;
+    creditsTotal: number;
+    feedbackCreditsEarned: number;
+    referralCreditsEarned: number;
+    lastResetDate: string | null;
 }
 
 interface CreditsCacheEntry {
@@ -55,6 +64,43 @@ const getDefaultCredits = (): UserCredits => ({
     resetDate: new Date().toISOString(),
 });
 
+/**
+ * A row flagged `pending_initial_grant` always reads as zero credits: the signup
+ * trigger creates it empty and only the server may issue the grant, after its
+ * IP-abuse and email-verification checks. Reading the table alone would leave a
+ * new user at zero with every credit-gated action disabled, so resolve the grant
+ * server-side and use that balance instead. Failure is non-fatal — the caller
+ * falls back to the (zero) row rather than erroring the whole provider.
+ */
+const resolvePendingInitialGrant = async (fallback: UserCredits): Promise<UserCredits> => {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return fallback;
+
+        const response = await fetch('/.netlify/functions/user-credits', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`,
+            },
+        });
+
+        if (!response.ok) return fallback;
+
+        const data = await response.json() as UserCreditsApiResponse;
+        return {
+            remaining: data.creditsRemaining,
+            total: data.creditsTotal,
+            feedbackCreditsEarned: data.feedbackCreditsEarned,
+            referralCreditsEarned: data.referralCreditsEarned,
+            resetDate: data.lastResetDate ?? fallback.resetDate,
+        };
+    } catch (error) {
+        console.warn('[CreditsContext] Failed to resolve initial credit grant:', error);
+        return fallback;
+    }
+};
+
 const fetchCreditsForEmail = (email: string, options: { forceRefresh?: boolean } = {}) => {
     const cached = recentCreditsByEmail.get(email);
     if (!options.forceRefresh && cached && Date.now() - cached.fetchedAt < CREDITS_CACHE_TTL_MS) {
@@ -68,7 +114,7 @@ const fetchCreditsForEmail = (email: string, options: { forceRefresh?: boolean }
 
     const request = Promise.resolve(supabase
         .from('user_credits')
-        .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date')
+        .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
         .eq('email', email)
         .single())
         .then(({ data, error: fetchError }) => {
@@ -83,7 +129,14 @@ const fetchCreditsForEmail = (email: string, options: { forceRefresh?: boolean }
                 return getDefaultCredits();
             }
 
-            return mapCreditsRow(data as UserCreditsRow);
+            const row = data as UserCreditsRow;
+            const credits = mapCreditsRow(row);
+
+            if (row.signup_metadata?.pending_initial_grant === true) {
+                return resolvePendingInitialGrant(credits);
+            }
+
+            return credits;
         })
         .then((credits) => {
             recentCreditsByEmail.set(email, { fetchedAt: Date.now(), credits });
