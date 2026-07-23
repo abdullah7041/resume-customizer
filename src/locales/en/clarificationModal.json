@@ -10,6 +10,8 @@
     "hardStopFallback": "I don't have this / I never do this",
     "validationHint": "Please provide a meaningful answer or choose another option",
     "nudge": "Answering these questions helps the AI generate more targeted improvements",
+    "regenerate": "Generate different questions",
+    "regenerateFailed": "Could not generate new questions. Your current questions are still available.",
     "skipBtn": "Skip for now",
     "submitBtn": "Submit Answers"
   }

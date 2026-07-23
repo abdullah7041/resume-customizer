@@ -210,7 +210,7 @@ export function ClarificationModal({
         <div className="flex items-start justify-between p-6 pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-500/15 ring-1 ring-emerald-500/30">
-              <Sparkles className="w-5 h-5 text-emerald-400" />
+              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <h2
@@ -231,14 +231,14 @@ export function ClarificationModal({
                 type="button"
                 onClick={onRegenerate}
                 disabled={isRegenerating}
-                title="Re-generate questions"
+                title={t('clarificationModal.regenerate', 'Generate different questions')}
                 className={cn(
                   'p-1.5 rounded-lg transition-colors',
                   'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200',
                   'hover:bg-white/10',
                   isRegenerating && 'opacity-50 cursor-not-allowed'
                 )}
-                aria-label="Re-generate clarification questions"
+                aria-label={t('clarificationModal.regenerate', 'Generate different questions')}
               >
                 <RefreshCw className={cn('w-4 h-4', isRegenerating && 'animate-spin')} />
               </button>
@@ -273,7 +273,7 @@ export function ClarificationModal({
               >
                 {/* Theme badge + rationale */}
                 <div className="flex items-start gap-2">
-                  <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                  <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
                     {idx + 1}.
                   </span>
                   <div className="min-w-0">
@@ -332,7 +332,7 @@ export function ClarificationModal({
                   )}
                   {/* Validation hint */}
                   {isInvalid && (
-                    <p className="flex items-center gap-1 mt-1.5 text-xs text-red-400">
+                    <p className="flex items-center gap-1 mt-1.5 text-xs text-red-600 dark:text-red-400">
                       <AlertCircle className="w-3 h-3 flex-shrink-0" />
                       {t('clarificationModal.validationHint', 'Please provide a meaningful answer or choose another option')}
                     </p>
@@ -346,7 +346,7 @@ export function ClarificationModal({
         {/* ---- Footer ---- */}
         <div className="px-6 pb-6 space-y-3">
           {/* Recommendation nudge (shown always) */}
-          <p className="text-center text-xs text-amber-400/80 dark:text-amber-300/70">
+          <p className="text-center text-xs text-amber-700/90 dark:text-amber-300/70">
             💡 {t('clarificationModal.nudge', 'Answering these questions helps the AI generate more targeted improvements')}
           </p>
 

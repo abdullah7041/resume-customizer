@@ -79,17 +79,23 @@ export function ScoreDiffBreakdown({
   const afterDisplay = arrowTarget !== null ? `${arrowTarget}%` : EM_DASH;
 
   return (
-    <div className={cn('mt-4 rounded-lg border border-white/10 bg-white/[0.03] p-4', className)}>
+    <div
+      data-score-diff
+      className={cn(
+        'mt-4 rounded-lg border border-slate-200/80 bg-white/80 p-4 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/[0.03] dark:text-gray-300',
+        className
+      )}
+    >
       <div className="flex items-center gap-2 flex-wrap mb-3">
-        <h4 className="text-sm font-semibold text-white">
+        <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
           {t('sections.optimize.scoreDiff.title')}
         </h4>
         <span
           className={cn(
             'text-[11px] px-1.5 py-0.5 rounded border',
             arrowIsVerified
-              ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20'
-              : 'bg-amber-500/15 text-amber-300 border-amber-500/20'
+              ? 'border-emerald-300/70 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-300'
+              : 'border-amber-300/70 bg-amber-100/80 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/15 dark:text-amber-300'
           )}
         >
           {arrowIsVerified
@@ -98,26 +104,26 @@ export function ScoreDiffBreakdown({
         </span>
       </div>
 
-      <div className="flex items-center gap-3 text-lg font-semibold text-white">
+      <div className="flex items-center gap-3 text-lg font-semibold text-slate-900 dark:text-white">
         <span>{beforeDisplay}</span>
-        <ArrowRight className="w-4 h-4 text-gray-400" />
-        <span className={arrowIsVerified ? 'text-emerald-300' : 'text-amber-300'}>
+        <ArrowRight className="h-4 w-4 text-slate-400 dark:text-gray-400" />
+        <span className={arrowIsVerified ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}>
           {afterDisplay}
         </span>
       </div>
 
-      <p className="text-xs text-gray-400 mt-1">
+      <p className="mt-1 text-xs text-slate-600 dark:text-gray-400">
         {t('sections.optimize.scoreDiff.appliedOf', { applied: counts.actionableApplied, total: counts.actionableTotal })}
       </p>
 
       {recommendations.length > 0 && (
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-slate-600 dark:text-gray-500">
           {t('sections.optimize.scoreDiff.recommendationsAside', { total: recommendations.length })}
         </p>
       )}
 
       {showPerCardShare && (
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-slate-600 dark:text-gray-500">
           {t('sections.optimize.scoreDiff.perCardShare', {
             points: perCardShare!.toFixed(1),
           })}
@@ -125,32 +131,32 @@ export function ScoreDiffBreakdown({
       )}
 
       {showPotentialNote && (
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-slate-600 dark:text-gray-500">
           {t('sections.optimize.scoreDiff.potentialNote', { score: potentialScore })}
         </p>
       )}
 
       {estimateIsZero && displayState === 'current' && (
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-slate-600 dark:text-gray-500">
           {t('sections.optimize.scoreDiff.noGainPredicted')}
         </p>
       )}
 
       {/* Verified potential row (target, not current) when not everything is applied. */}
       {displayState === 'verified_potential' && verifiedAllSuggestionsScore !== null && (
-        <p className="text-xs font-semibold text-emerald-300 mt-1">
+        <p className="mt-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
           {t('sections.optimize.verifiedPotentialLine', { score: verifiedAllSuggestionsScore })}
         </p>
       )}
 
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="mt-2 text-xs text-slate-600 dark:text-gray-500">
         {arrowIsVerified
           ? t('sections.optimize.scoreDiff.verifiedNote')
           : t('sections.optimize.scoreDiff.estimateNote')}
       </p>
 
       {counts.actionableTotal > 0 && counts.actionableApplied === 0 && (
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="mt-2 text-xs text-slate-600 dark:text-gray-400">
           {t('sections.optimize.scoreDiff.noneApplied')}
         </p>
       )}
@@ -161,7 +167,7 @@ export function ScoreDiffBreakdown({
             type="button"
             onClick={handleToggle}
             aria-expanded={showCards}
-            className="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-300 hover:text-emerald-200"
+            className="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-700 transition-colors hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200"
           >
             {showCards
               ? t('sections.optimize.scoreDiff.hideCards')
@@ -176,12 +182,16 @@ export function ScoreDiffBreakdown({
                 return (
                   <div
                     key={o.sectionId}
-                    className="flex items-start gap-2 text-sm rounded-md bg-white/[0.03] p-2"
+                    className="flex items-start gap-2 rounded-md bg-slate-50/80 p-2 text-sm dark:bg-white/[0.03]"
                   >
                     <span
                       className={cn(
                         'mt-0.5 flex-shrink-0',
-                        counted ? 'text-emerald-400' : o.mergeStatus === 'failed' ? 'text-amber-400' : 'text-gray-500'
+                        counted
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : o.mergeStatus === 'failed'
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-slate-500 dark:text-gray-500'
                       )}
                     >
                       {counted
@@ -192,13 +202,17 @@ export function ScoreDiffBreakdown({
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-medium text-gray-200">
+                        <span className="text-xs font-medium text-slate-800 dark:text-gray-200">
                           {t(`sections.optimize.tabs.${o.sectionType}`, o.sectionType)}
                         </span>
                         <span
                           className={cn(
                             'text-[11px]',
-                            counted ? 'text-emerald-300/80' : o.mergeStatus === 'failed' ? 'text-amber-300/80' : 'text-gray-500'
+                            counted
+                              ? 'text-emerald-700/80 dark:text-emerald-300/80'
+                              : o.mergeStatus === 'failed'
+                                ? 'text-amber-700/80 dark:text-amber-300/80'
+                                : 'text-slate-500 dark:text-gray-500'
                           )}
                         >
                           {counted
@@ -208,7 +222,7 @@ export function ScoreDiffBreakdown({
                               : t('sections.optimize.scoreDiff.notCounted')}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5 truncate">
+                      <p className="mt-0.5 truncate text-xs text-slate-600 dark:text-gray-400">
                         {firstLine(o.original)}
                       </p>
                     </div>
@@ -218,28 +232,28 @@ export function ScoreDiffBreakdown({
 
               {recommendations.length > 0 && (
                 <>
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 mt-3">
+                  <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-gray-500">
                     <Lightbulb className="w-3.5 h-3.5" />
                     {t('sections.optimize.scoreDiff.recommendationsHeading')}
                   </p>
                   {recommendations.map((o) => (
                     <div
                       key={o.sectionId}
-                      className="flex items-start gap-2 text-sm rounded-md bg-white/[0.03] p-2"
+                      className="flex items-start gap-2 rounded-md bg-slate-50/80 p-2 text-sm dark:bg-white/[0.03]"
                     >
-                      <span className="mt-0.5 flex-shrink-0 text-gray-500">
+                      <span className="mt-0.5 flex-shrink-0 text-slate-500 dark:text-gray-500">
                         <Minus className="w-4 h-4" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-medium text-gray-200">
+                          <span className="text-xs font-medium text-slate-800 dark:text-gray-200">
                             {t(`sections.optimize.tabs.${o.sectionType}`, o.sectionType)}
                           </span>
-                          <span className="text-[11px] text-gray-500">
+                          <span className="text-[11px] text-slate-500 dark:text-gray-500">
                             {t('sections.optimize.scoreDiff.recommendationLabel')}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5 truncate">
+                        <p className="mt-0.5 truncate text-xs text-slate-600 dark:text-gray-400">
                           {firstLine(o.optimized)}
                         </p>
                       </div>

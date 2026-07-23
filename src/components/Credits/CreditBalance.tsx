@@ -14,9 +14,10 @@ import { useMemo, useState, type MouseEvent } from 'react';
 interface CreditBalanceProps {
   onClick: () => void;
   variant?: 'default' | 'compact';
+  iconOnly?: boolean;
 }
 
-export function CreditBalance({ onClick, variant = 'default' }: CreditBalanceProps) {
+export function CreditBalance({ onClick, variant = 'default', iconOnly = false }: CreditBalanceProps) {
   const { credits, isLoading, refetch } = useUserCredits();
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
@@ -96,7 +97,7 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
     return (
       <div className={cn(
         "animate-pulse bg-white/5 h-9 rounded-lg",
-        isCompact ? "w-24 min-w-[96px]" : "w-32 min-w-[140px]"
+        iconOnly ? "h-11 w-11" : isCompact ? "w-24 min-w-[96px]" : "w-32 min-w-[140px]"
       )} />
     );
   }
@@ -116,19 +117,20 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
         className={cn(
           // Glassy dark/light background
           'bg-white/90 dark:bg-black/40 backdrop-blur-md border border-gray-300 dark:border-white/10 flex items-center rounded-xl transition-[background-color,scale] shadow-sm',
-          isCompact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-4 py-2',
+          iconOnly ? 'h-11 w-11 justify-center p-0' : isCompact ? 'gap-2 px-2.5 py-1.5' : 'gap-3 px-4 py-2',
           colorClasses.border, // Optional solid border color
           'hover:bg-gray-100 dark:hover:bg-black/50 active:scale-[0.96]',
           !isCompact && 'hover:scale-[1.02]',
           colorClasses.pulse
         )}
         aria-label={t('credits.balance')}
+        title={iconOnly ? balanceDisplay : undefined}
       >
         <div className={cn("rounded-full bg-gray-100 dark:bg-white/5", isCompact ? "p-1" : "p-1.5", colorClasses.text)}>
           <Coins className={cn(isCompact ? "w-3.5 h-3.5" : "w-4 h-4")} />
         </div>
 
-        <div className="flex flex-col items-start gap-0.5">
+        {!iconOnly && <div className="flex flex-col items-start gap-0.5">
           <span className={cn('whitespace-nowrap', isCompact ? 'text-xs font-bold' : 'text-sm font-extrabold tracking-wide', colorClasses.text)}>
             <span dir={isArabic ? 'rtl' : 'ltr'} className="inline-block" style={{ unicodeBidi: 'isolate' }}>
               {balanceDisplay}
@@ -144,7 +146,7 @@ export function CreditBalance({ onClick, variant = 'default' }: CreditBalancePro
                 : t('credits.resetsInWithDate', { days: resetInfo.daysRemaining, date: resetInfo.dateText })}
             </span>
           )}
-        </div>
+        </div>}
       </button>
 
       {/* Refresh Button */}

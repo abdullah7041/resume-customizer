@@ -215,7 +215,10 @@ export function PipelineSection() {
                       className="appearance-none bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 pr-7 text-xs font-medium text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50"
                     >
                       {STATUS_OPTIONS.map((s) => (
-                        <option key={s} value={s}>
+                        // Native dropdown popups ignore the trigger's classes;
+                        // without explicit colors the list rendered near-white
+                        // text on a white popup in dark mode.
+                        <option key={s} value={s} className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
                           {t("pipeline." + s, s)}
                         </option>
                       ))}

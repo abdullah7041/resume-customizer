@@ -6,7 +6,13 @@ Execute in the order below unless dependencies say otherwise. Each executor: rea
 
 Selection note (round 2): the owner selected all four offered clusters plus the usage-attribution direction spike. Unselected findings are recorded under "candidates" below.
 
+> **2026-07-21 — `/improve security` round (against commit `ceed480`).** A focused security re-audit (three parallel read-only auditors: auth/authz, injection/SSRF, secrets/config/supply-chain) added plans **007–012** below. Headline: the money/credit path, SSRF guard, Puppeteer PDF sandbox, RLS, and secret hygiene are all solid — no HIGH-severity findings survived vetting. The new plans close MED/LOW hardening gaps. Ran non-interactively, so plans were written for the vetted findings by leverage; unplanned items are in the findings section below. **Correction during review:** the audit's highest-rated item (SEC-07, cron-gate) was **rejected after verifying a Netlify platform fact** — scheduled functions are not publicly URL-invocable, so the header-only gate is safe and requiring `CRON_SECRET` would have broken the crons. Plan 007 was narrowed to the constant-time admin-secret fix (SEC-08) only. Details below.
+
 ## Execution order & status
+
+> **Numbering collision (read this first).** Two independent rounds were planned in parallel against the same commit `ceed480` and both numbered their plans from 007. The plan *files* do not collide (the names differ), but the numbers do. Always refer to a plan by its **filename**, not its number. Round 2 is `007-restore-credit-init-anti-abuse.md` … `016-ai-usage-user-attribution-spike.md`; the security round is `007-enforce-cron-secret-and-constant-time-admin.md` … `012-rate-limit-batch-api-fanout.md`.
+
+### Round 1 (2026-07-08)
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 |------|-------|----------|--------|------------|--------|
@@ -16,6 +22,11 @@ Selection note (round 2): the owner selected all four offered clusters plus the 
 | 004 | Atomic referral completion (claim-then-award) | P2 | S | — | DONE |
 | 005 | Harden abuse-facing surfaces (cron gate, beta gate, dead fn, email escaping) | P2 | M | — | DONE |
 | 006 | Toolchain & repo hygiene (dead dep, tracked artifacts, honest gate, env docs) | P2 | S | — | DONE |
+
+### Round 2 — general improve round (2026-07-21)
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
 | 007 | Restore signup anti-abuse checks; atomic addCredits | P1 | M | — | DONE |
 | 008 | Pay referral rewards on first paid action | P1 | M | 007 | DONE |
 | 009 | CI pipeline gating main (lint/typecheck/test) | P1 | S | — | DONE |
@@ -27,9 +38,28 @@ Selection note (round 2): the owner selected all four offered clusters plus the 
 | 015 | Docs & DX hygiene (README setup, env docs, CLAUDE.md de-drift, spec archive) | P3 | S | — | DONE |
 | 016 | SPIKE: user attribution on ai_usage_events (unblocks job-variant ADR) | P2 | S–M | — | DONE |
 
+### Security round (2026-07-21) — separate numbering, see collision note above
+
+| Plan | Title | Priority | Effort | Depends on | Status |
+|------|-------|----------|--------|------------|--------|
+| 007 (sec) | Constant-time admin-secret comparison (SEC-08) | P3 | S | — | DONE |
+| 008 (sec) | Add report-only CSP + framing/transport headers | P2 | M | — | DONE |
+| 009 (sec) | Scrub PII from client-side Sentry error events | P2 | S | — | DONE |
+| 010 (sec) | Extract + behaviorally test the generate-pdf sandbox controls | P2 | M | — | DONE |
+| 011 (sec) | Close empty-Content-Type gap in safe-fetch + bound job-extract regex | P3 | S | — | DONE |
+| 012 (sec) | Rate-limit the batch-api fan-out endpoint | P3 | S | — | DONE |
+
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
 ## Dependency notes
+
+Round 1:
+
+- 002 requires 001: both edit the same regions of `optimize.ts`/`optimize-stream.ts`; 002's cache-before-credits reorder assumes 001's `success === false` guards exist (an unpaid result must never be cached).
+- 003 requires 001+002: the `creditsConsumed` flag brackets the consumption guard from 001, and the safe `cacheOnly` recovery it routes to is only cross-endpoint-reliable once 002 unifies keys.
+- 004, 005, 006 are independent of everything else and of each other (005 and 006 both append to `.env.example` — trivial merge).
+
+Round 2 (general improve round):
 
 - **009 first** — it is the verification baseline; every later plan's done criteria get enforced by it.
 - 008 requires 007: both edit `credit-manager`-adjacent code and the same test harnesses; 007's RPC-based `addCredits` is the atomicity story 008's reward flow assumes.
@@ -37,6 +67,43 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 011 and 013 both touch optimize-family files (011: optimize.ts/optimize-stream.ts; 013: vision2030 only) — run on separate branches, merge sequentially.
 - 015 and 016 both append to `.env.example` — trivial merge.
 - **Deploy-order gates (maintainer actions, not executor actions)**: 007 and 016 each produce a migration file the maintainer must run in the Supabase dashboard; both plans' code is written to be safe to deploy before the migration is applied. 016 additionally needs `AI_USAGE_USER_ATTRIBUTION=true` set in Netlify env after the migration.
+
+Security round:
+
+- 007 (sec)–012 (sec) are fully independent of each other and of 001–006; each touches a disjoint file set. No plan depends on another. Recommended order is by priority (008/009/010 first).
+
+## 2026-07-21 security round — findings & notes
+
+The security-round plans (`007-enforce-cron-secret-and-constant-time-admin.md` … `012-rate-limit-batch-api-fanout.md`) map to these vetted findings:
+
+- **SEC-08** (→ plan 007): admin-secret compared with plain `!==` at `admin-gates.ts:101` while the file already has `timingSafeEqualStrings`. Constant-time swap, P3. (Plan 007 was originally scoped to also cover SEC-07; that was removed — see rejected list.)
+- **SEC-40** (→ plan 008): no CSP / X-Frame-Options / HSTS / Permissions-Policy in `netlify.toml`; the app holds a Supabase JWT + resume PII in localStorage with no defense-in-depth. Ships report-only first.
+- **SEC-41** (→ plan 009): client Sentry `beforeSend` (`src/main.tsx:29-33`) does no PII scrubbing; only replays are masked.
+- **SEC-20** (→ plan 010): the generate-pdf sandbox controls (request interception, protocol allowlist, `setJavaScriptEnabled(false)`) are guarded only by source-string matching; the JS-disable is untested.
+- **SEC-21 + SEC-22** (→ plan 011): `safe-fetch.ts:327` lets empty-Content-Type responses past the text-only filter; `job-page-extract.ts:154` runs a ~O(n²) regex on up to 2 MB of attacker-influenced HTML.
+- **SEC-09** (→ plan 012): `batch-api` fan-out exported without `withRateLimit` and no own auth — a 1→10 AI amplifier with no top-level throttle.
+
+Vetted but NOT planned (owner's call / lower leverage):
+
+- **SEC-05** (still present, `waitlist-confirm.ts:42-63`): sends a branded email to any well-formed address with no ownership proof; rate-limited but no CAPTCHA. Needs a product decision (CAPTCHA / double-opt-in) before a plan — carried over from the prior round.
+- **SEC-06** (still present): raw `error.message` returned to clients on the admin/dev/referral surface — `referral-api.ts:358`, `batch-api.ts:256-267`, `dev-celebration-bonus.ts:147`, `dev-reset-credits.ts:99`, `cron-reset-credits.ts:181`, `cron-monthly-summary.ts:215`, `notify-waitlist.ts:146`. The user-facing AI endpoints (optimize/ai-match/feedback) already sanitize. S effort; a single sweep replacing raw messages with generic text + a logged detail. Not planned only because it's low-severity on already-authenticated/dev surfaces; promote if desired.
+- **SEC-42** (dependencies): `npm audit --omit=dev` → 0 critical/high, 4 moderate (dompurify via jspdf — the vulnerable `jspdf.html()` path is not used; opentelemetry via Sentry — telemetry only). Full audit → 2 build-time highs (`brace-expansion`, `shell-quote`) not reachable at runtime. Action: run `npm audit fix` for the build-path highs and re-check whether the `mailparser`/`tar`/`minimatch` overrides are still needed. Hygiene, not urgent — folded into a future toolchain pass rather than its own plan.
+
+Rejected / confirmed clean this round (do not re-audit):
+
+- **SEC-07 (cron gate accepts `x-netlify-internal-functions` header without `CRON_SECRET`) — REJECTED, not exploitable.** The auditor rated it HIGH on code logic but MED on exploitability, flagging "depends on Netlify's inbound-header handling — worth verifying." Verified: Netlify scheduled functions (those with a `schedule =` in `netlify.toml`, i.e. `cron-reset-credits` and `cron-monthly-summary`) **cannot be invoked via a public URL in production** — Netlify docs: *"You can't invoke scheduled functions directly with a URL"* and *"Scheduled functions only run on their schedule for published deploys."* So there is no external HTTP path on which to deliver a spoofed `x-netlify-internal-functions` header; the header-only gate is a safe standard-platform convention, not a vulnerability. **Additional decision-drift note:** plan 005's maintenance note ("remove the header-only back-compat branch once `CRON_SECRET` is confirmed set in production") is **wrong** and must not be acted on — the native Netlify scheduler cannot attach a custom `x-cron-secret` header, so requiring the secret would 403 the real scheduled invocations and silently disable both crons. Plan 007 carries a code comment warning future maintainers off this. Source: https://docs.netlify.com/build/functions/scheduled-functions/
+- Money/credit IDOR — none: every credit endpoint verifies the Supabase JWT and derives billing email/id from the verified token, never the request body; `credit-manager.js` keys on the server-derived email.
+- CSRF — not applicable: all auth is Bearer-token, no cookie sessions.
+- SSRF guard (`safe-fetch.ts`) — DNS-rebinding-safe (connection-time IP validation), redirects re-validated per hop, IPv4-mapped/NAT64/link-local/CGNAT/metadata/TEST-NETs all rejected. Only the empty-Content-Type + regex items (SEC-21/22) remained.
+- Puppeteer HTML injection — neutralized by JS-disable + request interception (only the test coverage gap SEC-20 remained).
+- Email HTML injection — all user fields pass through `escapeHtml` (plan 005 landed this).
+- SQL injection — none; parameterized `.rpc()`/`.eq()` only.
+- Prompt-injection-to-sink — none: AI output flows only to escaped React, the JS-disabled Puppeteer renderer, and escapeHtml'd `document.write`; no privileged sink receives raw AI output.
+- Hardcoded secrets / secrets in git history — none; only `VITE_WORKER_URL` (public) was ever committed in `.env`. `.env` is gitignored.
+- Supabase RLS — owner-scoped on all user tables via `auth.uid() = user_id`; waitlist is insert-only with no anon SELECT.
+- CORS `*` without credentials — safe for a bearer-token API (by design).
+- Logging/analytics — functions redact via `redactForLog`/`summarizeErrorForLog`; Mixpanel sends only bucketed enums, consent-gated.
+- dev-* functions freely callable in prod — false: gated behind BOTH an env allow-flag AND the admin secret (`admin-gates.ts:80-109`).
 
 ## Candidates not planned this round (promote or reject next round)
 

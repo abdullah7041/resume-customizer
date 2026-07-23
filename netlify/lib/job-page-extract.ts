@@ -27,6 +27,21 @@ export interface ExtractedJob {
 const MIN_JSONLD_DESCRIPTION_CHARS = 200;
 const MIN_HEURISTIC_CHARS = 350;
 export const MAX_JOB_TEXT_CHARS = 30000;
+// Bound regex work on attacker-influenced HTML: the role=main heuristic has
+// sequential greedy quantifiers, while safeFetch allows bodies up to 2 MB.
+const MAX_HTML_SCAN_CHARS = 400_000;
+
+const PAIRED_NOISE_TAGS = new Set([
+  'nav', 'header', 'footer', 'aside', 'form', 'button', 'dialog', 'select', 'svg', 'iframe',
+]);
+// Bare "ad" is deliberately NOT matched — job boards class the posting itself
+// "job-ad"/"jobad"; only explicit ad compounds are treated as noise.
+const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|consent|gdpr|banner|share|apply[-_]?button|top[-_]?card[-_]?actions|sidebar|widget|promo|advert|adsense|ad[-_]?slot|ad[-_]?banner|sponsor|subscribe|newsletter|social|follow[-_]?us|job[-_]?alert|modal|popup|overlay|pagination|comments|toolbar|menu)/i;
+const DESCRIPTION_CLASS_OR_ID_PATTERN = /job[-_]?desc|description|show-more-less-html|posting/i;
+const STANDALONE_CTA_PATTERN = /^(sign in|sign up|join now|apply|apply now|easy apply|save|save job|share|share this job|email this job|print|report this job|show more|see more jobs|view all jobs|get notified|set alert|create (job )?alert|back to (results|search)|accept (all )?cookies|cookie settings|subscribe|قدم الآن|تقديم|حفظ الوظيفة|مشاركة|سجل الدخول|انضم الآن|اشترك)$/i;
+const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more|more jobs( like this)?|related jobs|jobs you may like|share this job|get job alerts|وظائف مشابهة|وظائف ذات صلة|وظائف قد تعجبك|شارك هذه الوظيفة|تنبيهات الوظائف)$/i;
+const HTML_TAG_PATTERN = /<\/?([a-z][\w:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi;
+const HTML_ATTRIBUTE_PATTERN = /(?:^|\s)([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
 const NAMED_ENTITIES: Record<string, string> = {
   amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
@@ -63,6 +78,224 @@ export function htmlToText(html: string): string {
     .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function parseOpeningTagAttributes(openingTag: string): Map<string, string> {
+  const tagName = openingTag.match(/^<([a-z][\w:-]*)\b/i)?.[0];
+  if (!tagName) return new Map();
+
+  const closingLength = /\/\s*>$/.test(openingTag) ? 2 : 1;
+  const attributeSource = openingTag.slice(tagName.length, -closingLength);
+  const attributes = new Map<string, string>();
+  HTML_ATTRIBUTE_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = HTML_ATTRIBUTE_PATTERN.exec(attributeSource)) !== null) {
+    attributes.set(match[1].toLowerCase(), match[2] ?? match[3] ?? match[4] ?? '');
+  }
+  return attributes;
+}
+
+function tagHasMatchingClassOrId(openingTag: string, pattern: RegExp): boolean {
+  const attributes = parseOpeningTagAttributes(openingTag);
+  const className = attributes.get('class');
+  const id = attributes.get('id');
+  return (className !== undefined && pattern.test(className))
+    || (id !== undefined && pattern.test(id));
+}
+
+function createTagScanner(): RegExp {
+  return new RegExp(HTML_TAG_PATTERN.source, HTML_TAG_PATTERN.flags);
+}
+
+function isClosingTag(tag: string): boolean {
+  return /^<\//.test(tag);
+}
+
+function isSelfClosingTag(tag: string): boolean {
+  return /\/\s*>$/.test(tag);
+}
+
+function findBalancedElementEnd(
+  html: string,
+  openingMatch: RegExpExecArray,
+): number | null {
+  const openingTag = openingMatch[0];
+  if (isSelfClosingTag(openingTag)) return openingMatch.index + openingTag.length;
+
+  const tagName = openingMatch[1].toLowerCase();
+  const scanner = createTagScanner();
+  scanner.lastIndex = openingMatch.index + openingTag.length;
+  let depth = 1;
+  let match: RegExpExecArray | null;
+  while ((match = scanner.exec(html)) !== null) {
+    if (match[1].toLowerCase() !== tagName) continue;
+    if (isClosingTag(match[0])) {
+      depth -= 1;
+      if (depth === 0) return scanner.lastIndex;
+    } else if (!isSelfClosingTag(match[0])) {
+      depth += 1;
+    }
+  }
+  return null;
+}
+
+function removeMatchingElementBlocks(
+  html: string,
+  matchesOpeningTag: (tagName: string, openingTag: string) => boolean,
+): string {
+  const scanner = createTagScanner();
+  let cursor = 0;
+  let output = '';
+  let changed = false;
+  let match: RegExpExecArray | null;
+
+  while ((match = scanner.exec(html)) !== null) {
+    if (isClosingTag(match[0]) || !matchesOpeningTag(match[1].toLowerCase(), match[0])) continue;
+    const end = findBalancedElementEnd(html, match);
+    if (end === null) continue;
+
+    output += `${html.slice(cursor, match.index)} `;
+    cursor = end;
+    scanner.lastIndex = end;
+    changed = true;
+  }
+
+  return changed ? output + html.slice(cursor) : html;
+}
+
+function stripNoiseElements(html: string): string {
+  let cleaned = html;
+  for (let pass = 0; pass < 5; pass += 1) {
+    const withoutNoiseTags = removeMatchingElementBlocks(
+      cleaned,
+      (tagName) => PAIRED_NOISE_TAGS.has(tagName),
+    );
+    const next = removeMatchingElementBlocks(
+      withoutNoiseTags,
+      (_tagName, openingTag) => tagHasMatchingClassOrId(openingTag, NOISE_CLASS_OR_ID_PATTERN),
+    );
+    if (next === cleaned) break;
+    cleaned = next;
+  }
+  return cleaned;
+}
+
+function preferDescriptionContainer(region: string): string {
+  const scanner = createTagScanner();
+  let match: RegExpExecArray | null;
+  while ((match = scanner.exec(region)) !== null) {
+    const tagName = match[1].toLowerCase();
+    if (
+      isClosingTag(match[0])
+      || (tagName !== 'div' && tagName !== 'section')
+      || !tagHasMatchingClassOrId(match[0], DESCRIPTION_CLASS_OR_ID_PATTERN)
+    ) {
+      continue;
+    }
+
+    const end = findBalancedElementEnd(region, match);
+    if (end === null) continue;
+    const candidate = region.slice(match.index, end);
+    if (htmlToText(candidate).length >= MIN_HEURISTIC_CHARS) return candidate;
+  }
+  return region;
+}
+
+/**
+ * Readability-lite content score for an HTML block. Link-heavy blocks (nav,
+ * "similar jobs" rails, footers) score low even when their class names match
+ * no noise pattern. The squared content ratio makes a region that wraps both
+ * the JD and a link-heavy sibling score BELOW the clean JD child alone, so
+ * `selectBestContentBlock` can descend past unlabelled chrome.
+ */
+function scoreBlock(html: string): number {
+  const text = htmlToText(html);
+  if (text.length < MIN_HEURISTIC_CHARS) return 0;
+  let linkChars = 0;
+  for (const anchor of html.match(/<a\b[\s\S]*?<\/a>/gi) ?? []) {
+    linkChars += htmlToText(anchor).length;
+  }
+  const contentChars = Math.max(0, text.length - linkChars);
+  const bulletBonus = Math.min(500, (html.match(/<li\b/gi)?.length ?? 0) * 20);
+  return (contentChars * contentChars) / text.length + bulletBonus;
+}
+
+/** Direct child elements of a region whose first tag is the region's root. */
+function directChildElements(region: string): string[] {
+  const scanner = createTagScanner();
+  const rootMatch = scanner.exec(region);
+  if (!rootMatch || isClosingTag(rootMatch[0]) || isSelfClosingTag(rootMatch[0])) return [];
+
+  const children: string[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = scanner.exec(region)) !== null) {
+    if (isClosingTag(match[0]) || isSelfClosingTag(match[0])) continue;
+    const end = findBalancedElementEnd(region, match);
+    if (end === null) break;
+    children.push(region.slice(match.index, end));
+    scanner.lastIndex = end;
+  }
+  return children;
+}
+
+/**
+ * Fallback for pages with no description-classed container: pick the densest
+ * text block instead of admitting the whole region. Descends at most two
+ * levels, and only when a child genuinely outscores its parent — a region
+ * whose loose text matters always wins over any single child.
+ */
+function selectBestContentBlock(region: string, depth = 0): string {
+  if (depth >= 2) return region;
+  const regionScore = scoreBlock(region);
+  const children = directChildElements(region);
+  let best: string | null = null;
+  let bestScore = regionScore;
+  for (const child of children) {
+    const childScore = scoreBlock(child);
+    if (childScore > bestScore) {
+      best = child;
+      bestScore = childScore;
+    }
+  }
+  // Layout-only wrappers and their parent contain the same text/link mix, so
+  // their scores tie. Descend through that single neutral wrapper before
+  // comparing its real body/rail children; otherwise a common two-column page
+  // leaks the rail despite block scoring.
+  if (best === null && children.length === 1 && scoreBlock(children[0]) === regionScore) {
+    return selectBestContentBlock(children[0], depth + 1);
+  }
+  return best === null ? region : selectBestContentBlock(best, depth + 1);
+}
+
+function cleanExtractedJobText(text: string): string {
+  const seen = new Set<string>();
+  const lines: string[] = [];
+
+  for (const rawLine of text.split('\n')) {
+    const line = rawLine.trim();
+    const normalized = line.replace(/\s+/g, ' ');
+    if (!normalized) {
+      if (lines.length > 0 && lines[lines.length - 1] !== '') lines.push('');
+      continue;
+    }
+    if (STANDALONE_CTA_PATTERN.test(normalized)) continue;
+
+    const key = normalized.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    lines.push(line);
+  }
+
+  const cleaned = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const halfway = cleaned.length / 2;
+  let offset = 0;
+  for (const line of cleaned.split('\n')) {
+    if (offset >= halfway && TRAILING_BOILERPLATE_PATTERN.test(line.trim())) {
+      return cleaned.slice(0, offset).trim();
+    }
+    offset += line.length + 1;
+  }
+  return cleaned;
 }
 
 function parseJsonLdBlocks(html: string): unknown[] {
@@ -149,13 +382,21 @@ function pageTitle(html: string): string | null {
 }
 
 function extractFromMainContent(html: string): ExtractedJob | null {
-  const region = html.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
-    ?? html.match(/<article\b[\s\S]*?<\/article>/i)?.[0]
-    ?? html.match(/<[a-z]+\b[^>]*role\s*=\s*["']main["'][\s\S]*?>[\s\S]*<\/[a-z]+>/i)?.[0]
+  const heuristicHtml = html.slice(0, MAX_HTML_SCAN_CHARS);
+  const region = heuristicHtml.match(/<main\b[\s\S]*?<\/main>/i)?.[0]
+    ?? heuristicHtml.match(/<article\b[\s\S]*?<\/article>/i)?.[0]
+    ?? heuristicHtml.match(/<[a-z]+\b[^>]*role\s*=\s*["']main["'][\s\S]*?>[\s\S]*<\/[a-z]+>/i)?.[0]
     ?? null;
   if (!region) return null;
 
-  const jobText = htmlToText(region);
+  const cleanedRegion = stripNoiseElements(region);
+  let preferredRegion = preferDescriptionContainer(cleanedRegion);
+  if (preferredRegion === cleanedRegion) {
+    // No description-classed container qualified — score blocks instead of
+    // admitting the whole region (nav/ads/related rails would leak through).
+    preferredRegion = selectBestContentBlock(cleanedRegion);
+  }
+  const jobText = cleanExtractedJobText(htmlToText(preferredRegion));
   if (jobText.length < MIN_HEURISTIC_CHARS || jobText.length > MAX_JOB_TEXT_CHARS * 2) return null;
 
   return {

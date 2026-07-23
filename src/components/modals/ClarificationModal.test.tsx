@@ -2,6 +2,17 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { ClarificationModal } from '@/components/modals/ClarificationModal';
 
+const translate = vi.hoisted(() => (
+  key: string,
+  fallback?: string,
+) => (key === 'clarificationModal.regenerate' ? 'Generate different questions' : (fallback ?? key)));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: translate,
+  }),
+}));
+
 const question = {
   id: 'excelExperience',
   theme: 'Excel',
@@ -78,5 +89,39 @@ describe('ClarificationModal', () => {
 
     expect(screen.getByRole('button', { name: /submit answers/i })).toBeDisabled();
     expect(screen.getByText(/meaningful answer/i)).toBeInTheDocument();
+  });
+
+  it('renders a localized regenerate control and invokes it on click', () => {
+    const onRegenerate = vi.fn();
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+        onRegenerate={onRegenerate}
+      />,
+    );
+
+    const regenerate = screen.getByRole('button', { name: 'Generate different questions' });
+    expect(regenerate).toHaveAttribute('title', 'Generate different questions');
+
+    fireEvent.click(regenerate);
+    expect(onRegenerate).toHaveBeenCalledOnce();
+  });
+
+  it('disables regeneration while a fresh question set is loading', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        isRegenerating
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+        onRegenerate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Generate different questions' })).toBeDisabled();
   });
 });

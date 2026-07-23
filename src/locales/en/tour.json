@@ -19,22 +19,6 @@
           "content": "Share your referral link with friends! When they sign up, you both get 5 free credits. It's a win-win!"
         }
       }
-    },
-    "vision2030": {
-      "steps": {
-        "intro": {
-          "title": "Vision 2030 Alignment",
-          "content": "This AI-powered feature analyzes how your resume aligns with Saudi Vision 2030 priorities. It costs 2 credits and provides detailed insights."
-        },
-        "calculate": {
-          "title": "🎯 Get Your Alignment Score",
-          "content": "Click 'Calculate Alignment' to analyze your resume against Vision 2030 goals. You'll get a score and detailed recommendations."
-        },
-        "methodology": {
-          "title": "📊 How It's Calculated",
-          "content": "Want to understand the methodology? Click 'How is this calculated?' to see the detailed scoring criteria based on official Vision 2030 pillars."
-        }
-      }
     }
   }
 }

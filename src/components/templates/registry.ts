@@ -42,7 +42,7 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
     description: 'Skills-first layout for technical roles',
     descriptionAr: 'تخطيط يركز على المهارات للأدوار التقنية',
     isAtsOptimized: true,
-    previewColor: '#3b82f6', // blue-500
+    previewColor: '#3b82f6', // Unused template-identity metadata; intentionally stays blue.
   },
   {
     id: 'ats-optimized',

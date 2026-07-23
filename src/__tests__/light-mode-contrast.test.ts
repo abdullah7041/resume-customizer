@@ -22,6 +22,15 @@ const vision2030Files = [
   ['Vision2030CalculationModal.tsx', vision2030CalculationModalTsx],
 ];
 
+const optimizeFlowFiles = [
+  ['ClarificationModal.tsx', readFileSync(resolve(__dirname, '../components/modals/ClarificationModal.tsx'), 'utf-8')],
+  ['OptimizeSection.tsx', readFileSync(resolve(__dirname, '../components/sections/OptimizeSection.tsx'), 'utf-8')],
+  ['BulkAnalysisSection.tsx', readFileSync(resolve(__dirname, '../components/sections/BulkAnalysisSection.tsx'), 'utf-8')],
+  ['ScoreHeader.tsx', readFileSync(resolve(__dirname, '../components/sections/optimize/ScoreHeader.tsx'), 'utf-8')],
+  ['Vision2030Section.tsx', readFileSync(resolve(__dirname, '../components/Vision2030/Vision2030Section.tsx'), 'utf-8')],
+  ['SectorBreakdown.tsx', readFileSync(resolve(__dirname, '../components/Vision2030/SectorBreakdown.tsx'), 'utf-8')],
+];
+
 describe('Light mode contrast', () => {
   describe('index.css utility classes have dark-mode overrides', () => {
     it('.neu-inset has a .dark override', () => {
@@ -99,6 +108,16 @@ describe('Light mode contrast', () => {
       for (const offender of offenders) {
         expect(source).not.toMatch(offender);
       }
+    });
+  });
+
+  describe('Optimize/Bulk/Clarification surfaces pair status text colors with dark: variants', () => {
+    // Bare 200-400 shades are unreadable on the light default background; every
+    // status color must carry a light-safe default plus a dark: variant.
+    it.each(optimizeFlowFiles)('%s has no dark-only status text colors', (_fileName, source) => {
+      const offender =
+        /(?<!dark:)(?<!dark:hover:)(?<!dark:group-hover:)\btext-(emerald|amber|red|rose|yellow)-(200|300|400)\b/;
+      expect(source).not.toMatch(offender);
     });
   });
 });

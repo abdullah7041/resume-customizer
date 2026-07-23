@@ -28,7 +28,11 @@ vi.mock('../lib/assets', () => ({
 }));
 
 vi.mock('../components/ui/LanguageSwitcher', () => ({
-  LanguageSwitcher: () => <div>Language</div>,
+  LanguageSwitcher: ({ compact = false }: { compact?: boolean }) => (
+    <button type="button" aria-label="Language" data-compact={String(compact)}>
+      Language
+    </button>
+  ),
 }));
 
 vi.mock('../components/ui/GlassButton', () => ({
@@ -40,8 +44,8 @@ vi.mock('../components/ui/GlassButton', () => ({
 }));
 
 vi.mock('../components/Credits/CreditBalance', () => ({
-  CreditBalance: ({ onClick }: { onClick?: () => void }) => (
-    <button type="button" onClick={onClick}>
+  CreditBalance: ({ onClick, iconOnly = false }: { onClick?: () => void; iconOnly?: boolean }) => (
+    <button type="button" onClick={onClick} data-icon-only={String(iconOnly)}>
       Credits
     </button>
   ),
@@ -66,10 +70,13 @@ vi.mock('../components/Feedback/FeedbackModal', () => ({
   FeedbackModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Feedback modal</div> : null),
 }));
 
-const themeState = vi.hoisted(() => ({ theme: 'light' as 'light' | 'dark' }));
+const themeState = vi.hoisted(() => ({
+  theme: 'light' as 'light' | 'dark',
+  toggleTheme: vi.fn(),
+}));
 
 vi.mock('../hooks/useTheme', () => ({
-  useTheme: () => [themeState.theme, vi.fn()],
+  useTheme: () => [themeState.theme, themeState.toggleTheme],
 }));
 
 vi.mock('../hooks/useUserCredits', () => ({
@@ -82,6 +89,7 @@ describe('Header feedback action', () => {
   beforeEach(() => {
     authState.user = null;
     themeState.theme = 'light';
+    themeState.toggleTheme.mockClear();
     vi.stubGlobal('matchMedia', vi.fn(() => ({
       matches: false,
       addEventListener: vi.fn(),
@@ -110,6 +118,44 @@ describe('Header feedback action', () => {
     expect(await screen.findByRole('menuitem', { name: /feedback/i })).toBeInTheDocument();
   });
 
+  it('keeps theme and language controls directly available in both responsive headers', () => {
+    authState.user = {
+      id: 'user-1',
+      email: 'user@example.com',
+      app_metadata: {},
+      user_metadata: {},
+    };
+
+    const { container } = render(<Header />);
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    const themeButtons = screen.getAllByRole('button', { name: 'Toggle theme' });
+    expect(themeButtons).toHaveLength(2);
+
+    const languageButtons = screen.getAllByRole('button', { name: 'Language' });
+    expect(languageButtons).toHaveLength(2);
+    expect(languageButtons.filter((button) => button.dataset.compact === 'true')).toHaveLength(1);
+    expect(languageButtons.filter((button) => button.dataset.compact === 'false')).toHaveLength(1);
+
+    const mobilePreferences = container.querySelector('[data-mobile-header-preferences]');
+    expect(mobilePreferences).toHaveClass(
+      'absolute',
+      'end-[calc(var(--app-shell-gutter)+152px)]',
+    );
+
+    const mobileCredits = Array.from(container.querySelectorAll('[data-tour="credits"]'))
+      .find((element) => element.classList.contains('fixed'));
+    expect(mobileCredits).toHaveClass(
+      'fixed',
+      'end-[calc(var(--app-shell-gutter)+52px)]',
+    );
+    expect(mobileCredits?.querySelector('[data-icon-only="true"]')).toBeInTheDocument();
+
+    fireEvent.click(themeButtons[0]);
+    expect(themeState.toggleTheme).toHaveBeenCalledOnce();
+  });
+
   it('renders the authenticated account menu outside the clipped header when opened', async () => {
     authState.user = {
       id: 'user-1',
@@ -122,8 +168,10 @@ describe('Header feedback action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /account menu/i }));
 
-    expect(await screen.findByRole('menu')).toBeInTheDocument();
-    expect(screen.getAllByText('Language').length).toBeGreaterThan(0);
+    const menu = await screen.findByRole('menu');
+    expect(menu).toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Language' })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
   });
 
   it('mobile nav (dark mode): Feedback sits with Settings, secondary tools stay reachable', async () => {
@@ -144,6 +192,9 @@ describe('Header feedback action', () => {
     // Feedback is no longer in the prominent Credits block, but is reachable
     // alongside Settings in the Auth section.
     const navQueries = within(nav);
+    expect(navQueries.queryByRole('button', { name: 'Language' })).not.toBeInTheDocument();
+    expect(navQueries.queryByRole('button', { name: 'Toggle theme' })).not.toBeInTheDocument();
+
     const feedbackButton = await navQueries.findByRole('button', { name: /feedback/i });
     const settingsButton = navQueries.getByRole('button', { name: /settings/i });
     expect(feedbackButton).toBeInTheDocument();

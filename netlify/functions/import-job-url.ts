@@ -40,6 +40,7 @@ export type ImportFailureReason =
   | 'unsupported_url'
   | 'unreachable'
   | 'login_required'
+  | 'linkedin_blocked'
   | 'blocked'
   | 'timeout'
   | 'too_large'
@@ -57,6 +58,8 @@ const SAFE_FETCH_FAILURE_MAP: Record<SafeFetchFailure, ImportFailureReason> = {
   too_many_redirects: 'unreachable',
 };
 
+const LINKEDIN_BLOCK_STATUSES = new Set([401, 403, 429, 999]);
+
 const json = (statusCode: number, body: unknown) => ({
   statusCode,
   headers: { 'Content-Type': 'application/json' },
@@ -68,6 +71,7 @@ const FAILURE_MESSAGES: Record<ImportFailureReason, string> = {
   unsupported_url: 'This job URL format is not supported.',
   unreachable: 'The job page could not be reached.',
   login_required: 'The job page requires a login.',
+  linkedin_blocked: 'LinkedIn blocked automated access to this job page. Open the job on LinkedIn and paste the description manually.',
   blocked: 'This URL cannot be fetched.',
   timeout: 'The job page took too long to respond.',
   too_large: 'The job page is too large to import.',
@@ -156,17 +160,21 @@ const baseHandler: Handler = async (event) => {
     } catch (error) {
       if (error instanceof SafeFetchError) {
         console.warn(`[ImportJobUrl] fetch failed (${error.reason})`);
-        return failed(sourceUrl, SAFE_FETCH_FAILURE_MAP[error.reason]);
+        const mapped = SAFE_FETCH_FAILURE_MAP[error.reason];
+        return failed(sourceUrl, mapped);
       }
       throw error;
     }
 
     if (detectLoginWall(page.finalUrl, page.status, page.body)) {
       console.warn(`[ImportJobUrl] login wall detected (status ${page.status})`);
-      return failed(sourceUrl, 'login_required', page.finalUrl);
+      return failed(sourceUrl, linkedIn.isLinkedIn ? 'linkedin_blocked' : 'login_required', page.finalUrl);
     }
     if (page.status >= 400) {
       console.warn(`[ImportJobUrl] upstream status ${page.status}`);
+      if (linkedIn.isLinkedIn && LINKEDIN_BLOCK_STATUSES.has(page.status)) {
+        return failed(sourceUrl, 'linkedin_blocked', page.finalUrl);
+      }
       return failed(sourceUrl, page.status === 401 ? 'login_required' : 'unreachable', page.finalUrl);
     }
 

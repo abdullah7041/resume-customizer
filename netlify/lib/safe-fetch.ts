@@ -156,7 +156,11 @@ export function createSafeLookup(baseLookup: BaseLookup = dnsLookup) {
   return (
     hostname: string,
     options: Record<string, unknown>,
-    callback: (err: ErrnoLike | null, address: string, family: number) => void,
+    callback: (
+      err: ErrnoLike | null,
+      address: string | Array<{ address: string; family: number }>,
+      family: number,
+    ) => void,
   ) => {
     baseLookup(hostname, { ...options, all: true } as never, (err, addresses) => {
       if (err) return callback(err, '', 0);
@@ -174,6 +178,13 @@ export function createSafeLookup(baseLookup: BaseLookup = dnsLookup) {
             0,
           );
         }
+      }
+      // The socket layer may ask for the full address list (options.all — Node
+      // >= 20 sets it for Happy Eyeballs / autoSelectFamily). Answering that
+      // call with a single address string makes net.connect throw
+      // ERR_INVALID_IP_ADDRESS, which killed every fetch in production.
+      if (options?.all) {
+        return callback(null, list, 0);
       }
       callback(null, list[0].address, list[0].family);
     });
@@ -324,10 +335,11 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
 
       const rawContentType = response.headers['content-type'];
       const contentType = (Array.isArray(rawContentType) ? rawContentType[0] : rawContentType ?? '').toLowerCase();
-      if (contentType && !TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed))) {
+      const isTextType = TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed));
+      if (!isTextType) {
         response.abort();
         activeResponse = undefined;
-        throw new SafeFetchError('not_html', `content-type ${contentType.split(';')[0]}`);
+        throw new SafeFetchError('not_html', `content-type ${contentType.split(';')[0] || '(none)'}`);
       }
 
       const body = await response.readBody(maxBytes);

@@ -4,7 +4,7 @@ import { executeAiContract } from '../lib/ai-contracts/executor.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { Vision2030RequestSchema, formatZodError } from '../lib/resume-schemas.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
-import { checkCredits, consumeCredits, isEmailVerified } from '../lib/credit-manager.js';
+import { addCredits, checkCredits, consumeCredits, isEmailVerified } from '../lib/credit-manager.js';
 import { getClientIP } from '../lib/ip-utils.js';
 import type { Vision2030AnalysisResponse } from '../lib/vision2030-types.js';
 
@@ -101,7 +101,8 @@ const baseHandler: Handler = async (event) => {
     const duration = Date.now() - startTime;
     console.log(`[vision2030-alignment] OpenRouter call took ${duration}ms`);
 
-    // Consume credits AFTER successful analysis
+    // Consume credits AFTER successful analysis. The contract transform throws
+    // on empty/unusable output, so garbage results never reach this point.
     const creditResult = await consumeCredits(userEmail, 'vision2030');
 
     if (creditResult.success === false) {
@@ -119,13 +120,30 @@ const baseHandler: Handler = async (event) => {
       };
     }
 
+    // Fail-safe: once charged, any failure to deliver the result must refund.
+    let responseBody: string;
+    try {
+      responseBody = JSON.stringify({
+        ...analysis,
+        creditsRemaining: creditResult.creditsRemaining,
+      });
+    } catch (deliveryError) {
+      try {
+        await addCredits(userEmail, creditCheck.required, 'refund', {
+          feature: 'vision2030',
+          reason: 'result_delivery_failed',
+        });
+        console.warn('[vision2030-alignment] refunded credits after delivery failure');
+      } catch (refundError) {
+        captureError(refundError, { function: 'vision2030-alignment', stage: 'refund' });
+      }
+      throw deliveryError;
+    }
+
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...analysis,
-        creditsRemaining: creditResult.creditsRemaining,
-      })
+      body: responseBody
     };
 
   } catch (error) {

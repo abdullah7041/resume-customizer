@@ -1653,6 +1653,80 @@
     text-decoration: none;
   }
 
+  .majlis-footer a:hover {
+    color: var(--mj-ink);
+  }
+
+  .majlis-footer .majlis-footer-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 2rem;
+  }
+
+  .majlis-footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .majlis-footer-tagline {
+    font-size: 13px;
+    color: var(--mj-muted);
+  }
+
+  .majlis-footer-col {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.55rem;
+  }
+
+  .majlis-footer-col h3 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--mj-ink);
+    margin-bottom: 0.2rem;
+  }
+
+  .majlis-footer-col button {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    font-size: 14px;
+    color: var(--mj-green);
+    cursor: pointer;
+    text-align: start;
+  }
+
+  .majlis-footer-col button:hover {
+    color: var(--mj-greenhover);
+  }
+
+  .majlis-footer .majlis-footer-bottom {
+    display: block;
+    margin-top: 1.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--mj-hair);
+    font-size: 13px;
+    color: var(--mj-muted);
+  }
+
+  @media (max-width: 920px) {
+    .majlis-footer .majlis-footer-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .majlis-footer .majlis-footer-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   @media (max-width: 920px) {
     .majlis-nav {
       grid-template-columns: auto 1fr;

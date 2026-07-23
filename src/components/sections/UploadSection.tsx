@@ -249,6 +249,9 @@ export default function UploadSection({
 
     return (
         <div data-tour="upload" className="space-y-6">
+            {/* Validation Warnings — rendered from store via shared banner component */}
+            <ParsingWarningsBanner className="mb-4" />
+
             <UploadCard
                 fileName={fileName}
                 pastedText={pastedText}
@@ -266,11 +269,6 @@ export default function UploadSection({
                 isSaudiNational={isSaudiNational}
                 onSaudiNationalChange={setSaudiNational}
             />
-
-
-
-            {/* Validation Warnings — rendered from store via shared banner component */}
-            <ParsingWarningsBanner />
         </div>
     );
 }

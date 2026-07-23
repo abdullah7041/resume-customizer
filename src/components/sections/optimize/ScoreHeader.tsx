@@ -1,9 +1,10 @@
-import { Check, ChevronDown, Code2, GraduationCap, Lightbulb, Loader2, RotateCcw, Users, Briefcase, TrendingDown, TrendingUp } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Code2, GraduationCap, Lightbulb, Loader2, RotateCcw, Users, Briefcase, TrendingDown, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { GlassButton } from '@/components/ui/GlassButton';
+import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
 import { cn } from '@/lib/utils/cn';
 import type { CategoryScoresData } from '@/components/ScoreBreakdown';
-import type { ScorePresentation, VerifyAnomalyState } from '@/lib/optimize/scoreModel';
+import type { AppliedVerifyStatus, ScorePresentation, VerifyAnomalyState } from '@/lib/optimize/scoreModel';
 
 type CategoryKey = keyof CategoryScoresData;
 
@@ -12,6 +13,7 @@ interface ScoreHeaderProps {
   isAutoVerifying: boolean;
   verifyAnomaly: VerifyAnomalyState | null;
   verifyRetryUsed: boolean;
+  appliedVerifyStatus: AppliedVerifyStatus;
   categoryScores?: CategoryScoresData | null;
   expanded: boolean;
   expandedCategories: Set<CategoryKey>;
@@ -21,16 +23,17 @@ interface ScoreHeaderProps {
   onToggleExpanded: () => void;
   onToggleCategory: (category: CategoryKey) => void;
   onRetryVerify: () => void;
+  onRequestAppliedVerify: () => void;
   onRerun: () => void;
   onContinue: () => void;
   onReviewMatchGaps: () => void;
 }
 
-const categoryConfig = {
-  hard_skills: { icon: Code2, color: 'text-blue-500', bar: 'bg-blue-500' },
-  experience: { icon: Briefcase, color: 'text-purple-500', bar: 'bg-purple-500' },
-  education: { icon: GraduationCap, color: 'text-amber-500', bar: 'bg-amber-500' },
-  soft_skills: { icon: Users, color: 'text-emerald-500', bar: 'bg-emerald-500' },
+const categoryIcons = {
+  hard_skills: Code2,
+  experience: Briefcase,
+  education: GraduationCap,
+  soft_skills: Users,
 } as const;
 
 const categoryLabels: Record<CategoryKey, string> = {
@@ -45,6 +48,7 @@ export function ScoreHeader({
   isAutoVerifying,
   verifyAnomaly,
   verifyRetryUsed,
+  appliedVerifyStatus,
   categoryScores,
   expanded,
   expandedCategories,
@@ -54,6 +58,7 @@ export function ScoreHeader({
   onToggleExpanded,
   onToggleCategory,
   onRetryVerify,
+  onRequestAppliedVerify,
   onRerun,
   onContinue,
   onReviewMatchGaps,
@@ -63,6 +68,7 @@ export function ScoreHeader({
     baselineScore,
     allSuggestionsPotentialEstimate,
     verifiedAllSuggestionsScore,
+    appliedVerificationPending,
     displayState,
     arrowTarget,
     arrowIsVerified,
@@ -124,8 +130,8 @@ export function ScoreHeader({
                   <span className={cn(
                     'inline-flex min-h-7 items-center gap-1 rounded-full border px-2 text-xs font-bold',
                     delta > 0
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                      : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-400'
                   )}>
                     <DeltaIcon className="h-3.5 w-3.5" />
                     {delta > 0 ? `+${delta}%` : `${delta}%`}
@@ -200,6 +206,36 @@ export function ScoreHeader({
               </p>
             )}
 
+            {!isAutoVerifying && !verifyAnomaly && appliedVerificationPending
+              && displayState !== 'verified_no_change' && displayState !== 'verified_decreased' && (
+              appliedVerifyStatus === 'failed' ? (
+                <p className="font-semibold text-amber-600 dark:text-amber-300">
+                  {t('sections.optimize.scoreHeader.appliedVerifyFailed', "Couldn't verify the new score — showing an estimate.")}
+                </p>
+              ) : appliedVerifyStatus === 'guest' ? (
+                <p>{t('sections.optimize.scoreHeader.appliedVerifySignIn', 'Sign in to verify your updated score — showing an estimate.')}</p>
+              ) : appliedVerifyStatus === 'unavailable' ? (
+                <p>{t('sections.optimize.scoreHeader.appliedVerifyUnavailable', 'Add a job description to recalculate your updated score.')}</p>
+              ) : appliedVerifyStatus === 'pending' ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {t('sections.optimize.scoreHeader.appliedVerifyPending', 'Recalculating your score for the applied changes...')}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onRequestAppliedVerify}
+                  className="min-h-8 rounded-lg border border-emerald-500/30 px-3 font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/10 dark:text-emerald-300"
+                >
+                  {t('sections.optimize.scoreHeader.appliedVerifyReady', 'Recalculate updated score')}
+                </button>
+              )
+            )}
+
+            {!isAutoVerifying && !verifyAnomaly && arrowIsVerified && delta === 0 && (
+              <p>{t('sections.optimize.scoreHeader.verifiedNoGainYet', "Verified — the applied changes haven't moved the score yet.")}</p>
+            )}
+
             {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && counts.actionableTotal > 0 && (
               <p>
                 {t('sections.optimize.scoreHeader.suggestionsReady', { defaultValue: '{{total}} suggestions ready · none applied yet', total: counts.actionableTotal + counts.recommendationTotal })}
@@ -210,8 +246,17 @@ export function ScoreHeader({
                 {t('sections.optimize.scoreHeader.potentialEstimate', { defaultValue: 'Up to ~{{score}}% if all suggestions are applied (estimate)', score: allSuggestionsPotentialEstimate })}
               </p>
             )}
-            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && estimateIsZero && (
+            {/* A zero ESTIMATE may only be presented while nothing is applied —
+                once cards are applied the genuine re-score (or its pending
+                state) speaks instead. estimateIsZero already enforces this;
+                the count gate is belt-and-braces. */}
+            {!isAutoVerifying && !verifyAnomaly && displayState === 'current' && estimateIsZero && counts.actionableApplied === 0 && (
               <p>{t('sections.optimize.scoreHeader.noGainPredicted', 'No measurable Match-score increase predicted (estimate)')}</p>
+            )}
+            {!isPlaceholderScore && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {t('sections.optimize.scoreHeader.estimateDisclaimer', 'Important: review changes before applying — AI can make mistakes, and projections are estimates until verified.')}
+              </p>
             )}
           </div>
         </div>
@@ -235,8 +280,16 @@ export function ScoreHeader({
           <GlassButton variant="ghost" size="sm" onClick={onRerun} disabled={isOptimizing} leftIcon={<RotateCcw className="h-3.5 w-3.5" />} className="w-full sm:w-auto">
             {t('sections.optimize.scoreHeader.rerun', 'Re-run')}
           </GlassButton>
-          <GlassButton variant="primary" size="sm" onClick={onContinue} disabled={!canExport} className="w-full sm:w-auto">
-            {t('sections.optimize.scoreHeader.continue', 'Continue')}
+          <GlassButton
+            variant="primary"
+            size="sm"
+            onClick={onContinue}
+            disabled={!canExport}
+            title={!canExport ? t('sections.optimize.scoreHeader.continueDisabled', 'Upload a resume first to continue') : undefined}
+            className="w-full sm:w-auto"
+          >
+            {t('sections.optimize.scoreHeader.continueToTemplates', 'Continue to Templates')}
+            <ArrowRight className={cn('ms-1.5 h-3.5 w-3.5', isArabic && 'rotate-180')} />
           </GlassButton>
           {categories.length > 0 && (
             <button
@@ -256,7 +309,8 @@ export function ScoreHeader({
           {categories.map((key) => {
             const item = categoryScores?.[key];
             if (!item) return null;
-            const Icon = categoryConfig[key].icon;
+            const Icon = categoryIcons[key];
+            const colors = CATEGORY_COLORS[key];
             const percent = item.max > 0 ? Math.min(100, Math.round((item.score / item.max) * 100)) : 0;
             const isOpen = expandedCategories.has(key);
 
@@ -264,7 +318,7 @@ export function ScoreHeader({
               <div key={key} className="rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-3 dark:border-white/10 dark:bg-white/5">
                 <button type="button" onClick={() => onToggleCategory(key)} className="flex min-h-11 w-full items-center justify-between gap-3 text-start">
                   <span className="flex min-w-0 items-center gap-2">
-                    <Icon className={cn('h-4 w-4 shrink-0', categoryConfig[key].color)} />
+                    <Icon className={cn('h-4 w-4 shrink-0', colors.textClass)} />
                     <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                       {t(`optimize.scoreBreakdown.categories.${categoryLabels[key]}`, key)}
                     </span>
@@ -272,7 +326,7 @@ export function ScoreHeader({
                   <span className="shrink-0 text-sm font-bold tabular-nums text-gray-700 dark:text-gray-200">{item.score}/{item.max}</span>
                 </button>
                 <div className={cn('mt-2 flex h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-black/30', isArabic && 'justify-end')}>
-                  <div className={cn('h-full rounded-full', categoryConfig[key].bar)} style={{ width: `${percent}%` }} />
+                  <div className={cn('h-full rounded-full', colors.barClass)} style={{ width: `${percent}%` }} />
                 </div>
                 {isOpen && item.reasoning && (
                   <p className="mt-3 text-xs leading-relaxed text-gray-600 dark:text-gray-400">{item.reasoning}</p>

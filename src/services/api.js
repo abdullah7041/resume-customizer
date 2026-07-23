@@ -703,6 +703,7 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
  * @param {string} params.resumeText
  * @param {string} params.jobDesc
  * @param {string} [params.language='en']
+ * @param {boolean} [params.regenerate]
  * @returns {Promise<{ clarifications: Array<{
  *   id: string,
  *   theme: string,
@@ -714,13 +715,18 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
  *   defaultValue?: string
  * }> }>}
  */
-export const generateClarifications = async ({ resumeText, jobDesc, language = 'en' }) => {
+export const generateClarifications = async ({ resumeText, jobDesc, language = 'en', regenerate }) => {
   try {
     const headers = await getAuthHeaders({ requireAuth: true });
     const response = await fetch(CLARIFY_ENDPOINT, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ resumeText, jobText: jobDesc, language }),
+      body: JSON.stringify({
+        resumeText,
+        jobText: jobDesc,
+        language,
+        ...(typeof regenerate === 'boolean' ? { regenerate } : {}),
+      }),
     });
     if (!response.ok) {
       console.warn('[API] generateClarifications returned non-OK status:', response.status);

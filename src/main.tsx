@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react";
+import { scrubSentryEvent } from "@/lib/utils/scrubSentryEvent";
 
 Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -10,6 +11,7 @@ Sentry.init({
     }),
   ],
   environment: import.meta.env.MODE,
+  sendDefaultPii: false,
 
   // Performance Monitoring
   tracesSampleRate: 0.1, // 10% of transactions (adjust for traffic)
@@ -29,7 +31,7 @@ Sentry.init({
   beforeSend(event) {
     // Don't send errors in development
     if (import.meta.env.DEV) return null;
-    return event;
+    return scrubSentryEvent(event);
   },
 });
 

@@ -35,6 +35,7 @@ interface JobGroupCardProps {
   onApply: (opt: OptimizationResult) => void;
   onRevert: (sectionId: string) => void;
   onApplyGroup: (ids: string[]) => void;
+  onRevertGroup: (ids: string[]) => void;
   onCopy?: (value: string) => Promise<void>;
   onStartRefine: (sectionId: string) => void;
   onRefineInstructionChange: (value: string) => void;
@@ -67,6 +68,7 @@ export const JobGroupCard = memo(function JobGroupCard({
   onApply,
   onRevert,
   onApplyGroup,
+  onRevertGroup,
   onCopy,
   onStartRefine,
   onRefineInstructionChange,
@@ -76,6 +78,7 @@ export const JobGroupCard = memo(function JobGroupCard({
   const isRecommendationGroup = group.kind === 'recommendation';
   const appliedCount = group.items.filter((item) => item.applied).length;
   const pendingIds = group.items.flatMap((item) => item.applied ? [] : [item.sectionId]);
+  const appliedIds = group.items.flatMap((item) => item.applied ? [item.sectionId] : []);
   const allApplied = !isRecommendationGroup && pendingIds.length === 0;
 
   return (
@@ -102,15 +105,27 @@ export const JobGroupCard = memo(function JobGroupCard({
             {t('sections.optimize.queue.recommendationsBadge', 'Recommendations — not applied to your resume')}
           </span>
         ) : (
-          <button
-            type="button"
-            onClick={() => onApplyGroup(pendingIds)}
-            disabled={allApplied}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
-          >
-            <Check className="h-4 w-4" />
-            {t('sections.optimize.queue.applyGroup', 'Apply all in this job')}
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => onApplyGroup(pendingIds)}
+              disabled={allApplied}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-300"
+            >
+              <Check className="h-4 w-4" />
+              {t('sections.optimize.queue.applyGroup', 'Apply all in this job')}
+            </button>
+            {appliedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onRevertGroup(appliedIds)}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 text-sm font-semibold text-red-700 transition-colors hover:bg-red-500/15 dark:text-red-300"
+              >
+                <RotateCcw className="h-4 w-4" />
+                {t('sections.optimize.queue.revertGroup', 'Revert all in this job')}
+              </button>
+            )}
+          </div>
         )}
       </div>
 

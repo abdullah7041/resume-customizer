@@ -102,6 +102,16 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result!.jobText).not.toContain('menu menu');
   });
 
+  it('limits role=main heuristic matching to the first 400 KB of HTML', () => {
+    const page = `<html><head><title>Careers — Acme</title></head><body>${'x'.repeat(600_000)}
+      <section role="main">${LONG_DESCRIPTION_HTML}</section></body></html>`;
+    const startedAt = performance.now();
+    const result = extractJobFromHtml(page);
+
+    expect(performance.now() - startedAt).toBeLessThan(1000);
+    expect(result).toEqual(extractJobFromHtml(page.slice(0, 400_000)));
+  });
+
   it('returns null when only a truncated og:description exists (never imports partial JDs)', () => {
     const page = `
       <html><head><meta property="og:description" content="We are hiring an engineer..." /></head>
@@ -112,6 +122,271 @@ describe('extractJobFromHtml — main-content heuristic', () => {
 
   it('returns null for empty input', () => {
     expect(extractJobFromHtml('')).toBeNull();
+  });
+
+  it('cleans a LinkedIn guest-shaped main region while keeping the job description', () => {
+    const page = `
+      <html><head><title>Senior Backend Engineer | Acme</title></head><body>
+        <main>
+          <div class="top-card-actions"><button>Apply</button><button>Save</button></div>
+          <section class="show-more-less-html__markup">${LONG_DESCRIPTION_HTML}</section>
+          <aside class="recruiter-card">
+            <h2>Meet the recruiter</h2><p>Message Taylor about this role.</p>
+          </aside>
+          <section class="similar-jobs">
+            <h2>Similar jobs</h2><p>Staff Engineer at Another Company</p>
+          </section>
+          <form class="sign-in"><p>Sign in to apply</p></form>
+        </main>
+      </body></html>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.source).toBe('heuristic');
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/apply|save|meet the recruiter|taylor|similar jobs|sign in/i);
+  });
+
+  it('prefers a qualified description container over the broader cleaned region', () => {
+    const page = `
+      <main>
+        <p>Page-level promotional copy that is not part of the role.</p>
+        <div class="posting-description">${LONG_DESCRIPTION_HTML}</div>
+        <section><h2>Company updates</h2><p>Follow Acme for weekly product news.</p></section>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('Senior Backend Engineer');
+    expect(result?.jobText).not.toContain('Page-level promotional copy');
+    expect(result?.jobText).not.toContain('Company updates');
+  });
+
+  it('deduplicates exact normalized lines and keeps the first occurrence', () => {
+    const repeated = 'Own platform reliability and partner with product teams across the full delivery lifecycle.';
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>${repeated}</p>
+        <p>  OWN   PLATFORM RELIABILITY and partner with product teams across the full delivery lifecycle.  </p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+    const normalizedMatches = result?.jobText.match(/own\s+platform reliability and partner with product teams across the full delivery lifecycle\./gi);
+
+    expect(normalizedMatches).toHaveLength(1);
+    expect(result?.jobText).toContain(repeated);
+  });
+
+  it('truncates trailing similar-jobs content when its heading starts in the second half', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>You will mentor engineers and improve delivery practices across the organization.</p>
+        <h2>Similar jobs</h2>
+        <p>Staff Engineer at Another Company</p>
+        <p>Engineering Manager at Example Limited</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('mentor engineers');
+    expect(result?.jobText).not.toContain('Similar jobs');
+    expect(result?.jobText).not.toContain('Another Company');
+  });
+
+  it('uses the whole cleaned region when no description container is qualified', () => {
+    const page = `
+      <main>
+        <section class="description"><p>Short role summary.</p></section>
+        <div>${LONG_DESCRIPTION_HTML}</div>
+        <p>This final requirement is only available in the broader main region.</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('Short role summary.');
+    expect(result?.jobText).toContain('This final requirement is only available in the broader main region.');
+  });
+
+  it('strips cookie-consent, newsletter and sidebar blocks by class name', () => {
+    const page = `
+      <main>
+        <div class="cookie-consent"><p>We use cookies to improve your experience. Accept all cookies.</p></div>
+        <div class="job-content">${LONG_DESCRIPTION_HTML}</div>
+        <div class="newsletter-signup"><p>Subscribe to weekly job alerts in your inbox.</p></div>
+        <div class="sidebar-widget"><a href="/j/1">Marketing Manager</a><a href="/j/2">HR Generalist</a></div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/cookies|subscribe|marketing manager|hr generalist/i);
+  });
+
+  it('drops a link-heavy rail with neutral class names via block scoring', () => {
+    // No class/id matches any noise pattern — only text/link density can
+    // separate the JD body from the related-jobs rail.
+    const page = `
+      <main>
+        <div class="col-left">${LONG_DESCRIPTION_HTML}</div>
+        <div class="col-right">
+          <a href="/jobs/1">Senior Accountant — Riyadh, full time, competitive salary package</a>
+          <a href="/jobs/2">Warehouse Supervisor — Dammam, rotating shifts, transport provided</a>
+          <a href="/jobs/3">Sales Executive — Khobar, automotive sector, commission scheme</a>
+          <a href="/jobs/4">Executive Assistant — Jeddah, immediate start, bilingual preferred</a>
+          <a href="/jobs/5">Graphic Designer — Riyadh, agency environment, portfolio required</a>
+          <a href="/jobs/6">HR Generalist — Riyadh, 2 years experience, CIPD a plus</a>
+        </div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/senior accountant|warehouse supervisor|graphic designer/i);
+  });
+
+  it('descends through a neutral layout wrapper before scoring the JD body against a link rail', () => {
+    const page = `
+      <main>
+        <div class="layout">
+          <div class="body">${LONG_DESCRIPTION_HTML}</div>
+          <div class="rail">
+            <a href="/jobs/1">Senior Accountant — Riyadh, full time, competitive salary package</a>
+            <a href="/jobs/2">Warehouse Supervisor — Dammam, rotating shifts, transport provided</a>
+            <a href="/jobs/3">Sales Executive — Khobar, automotive sector, commission scheme</a>
+            <a href="/jobs/4">Executive Assistant — Jeddah, immediate start, bilingual preferred</a>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toMatch(/senior accountant|warehouse supervisor|sales executive/i);
+  });
+
+  it('truncates trailing Arabic similar-jobs boilerplate in the second half', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>You will mentor engineers and improve delivery practices across the organization.</p>
+        <h2>وظائف مشابهة</h2>
+        <p>مهندس برمجيات أول في شركة أخرى</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('mentor engineers');
+    expect(result?.jobText).not.toContain('وظائف مشابهة');
+    expect(result?.jobText).not.toContain('مهندس برمجيات أول');
+  });
+
+  it('keeps a description container classed job-ad__description (bare "ad" is not noise)', () => {
+    const page = `
+      <main>
+        <p>Page-level promotional copy that is not part of the role.</p>
+        <div class="job-ad__description">${LONG_DESCRIPTION_HTML}</div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('design, build and operate high-throughput APIs');
+    expect(result?.jobText).not.toContain('Page-level promotional copy');
+  });
+
+  it('removes an entire noise block with nested elements of the same tag', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <div class="similar-jobs">
+          <div>First unrelated recommendation.</div>
+          <div>Second unrelated recommendation.</div>
+        </div>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).not.toContain('First unrelated recommendation.');
+    expect(result?.jobText).not.toContain('Second unrelated recommendation.');
+  });
+
+  it('keeps every nested same-tag child in a qualified description container', () => {
+    const page = `
+      <main>
+        <div class="description">
+          <div>${LONG_DESCRIPTION_HTML}</div>
+          <div>Critical requirement: lead production incident reviews and mentor platform engineers.</div>
+        </div>
+        <p>Page promotion outside the job description.</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('Critical requirement: lead production incident reviews');
+    expect(result?.jobText).not.toContain('Page promotion outside the job description.');
+  });
+
+  it('does not treat data-testid as an id attribute', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <div data-testid="related-content">
+          <p>Required role context carried by a prefixed attribute.</p>
+        </div>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .toContain('Required role context carried by a prefixed attribute.');
+  });
+
+  it('does not treat data-class as a class attribute', () => {
+    const page = `
+      <main>
+        <div data-class="job-description">${LONG_DESCRIPTION_HTML}</div>
+        <p>Required role context from the broader main region.</p>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .toContain('Required role context from the broader main region.');
+  });
+
+  it('recognizes an unquoted class attribute on a noise block', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <div class=similar-jobs><p>Unquoted-class recommendation noise.</p></div>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .not.toContain('Unquoted-class recommendation noise.');
+  });
+
+  it('recognizes an unquoted id attribute on a description container', () => {
+    const page = `
+      <main>
+        <div id=job-description>${LONG_DESCRIPTION_HTML}</div>
+        <p>Page promotion outside the unquoted description container.</p>
+      </main>
+    `;
+
+    expect(extractJobFromHtml(page)?.jobText)
+      .not.toContain('Page promotion outside the unquoted description container.');
   });
 });
 

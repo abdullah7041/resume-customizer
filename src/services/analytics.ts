@@ -4,6 +4,7 @@ import type {
     FeedbackType,
     FeedbackWillingnessToPay,
 } from '@/types/feedback';
+import type { GetStartedSource } from '@/types/analytics';
 
 const MIXPANEL_TOKEN = import.meta.env.VITE_MIXPANEL_TOKEN;
 let mixpanel: typeof import('mixpanel-browser').default | null = null;
@@ -132,7 +133,7 @@ class Analytics {
     /**
      * Track optimization events.
      */
-    trackOptimization(action: 'started' | 'completed' | 'applied', data?: Record<string, unknown>) {
+    trackOptimization(action: 'started' | 'completed' | 'applied' | 'applied_all' | 'reverted_all', data?: Record<string, unknown>) {
         this.track(`optimization_${action}`, data);
     }
 
@@ -250,7 +251,7 @@ class Analytics {
         this.track('landing_viewed');
     }
 
-    trackGetStartedClicked(source: 'hero' | 'walkthrough' | 'final_cta') {
+    trackGetStartedClicked(source: GetStartedSource) {
         this.track('get_started_clicked', { source });
     }
 
@@ -401,7 +402,7 @@ class Analytics {
         this.track('pipeline_save_clicked');
     }
 
-    trackPipelineJobSaved(data?: { is_duplicate?: boolean }) {
+    trackPipelineJobSaved(data?: { is_duplicate?: boolean; auto?: boolean }) {
         this.track('pipeline_job_saved', data);
     }
 

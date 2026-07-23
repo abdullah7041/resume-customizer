@@ -13,7 +13,9 @@
 //   verifiedAllSuggestionsScore     — genuine re-score of the resume with all
 //                                     actionable suggestions applied. A target, not
 //                                     the current score; valid only while its
-//                                     signature matches the live card set.
+//                                     signature matches the live card set. Verified
+//                                     no-change and decrease outcomes never fabricate
+//                                     an upward projection.
 import type { OptimizationMetrics, OptimizationResult } from '@/types/templates';
 import { partitionOptimizations } from '@/lib/optimize/actionability';
 
@@ -28,8 +30,16 @@ export type DisplayState =
   | 'estimated_applied'
   | 'verified_potential'
   | 'verified_applied'
+  | 'verified_applied_partial'
   | 'verified_no_change'
   | 'verified_decreased';
+
+/**
+ * Lifecycle of the applied-subset re-verification, shared by OptimizeSection
+ * and ScoreHeader. 'ready' requires an explicit credit-confirmed user action;
+ * 'guest' and 'unavailable' never show a false loading state.
+ */
+export type AppliedVerifyStatus = 'idle' | 'ready' | 'pending' | 'failed' | 'guest' | 'unavailable';
 
 /** Typed verification-anomaly state shared by OptimizeSection and ScoreHeader. */
 export type VerifyAnomalyKind = 'too_short' | 'no_text_change' | 'anomalous_drop' | 'error';
@@ -62,6 +72,18 @@ export interface ScorePresentation {
   currentAppliedProjection: number | null;
   allSuggestionsPotentialEstimate: number | null;
   verifiedAllSuggestionsScore: number | null;
+  /**
+   * Genuine re-score of the resume with ONLY the currently applied cards
+   * merged (signature-checked). When all actionable cards are applied it
+   * reuses the valid all-suggestions verification — same merged resume.
+   */
+  verifiedAppliedScore: number | null;
+  /**
+   * True when cards are applied but no genuine re-score covers the current
+   * applied set yet — the UI owes the user a recalculation, and must never
+   * present the baseline (or a zero estimate) as a settled answer.
+   */
+  appliedVerificationPending: boolean;
   verifiedOutcome: VerifiedOutcome | null;
   displayState: DisplayState;
   /** Optional second score rendered beside the baseline score. */
@@ -115,6 +137,25 @@ export function verificationSignature(
   return `${fnv1a(cards)}-${fnv1a(resumeText)}-${fnv1a(jobDescription)}`;
 }
 
+/**
+ * Invalidation key for an applied-subset verification. Unlike
+ * `verificationSignature`, each card also contributes its applied bit — WHICH
+ * cards are applied is the whole point, so applying or reverting any card
+ * shifts the signature and forces a fresh re-score of the new subset.
+ * Merge-failed cards always contribute '0' (they never merge).
+ */
+export function appliedVerificationSignature(
+  actionable: readonly OptimizationResult[],
+  resumeText: string,
+  jobDescription: string,
+): string {
+  const cards = actionable
+    .map((o) => `${o.sectionId}::${o.applied && o.mergeStatus !== 'failed' ? '1' : '0'}::${cardText(o.original)}::${cardText(o.optimized)}`)
+    .sort()
+    .join('|');
+  return `${fnv1a(cards)}-${fnv1a(resumeText)}-${fnv1a(jobDescription)}`;
+}
+
 export interface ScorePresentationInput {
   optimizations: readonly OptimizationResult[];
   /** Resolved via the existing baseline priority chain (may be null = placeholder). */
@@ -122,23 +163,23 @@ export interface ScorePresentationInput {
   /** Generation-time estimate if all actionable suggestions applied (never the verified delta). */
   improvement: number | null;
   verifiedPotential: OptimizationMetrics['verifiedPotential'] | undefined;
+  verifiedApplied?: OptimizationMetrics['verifiedApplied'] | undefined;
   resumeText: string;
   jobDescription: string;
 }
 
 export function buildScorePresentation(input: ScorePresentationInput): ScorePresentation {
   const { actionable, recommendations } = partitionOptimizations(input.optimizations);
+  const actionableForProjection = actionable.filter((o) => o.mergeStatus !== 'failed');
 
-  const actionableTotal = actionable.length;
+  const actionableTotal = actionableForProjection.length;
   const mergeFailed = actionable.filter((o) => o.mergeStatus === 'failed').length;
-  const actionableApplied = actionable.filter((o) => o.applied && o.mergeStatus !== 'failed').length;
+  const actionableApplied = actionableForProjection.filter((o) => o.applied).length;
 
   const baseline = input.baselineScore;
   const isPlaceholderScore = baseline === null;
 
   const improvement = input.improvement;
-  const estimateMeaningful = improvement !== null && improvement >= MIN_MEANINGFUL_ESTIMATE;
-  const estimateIsZero = improvement === 0;
 
   // A verified potential only counts while its signature matches the live card set.
   let verifiedAllSuggestionsScore: number | null = null;
@@ -152,21 +193,58 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
     }
   }
 
+  const verifiedDelta = verifiedAllSuggestionsScore !== null && baseline !== null
+    ? verifiedAllSuggestionsScore - baseline
+    : null;
+  const effectiveImprovement = verifiedDelta ?? improvement;
+  const estimateMeaningful = effectiveImprovement !== null
+    && effectiveImprovement >= MIN_MEANINGFUL_ESTIMATE;
+  const generationEstimateMeaningful = improvement !== null
+    && improvement >= MIN_MEANINGFUL_ESTIMATE;
+  // A zero estimate is only a settled "current" statement while nothing is
+  // applied — once cards are applied the truth is a genuine re-score (or the
+  // fact that one is still pending), never "no gain predicted".
+  const estimateIsZero = improvement === 0 && verifiedDelta === null && actionableApplied === 0;
+
+  const allActionableApplied = actionableTotal > 0 && actionableApplied === actionableTotal;
+
+  // Genuine score of the CURRENT applied subset. Sources, in order:
+  //   1. An applied-subset verification whose signature matches the live set.
+  //   2. When ALL actionable cards are applied, the valid all-suggestions
+  //      verification — the merged resume is identical, so its score is the
+  //      current score, not merely a target.
+  let verifiedAppliedScore: number | null = null;
+  const verifiedAppliedMetric = input.verifiedApplied;
+  if (verifiedAppliedMetric && baseline !== null && actionableApplied > 0) {
+    const liveAppliedSignature = appliedVerificationSignature(actionable, input.resumeText, input.jobDescription);
+    if (verifiedAppliedMetric.appliedSignature === liveAppliedSignature) {
+      verifiedAppliedScore = clampScore(verifiedAppliedMetric.score);
+    }
+  }
+  if (verifiedAppliedScore === null && allActionableApplied && verifiedAllSuggestionsScore !== null) {
+    verifiedAppliedScore = verifiedAllSuggestionsScore;
+  }
+
+  const appliedVerificationPending = actionableApplied > 0 && verifiedAppliedScore === null;
+
   const currentAppliedProjection =
     baseline !== null && actionableTotal > 0 && actionableApplied > 0 && estimateMeaningful
-      ? clampScore(baseline + Math.round((improvement as number) * (actionableApplied / actionableTotal)))
+      ? clampScore(baseline + Math.round((effectiveImprovement as number) * (actionableApplied / actionableTotal)))
       : null;
 
   const allSuggestionsPotentialEstimate =
-    baseline !== null && estimateMeaningful ? clampScore(baseline + (improvement as number)) : null;
+    baseline !== null && generationEstimateMeaningful ? clampScore(baseline + (improvement as number)) : null;
 
   let displayState: DisplayState;
+  // The verified no-change/decrease banners keep precedence — applying cards
+  // must never hide the honest "rewording will not move this match" verdict.
   if (verifiedOutcome === 'decreased') {
     displayState = 'verified_decreased';
   } else if (verifiedOutcome === 'no_change') {
     displayState = 'verified_no_change';
+  } else if (verifiedAppliedScore !== null) {
+    displayState = allActionableApplied ? 'verified_applied' : 'verified_applied_partial';
   } else if (verifiedOutcome === 'improved') {
-    const allActionableApplied = actionableTotal > 0 && actionableApplied === actionableTotal;
     displayState = allActionableApplied ? 'verified_applied' : 'verified_potential';
   } else if (actionableApplied > 0 && estimateMeaningful && baseline !== null) {
     displayState = 'estimated_applied';
@@ -174,18 +252,20 @@ export function buildScorePresentation(input: ScorePresentationInput): ScorePres
     displayState = 'current';
   }
 
-  const arrowTarget = displayState === 'verified_applied'
-    ? verifiedAllSuggestionsScore
+  const arrowTarget = (displayState === 'verified_applied' || displayState === 'verified_applied_partial')
+    ? (verifiedAppliedScore ?? verifiedAllSuggestionsScore)
     : (displayState === 'estimated_applied' || displayState === 'verified_potential')
       ? currentAppliedProjection
       : null;
-  const arrowIsVerified = displayState === 'verified_applied';
+  const arrowIsVerified = displayState === 'verified_applied' || displayState === 'verified_applied_partial';
 
   return {
     baselineScore: baseline,
     currentAppliedProjection,
     allSuggestionsPotentialEstimate,
     verifiedAllSuggestionsScore,
+    verifiedAppliedScore,
+    appliedVerificationPending,
     verifiedOutcome,
     displayState,
     arrowTarget,

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useResumeStore } from './resumeStore';
 import type { ResumeSchema } from '../../types/resume';
 import type { OptimizationResult } from '../../types/templates';
+import { buildScorePresentation, verificationSignature } from '@/lib/optimize/scoreModel';
 
 describe('resumeStore', () => {
     beforeEach(() => {
@@ -68,6 +69,80 @@ describe('resumeStore', () => {
         useResumeStore.getState().setHasDownloaded(true);
         useResumeStore.getState().setShowOptimized(true);
         expect(useResumeStore.getState().hasDownloaded).toBe(false);
+    });
+
+    it('keeps applied counts and verified projection inputs aligned after persist round-trip', () => {
+        const resumeText = 'Persisted resume text with enough detail to preserve the score verification signature across hydration.';
+        const jobDescription = 'Senior frontend engineer role requiring React and TypeScript delivery experience.';
+        const optimizations: OptimizationResult[] = [
+            {
+                sectionId: 'summary-0',
+                sectionType: 'summary',
+                original: 'Built applications.',
+                optimized: 'Built React applications.',
+                applied: true,
+                mergeStatus: 'mergeable',
+            },
+            {
+                sectionId: 'experience-0',
+                sectionType: 'experience',
+                original: 'Delivered features.',
+                optimized: 'Delivered TypeScript features.',
+                applied: false,
+                mergeStatus: 'mergeable',
+            },
+            {
+                sectionId: 'headline-0',
+                sectionType: 'headline',
+                original: 'Engineer',
+                optimized: 'Senior Frontend Engineer',
+                applied: false,
+                mergeStatus: 'failed',
+            },
+        ];
+        const verifiedPotential = {
+            score: 78,
+            baselineAtVerify: 60,
+            signature: verificationSignature(optimizations, resumeText, jobDescription),
+            verifiedAt: Date.now(),
+            outcome: 'improved' as const,
+        };
+
+        useResumeStore.getState().setParsedResumeText(resumeText);
+        useResumeStore.getState().setOptimizations(optimizations);
+        useResumeStore.getState().setBaselineMatchScore(60);
+        useResumeStore.getState().setOptimizationMetrics({
+            improvement: null,
+            verifiedPotential,
+            hasJobDescription: true,
+        });
+
+        const { partialize, merge } = useResumeStore.persist.getOptions();
+        if (!partialize || !merge) throw new Error('Persist round-trip options are unavailable');
+        const persisted = partialize(useResumeStore.getState());
+        const roundTripped = JSON.parse(JSON.stringify(persisted)) as typeof persisted;
+
+        useResumeStore.getState().clearAll();
+        const rehydrated = merge(
+            roundTripped,
+            useResumeStore.getState(),
+        ) as ReturnType<typeof useResumeStore.getState>;
+        const presentation = buildScorePresentation({
+            optimizations: rehydrated.optimizations,
+            baselineScore: rehydrated.baselineMatchScore,
+            improvement: rehydrated.optimizationMetrics.improvement ?? null,
+            verifiedPotential: rehydrated.optimizationMetrics.verifiedPotential,
+            resumeText: rehydrated.parsedResumeText ?? '',
+            jobDescription,
+        });
+
+        expect(presentation.counts).toEqual({
+            actionableTotal: 2,
+            actionableApplied: 1,
+            recommendationTotal: 0,
+            mergeFailed: 1,
+        });
+        expect(presentation.currentAppliedProjection).toBe(69);
     });
 });
 

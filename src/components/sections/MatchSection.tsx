@@ -15,28 +15,29 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
-import { GlassButton } from '../ui/GlassButton';
-import { GlassCard } from '../ui/GlassCard';
-import { GlassCircle } from '../ui/GlassCircle';
-import { GlassTextarea } from '../ui/GlassTextarea';
-import Tooltip from '../ui/Tooltip';
-import { AnimatedCounter } from '../ui/AnimatedCounter';
-import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
-import { GapAnalysisCard, type GapItem } from '../GapAnalysisCard';
-import { HiddenMatchesCard, type HiddenMatch } from '../HiddenMatchesCard';
-import { MirroredKeywordsCard } from '../MirroredKeywordsCard';
-import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { GlassCircle } from '@/components/ui/GlassCircle';
+import { GlassTextarea } from '@/components/ui/GlassTextarea';
+import Tooltip from '@/components/ui/Tooltip';
+import { AnimatedCounter } from '@/components/ui/AnimatedCounter';
+import { ConfirmActionModal } from '@/components/Credits/ConfirmActionModal';
+import { GapAnalysisCard } from '@/components/GapAnalysisCard';
+import { HiddenMatchesCard } from '@/components/HiddenMatchesCard';
+import { MirroredKeywordsCard } from '@/components/MirroredKeywordsCard';
+import { requestValueMomentFeedbackPrompt } from '@/components/Feedback/FeedbackPromptController';
 import { importJobFromUrl } from '@/services/api';
-import { useUserCredits } from '../../hooks/useUserCredits';
-import { cn } from '../../lib/utils/cn';
-import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { useUserCredits } from '@/hooks/useUserCredits';
+import { cn } from '@/lib/utils/cn';
+import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '@/lib/utils/storage-migration';
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
-import { FEATURE_COSTS } from '../../types/credits';
-import { analytics } from '../../services/analytics';
-import type { ExtractedJobMetadata } from '../../types/pipeline';
-import type { StrategicRealityCheck } from '../../types/analysis';
-import type { AtsExplainabilitySource } from '../../types/explainability';
-import { AtsExplainabilityPanel } from '../AtsExplainabilityPanel';
+import { FEATURE_COSTS } from '@/types/credits';
+import { analytics } from '@/services/analytics';
+import type { ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
+import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
+import type { AtsExplainabilitySource } from '@/types/explainability';
+import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
+import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -96,29 +97,6 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
   };
 };
 
-interface MatchResult {
-  score: number;
-  matchedKeywords?: string[];
-  missingKeywords?: string[];
-  topHits?: string[];
-  suggestions?: string[];
-  summary_bullets?: string[];
-  reasoning?: string;
-  categoryScores?: {
-    hard_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-    experience: { score: number; max: number; matched?: string[]; gaps?: string[]; reasoning?: string };
-    education: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-    soft_skills: { score: number; max: number; matched?: string[]; missing?: string[]; reasoning?: string };
-  } | null;
-  gapAnalysis?: GapItem[];
-  keywordStrategy?: {
-    mirroredPhrases?: string[];
-    structuralChanges?: string[];
-    hiddenMatches?: HiddenMatch[];
-  } | null;
-  strategicRealityCheck?: StrategicRealityCheck | null;
-}
-
 interface Toast {
   type: 'success' | 'warning' | 'danger' | 'info';
   title: string;
@@ -135,7 +113,9 @@ interface MatchSectionProps {
   onClear?: () => void;
   jobDescription?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
-  onJobSaved?: (id: string) => void;
+  onJobSaved?: (application: JobApplication) => void;
+  savedApplicationId?: string | null;
+  savedApplication?: JobApplication | null;
   isGuestMode?: boolean;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
@@ -228,6 +208,8 @@ export function MatchSection({
   jobDescription = '',
   extractedMetadata,
   onJobSaved,
+  savedApplicationId,
+  savedApplication,
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
@@ -300,10 +282,13 @@ export function MatchSection({
         setJobText(result.jobText);
         setJobUrl('');
         analytics.track('job_url_import_succeeded', { source: result.source, confidence: result.confidence });
+        const isLowConfidence = result.confidence === 'low';
         onToast?.({
-          type: 'success',
+          type: isLowConfidence ? 'warning' : 'success',
           title: t('sections.match.urlImport.import', 'Import'),
-          description: t('sections.match.urlImport.success', 'Job description imported — review it before analyzing.'),
+          description: isLowConfidence
+            ? t('sections.match.urlImport.reviewWarning', "Imported from the page layout — review the text below and remove anything that isn't the job description before analyzing")
+            : t('sections.match.urlImport.success', 'Job description imported — review it before analyzing.'),
         });
       } else {
         const reason = typeof result?.failureReason === 'string' ? result.failureReason : 'unreachable';
@@ -323,6 +308,8 @@ export function MatchSection({
         return t('sections.match.urlImport.errors.unsupportedUrl', 'This link type is not supported yet. Open the job posting itself and copy its link.');
       case 'login_required':
         return t('sections.match.urlImport.errors.loginRequired', "Watheq couldn't reliably import the full description from this link. Open the company's job page or paste the description manually.");
+      case 'linkedin_blocked':
+        return t('sections.match.urlImport.errors.linkedinBlocked', 'LinkedIn blocked automated access to this job page. Open the job on LinkedIn and paste the description manually.');
       case 'blocked':
         return t('sections.match.urlImport.errors.blocked', 'This site blocked the import. Paste the job description manually.');
       case 'timeout':
@@ -488,10 +475,10 @@ export function MatchSection({
 
   const categoryRows = useMemo(
     () => [
-      { key: 'hard_skills' as const, i18nKey: 'hardSkills', color: 'bg-blue-500', text: 'text-blue-500', icon: Code2 },
-      { key: 'experience' as const, i18nKey: 'experience', color: 'bg-purple-500', text: 'text-purple-500', icon: Briefcase },
-      { key: 'education' as const, i18nKey: 'education', color: 'bg-amber-500', text: 'text-amber-500', icon: GraduationCap },
-      { key: 'soft_skills' as const, i18nKey: 'softSkills', color: 'bg-emerald-500', text: 'text-emerald-500', icon: Users },
+      { key: 'hard_skills' as const, i18nKey: 'hardSkills', icon: Code2 },
+      { key: 'experience' as const, i18nKey: 'experience', icon: Briefcase },
+      { key: 'education' as const, i18nKey: 'education', icon: GraduationCap },
+      { key: 'soft_skills' as const, i18nKey: 'softSkills', icon: Users },
     ],
     []
   );
@@ -770,18 +757,19 @@ export function MatchSection({
                       const data = matchAnalysis.categoryScores?.[cat.key];
                       if (!data) return null;
                       const CatIcon = cat.icon;
+                      const colors = CATEGORY_COLORS[cat.key];
                       const percent = Math.min(100, (data.score / data.max) * 100);
                       return (
                         <div key={cat.key} className="space-y-1.5">
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
-                              <CatIcon className={cn('h-3.5 w-3.5', cat.text)} />
+                              <CatIcon className={cn('h-3.5 w-3.5', colors.textClass)} />
                               <span className="font-medium text-gray-700 dark:text-white/80">{t(`sections.match.categoryScores.${cat.i18nKey}`)}</span>
                             </div>
-                            <span className={cn('font-bold', cat.text)}>{data.score}/{data.max}</span>
+                            <span className={cn('font-bold', colors.textClass)}>{data.score}/{data.max}</span>
                           </div>
                           <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200 ring-1 ring-gray-300/50 dark:bg-black/20 dark:ring-white/5">
-                            <div className={cn('h-full w-full origin-left rtl:origin-right rounded-full transition-transform duration-700 ease-out', cat.color)} style={{ transform: `scaleX(${Math.min(Math.max(percent, 0), 100) / 100})` }} />
+                            <div className={cn('h-full w-full origin-left rtl:origin-right rounded-full transition-transform duration-700 ease-out', colors.barClass)} style={{ transform: `scaleX(${Math.min(Math.max(percent, 0), 100) / 100})` }} />
                           </div>
                         </div>
                       );
@@ -802,6 +790,8 @@ export function MatchSection({
                 extractedMetadata={extractedMetadata}
                 onSaved={onJobSaved}
                 onToast={onToast}
+                savedApplicationId={savedApplicationId}
+                savedApplication={savedApplication}
               />
             )}
 
@@ -948,9 +938,9 @@ export function MatchSection({
           <GlassCard>
             <div className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center animate-fade-in">
               <div className="group relative mb-6">
-                <div className="absolute inset-0 rounded-full bg-blue-500/20 opacity-60 blur-3xl" />
+                <div className="absolute inset-0 rounded-full bg-emerald-500/20 opacity-60 blur-3xl" />
                 <div className="relative rounded-full border border-gray-200 bg-gray-100 p-6 transition-colors duration-200 group-hover:border-gray-300 dark:border-white/10 dark:bg-white/5 dark:group-hover:border-white/20">
-                  <Target className="h-10 w-10 text-gray-400 transition-colors duration-200 group-hover:text-blue-400" />
+                  <Target className="h-10 w-10 text-gray-400 transition-colors duration-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-300" />
                 </div>
               </div>
               <h4 className="mb-2 text-lg font-medium text-gray-900 dark:text-white">

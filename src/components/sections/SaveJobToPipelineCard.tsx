@@ -1,35 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Save, Loader2 } from 'lucide-react';
-import { GlassCard } from '../ui/GlassCard';
-import { GlassButton } from '../ui/GlassButton';
-import { useAuth } from '../../hooks/useAuth';
-import { analytics } from '../../services/analytics';
-import { createJobApplication } from '../../services/pipeline';
-import type { ExtractedJobMetadata, JobApplicationStatus } from '../../types/pipeline';
-import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { GlassButton } from '@/components/ui/GlassButton';
+import { useAuth } from '@/hooks/useAuth';
+import { analytics } from '@/services/analytics';
+import { createJobApplication, updateJobApplication } from '@/services/pipeline';
+import type { ExtractedJobMetadata, JobApplication, JobApplicationStatus } from '@/types/pipeline';
+import { requestValueMomentFeedbackPrompt } from '@/components/Feedback/FeedbackPromptController';
+import { sanitizeCompanyName, sanitizeJobMetadataField } from '@/lib/utils/jobMetadata';
 
 interface SaveJobToPipelineCardProps {
   jobDescription: string;
   matchScore?: number | null;
   extractedMetadata?: ExtractedJobMetadata | null;
-  onSaved?: (id: string) => void;
+  onSaved?: (application: JobApplication) => void;
   onToast?: (toast: { type: 'success' | 'warning' | 'danger' | 'info'; title: string; description?: string }) => void;
+  /** Set when the job was already auto-saved — the card becomes an update form. */
+  savedApplicationId?: string | null;
+  savedApplication?: JobApplication | null;
 }
-
-const UNKNOWN_COMPANY_VALUE = 'unknown company';
-
-const sanitizeMetadataField = (value?: string | null) => {
-  if (typeof value !== 'string') return '';
-  const trimmed = value.trim();
-  if (!trimmed || trimmed.toLowerCase() === 'null') return '';
-  return trimmed;
-};
-
-const sanitizeCompanyName = (value?: string | null) => {
-  const sanitized = sanitizeMetadataField(value);
-  return sanitized.toLowerCase() === UNKNOWN_COMPANY_VALUE ? '' : sanitized;
-};
 
 export function SaveJobToPipelineCard({
   jobDescription,
@@ -37,24 +27,41 @@ export function SaveJobToPipelineCard({
   extractedMetadata,
   onSaved,
   onToast,
+  savedApplicationId,
+  savedApplication,
 }: SaveJobToPipelineCardProps) {
   const { t } = useTranslation();
   const { user } = useAuth();
 
-  const [companyName, setCompanyName] = useState(() => sanitizeCompanyName(extractedMetadata?.companyName));
-  const [jobTitle, setJobTitle] = useState(() => sanitizeMetadataField(extractedMetadata?.jobTitle));
-  const [jobUrl, setJobUrl] = useState('');
-  const [location, setLocation] = useState(() => sanitizeMetadataField(extractedMetadata?.location));
-  const [employmentType, setEmploymentType] = useState(() => sanitizeMetadataField(extractedMetadata?.employmentType));
-  const [seniority, setSeniority] = useState(() => sanitizeMetadataField(extractedMetadata?.seniority));
-  const [sector, setSector] = useState(() => sanitizeMetadataField(extractedMetadata?.sector));
-  const [status, setStatus] = useState<JobApplicationStatus>('saved');
-  const [notes, setNotes] = useState('');
+  const [companyName, setCompanyName] = useState(() => sanitizeCompanyName(savedApplication?.company_name ?? extractedMetadata?.companyName));
+  const [jobTitle, setJobTitle] = useState(() => sanitizeJobMetadataField(savedApplication?.job_title ?? extractedMetadata?.jobTitle));
+  const [jobUrl, setJobUrl] = useState(() => sanitizeJobMetadataField(savedApplication?.job_url));
+  const [location, setLocation] = useState(() => sanitizeJobMetadataField(savedApplication?.location ?? extractedMetadata?.location));
+  const [employmentType, setEmploymentType] = useState(() => sanitizeJobMetadataField(savedApplication?.employment_type ?? extractedMetadata?.employmentType));
+  const [seniority, setSeniority] = useState(() => sanitizeJobMetadataField(savedApplication?.seniority ?? extractedMetadata?.seniority));
+  const [sector, setSector] = useState(() => sanitizeJobMetadataField(savedApplication?.sector ?? extractedMetadata?.sector));
+  const [status, setStatus] = useState<JobApplicationStatus>(() => savedApplication?.status ?? 'saved');
+  const [notes, setNotes] = useState(() => sanitizeJobMetadataField(savedApplication?.notes));
   const [isSaving, setIsSaving] = useState(false);
 
   const needsConfirmation = extractedMetadata?.needsUserConfirmation ?? true;
 
   const seededMetadataRef = useRef<ExtractedJobMetadata | null>(null);
+  const seededApplicationRef = useRef<JobApplication | null>(null);
+
+  useEffect(() => {
+    if (!savedApplication || seededApplicationRef.current === savedApplication) return;
+    seededApplicationRef.current = savedApplication;
+    setCompanyName(sanitizeCompanyName(savedApplication.company_name));
+    setJobTitle(sanitizeJobMetadataField(savedApplication.job_title));
+    setJobUrl(sanitizeJobMetadataField(savedApplication.job_url));
+    setLocation(sanitizeJobMetadataField(savedApplication.location));
+    setEmploymentType(sanitizeJobMetadataField(savedApplication.employment_type));
+    setSeniority(sanitizeJobMetadataField(savedApplication.seniority));
+    setSector(sanitizeJobMetadataField(savedApplication.sector));
+    setStatus(savedApplication.status);
+    setNotes(sanitizeJobMetadataField(savedApplication.notes));
+  }, [savedApplication]);
 
   // Seed editable fields once per distinct metadata object, filling only blanks so
   // user edits are never clobbered. Keyed on metadata identity (not the field values)
@@ -66,11 +73,11 @@ export function SaveJobToPipelineCard({
     seededMetadataRef.current = extractedMetadata;
 
     const nextCompanyName = sanitizeCompanyName(extractedMetadata.companyName);
-    const nextJobTitle = sanitizeMetadataField(extractedMetadata.jobTitle);
-    const nextLocation = sanitizeMetadataField(extractedMetadata.location);
-    const nextEmploymentType = sanitizeMetadataField(extractedMetadata.employmentType);
-    const nextSeniority = sanitizeMetadataField(extractedMetadata.seniority);
-    const nextSector = sanitizeMetadataField(extractedMetadata.sector);
+    const nextJobTitle = sanitizeJobMetadataField(extractedMetadata.jobTitle);
+    const nextLocation = sanitizeJobMetadataField(extractedMetadata.location);
+    const nextEmploymentType = sanitizeJobMetadataField(extractedMetadata.employmentType);
+    const nextSeniority = sanitizeJobMetadataField(extractedMetadata.seniority);
+    const nextSector = sanitizeJobMetadataField(extractedMetadata.sector);
 
     if (nextCompanyName && !companyName) setCompanyName(nextCompanyName);
     if (nextJobTitle && !jobTitle) setJobTitle(nextJobTitle);
@@ -95,10 +102,9 @@ export function SaveJobToPipelineCard({
     setIsSaving(true);
 
     try {
-      const { data, error, isDuplicate } = await createJobApplication({
+      const editableFields = {
         company_name: companyName.trim() || null,
         job_title: jobTitle.trim() || null,
-        job_description: jobDescription,
         job_url: jobUrl.trim() || null,
         location: location.trim() || null,
         employment_type: employmentType.trim() || null,
@@ -111,7 +117,12 @@ export function SaveJobToPipelineCard({
           extractionConfidence: extractedMetadata?.confidence ?? null,
           needsUserConfirmation: needsConfirmation,
         },
-      });
+      };
+      const saveResult = savedApplicationId
+        ? await updateJobApplication(savedApplicationId, editableFields)
+        : await createJobApplication({ ...editableFields, job_description: jobDescription });
+      const { data, error } = saveResult;
+      const isDuplicate = 'isDuplicate' in saveResult && saveResult.isDuplicate === true;
 
       if (error || !data) {
         analytics.trackPipelineSaveFailed(error || 'unknown');
@@ -140,7 +151,7 @@ export function SaveJobToPipelineCard({
         });
       }
 
-      onSaved?.(data.id);
+      onSaved?.(data);
     } finally {
       setIsSaving(false);
     }
@@ -154,10 +165,14 @@ export function SaveJobToPipelineCard({
         </div>
         <div>
           <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {t('pipeline.saveJob', 'Save this job to pipeline')}
+            {savedApplicationId
+              ? t('pipeline.autoSavedTitle', 'Saved to your pipeline')
+              : t('pipeline.saveJob', 'Save this job to pipeline')}
           </h4>
           <p className="text-xs text-gray-500">
-            {t('pipeline.saveJobDesc', 'Track your application progress')}
+            {savedApplicationId
+              ? t('pipeline.autoSavedDesc', 'Details were saved automatically — edit and save to update.')
+              : t('pipeline.saveJobDesc', 'Track your application progress')}
           </p>
         </div>
       </div>
@@ -290,7 +305,7 @@ export function SaveJobToPipelineCard({
             className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
           >
             {(['saved', 'applied', 'offer', 'rejected', 'withdrawn'] as JobApplicationStatus[]).map((value) => (
-              <option key={value} value={value}>
+              <option key={value} value={value} className="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
                 {t(`pipeline.${value}`, value)}
               </option>
             ))}
@@ -320,7 +335,11 @@ export function SaveJobToPipelineCard({
           leftIcon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           className="w-full"
         >
-          {isSaving ? t('common.submitting', 'Sending...') : t('common.save', 'Save')}
+          {isSaving
+            ? t('common.submitting', 'Sending...')
+            : savedApplicationId
+              ? t('pipeline.updateSaved', 'Update saved job')
+              : t('common.save', 'Save')}
         </GlassButton>
       </div>
     </GlassCard>

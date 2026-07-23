@@ -23,6 +23,13 @@
       },
       "title": "Optimize",
       "subtitle": "AI-powered suggestions to improve your resume",
+      "variants": {
+        "title": "Job Variants",
+        "subtitle": "Saves this job's suggestions, applied changes, and scores so you can switch between jobs.",
+        "saveChanges": "Save changes",
+        "saveNew": "Save as variant",
+        "namePlaceholder": "e.g. Senior PM @ Aramco"
+      },
       "optimizeBtn": "Optimize resume with AI",
       "runMatchFirst": "Upload your resume first",
       "keywordFocus": "Keyword focus",
@@ -92,7 +99,7 @@
       "verifyAnomalyTitle": "Couldn't verify the new score",
       "retryVerify": "Retry",
       "verifying": "Verifying...",
-      "verifiedTooltip": "We re-scored your optimized resume against this job description",
+      "verifiedTooltip": "We re-scored your optimized resume against this job description using the same strict scoring as Match and Bulk analysis",
       "verifiedByReanalysis": "Verified by re-analysis",
       "scoreHeader": {
         "verified": "verified",
@@ -106,7 +113,16 @@
         "recommendationsCount": "{{total}} recommendations",
         "suggestionsReady": "{{total}} suggestions ready · none applied yet",
         "potentialEstimate": "Up to ~{{score}}% if all suggestions are applied (estimate)",
-        "noGainPredicted": "No measurable Match-score increase predicted (estimate)"
+        "noGainPredicted": "No measurable Match-score increase predicted (estimate)",
+        "appliedVerifyPending": "Recalculating your score for the applied changes...",
+        "appliedVerifyReady": "Recalculate updated score",
+        "appliedVerifyUnavailable": "Add a job description to recalculate your updated score.",
+        "appliedVerifyFailed": "Couldn't verify the new score — showing an estimate.",
+        "appliedVerifySignIn": "Sign in to verify your updated score — showing an estimate.",
+        "verifiedNoGainYet": "Verified — the applied changes haven't moved the score yet.",
+        "continueToTemplates": "Continue to Templates",
+        "continueDisabled": "Upload a resume first to continue",
+        "estimateDisclaimer": "Important: review changes before applying — AI can make mistakes, and projections are estimates until verified."
       },
       "strategy": {
         "title": "Strategy",
@@ -118,6 +134,7 @@
         "workSubtitle": "Work experience",
         "suggestionsCount": "{{count}} suggestions",
         "applyGroup": "Apply all in this job",
+        "revertGroup": "Revert all in this job",
         "filters": {
           "all": "All",
           "pending": "Pending",
@@ -158,6 +175,7 @@
         "more": "more",
         "improvementsApplied": "Improvements Applied",
         "applyAllRemaining": "Apply All ({{count}} remaining)",
+        "unapplyAll": "Unapply All ({{count}} applied)",
         "exportPdf": "Export PDF",
         "sectionLabels": {
           "headline": "Headline optimized for ATS",

@@ -1,9 +1,9 @@
 import { AlertCircle, Check, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { HiddenMatchesCard, type HiddenMatch } from '@/components/HiddenMatchesCard';
+import { HiddenMatchesCard } from '@/components/HiddenMatchesCard';
 import { MirroredKeywordsCard } from '@/components/MirroredKeywordsCard';
 import { PositionSuggestionBanner } from '@/components/PositionSuggestionBanner';
-import type { GapItem } from '@/components/GapAnalysisCard';
+import type { GapAnalysisItem as GapItem, HiddenMatch } from '@/types/analysis';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { cn } from '@/lib/utils/cn';
 
@@ -48,8 +48,8 @@ const bucketStyles = {
   },
   neutral: {
     icon: Info,
-    titleClass: 'text-blue-700 dark:text-blue-300',
-    chipClass: 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20 text-blue-800 dark:text-blue-300',
+    titleClass: 'text-teal-700 dark:text-teal-300',
+    chipClass: 'bg-teal-50 dark:bg-teal-500/10 border-teal-200 dark:border-teal-500/20 text-teal-800 dark:text-teal-300',
   },
   remove: {
     icon: AlertCircle,
