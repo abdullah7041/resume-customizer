@@ -94,7 +94,7 @@ function createCreditManagerError(status, code, message) {
  * @param {Object} options - Additional options
  * @param {string} options.ipAddress - User's IP address for abuse detection
  * @param {boolean} options.emailVerified - Whether user's email is verified
- * @returns {Promise<{credits_remaining: number, credits_total: number, last_reset_date: string} | null>}
+ * @returns {Promise<{credits_remaining: number, credits_total: number, feedback_credits_earned: number, referral_credits_earned: number | null, last_reset_date: string, signup_metadata: ({pending_initial_grant?: boolean} | null)} | null>}
  */
 export async function getUserCredits(email, options = {}) {
   const { ipAddress, emailVerified } = options;
