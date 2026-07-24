@@ -38,6 +38,11 @@ const ENABLE_HR_MASCOT = false;
 
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
+// Set once a signed-out visitor leaves the landing page (Get started / guest preview).
+const LANDING_SEEN_STORAGE_KEY = "watheq:landingSeen";
+// Fired by the landing "Get started" CTA when a new signed-out visitor should enter
+// the first-run onboarding chat instead of jumping straight into the guest workspace.
+const ENTER_ONBOARDING_EVENT = "watheq:enter-onboarding";
 
 // Feature-flags dashboard. Reachable in dev always, and in prod for signed-in
 // admins (the page self-gates via app_metadata.role, mirroring AdminFeedbackPage).
@@ -78,7 +83,19 @@ export default function App() {
   );
   const onboardingChatEnabled = useFeatureFlag("onboardingChat");
   const hrOverlayEnabled = useFeatureFlag("hrSuperSaudOverlay");
-  const needsOnboarding = onboardingChatEnabled && onboardingGateActive && !onboardedFlag;
+  // A signed-out visitor sees the landing page FIRST; onboarding opens only after they
+  // click a "Get started" CTA (which fires ENTER_ONBOARDING_EVENT / sets landingSeen).
+  // Signed-in new users are unaffected — they never see the landing page, so their
+  // onboarding still opens on entry.
+  const [enteredApp, setEnteredApp] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(LANDING_SEEN_STORAGE_KEY) === "true";
+  });
+  const needsOnboarding =
+    onboardingChatEnabled &&
+    onboardingGateActive &&
+    !onboardedFlag &&
+    (Boolean(user) || enteredApp);
 
   // Run storage migration once on app initialization
   useEffect(() => {
@@ -97,16 +114,22 @@ export default function App() {
       workspaceScrollYRef.current = window.scrollY;
       setLandingSection(section);
     };
+    const handleEnterOnboarding = () => {
+      window.localStorage.setItem(LANDING_SEEN_STORAGE_KEY, "true");
+      setEnteredApp(true);
+    };
     window.addEventListener("popstate", handleLocationChange);
     window.addEventListener("watheq:navigate", handleLocationChange);
     window.addEventListener(GUEST_MODE_CHANGED_EVENT, handleGuestModeChange);
     window.addEventListener("watheq:view-landing", handleViewLanding);
+    window.addEventListener(ENTER_ONBOARDING_EVENT, handleEnterOnboarding);
 
     return () => {
       window.removeEventListener("popstate", handleLocationChange);
       window.removeEventListener("watheq:navigate", handleLocationChange);
       window.removeEventListener(GUEST_MODE_CHANGED_EVENT, handleGuestModeChange);
       window.removeEventListener("watheq:view-landing", handleViewLanding);
+      window.removeEventListener(ENTER_ONBOARDING_EVENT, handleEnterOnboarding);
     };
   }, []);
 

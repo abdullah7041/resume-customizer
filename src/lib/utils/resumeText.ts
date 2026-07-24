@@ -539,9 +539,15 @@ const extractPdfTextFallback = (arrayBuffer) => {
 const extractPdfPlainText = async (arrayBuffer) => {
   const pdfjs = await loadPdfjs();
   if (pdfjs) {
+    // pdfjs `getDocument({ data })` transfers ownership of the buffer and DETACHES it.
+    // Hand it a private copy so the raw-text fallback below can still read the original
+    // bytes when the primary path throws — otherwise `new Uint8Array(detachedBuffer)`
+    // in extractPdfTextFallback crashes with "Cannot perform Construct on a detached
+    // ArrayBuffer", turning a recoverable pdfjs failure into an empty extraction (→ 422).
+    const pdfData = arrayBuffer.slice(0);
     try {
       const document = await pdfjs.getDocument({
-        data: arrayBuffer,
+        data: pdfData,
         cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
         cMapPacked: true,
         standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
@@ -582,8 +588,15 @@ const extractPdfPlainText = async (arrayBuffer) => {
       if (lines.length > 0) {
         return lines.join("\n");
       }
-    } catch {
-      // fall back to manual parsing below
+    } catch (error) {
+      // Surface the real pdfjs failure instead of swallowing it. This is the error
+      // that otherwise hides behind an empty extraction + a generic server 422, so it
+      // is the single most useful signal for diagnosing prod upload regressions
+      // (e.g. worker-asset loading failures that only reproduce on the deployed site).
+      console.error("[ResumeText] pdfjs extraction failed; using raw-text fallback:", error);
+      void import("@sentry/react")
+        .then((Sentry) => Sentry.captureException(error, { tags: { area: "pdf-extract" } }))
+        .catch(() => {});
     }
   }
 

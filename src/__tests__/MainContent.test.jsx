@@ -336,8 +336,30 @@ describe("MainContent resume parsing", () => {
     removeItemSpy.mockRestore();
   });
 
-  it("opens guest workspace from the signed-out preview CTA without starting Google sign-in", async () => {
+  it("routes a NEW signed-out visitor into first-run onboarding from the preview CTA (not straight into the guest workspace)", async () => {
     authMockState.user = null;
+    const enterOnboarding = vi.fn();
+    window.addEventListener("watheq:enter-onboarding", enterOnboarding);
+
+    render(<MainContent />);
+
+    expect(localStorage.getItem("watheq:guestMode")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /preview the workflow/i }));
+
+    // Onboarding is owned by App: MainContent signals it via the event + landingSeen,
+    // and must NOT enter the guest workspace or trigger Google sign-in itself.
+    expect(authMockState.signInWithGoogle).not.toHaveBeenCalled();
+    expect(enterOnboarding).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem("watheq:landingSeen")).toBe("true");
+    expect(localStorage.getItem("watheq:guestMode")).toBeNull();
+    expect(analyticsMock.trackGuestPreviewStarted).toHaveBeenCalledWith("landing_preview");
+
+    window.removeEventListener("watheq:enter-onboarding", enterOnboarding);
+  });
+
+  it("opens the guest workspace directly for an already-onboarded signed-out visitor", async () => {
+    authMockState.user = null;
+    localStorage.setItem("watheq:onboarded", "true");
 
     render(<MainContent />);
 

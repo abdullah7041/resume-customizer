@@ -210,6 +210,9 @@ describe('App compliance navigation', () => {
 
   it('keeps the normal app shell visible after signed-out onboarding enters guest mode', async () => {
     window.localStorage.removeItem('watheq:onboarded');
+    // Signed-out onboarding now opens only after the visitor enters from the landing
+    // page ("Get started"); simulate that so the first-run gate is active.
+    window.localStorage.setItem('watheq:landingSeen', 'true');
 
     render(<App />);
 

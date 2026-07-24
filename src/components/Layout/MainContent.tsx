@@ -25,6 +25,7 @@ import {
 import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
+import { isOnboarded } from "../../lib/onboarding/onboardedFlag";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
 // Lazy-loaded tab sections — each gets its own chunk
@@ -502,6 +503,22 @@ export default function MainContent() {
     setGuestMode(true);
     setActiveTab("resume");
   }, []);
+
+  // Landing "Get started" for a signed-out visitor. A brand-new user (onboarding flag
+  // on, not yet onboarded) is routed into the first-run onboarding chat first — App
+  // owns that gate and opens it on the ENTER_ONBOARDING_EVENT. Returning/onboarded
+  // users (or when the flag is off) skip straight into the guest workspace.
+  const handleLandingGetStarted = useCallback(() => {
+    if (flags.onboardingChat && !isOnboarded()) {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("watheq:landingSeen", "true");
+        window.dispatchEvent(new Event("watheq:enter-onboarding"));
+      }
+      analytics.trackGuestPreviewStarted("landing_preview");
+      return;
+    }
+    enterGuestMode();
+  }, [enterGuestMode, flags.onboardingChat]);
 
   const exitGuestMode = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -2318,7 +2335,7 @@ export default function MainContent() {
         <ToastContainer>{renderedToasts}</ToastContainer>
         <Suspense fallback={<SectionSkeleton />}>
           <LandingPage
-            onGetStarted={enterGuestMode}
+            onGetStarted={handleLandingGetStarted}
             onSignIn={() => handleGuestSignIn()}
           />
         </Suspense>

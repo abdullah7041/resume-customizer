@@ -183,8 +183,23 @@ describe('App onboarding overlay — react-joyride removed', () => {
     expect(uploadButton).toBeEnabled();
   });
 
-  it('shows the first-run onboarding gate when no resume, no intent, and not flagged', () => {
+  it('shows the landing page (not onboarding) on a signed-out visitor\'s first paint', () => {
     window.localStorage.removeItem('watheq:onboarded');
+    // No landingSeen yet: the visitor has not clicked "Get started", so the first-run
+    // onboarding gate must NOT preempt the landing/workspace.
+    window.localStorage.removeItem('watheq:landingSeen');
+    useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
+
+    render(<App />);
+
+    expect(screen.queryByText('Onboarding')).toBeNull();
+    expect(screen.getByRole('button', { name: /upload resume/i })).toBeInTheDocument();
+  });
+
+  it('shows the first-run onboarding gate once a signed-out visitor has entered (Get started)', () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    // Simulate the visitor clicking "Get started" on the landing page.
+    window.localStorage.setItem('watheq:landingSeen', 'true');
     useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
 
     render(<App />);
@@ -195,6 +210,7 @@ describe('App onboarding overlay — react-joyride removed', () => {
 
   it('does not leave first-run onboarding after only the starter name answer', async () => {
     window.localStorage.removeItem('watheq:onboarded');
+    window.localStorage.setItem('watheq:landingSeen', 'true');
     useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
 
     render(<App />);
@@ -208,6 +224,7 @@ describe('App onboarding overlay — react-joyride removed', () => {
   it('marks signed-out first-run completion as guest preview', async () => {
     window.localStorage.removeItem('watheq:onboarded');
     window.localStorage.removeItem('watheq:guestMode');
+    window.localStorage.setItem('watheq:landingSeen', 'true');
     useResumeStore.setState({ originalResume: null, parsedResumeText: null, searchIntent: null });
 
     render(<App />);
