@@ -69,6 +69,15 @@ const loadPdfjs = async () => {
   if (pdfjsLibPromise !== undefined) {
     return pdfjsLibPromise;
   }
+  // We still resolve the bundled worker URL so pdfjs has a valid `workerSrc`, but
+  // parsing runs on the MAIN THREAD (`disableWorker: true` at the getDocument call).
+  // pdfjs 5.x REQUIRES a non-empty workerSrc even in no-worker mode (it dynamically
+  // imports that module on the main thread); an empty workerSrc throws "Setting up
+  // fake worker failed". Main-thread mode avoids spawning `new Worker(type:'module')`
+  // and the cross-thread ArrayBuffer transfer — the failure surface implicated by the
+  // prod "detached ArrayBuffer" symptom, where the worker received the buffer then the
+  // real (swallowed) error threw. The worker asset itself serves fine in prod
+  // (application/javascript, 200), so this is NOT a MIME/serving fix.
   pdfjsLibPromise = Promise.all([
     import("pdfjs-dist/legacy/build/pdf.mjs"),
     import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
@@ -548,6 +557,11 @@ const extractPdfPlainText = async (arrayBuffer) => {
     try {
       const document = await pdfjs.getDocument({
         data: pdfData,
+        // Parse on the main thread (no worker asset — see loadPdfjs). isEvalSupported
+        // false skips pdfjs's eval-based font path (text extraction never needs it),
+        // keeping this clean under a `script-src 'self'` CSP with no unsafe-eval.
+        disableWorker: true,
+        isEvalSupported: false,
         cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
         cMapPacked: true,
         standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
