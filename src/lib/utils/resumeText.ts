@@ -69,6 +69,15 @@ const loadPdfjs = async () => {
   if (pdfjsLibPromise !== undefined) {
     return pdfjsLibPromise;
   }
+  // We still resolve the bundled worker URL so pdfjs has a valid `workerSrc`, but
+  // parsing runs on the MAIN THREAD (`disableWorker: true` at the getDocument call).
+  // pdfjs 5.x REQUIRES a non-empty workerSrc even in no-worker mode (it dynamically
+  // imports that module on the main thread); an empty workerSrc throws "Setting up
+  // fake worker failed". Main-thread mode avoids spawning `new Worker(type:'module')`
+  // and the cross-thread ArrayBuffer transfer — the failure surface implicated by the
+  // prod "detached ArrayBuffer" symptom, where the worker received the buffer then the
+  // real (swallowed) error threw. The worker asset itself serves fine in prod
+  // (application/javascript, 200), so this is NOT a MIME/serving fix.
   pdfjsLibPromise = Promise.all([
     import("pdfjs-dist/legacy/build/pdf.mjs"),
     import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
@@ -539,9 +548,20 @@ const extractPdfTextFallback = (arrayBuffer) => {
 const extractPdfPlainText = async (arrayBuffer) => {
   const pdfjs = await loadPdfjs();
   if (pdfjs) {
+    // pdfjs `getDocument({ data })` transfers ownership of the buffer and DETACHES it.
+    // Hand it a private copy so the raw-text fallback below can still read the original
+    // bytes when the primary path throws — otherwise `new Uint8Array(detachedBuffer)`
+    // in extractPdfTextFallback crashes with "Cannot perform Construct on a detached
+    // ArrayBuffer", turning a recoverable pdfjs failure into an empty extraction (→ 422).
+    const pdfData = arrayBuffer.slice(0);
     try {
       const document = await pdfjs.getDocument({
-        data: arrayBuffer,
+        data: pdfData,
+        // Parse on the main thread (no worker asset — see loadPdfjs). isEvalSupported
+        // false skips pdfjs's eval-based font path (text extraction never needs it),
+        // keeping this clean under a `script-src 'self'` CSP with no unsafe-eval.
+        disableWorker: true,
+        isEvalSupported: false,
         cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
         cMapPacked: true,
         standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
@@ -582,8 +602,15 @@ const extractPdfPlainText = async (arrayBuffer) => {
       if (lines.length > 0) {
         return lines.join("\n");
       }
-    } catch {
-      // fall back to manual parsing below
+    } catch (error) {
+      // Surface the real pdfjs failure instead of swallowing it. This is the error
+      // that otherwise hides behind an empty extraction + a generic server 422, so it
+      // is the single most useful signal for diagnosing prod upload regressions
+      // (e.g. worker-asset loading failures that only reproduce on the deployed site).
+      console.error("[ResumeText] pdfjs extraction failed; using raw-text fallback:", error);
+      void import("@sentry/react")
+        .then((Sentry) => Sentry.captureException(error, { tags: { area: "pdf-extract" } }))
+        .catch(() => {});
     }
   }
 
