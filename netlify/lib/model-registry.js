@@ -29,6 +29,7 @@ const SUPPORTED_BENCHMARK_MODELS = [
   'google/gemini-2.5-flash-lite',
   'google/gemini-2.5-flash',
   'google/gemini-3.1-flash-lite',
+  'google/gemini-3.5-flash-lite',
 ];
 
 // ---------------------------------------------------------------------------
@@ -118,11 +119,13 @@ const FEATURE_CONFIGS = {
 // ---------------------------------------------------------------------------
 // Approximate pricing (USD per 1M tokens) — NOT actual billed cost.
 // Update these when provider pricing changes.
+// Last verified against the live OpenRouter catalog on 2026-07-26.
 // ---------------------------------------------------------------------------
 const APPROXIMATE_PRICING = {
-  'google/gemini-2.5-flash-lite': { prompt: 0.30, completion: 0.60 },
-  'google/gemini-2.5-flash':      { prompt: 0.50, completion: 2.00 },
-  'google/gemini-3.1-flash-lite': { prompt: 0.15, completion: 0.60 },
+  'google/gemini-2.5-flash-lite': { prompt: 0.10, completion: 0.40 },
+  'google/gemini-2.5-flash':      { prompt: 0.30, completion: 2.50 },
+  'google/gemini-3.1-flash-lite': { prompt: 0.25, completion: 1.50 },
+  'google/gemini-3.5-flash-lite': { prompt: 0.30, completion: 2.50 },
 };
 
 /**
