@@ -2,33 +2,33 @@
   "score": 65,
   "categoryScores": {
     "hard_skills": {
-      "score": 60,
-      "max": 100,
-      "reasoning": "The applicant demonstrates strong Excel skills and descriptive statistics. However, there is no evidence of SQL proficiency beyond 'intro statistics' or experience with Power BI, which are key requirements."
+      "score": 20,
+      "max": 40,
+      "reasoning": "The candidate demonstrates strong Excel skills, including pivot tables and VLOOKUP. Descriptive statistics are also evidenced. However, there is no evidence of SQL (joins, aggregations, PostgreSQL) or Power BI dashboard creation/maintenance, which are key requirements."
     },
     "experience": {
-      "score": 70,
-      "max": 100,
-      "reasoning": "While the applicant has 5 years of professional experience, it is not directly in a data analyst role. The resume provides strong evidence of demonstrated analytical work, which is a key requirement for this entry-level position."
+      "score": 20,
+      "max": 30,
+      "reasoning": "The candidate has 5 years of teaching experience with demonstrated analytical work, including analyzing exam results and tracking student performance. This fulfills the 'demonstrated analytical work' and '0-2 years of analyst experience accepted' criteria. However, the experience is not directly in a data analyst role or supporting an operations team."
     },
     "education": {
-      "score": 90,
-      "max": 100,
-      "reasoning": "The applicant holds a B.Sc. Mathematics, which is a strong quantitative field, and completed a data analytics bootcamp, directly aligning with the educational requirements."
+      "score": 15,
+      "max": 15,
+      "reasoning": "The candidate holds a B.Sc. in Mathematics, which is a quantitative field, and completed a Data Analytics Bootcamp. This fully meets the education requirement."
     },
     "soft_skills": {
-      "score": 70,
-      "max": 100,
-      "reasoning": "The applicant's experience as a teacher implies strong communication skills, particularly in explaining complex topics. However, direct evidence of communicating 'findings clearly to non-technical staff' in a business context is not explicitly stated."
+      "score": 10,
+      "max": 15,
+      "reasoning": "The resume implies communication skills through teaching and presenting findings (e.g., parent-teacher meetings). However, there is no direct evidence of communicating findings clearly to non-technical staff in a business context, which is a specific requirement."
     }
   },
   "strongMatches": [
     "Excel",
     "pivot tables",
+    "lookups",
     "descriptive statistics",
-    "data analytics bootcamp",
-    "quantitative field",
-    "analytical work"
+    "Bachelor's degree in a quantitative field",
+    "demonstrated analytical work"
   ],
   "missingKeywords": [
     "SQL",
@@ -36,69 +36,83 @@
     "aggregations",
     "PostgreSQL",
     "Power BI",
-    "dashboards",
+    "build and maintain Power BI dashboards",
     "operations KPIs",
-    "non-technical staff"
+    "communicate findings clearly to non-technical staff"
   ],
   "summary_bullets": [
-    "Strong Excel and descriptive statistics skills align well with job requirements.",
-    "B.Sc. in Mathematics and data analytics bootcamp meet educational criteria.",
-    "Demonstrated analytical work from teaching experience is a good fit for entry-level.",
-    "Significant gaps in SQL and Power BI experience, which are core technical requirements.",
-    "Communication skills are implied but lack direct evidence in a business context."
+    "Strong Excel and descriptive statistics skills are well-evidenced.",
+    "Education in a quantitative field and bootcamp are a direct match.",
+    "Analytical experience is present, but not in a data analyst role.",
+    "Critical gaps in SQL and Power BI, with no evidence of use.",
+    "Communication skills are implied but not directly demonstrated for the role."
   ],
-  "reasoning": "The applicant presents a compelling case for an entry-level role, leveraging a strong quantitative background and demonstrated analytical work from a teaching career. Excel and descriptive statistics skills are well-evidenced. However, the absence of explicit SQL and Power BI experience, which are critical daily-use tools for this role, represents a significant gap. The transition from teaching to data analysis is clear, but specific business communication evidence is limited.",
+  "reasoning": "The candidate presents a strong foundation in quantitative education and demonstrated analytical work using Excel and basic statistics. However, there are significant gaps in core technical requirements such as SQL (joins, aggregations, PostgreSQL) and Power BI dashboard creation, which are critical for the role. The experience, while analytical, is not directly in a data analyst capacity, and communication skills are not explicitly evidenced for a non-technical business audience.",
   "strategicRealityCheck": {
-    "riskTier": "medium",
+    "riskTier": "high",
     "recommendation": "add_evidence_first",
     "confidence": "high",
     "riskTypes": [
       "missing_required_skill",
       "experience_gap",
-      "role_scope_mismatch",
-      "evidence_quality"
+      "evidence_quality",
+      "domain_gap"
     ],
-    "summary": "The applicant has a strong foundation and relevant analytical experience from a non-traditional background. However, critical technical skills like SQL and Power BI are missing or lack sufficient evidence, posing a medium risk for direct alignment with the role's daily demands. The resume needs to bridge these specific technical gaps.",
+    "summary": "The candidate has a strong academic background and transferable analytical skills from teaching, but lacks direct evidence for several critical technical requirements (SQL, Power BI) and specific experience in a data analyst role supporting operations. The resume lists some skills without demonstrating their use.",
     "strengths": [
       {
-        "title": "Strong Quantitative Background",
-        "whyItMatters": "A Bachelor's in Mathematics provides a solid foundation for data analysis, meeting the 'quantitative field' requirement.",
+        "title": "Quantitative Educational Background",
+        "whyItMatters": "A Bachelor's degree in a quantitative field is a direct requirement, and Mathematics is highly relevant.",
         "evidence": [
-          {
-            "source": "resume",
-            "snippet": "B.Sc. Mathematics — Princess Nourah University, 2020"
-          },
           {
             "source": "job_description",
             "snippet": "Bachelor's degree in a quantitative field"
+          },
+          {
+            "source": "resume",
+            "snippet": "B.Sc. Mathematics — Princess Nourah University, 2020"
           }
         ]
       },
       {
         "title": "Demonstrated Analytical Work",
-        "whyItMatters": "Despite not being a formal analyst role, the applicant shows clear examples of applying analytical skills, fulfilling a key entry-level requirement.",
+        "whyItMatters": "The job explicitly accepts 0-2 years of experience but requires demonstrated analytical work, which the candidate provides.",
         "evidence": [
-          {
-            "source": "resume",
-            "snippet": "Analyzed exam results per topic to redesign the term plan; pass rates improved from 78% to 91% over two years."
-          },
           {
             "source": "job_description",
             "snippet": "demonstrated analytical work required"
+          },
+          {
+            "source": "resume",
+            "snippet": "Analyzed exam results per topic to redesign the term plan; pass rates improved from 78% to 91% over two years."
           }
         ]
       },
       {
-        "title": "Proficiency in Excel and Descriptive Statistics",
-        "whyItMatters": "The resume explicitly mentions and provides examples of using Excel features and understanding descriptive statistics, which are core requirements.",
+        "title": "Strong Excel Skills (Pivot Tables)",
+        "whyItMatters": "Strong Excel with pivot tables is a core requirement, and the candidate shows practical application.",
         "evidence": [
           {
-            "source": "resume",
-            "snippet": "Built Excel gradebooks with pivot tables and conditional formatting used by the whole math department (8 teachers). ... Microsoft Excel (pivot tables, VLOOKUP, charts), descriptive statistics"
+            "source": "job_description",
+            "snippet": "Strong Excel (pivot tables, lookups) — daily use"
           },
           {
+            "source": "resume",
+            "snippet": "Built Excel gradebooks with pivot tables and conditional formatting used by the whole math department (8 teachers)."
+          }
+        ]
+      },
+      {
+        "title": "Descriptive Statistics",
+        "whyItMatters": "A solid grasp of descriptive statistics is required, and the candidate's background and teaching experience support this.",
+        "evidence": [
+          {
             "source": "job_description",
-            "snippet": "Strong Excel (pivot tables, lookups) — daily use ... Solid grasp of descriptive statistics"
+            "snippet": "Solid grasp of descriptive statistics"
+          },
+          {
+            "source": "resume",
+            "snippet": "Teach algebra and statistics to 150 students per year across grades 10-12."
           }
         ]
       }
@@ -106,10 +120,10 @@
     "confirmedRisks": [
       {
         "type": "missing_required_skill",
-        "severity": "high",
-        "title": "Lack of SQL Experience",
-        "explanation": "The job requires 'working SQL: joins and aggregations against our PostgreSQL reporting database' for daily use. The resume only mentions 'intro statistics' from a bootcamp, which does not confirm the required SQL proficiency.",
-        "mitigation": "The applicant needs to explicitly demonstrate working SQL experience, ideally with joins and aggregations, and mention any exposure to PostgreSQL.",
+        "severity": "critical",
+        "title": "Missing SQL Experience",
+        "explanation": "The job requires 'Working SQL: joins and aggregations against our PostgreSQL reporting database'. The resume provides no evidence of SQL skills or experience with PostgreSQL.",
+        "mitigation": "Add specific projects or coursework demonstrating practical application of SQL, including joins and aggregations, ideally with PostgreSQL or a similar relational database.",
         "evidence": [
           {
             "source": "job_description",
@@ -117,16 +131,16 @@
           },
           {
             "source": "resume",
-            "snippet": "Data Analytics Bootcamp (part-time, 12 weeks) — Tuwaiq Academy, 2025: Excel, intro statistics, data visualization fundamentals"
+            "snippet": "SKILLS: Microsoft Excel (pivot tables, VLOOKUP, charts), Google Sheets, descriptive statistics, data visualization basics, curriculum planning, Arabic (native), English (professional)"
           }
         ]
       },
       {
         "type": "missing_required_skill",
-        "severity": "high",
-        "title": "No Power BI Experience",
-        "explanation": "The job explicitly requires the ability to 'Build and maintain Power BI dashboards'. The resume mentions 'data visualization basics' but does not specify Power BI or any equivalent dashboarding tool.",
-        "mitigation": "The applicant needs to provide evidence of experience with Power BI or a directly transferable dashboarding tool.",
+        "severity": "critical",
+        "title": "Missing Power BI Experience",
+        "explanation": "The job requires the ability to 'Build and maintain Power BI dashboards for operations KPIs'. The resume does not mention Power BI or any experience building/maintaining dashboards.",
+        "mitigation": "Include any projects, certifications, or coursework related to Power BI, specifically demonstrating dashboard creation and maintenance. If none exist, this is a significant skill gap to address.",
         "evidence": [
           {
             "source": "job_description",
@@ -134,38 +148,71 @@
           },
           {
             "source": "resume",
-            "snippet": "data visualization basics"
+            "snippet": "SKILLS: Microsoft Excel (pivot tables, VLOOKUP, charts), Google Sheets, descriptive statistics, data visualization basics, curriculum planning, Arabic (native), English (professional)"
           }
         ]
       },
       {
-        "type": "role_scope_mismatch",
-        "severity": "medium",
-        "title": "Limited Business Communication Evidence",
-        "explanation": "The job requires communicating findings 'clearly to non-technical staff'. While teaching involves communication, the resume lacks specific examples of communicating data findings in a business or operational context.",
-        "mitigation": "The applicant should add bullet points demonstrating how they communicated analytical findings to non-technical stakeholders, even if from their teaching role (e.g., parent-teacher meetings, department heads).",
+        "type": "domain_gap",
+        "severity": "high",
+        "title": "Lack of Operations Context",
+        "explanation": "The role is to 'support the operations team' and build dashboards for 'operations KPIs'. The candidate's experience is in education, lacking direct exposure to business operations or KPIs.",
+        "mitigation": "Highlight any transferable skills from managing educational operations (e.g., student performance as a 'KPI') or seek out projects that involve operational data analysis.",
         "evidence": [
           {
             "source": "job_description",
-            "snippet": "Communicate findings clearly to non-technical staff"
+            "snippet": "to support the operations team."
+          },
+          {
+            "source": "job_description",
+            "snippet": "Power BI dashboards for operations KPIs"
           },
           {
             "source": "resume",
-            "snippet": "Created a Google Sheets dashboard tracking student performance trends per unit, used in parent-teacher meetings."
+            "snippet": "Mathematics Teacher — Al-Rowad International School, Riyadh"
+          }
+        ]
+      },
+      {
+        "type": "evidence_quality",
+        "severity": "medium",
+        "title": "Unproven Excel VLOOKUP",
+        "explanation": "While 'VLOOKUP' is listed in the skills section, there is no specific bullet point in the experience section demonstrating its use, unlike 'pivot tables'.",
+        "mitigation": "Add a specific example of how VLOOKUP was used in a work context to provide evidence of practical application.",
+        "evidence": [
+          {
+            "source": "job_description",
+            "snippet": "Strong Excel (pivot tables, lookups)"
+          },
+          {
+            "source": "resume",
+            "snippet": "SKILLS: Microsoft Excel (pivot tables, VLOOKUP, charts)"
           }
         ]
       }
     ],
-    "unclearRisks": [],
+    "unclearRisks": [
+      {
+        "type": "evidence_quality",
+        "topic": "Communication to Non-Technical Staff",
+        "reason": "The resume mentions teaching and parent-teacher meetings, which involve communication, but not specifically 'communicating findings clearly to non-technical staff' in a business context.",
+        "evidenceNeeded": "Specific examples of simplifying complex analytical findings for a non-technical audience, perhaps from the bootcamp or a project."
+      },
+      {
+        "type": "experience_gap",
+        "topic": "Daily Use of Excel",
+        "reason": "The job requires 'daily use' of Excel. While the candidate built gradebooks, it's unclear if their current role involves daily, intensive Excel use as an analyst would.",
+        "evidenceNeeded": "Clarify the frequency and depth of Excel usage in current or past roles, aligning it with 'daily use' if applicable."
+      }
+    ],
     "limits": {
       "cannotDetermine": [
-        "Specific daily use of Excel as required by the job description (beyond general proficiency).",
-        "The exact content and depth of 'intro statistics' and 'data visualization fundamentals' from the bootcamp."
+        "Specific details of the Data Analytics Bootcamp curriculum beyond listed tools.",
+        "The candidate's proficiency level in listed skills without direct evidence of use."
       ],
       "assumptions": [
-        "Assumed 'B.Sc. Mathematics' is a 'quantitative field'.",
-        "Assumed 'Mathematics Teacher' experience, while not a data analyst role, provides transferable analytical and communication skills.",
-        "Assumed 'intro statistics' from the bootcamp covers descriptive statistics adequately."
+        "The 'Data Analytics Bootcamp' provided foundational knowledge in areas like data visualization, even if not explicitly detailed.",
+        "Teaching statistics implies a 'solid grasp of descriptive statistics'."
       ]
     }
   }
