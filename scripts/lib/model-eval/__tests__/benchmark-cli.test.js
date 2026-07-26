@@ -305,6 +305,7 @@ describe('benchmark matrix execution and reporting', () => {
         evaluationMode: 'smoke_only',
         disableFallback: true,
       });
+      expect(report.providers).toEqual(['openrouter']);
     } finally {
       rmSync(reportRoot, { recursive: true, force: true });
     }

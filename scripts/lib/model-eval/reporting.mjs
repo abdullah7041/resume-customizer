@@ -38,6 +38,7 @@ const OUTCOME_COUNT_FIELDS = new Set([
 const OUTCOME_CODE_FIELDS = new Set(['failureReason', 'exclusionReason']);
 const MACHINE_CODE = /^[a-z][a-z0-9_]*$/;
 const MACHINE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
+const PROVIDERS = new Set(['openrouter', 'gemini', 'cache']);
 const SCORE_SUMMARY_COUNT_FIELDS = ['attempts', 'primarySuccesses', 'failures'];
 const SCORE_SUMMARY_METRIC_FIELDS = [
   'meanScore',
@@ -80,6 +81,10 @@ const sanitizeOutcomeSummary = (outcomeSummary) => {
 
 const sanitizeMachineIds = (values) => Array.isArray(values)
   ? values.filter((value) => typeof value === 'string' && MACHINE_ID.test(value))
+  : [];
+
+const sanitizeProviders = (values) => Array.isArray(values)
+  ? [...new Set(values.filter((value) => PROVIDERS.has(value)))]
   : [];
 
 const sanitizeScoreSummaries = (scoreSummaries) => Array.isArray(scoreSummaries)
@@ -142,6 +147,7 @@ const buildMarkdown = (report) => `# Model evaluation: ${report.feature}
 - Generated at: ${report.generatedAt}
 - Fixtures: ${report.fixtureCount}
 - Models: ${report.models.join(', ') || '(none)'}
+- Providers: ${report.providers.join(', ') || '(none)'}
 - Latency p50 / p95: ${report.latency ? `${report.latency.p50Ms}ms / ${report.latency.p95Ms}ms` : 'not recorded'}
 - Approximate cost (USD): ${report.approximateCostUsd ?? 'unknown'}
 - Pricing snapshot: ${report.pricingSnapshotTimestamp ?? 'unknown'}
@@ -201,6 +207,7 @@ export const writeEvaluationReport = (session, input = {}) => {
     feature: session.feature,
     generatedAt: input.generatedAt ?? session.timestamp,
     models: sanitizeMachineIds(input.models),
+    providers: sanitizeProviders(input.providers),
     fixtureIds,
     fixtureCount: fixtureIds.length,
     options: sanitizeCommandOptions(input.options),
@@ -219,6 +226,7 @@ export const writeEvaluationReport = (session, input = {}) => {
     feature: report.feature,
     generatedAt: report.generatedAt,
     models: report.models,
+    providers: report.providers,
     fixtureIds: report.fixtureIds,
     fixtureCount: report.fixtureCount,
     options: report.options,

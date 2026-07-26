@@ -31,6 +31,7 @@ describe('writeEvaluationReport', () => {
 
     const paths = writeEvaluationReport(session, {
       models: ['google/gemini-2.5-flash', 'google/gemini-3.5-flash-lite'],
+      providers: ['openrouter', 'Bearer private-provider'],
       fixtureIds: ['fixture-en-001', 'fixture-ar-001'],
       options: {
         runs: 3,
@@ -82,6 +83,7 @@ describe('writeEvaluationReport', () => {
 
     expect(report).toMatchObject({
       models: ['google/gemini-2.5-flash', 'google/gemini-3.5-flash-lite'],
+      providers: ['openrouter'],
       fixtureIds: ['fixture-en-001', 'fixture-ar-001'],
       fixtureCount: 2,
       latency: { p50Ms: 200, p95Ms: 300 },
@@ -101,7 +103,7 @@ describe('writeEvaluationReport', () => {
       }],
       pricingSnapshotTimestamp: '2026-07-26T11:00:00.000Z',
     });
-    expect(contents).not.toMatch(/private resume|private job description|private prompt|private telemetry|private score-summary resume|private score-summary output|secret-api-key|another-secret/);
+    expect(contents).not.toMatch(/private resume|private job description|private prompt|private telemetry|private score-summary resume|private score-summary output|secret-api-key|another-secret|private-provider/);
     expect(contents).not.toMatch(/resumeText|jobDescription|messages|rawOutput|apiKey|OPENROUTER_API_KEY|usageEvent/);
   });
 

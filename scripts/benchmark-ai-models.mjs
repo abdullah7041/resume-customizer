@@ -378,6 +378,7 @@ export const executeBenchmark = async (options, dependencies = {}) => {
   });
   const reportPaths = writeReport(session, {
     models: options.models,
+    providers: [...new Set(attempts.map((attempt) => attempt.classification?.provider).filter(Boolean))],
     fixtureIds: fixtures.map(fixtureIdFor),
     options: {
       runs: options.runs,
