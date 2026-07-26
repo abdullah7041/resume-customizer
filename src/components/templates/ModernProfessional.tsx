@@ -78,6 +78,9 @@ export function ModernProfessional({
     <div
       className="bg-white text-gray-900"
       style={{
+        backgroundColor: '#ffffff',
+        color: '#111827',
+        colorScheme: 'light',
         transform: `scale(${scale})`,
         transformOrigin: 'top left',
         width: A4_STYLES.width,

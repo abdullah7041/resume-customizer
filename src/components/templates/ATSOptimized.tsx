@@ -90,6 +90,9 @@ export function ATSOptimized({
         <div
             className="bg-white text-black font-sans"
             style={{
+                backgroundColor: '#ffffff',
+                color: '#111827',
+                colorScheme: 'light',
                 width: A4_STYLES.width,
                 minHeight: A4_STYLES.minHeight,
                 padding: marginPadding,

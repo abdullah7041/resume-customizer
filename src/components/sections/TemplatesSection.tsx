@@ -493,45 +493,39 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
         if (!previewElement) throw new Error('Preview not found for fallback');
 
-        // Hide elements that shouldn't be printed
-        const noPrintNodes = previewElement.querySelectorAll('[data-no-print]');
-        const noPrintDisplayStates = new Map<HTMLElement, string>();
-        
-        noPrintNodes.forEach(node => {
-          const el = node as HTMLElement;
-          noPrintDisplayStates.set(el, el.style.display);
-          el.style.display = 'none';
+        // Capture an isolated light clone so fallback export never mutates the live preview.
+        const fallbackClone = previewElement.cloneNode(true) as HTMLElement;
+        fallbackClone.style.position = 'absolute';
+        fallbackClone.style.left = '-9999px';
+        fallbackClone.style.top = '0';
+        fallbackClone.style.width = '210mm';
+        fallbackClone.style.overflow = 'visible';
+        fallbackClone.style.boxSizing = 'border-box';
+        document.body.appendChild(fallbackClone);
+        forceLightThemeForPdf(fallbackClone);
+        fallbackClone.querySelectorAll('[data-no-print]').forEach((element) => element.remove());
+        fallbackClone.querySelectorAll('[style*="transform"]').forEach((element) => {
+          const htmlElement = element as HTMLElement;
+          htmlElement.style.transform = 'none';
+          htmlElement.style.width = '210mm';
+          htmlElement.style.maxWidth = '100%';
+          htmlElement.style.height = 'auto';
+          htmlElement.style.minHeight = 'auto';
         });
 
-        // 1. Snapshot the actual live preview element without transformations
-        // We temporarily turn off transforms on the immediate wrapper so html2canvas renders crisply at Native dimensions instead of the scaled-down view
-        const wrapper = (
-          previewElement.closest?.('[style*="transform"]') as HTMLElement | null
-          ?? previewElement.parentElement?.closest?.('[style*="transform"]') as HTMLElement | null
-        );
-        
-        let originalTransform = '';
-        if (wrapper) {
-          originalTransform = wrapper.style.transform;
-          wrapper.style.transform = 'none';
+        let canvas: HTMLCanvasElement;
+        try {
+          canvas = await toCanvas(fallbackClone, {
+            pixelRatio: 2,
+            cacheBust: true,
+            backgroundColor: '#ffffff',
+            style: {
+              transform: 'none',
+            },
+          });
+        } finally {
+          document.body.removeChild(fallbackClone);
         }
-
-        const canvas = await toCanvas(previewElement, {
-          pixelRatio: 2,
-          cacheBust: true,
-          style: {
-            transform: 'none',
-          }
-        });
-
-        // Restore transforms and no-print elements
-        if (wrapper) {
-          wrapper.style.transform = originalTransform;
-        }
-        noPrintNodes.forEach(node => {
-          const el = node as HTMLElement;
-          el.style.display = noPrintDisplayStates.get(el) || '';
-        });
 
         const imgData = canvas.toDataURL('image/png');
         

@@ -3081,6 +3081,12 @@
   animation-direction: reverse;
 }
 
+[data-resume-preview] {
+  background-color: #ffffff;
+  color: #111827;
+  color-scheme: light;
+}
+
 /* Print optimization for resume templates */
 @media print {
   @page {

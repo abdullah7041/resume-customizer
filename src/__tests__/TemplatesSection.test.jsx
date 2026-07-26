@@ -346,6 +346,35 @@ describe('TemplatesSection', () => {
             expect(source).toMatch(/background:\s*#fff(?:fff)?\s*!important/);
         });
 
+        it('keeps template roots and client PDF fallback explicitly light', async () => {
+            const { readFileSync } = await import('fs');
+            const { join } = await import('path');
+            const templateSources = [
+                'ModernProfessional.tsx',
+                'ExecutiveProfessional.tsx',
+                'TechnicalEngineer.tsx',
+                'ATSOptimized.tsx',
+            ].map((fileName) => readFileSync(
+                join(__dirname, `../components/templates/${fileName}`),
+                'utf-8'
+            ));
+            const exportSource = readFileSync(
+                join(__dirname, '../components/sections/TemplatesSection.tsx'),
+                'utf-8'
+            );
+            const cssSource = readFileSync(join(__dirname, '../index.css'), 'utf-8');
+
+            templateSources.forEach((source) => {
+                expect(source).toContain("backgroundColor: '#ffffff'");
+                expect(source).toContain("color: '#111827'");
+                expect(source).toContain("colorScheme: 'light'");
+            });
+            expect(exportSource).toContain('const fallbackClone = previewElement.cloneNode(true)');
+            expect(exportSource).toContain('forceLightThemeForPdf(fallbackClone)');
+            expect(exportSource).toContain("backgroundColor: '#ffffff'");
+            expect(cssSource).toMatch(/\[data-resume-preview\]\s*\{[\s\S]*color-scheme:\s*light/);
+        });
+
         it('passes RTL direction to DOCX export for mixed Arabic/English content', async () => {
             mockContentLanguage = 'mixed';
 
