@@ -1,0 +1,286 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+let benchmark;
+let fetchSpy;
+
+const directSuccess = ({ feature, fixture, modelId, run }) => ({
+  feature,
+  contractId: 'resume_truth_check',
+  fixtureId: fixture._file,
+  modelId,
+  run,
+  latencyMs: 10,
+  score: 100,
+  qualityPassed: true,
+  classification: {
+    provider: 'openrouter',
+    fallbackUsed: false,
+    schemaValid: true,
+    malformedJson: false,
+    timeout: false,
+    providerUnavailable: false,
+    cacheUsed: false,
+    skipped: false,
+    primarySuccess: true,
+    failureReasons: [],
+  },
+});
+
+beforeAll(async () => {
+  fetchSpy = vi.fn(() => {
+    throw new Error('The benchmark must not fetch during import or CLI validation.');
+  });
+  vi.stubGlobal('fetch', fetchSpy);
+  vi.stubEnv('OPENROUTER_API_KEY', '');
+  vi.stubEnv('GEMINI_API_KEY', '');
+  benchmark = await import('../../../benchmark-ai-models.mjs?test-import-safe');
+});
+
+afterAll(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+describe('benchmark module and CLI validation', () => {
+  it('does not make a network request when imported', () => {
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('preserves legacy baseline/candidate CLI while defaulting the legacy feature to optimize', () => {
+    const parsed = benchmark.parseBenchmarkCli([
+      '--baseline', 'google/gemini-2.5-flash',
+      '--candidate', 'google/gemini-3.1-flash-lite',
+    ]);
+
+    expect(parsed).toMatchObject({
+      feature: 'optimize',
+      baseline: 'google/gemini-2.5-flash',
+      candidate: 'google/gemini-3.1-flash-lite',
+      models: [
+        'google/gemini-2.5-flash',
+        'google/gemini-3.1-flash-lite',
+      ],
+      runs: 1,
+      smokeOnly: true,
+      evaluationMode: 'smoke_only',
+    });
+  });
+
+  it('accepts additive models and repeated runs for an authoritative contract feature', () => {
+    const parsed = benchmark.parseBenchmarkCli([
+      '--feature', 'truth-check',
+      '--models', 'google/gemini-2.5-flash,google/gemini-3.1-flash-lite',
+      '--runs', '3',
+    ]);
+
+    expect(parsed).toMatchObject({
+      feature: 'truth-check',
+      models: [
+        'google/gemini-2.5-flash',
+        'google/gemini-3.1-flash-lite',
+      ],
+      runs: 3,
+      smokeOnly: false,
+      evaluationMode: 'authoritative',
+    });
+  });
+
+  it.each([
+    [
+      ['--feature', 'not-a-feature', '--models', 'google/gemini-2.5-flash'],
+      'Invalid --feature value',
+    ],
+    [
+      ['--feature', 'truth-check', '--models', 'unsupported/example-model'],
+      'Unsupported benchmark model',
+    ],
+  ])('rejects invalid CLI before any attempt can reach fetch', async (argv, message) => {
+    const runContractAttempt = vi.fn();
+    const logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+
+    const exitCode = await benchmark.main(argv, { logger, runContractAttempt });
+
+    expect(exitCode).toBe(1);
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining(message));
+    expect(runContractAttempt).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('benchmark matrix execution and reporting', () => {
+  it.each([
+    ['match', 'processMatchOnly', { score: 72 }, 72],
+    ['optimize', 'optimizeResume', { match_score: 74, bullet_improvements: [] }, 74],
+  ])('keeps %s wrapper execution smoke-only while disabling provider fallback', async (
+    feature,
+    wrapperName,
+    output,
+    score,
+  ) => {
+    const wrappers = {
+      processMatchOnly: vi.fn(),
+      optimizeResume: vi.fn(),
+    };
+    wrappers[wrapperName].mockResolvedValue(output);
+    const smokeFixture = {
+      _file: 'smoke.json',
+      resumeText: 'Synthetic resume',
+      jobDescription: 'Synthetic job',
+      language: 'en',
+    };
+
+    const result = await benchmark.runSmokeAttempt({
+      feature,
+      fixture: smokeFixture,
+      modelId: 'google/gemini-3.1-flash-lite',
+      run: 2,
+      wrappers,
+      now: (() => {
+        const times = [10, 20];
+        return () => times.shift();
+      })(),
+    });
+
+    const expectedOptions = {
+      modelId: 'google/gemini-3.1-flash-lite',
+      disableFallback: true,
+      featureName: `benchmark.${feature}`,
+    };
+    if (feature === 'match') {
+      expect(wrappers.processMatchOnly).toHaveBeenCalledWith(
+        smokeFixture.resumeText,
+        smokeFixture.jobDescription,
+        'en',
+        expectedOptions,
+      );
+    } else {
+      expect(wrappers.optimizeResume).toHaveBeenCalledWith(
+        smokeFixture.resumeText,
+        smokeFixture.jobDescription,
+        'en',
+        [],
+        '',
+        [],
+        expectedOptions,
+      );
+    }
+    expect(result).toMatchObject({
+      fixtureId: 'smoke.json',
+      modelId: 'google/gemini-3.1-flash-lite',
+      run: 2,
+      latencyMs: 10,
+      score,
+      qualityPassed: true,
+      classification: {
+        primarySuccess: true,
+        fallbackUsed: false,
+      },
+    });
+    expect(result).not.toHaveProperty('output');
+  });
+
+  it('runs every model, fixture, and repeat before returning a failed status', async () => {
+    const options = benchmark.parseBenchmarkCli([
+      '--feature', 'truth-check',
+      '--models', 'google/gemini-2.5-flash,google/gemini-3.1-flash-lite',
+      '--runs', '2',
+    ]);
+    const fixtures = [
+      { _file: 'one.json', resumeText: 'one', jobDescription: 'one', language: 'en' },
+      { _file: 'two.json', resumeText: 'two', jobDescription: 'two', language: 'ar' },
+    ];
+    let attemptNumber = 0;
+    const runContractAttempt = vi.fn(async (input) => {
+      attemptNumber += 1;
+      const result = directSuccess(input);
+      if (attemptNumber === 2) {
+        return {
+          ...result,
+          score: null,
+          qualityPassed: false,
+          classification: {
+            ...result.classification,
+            schemaValid: false,
+            primarySuccess: false,
+            failureReasons: ['schema_invalid'],
+          },
+        };
+      }
+      return result;
+    });
+    const writeReport = vi.fn(() => ({ jsonPath: 'safe-report.json' }));
+
+    const result = await benchmark.executeBenchmark(options, {
+      fixtures,
+      runContractAttempt,
+      writeReport,
+      createSession: vi.fn(() => ({ feature: 'truth-check', directory: 'unused' })),
+      logger: {
+        log: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    });
+
+    expect(runContractAttempt).toHaveBeenCalledTimes(8);
+    expect(writeReport).toHaveBeenCalledTimes(1);
+    expect(writeReport.mock.invocationCallOrder[0]).toBeGreaterThan(
+      runContractAttempt.mock.invocationCallOrder.at(-1),
+    );
+    expect(result).toMatchObject({
+      exitCode: 1,
+      attempts: expect.any(Array),
+      reportPaths: { jsonPath: 'safe-report.json' },
+    });
+    expect(result.attempts).toHaveLength(8);
+  });
+
+  it('labels match as smoke-only in the persisted report metadata', async () => {
+    const reportRoot = mkdtempSync(join(tmpdir(), 'watheq-benchmark-'));
+    try {
+      const options = benchmark.parseBenchmarkCli([
+        '--feature', 'match',
+        '--models', 'google/gemini-2.5-flash',
+        '--report-dir', reportRoot,
+      ]);
+      const smokeAttempt = vi.fn(async ({ feature, fixture, modelId, run }) => ({
+        ...directSuccess({ feature, fixture, modelId, run }),
+        contractId: null,
+      }));
+
+      const result = await benchmark.executeBenchmark(options, {
+        fixtures: [{
+          _file: 'smoke.json',
+          resumeText: 'Synthetic resume',
+          jobDescription: 'Synthetic job',
+          language: 'en',
+        }],
+        runSmokeAttempt: smokeAttempt,
+        logger: {
+          log: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+        },
+      });
+      const report = JSON.parse(readFileSync(result.reportPaths.jsonPath, 'utf8'));
+
+      expect(result.exitCode).toBe(0);
+      expect(smokeAttempt).toHaveBeenCalledOnce();
+      expect(report.options).toMatchObject({
+        smokeOnly: true,
+        evaluationMode: 'smoke_only',
+        disableFallback: true,
+      });
+    } finally {
+      rmSync(reportRoot, { recursive: true, force: true });
+    }
+  });
+});

@@ -1,442 +1,419 @@
 /**
- * AI Model Benchmark Harness
+ * AI model benchmark harness.
  *
- * Compares baseline and candidate AI models across synthetic resume/JD fixtures.
- * Does NOT run automatically during build or test.
+ * Authoritative direct-contract features:
+ *   truth-check, cover-letter, interview
  *
- * Usage:
- *   npm run benchmark:ai -- --feature optimize --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite
+ * Smoke-only features:
+ *   match, optimize, clarification, metadata
  *
- * Safety:
- * - All fixtures are synthetic (see benchmark-fixtures/README.md).
- * - Benchmark calls use feature names prefixed with "benchmark." to avoid polluting production analytics.
- * - Set BENCHMARK_DISABLE_USAGE_LOGGING=true to suppress ai_usage_events entirely.
- * - Candidate models must be in SUPPORTED_BENCHMARK_MODELS.
+ * The module is import-safe. Provider clients are loaded only after CLI and model
+ * validation succeeds and an attempt is about to run.
  */
 
-import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { callOpenRouter } from '../netlify/lib/openrouter-client.js';
-import { processMatchOnly, optimizeResume } from '../netlify/lib/gemini-client.js';
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+} from 'node:fs';
+import {
+  dirname,
+  join,
+  resolve,
+} from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { SUPPORTED_BENCHMARK_MODELS } from '../netlify/lib/model-registry.js';
+import { classifyAttempt } from './lib/model-eval/attempts.mjs';
+import { parseEvaluationArgs } from './lib/model-eval/cli.mjs';
+import {
+  FEATURE_CONTRACT_ALIASES,
+  runContractAttempt as runDirectContractAttempt,
+} from './lib/model-eval/contract-runners.mjs';
+import {
+  aggregateGoldAttempts,
+  buildGoldScoreSummaries,
+} from './lib/model-eval/gold-evaluator-options.mjs';
+import {
+  createEvaluationSession,
+  writeEvaluationReport,
+} from './lib/model-eval/reporting.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = join(__dirname, 'benchmark-fixtures');
-const REPORTS_DIR = join(__dirname, 'benchmark-reports');
+const GENERIC_FEATURES = new Set([
+  'match',
+  'optimize',
+  'truth-check',
+  'cover-letter',
+  'interview',
+  'clarification',
+  'metadata',
+]);
+const AUTHORITATIVE_FEATURES = new Set([
+  'truth-check',
+  'cover-letter',
+  'interview',
+]);
 
-// ---------------------------------------------------------------------------
-// CLI argument parsing
-// ---------------------------------------------------------------------------
-function parseArgs() {
-  const args = process.argv.slice(2);
-  const parsed = {};
-  for (let i = 0; i < args.length; i += 2) {
-    const key = args[i].replace(/^--/, '');
-    parsed[key] = args[i + 1];
+const usageError = (message) => {
+  const error = new Error(`${message}\nUsage: npm run benchmark:ai -- --feature <match|optimize|truth-check|cover-letter|interview|clarification|metadata> [--baseline <model> --candidate <model>] [--models <model,model>] [--runs <positive integer>] [--fixture <id>] [--report-dir <path>]`);
+  error.code = 'EVALUATION_USAGE';
+  return error;
+};
+
+const withLegacyDefaultFeature = (argv) => (
+  argv.includes('--feature') ? [...argv] : ['--feature', 'optimize', ...argv]
+);
+
+export const parseBenchmarkCli = (argv = []) => {
+  const parsed = parseEvaluationArgs(withLegacyDefaultFeature(argv));
+  if (!GENERIC_FEATURES.has(parsed.feature)) {
+    throw usageError(`Invalid --feature value "${parsed.feature}".`);
   }
-  return parsed;
-}
-
-const cli = parseArgs();
-const FEATURE = cli.feature || 'optimize';
-const BASELINE_MODEL = cli.baseline;
-const CANDIDATE_MODEL = cli.candidate;
-const FIXTURE_FILTER = cli.fixture;
-
-if (!BASELINE_MODEL || !CANDIDATE_MODEL) {
-  console.error(`Usage: npm run benchmark:ai -- --feature <match|clarification|optimize|metadata> --baseline <modelId> --candidate <modelId> [--fixture <filename>]`);
-  process.exit(1);
-}
-
-if (!SUPPORTED_BENCHMARK_MODELS.includes(BASELINE_MODEL)) {
-  console.error(`FAIL: Baseline model "${BASELINE_MODEL}" is not in SUPPORTED_BENCHMARK_MODELS.`);
-  console.error(`Supported models: ${SUPPORTED_BENCHMARK_MODELS.join(', ')}`);
-  process.exit(1);
-}
-
-if (!SUPPORTED_BENCHMARK_MODELS.includes(CANDIDATE_MODEL)) {
-  console.error(`FAIL: Candidate model "${CANDIDATE_MODEL}" is not in SUPPORTED_BENCHMARK_MODELS.`);
-  console.error(`Supported models: ${SUPPORTED_BENCHMARK_MODELS.join(', ')}`);
-  process.exit(1);
-}
-
-// ---------------------------------------------------------------------------
-// Privacy guard: warn if fixtures look like real personal data
-// ---------------------------------------------------------------------------
-function looksLikeRealData(text) {
-  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-  return emailPattern.test(text) && !text.includes('sample') && !text.includes('example');
-}
-
-// ---------------------------------------------------------------------------
-// Load fixtures
-// ---------------------------------------------------------------------------
-function loadFixtures() {
-  const files = readdirSync(FIXTURES_DIR)
-    .filter(f => f.endsWith('.json') && f !== 'README.md');
-
-  const fixtures = [];
-  for (const file of files) {
-    const raw = readFileSync(join(FIXTURES_DIR, file), 'utf8');
-    const parsed = JSON.parse(raw);
-    parsed._file = file;
-    fixtures.push(parsed);
+  if (parsed.models.length === 0) {
+    throw usageError('At least one model is required through --baseline/--candidate or --models.');
   }
 
-  if (FIXTURE_FILTER) {
-    return fixtures.filter(f => f._file === FIXTURE_FILTER);
+  const unsupported = parsed.models.filter((modelId) => (
+    !SUPPORTED_BENCHMARK_MODELS.includes(modelId)
+  ));
+  if (unsupported.length > 0) {
+    throw usageError(`Unsupported benchmark model: ${unsupported.join(', ')}`);
+  }
+
+  const smokeOnly = !AUTHORITATIVE_FEATURES.has(parsed.feature);
+  return {
+    ...parsed,
+    smokeOnly,
+    selectionEligible: !smokeOnly,
+    evaluationMode: smokeOnly ? 'smoke_only' : 'authoritative',
+    disableFallback: true,
+  };
+};
+
+const fixtureIdFor = (fixture) => (
+  fixture?.id
+  || fixture?._file
+  || fixture?.name
+  || 'unknown_fixture'
+);
+
+const fixtureMatches = (fixture, filter) => (
+  !filter
+  || fixture?._file === filter
+  || fixture?.id === filter
+  || fixture?.name === filter
+);
+
+export const loadBenchmarkFixtures = ({ fixture, fixturesDir = FIXTURES_DIR } = {}) => {
+  if (!existsSync(fixturesDir)) {
+    throw new Error(`Benchmark fixture directory does not exist: ${fixturesDir}`);
+  }
+
+  const fixtures = readdirSync(fixturesDir)
+    .filter((filename) => filename.endsWith('.json'))
+    .sort()
+    .map((filename) => ({
+      ...JSON.parse(readFileSync(join(fixturesDir, filename), 'utf8')),
+      _file: filename,
+    }))
+    .filter((loadedFixture) => fixtureMatches(loadedFixture, fixture));
+
+  if (fixtures.length === 0) {
+    throw new Error(fixture
+      ? `No benchmark fixture matched "${fixture}".`
+      : 'No benchmark fixtures found.');
   }
   return fixtures;
-}
+};
 
-// ---------------------------------------------------------------------------
-// Benchmark feature runners
-// ---------------------------------------------------------------------------
-async function runMatch(fixture, modelId) {
-  const start = Date.now();
-  try {
-    const result = await processMatchOnly(
-      fixture.resumeText,
-      fixture.jobDescription,
-      fixture.language,
-      { modelId, featureName: 'benchmark.match' }
-    );
-    return {
-      success: true,
-      latencyMs: Date.now() - start,
-      outputLength: JSON.stringify(result).length,
-      jsonParseSuccess: true,
-      score: result.score ?? null,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      latencyMs: Date.now() - start,
-      error: error.message,
-      status: error.status ?? null,
-    };
-  }
-}
+const looksLikeRealData = (text) => {
+  if (typeof text !== 'string') return false;
+  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/u;
+  return emailPattern.test(text)
+    && !text.toLocaleLowerCase().includes('sample')
+    && !text.toLocaleLowerCase().includes('example');
+};
 
-async function runOptimize(fixture, modelId) {
-  const start = Date.now();
-  try {
-    const result = await optimizeResume(
-      fixture.resumeText,
-      fixture.jobDescription,
-      fixture.language,
-      [],
-      '',
-      { modelId, featureName: 'benchmark.optimize' }
-    );
-    return {
-      success: true,
-      latencyMs: Date.now() - start,
-      outputLength: JSON.stringify(result).length,
-      jsonParseSuccess: true,
-      score: result.match_score ?? null,
-      hallucinationFlags: checkOptimizeHallucinations(result, fixture),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      latencyMs: Date.now() - start,
-      error: error.message,
-      status: error.status ?? null,
-    };
-  }
-}
+const metricTokens = (text) => (
+  typeof text === 'string'
+    ? text.toLocaleLowerCase().match(/\$\d+[,.]?\d*[kmb]?|\d+%|\d+\s*(?:million|billion|thousand)/gu) ?? []
+    : []
+);
 
-async function runClarification(fixture, modelId) {
-  // Reuse the clarification prompt + schema from generate-clarifications.ts
-  const CLARIFICATION_SCHEMA = {
-    type: 'object',
-    properties: {
-      clarifications: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            theme: { type: 'string' },
-            rationale: { type: 'string' },
-            question: { type: 'string' },
-          },
-          required: ['id', 'theme', 'rationale', 'question'],
-        },
-      },
-    },
-    required: ['clarifications'],
-  };
-
-  const prompt = `You are an elite resume strategist performing a precision gap analysis before optimization.
-
-Identify 0 to 3 CRITICAL missing data points that, if provided by the candidate, would allow a significantly better optimization — specifically missing quantifiable metrics, tool equivalencies, or contextual evidence that the job description explicitly requires.
-
-<job_description>
-${fixture.jobDescription}
-</job_description>
-
-<resume_text>
-${fixture.resumeText}
-</resume_text>`;
-
-  const start = Date.now();
-  try {
-    const text = await callOpenRouter('flash', [{ role: 'user', content: prompt }], CLARIFICATION_SCHEMA, {
-      maxTokens: 2048,
-      timeoutMs: 20000,
-      reasoningBudget: 512,
-      featureName: 'benchmark.clarification_questions',
-      modelId,
-    });
-    const parsed = JSON.parse(text);
-    return {
-      success: true,
-      latencyMs: Date.now() - start,
-      outputLength: text.length,
-      jsonParseSuccess: true,
-      questionCount: parsed.clarifications?.length ?? 0,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      latencyMs: Date.now() - start,
-      error: error.message,
-      status: error.status ?? null,
-    };
-  }
-}
-
-async function runMetadata(fixture, modelId) {
-  const jsonSchema = {
-    type: 'object',
-    properties: {
-      companyName: { type: 'string' },
-      jobTitle: { type: 'string' },
-      location: { type: 'string' },
-      employmentType: { type: 'string' },
-      seniority: { type: 'string' },
-      sector: { type: 'string' },
-      confidence: {
-        type: 'object',
-        properties: {
-          companyName: { type: 'number' },
-          jobTitle: { type: 'number' },
-          location: { type: 'number' },
-        },
-        required: ['companyName', 'jobTitle', 'location'],
-      },
-      needsUserConfirmation: { type: 'boolean' },
-    },
-    required: ['companyName', 'jobTitle', 'location', 'employmentType', 'seniority', 'sector', 'confidence', 'needsUserConfirmation'],
-  };
-
-  const messages = [
-    { role: 'system', content: 'You are a job metadata extraction assistant. Extract only what is clearly stated. Never hallucinate. If information is missing, return null.' },
-    { role: 'user', content: `Extract the following fields from this job posting:\n\n${fixture.jobDescription}\n\nReturn ONLY valid JSON, no extra text.` },
-  ];
-
-  const start = Date.now();
-  try {
-    const text = await callOpenRouter('lite', messages, jsonSchema, {
-      temperature: 0,
-      maxTokens: 1024,
-      timeoutMs: 15000,
-      featureName: 'benchmark.job_metadata_extraction',
-      modelId,
-    });
-    const parsed = JSON.parse(text);
-    return {
-      success: true,
-      latencyMs: Date.now() - start,
-      outputLength: text.length,
-      jsonParseSuccess: true,
-      hasJobTitle: !!parsed.jobTitle,
-      hasCompanyName: !!parsed.companyName,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      latencyMs: Date.now() - start,
-      error: error.message,
-      status: error.status ?? null,
-    };
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Hallucination checks for optimize output
-// ---------------------------------------------------------------------------
-function checkOptimizeHallucinations(result, fixture) {
+const optimizeHallucinationFlags = (result, fixture) => {
+  const resumeText = fixture.resumeText ?? '';
+  const outputText = JSON.stringify(result);
+  const resumeLower = resumeText.toLocaleLowerCase();
+  const outputLower = outputText.toLocaleLowerCase();
   const flags = [];
-  const resumeLower = fixture.resumeText.toLowerCase();
-  const outputLower = JSON.stringify(result).toLowerCase();
 
-  // Check for invented employer names not in resume
-  const knownEmployers = (fixture.resumeText.match(/at\s+([A-Z][A-Za-z0-9\s&]+)/g) || [])
-    .map(s => s.replace(/^at\s+/, '').trim().toLowerCase());
-  if (result.bullet_improvements) {
-    for (const item of result.bullet_improvements) {
-      const improved = (item.improved || '').toLowerCase();
-      for (const emp of knownEmployers) {
-        if (improved.includes(emp)) break;
+  for (const credential of ['phd', 'master', 'mba', 'bachelor', 'aws certified', 'pmp', 'scrum']) {
+    if (outputLower.includes(credential) && !resumeLower.includes(credential)) {
+      flags.push('possible_invented_credential');
+    }
+  }
+
+  const resumeMetrics = new Set(metricTokens(resumeText));
+  for (const metric of metricTokens(outputText)) {
+    if (!resumeMetrics.has(metric) && !outputLower.includes(`${metric} (verify)`)) {
+      flags.push('possible_invented_metric');
+    }
+  }
+
+  if (fixture.language === 'ar' && !/[\u0600-\u06FF]/u.test(outputText)) {
+    flags.push('language_drift');
+  }
+  return [...new Set(flags)];
+};
+
+const failureReasonFor = (error) => {
+  if (error?.name === 'TimeoutError' || error?.status === 504) return 'timeout';
+  if (error?.name === 'SyntaxError' || error?.code === 'AI_CONTRACT_JSON_PARSE_FAILED') {
+    return 'malformed_json';
+  }
+  if (error?.code === 'AI_CONTRACT_VALIDATION_FAILED') return 'schema_invalid';
+  if ([401, 403, 404, 408, 429, 500, 502, 503].includes(error?.status)) {
+    return 'provider_unavailable';
+  }
+  return 'contract_error';
+};
+
+const classifyFailure = (error) => {
+  const classification = classifyAttempt({
+    provider: 'openrouter',
+    schemaValid: false,
+    failureReason: failureReasonFor(error),
+  });
+  return {
+    ...classification,
+    failureReasons: [...new Set(classification.failureReasons)],
+  };
+};
+
+export const runSmokeAttempt = async ({
+  feature,
+  fixture,
+  modelId,
+  run = 1,
+  wrappers,
+  now = Date.now,
+} = {}) => {
+  if (!['match', 'optimize'].includes(feature)) {
+    throw new TypeError(`Feature "${feature}" is not a wrapper smoke feature.`);
+  }
+  const startedAt = now();
+  try {
+    const loadedWrappers = wrappers ?? await import('../netlify/lib/gemini-client.js');
+    const contractOptions = {
+      modelId,
+      disableFallback: true,
+      featureName: `benchmark.${feature}`,
+    };
+    const output = feature === 'match'
+      ? await loadedWrappers.processMatchOnly(
+        fixture.resumeText,
+        fixture.jobDescription,
+        fixture.language,
+        contractOptions,
+      )
+      : await loadedWrappers.optimizeResume(
+        fixture.resumeText,
+        fixture.jobDescription,
+        fixture.language,
+        [],
+        '',
+        [],
+        contractOptions,
+      );
+    const hallucinationFlags = feature === 'optimize'
+      ? optimizeHallucinationFlags(output, fixture)
+      : [];
+
+    return {
+      feature,
+      contractId: null,
+      fixtureId: fixtureIdFor(fixture),
+      modelId,
+      run,
+      latencyMs: Math.max(0, now() - startedAt),
+      outputLength: JSON.stringify(output).length,
+      score: feature === 'match' ? output.score ?? null : output.match_score ?? null,
+      qualityPassed: hallucinationFlags.length === 0,
+      qualityFailureReasons: hallucinationFlags,
+      approximateCostUsd: null,
+      status: null,
+      errorCode: null,
+      classification: classifyAttempt({
+        provider: 'openrouter',
+        schemaValid: true,
+        failureReason: null,
+      }),
+    };
+  } catch (error) {
+    return {
+      feature,
+      contractId: null,
+      fixtureId: fixtureIdFor(fixture),
+      modelId,
+      run,
+      latencyMs: Math.max(0, now() - startedAt),
+      outputLength: null,
+      score: null,
+      qualityPassed: false,
+      qualityFailureReasons: [],
+      approximateCostUsd: null,
+      status: Number.isInteger(error?.status) ? error.status : null,
+      errorCode: typeof error?.code === 'string' ? error.code : null,
+      classification: classifyFailure(error),
+    };
+  }
+};
+
+const unexpectedAttemptFailure = ({ feature, fixture, modelId, run, error }) => ({
+  feature,
+  contractId: FEATURE_CONTRACT_ALIASES[feature] ?? null,
+  fixtureId: fixtureIdFor(fixture),
+  modelId,
+  run,
+  latencyMs: 0,
+  outputLength: null,
+  score: null,
+  qualityPassed: false,
+  qualityFailureReasons: [],
+  approximateCostUsd: null,
+  status: Number.isInteger(error?.status) ? error.status : null,
+  errorCode: typeof error?.code === 'string' ? error.code : null,
+  classification: classifyFailure(error),
+});
+
+const selectedFixtures = (fixtures, filter) => {
+  const selected = fixtures.filter((fixture) => fixtureMatches(fixture, filter));
+  if (selected.length === 0) {
+    throw new Error(filter
+      ? `No benchmark fixture matched "${filter}".`
+      : 'No benchmark fixtures found.');
+  }
+  return selected;
+};
+
+export const executeBenchmark = async (options, dependencies = {}) => {
+  const logger = dependencies.logger ?? console;
+  const fixtures = selectedFixtures(
+    dependencies.fixtures ?? loadBenchmarkFixtures(options),
+    options.fixture,
+  );
+  const directRunner = dependencies.runContractAttempt ?? runDirectContractAttempt;
+  const smokeRunner = dependencies.runSmokeAttempt ?? runSmokeAttempt;
+  const createSession = dependencies.createSession ?? createEvaluationSession;
+  const writeReport = dependencies.writeReport ?? writeEvaluationReport;
+  const attempts = [];
+
+  logger.log(`[Benchmark] Feature: ${options.feature}`);
+  logger.log(options.smokeOnly
+    ? '[Benchmark] Mode: SMOKE ONLY — not eligible for model selection'
+    : '[Benchmark] Mode: AUTHORITATIVE direct-contract evaluation');
+  logger.log(`[Benchmark] Models: ${options.models.join(', ')}`);
+  logger.log(`[Benchmark] Runs per fixture: ${options.runs}`);
+
+  for (const fixture of fixtures) {
+    if (looksLikeRealData(fixture.resumeText) || looksLikeRealData(fixture.jobDescription)) {
+      logger.warn(`[Benchmark] WARNING: Fixture "${fixtureIdFor(fixture)}" may contain real personal data.`);
+    }
+  }
+
+  for (const fixture of fixtures) {
+    for (const modelId of options.models) {
+      for (let run = 1; run <= options.runs; run += 1) {
+        const attemptInput = {
+          feature: options.feature,
+          fixture,
+          modelId,
+          run,
+        };
+        let attempt;
+        try {
+          attempt = Object.hasOwn(FEATURE_CONTRACT_ALIASES, options.feature)
+            ? await directRunner(attemptInput)
+            : await smokeRunner(attemptInput);
+        } catch (error) {
+          attempt = unexpectedAttemptFailure({ ...attemptInput, error });
+        }
+        attempts.push(attempt);
+        logger.log(
+          `[Benchmark] ${attempt.fixtureId} model=${modelId} run=${run} primarySuccess=${attempt.classification?.primarySuccess === true} qualityPassed=${attempt.qualityPassed === true} latency=${attempt.latencyMs}ms`,
+        );
       }
     }
   }
 
-  // Check for invented degrees/certifications
-  const degreePatterns = ['phd', 'master', 'mba', 'bachelor', 'aws certified', 'pmp', 'scrum'];
-  for (const deg of degreePatterns) {
-    if (outputLower.includes(deg) && !resumeLower.includes(deg)) {
-      flags.push(`possible_invented_credential: "${deg}"`);
-    }
-  }
-
-  // Check for invented exact metrics not in source or clarifications
-  const metricPatterns = /\$\d+[,.]?\d*[KkMmBb]?|\d+%|\d+\s*(million|billion|thousand)/g;
-  const resumeMetrics = new Set(resumeLower.match(metricPatterns) || []);
-  const outputMetrics = outputLower.match(metricPatterns) || [];
-  for (const m of outputMetrics) {
-    if (!resumeMetrics.has(m) && !m.includes('verify')) {
-      flags.push(`possible_invented_metric: "${m}"`);
-    }
-  }
-
-  // Language direction check
-  if (fixture.language === 'ar' && !outputLower.match(/[\u0600-\u06FF]/)) {
-    flags.push('language_drift: expected Arabic output but none detected');
-  }
-
-  return flags;
-}
-
-// ---------------------------------------------------------------------------
-// Main benchmark loop
-// ---------------------------------------------------------------------------
-async function main() {
-  console.log(`[Benchmark] Feature: ${FEATURE}`);
-  console.log(`[Benchmark] Baseline: ${BASELINE_MODEL}`);
-  console.log(`[Benchmark] Candidate: ${CANDIDATE_MODEL}`);
-
-  const fixtures = loadFixtures();
-  if (fixtures.length === 0) {
-    console.error('No fixtures found.');
-    process.exit(1);
-  }
-
-  // Privacy guard
-  for (const fixture of fixtures) {
-    if (looksLikeRealData(fixture.resumeText) || looksLikeRealData(fixture.jobDescription)) {
-      console.warn(`[Benchmark] WARNING: Fixture "${fixture._file}" may contain real personal data. Review before sharing results.`);
-    }
-  }
-
-  const results = [];
-
-  for (const fixture of fixtures) {
-    console.log(`\n[Benchmark] Fixture: ${fixture.name || fixture._file}`);
-
-    let baselineResult;
-    let candidateResult;
-
-    switch (FEATURE) {
-      case 'match':
-        baselineResult = await runMatch(fixture, BASELINE_MODEL);
-        candidateResult = await runMatch(fixture, CANDIDATE_MODEL);
-        break;
-      case 'optimize':
-        baselineResult = await runOptimize(fixture, BASELINE_MODEL);
-        candidateResult = await runOptimize(fixture, CANDIDATE_MODEL);
-        break;
-      case 'clarification':
-        baselineResult = await runClarification(fixture, BASELINE_MODEL);
-        candidateResult = await runClarification(fixture, CANDIDATE_MODEL);
-        break;
-      case 'metadata':
-        baselineResult = await runMetadata(fixture, BASELINE_MODEL);
-        candidateResult = await runMetadata(fixture, CANDIDATE_MODEL);
-        break;
-      default:
-        console.error(`Unknown feature: ${FEATURE}`);
-        process.exit(1);
-    }
-
-    // Model availability validation: if both fail with 404, report clearly
-    if (!baselineResult.success && baselineResult.status === 404) {
-      console.error(`FAIL: Model "${BASELINE_MODEL}" not available on provider "openrouter" for feature "benchmark.${FEATURE}" (HTTP 404)`);
-    }
-    if (!candidateResult.success && candidateResult.status === 404) {
-      console.error(`FAIL: Model "${CANDIDATE_MODEL}" not available on provider "openrouter" for feature "benchmark.${FEATURE}" (HTTP 404)`);
-    }
-
-    results.push({
-      fixture: fixture.name || fixture._file,
-      baseline: baselineResult,
-      candidate: candidateResult,
-    });
-
-    // Print concise summary (do not print full resume/JD text)
-    console.log(`  Baseline:  success=${baselineResult.success} latency=${baselineResult.latencyMs}ms outputLength=${baselineResult.outputLength ?? 'N/A'}`);
-    console.log(`  Candidate: success=${candidateResult.success} latency=${candidateResult.latencyMs}ms outputLength=${candidateResult.outputLength ?? 'N/A'}`);
-    if (baselineResult.hallucinationFlags?.length) {
-      console.log(`  Baseline hallucination flags: ${baselineResult.hallucinationFlags.join('; ')}`);
-    }
-    if (candidateResult.hallucinationFlags?.length) {
-      console.log(`  Candidate hallucination flags: ${candidateResult.hallucinationFlags.join('; ')}`);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Print summary table
-  // ---------------------------------------------------------------------------
-  console.log('\n=== Benchmark Summary ===');
-  console.log(`Feature: ${FEATURE}`);
-  console.log(`Baseline:  ${BASELINE_MODEL}`);
-  console.log(`Candidate: ${CANDIDATE_MODEL}`);
-  console.log('');
-
-  const baselineSuccess = results.filter(r => r.baseline.success).length;
-  const candidateSuccess = results.filter(r => r.candidate.success).length;
-  const baselineAvgLatency = results.reduce((sum, r) => sum + r.baseline.latencyMs, 0) / results.length;
-  const candidateAvgLatency = results.reduce((sum, r) => sum + r.candidate.latencyMs, 0) / results.length;
-
-  console.log(`Baseline success rate:  ${baselineSuccess}/${results.length}`);
-  console.log(`Candidate success rate: ${candidateSuccess}/${results.length}`);
-  console.log(`Baseline avg latency:   ${Math.round(baselineAvgLatency)}ms`);
-  console.log(`Candidate avg latency:  ${Math.round(candidateAvgLatency)}ms`);
-
-  // ---------------------------------------------------------------------------
-  // Write JSON report
-  // ---------------------------------------------------------------------------
-  if (!existsSync(REPORTS_DIR)) {
-    mkdirSync(REPORTS_DIR, { recursive: true });
-  }
-  const reportFile = join(REPORTS_DIR, `benchmark-${FEATURE}-${Date.now()}.json`);
-  writeFileSync(reportFile, JSON.stringify({
-    meta: {
-      feature: FEATURE,
-      baselineModel: BASELINE_MODEL,
-      candidateModel: CANDIDATE_MODEL,
-      runAt: new Date().toISOString(),
-      fixtureCount: results.length,
+  const aggregate = aggregateGoldAttempts(attempts);
+  const qualityFailures = attempts.filter((attempt) => attempt.qualityPassed !== true).length;
+  const requiredFailure = aggregate.requiredFailure || qualityFailures > 0;
+  const outcomeSummary = {
+    ...aggregate.outcomeSummary,
+    qualityFailures,
+    requiredFailures: attempts.filter((attempt) => (
+      attempt.classification?.primarySuccess !== true || attempt.qualityPassed !== true
+    )).length,
+  };
+  const scoreSummaries = buildGoldScoreSummaries(attempts);
+  const session = createSession({
+    feature: options.feature,
+    reportDir: options.reportDir ?? undefined,
+  });
+  const reportPaths = writeReport(session, {
+    models: options.models,
+    fixtureIds: fixtures.map(fixtureIdFor),
+    options: {
+      runs: options.runs,
+      fixture: options.fixture,
+      stage: options.stage,
+      updateCache: false,
+      selftest: false,
+      disableFallback: true,
+      reportDir: options.reportDir,
+      smokeOnly: options.smokeOnly,
+      evaluationMode: options.evaluationMode,
     },
-    summary: {
-      baselineSuccessRate: `${baselineSuccess}/${results.length}`,
-      candidateSuccessRate: `${candidateSuccess}/${results.length}`,
-      baselineAvgLatencyMs: Math.round(baselineAvgLatency),
-      candidateAvgLatencyMs: Math.round(candidateAvgLatency),
-    },
-    results,
-  }, null, 2));
+    outcomeSummary,
+    scoreSummaries,
+    latencies: aggregate.latencies,
+    approximateCostUsd: aggregate.approximateCostUsd,
+    pricingSnapshotTimestamp: null,
+  });
 
-  console.log(`\nReport written to: ${reportFile}`);
+  logger.log(`[Benchmark] Report written to: ${reportPaths.jsonPath}`);
+  if (requiredFailure) {
+    logger.error(`[Benchmark] FAIL: ${outcomeSummary.requiredFailures} required attempt(s) failed.`);
+  }
+
+  return {
+    exitCode: requiredFailure ? 1 : 0,
+    attempts,
+    outcomeSummary,
+    scoreSummaries,
+    reportPaths,
+  };
+};
+
+export const main = async (argv = process.argv.slice(2), dependencies = {}) => {
+  const logger = dependencies.logger ?? console;
+  try {
+    const options = parseBenchmarkCli(argv);
+    const result = await executeBenchmark(options, dependencies);
+    return result.exitCode;
+  } catch (error) {
+    logger.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+};
+
+const executedPath = process.argv[1] ? resolve(process.argv[1]) : null;
+const modulePath = resolve(fileURLToPath(import.meta.url));
+if (executedPath === modulePath) {
+  main().then((exitCode) => {
+    process.exitCode = exitCode;
+  });
 }
-
-main().catch((err) => {
-  console.error('[Benchmark] Unhandled error:', err);
-  process.exit(1);
-});

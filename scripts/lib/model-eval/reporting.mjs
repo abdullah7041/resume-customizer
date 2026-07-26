@@ -13,6 +13,8 @@ const COMMAND_OPTION_FIELDS = new Set([
   'updateCache',
   'selftest',
   'disableFallback',
+  'smokeOnly',
+  'evaluationMode',
   'reportDir',
 ]);
 const OUTCOME_COUNT_FIELDS = new Set([
@@ -52,6 +54,7 @@ const sanitizeCommandOptions = (options) => {
     if (!COMMAND_OPTION_FIELDS.has(key)) return false;
     if (key === 'runs' || key === 'stage') return Number.isInteger(value) && value >= 0;
     if (key === 'fixture' || key === 'reportDir') return typeof value === 'string';
+    if (key === 'evaluationMode') return ['authoritative', 'smoke_only'].includes(value);
     return typeof value === 'boolean';
   }));
 };
