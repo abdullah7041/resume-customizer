@@ -1,7 +1,7 @@
 # ai_match model re-sweep — design
 
 **Date:** 2026-07-26
-**Status:** approved, blocked on prerequisite
+**Status:** approved, prerequisite satisfied
 
 ## Problem
 
@@ -10,7 +10,7 @@ A 2026-07-26 sweep of the `ai_match_reality_check` gold set concluded that
 identical price ($0.30/$2.50) with 2.5–3x lower latency (median 4.5–5.6s vs 13.5s).
 
 That conclusion is not usable. The sweep ran against a defective `strongMatches` prompt that
-penalised every model tested — the fix (branch `claude/angry-hertz-ba6bb0`) takes baseline
+penalised every model tested — `73f72a4` (merged through #131) takes baseline
 `gemini-2.5-flash` from 92% mean / 3-of-8 clean to **8/8 @ 100%**. The prompt defect was the
 dominant signal in the measurement, so the model ranking derived from it is unvalidated.
 
@@ -19,8 +19,9 @@ re-applying it.
 
 ## Prerequisite
 
-The `strongMatches` evidence-rule fix is merged to `main`, and `npm run eval:match` on baseline
-`gemini-2.5-flash` reproduces 8/8 @ 100%.
+Satisfied: the `strongMatches` evidence-rule fix from `73f72a4` is merged to `main` through
+#131, and `npm run eval:match` on baseline `gemini-2.5-flash` reproduced **8/8 @ 100%**. That
+is the baseline result the re-sweep must reproduce before comparing a candidate.
 
 If it does not reproduce, stop. An unstable gate makes any model comparison meaningless, and the
 instability is the more important finding.
@@ -32,8 +33,10 @@ deletes `GEMINI_API_KEY` so a non-Google model id cannot silently fall back to G
 bogus name):
 
 - **3 runs per model.** Report mean plus per-fixture min/max. The harness currently runs each
-  fixture once and reports no spread, while the observed within-model swing
-  (3.5-flash-lite on `arabic-accountant-partial`: 100% → 78% → 78%) is larger than the
+  fixture once and reports no spread. Independently, the baseline's temp-0 boilerplate pair
+  measured a 4–7 point spread across three live runs (82/78, 83/78, 78/85), corroborating that
+  one run per fixture cannot distinguish model signal from run variance. The earlier observed
+  3.5-flash-lite swing (on `arabic-accountant-partial`: 100% → 78% → 78%) is larger than the
   between-model gaps under comparison.
 - **Record per-fixture latency** alongside score. Latency is the actual thesis of the switch and
   the eval does not measure it. Report median and p95.
@@ -90,9 +93,16 @@ instrument and taking the measurement in the same pass makes neither trustworthy
 ## Known eval limits this design works around
 
 `npm run eval:match` is a sound regression gate: deterministic scorer with no LLM judge, exit code
-counts hard failures and invariance-group band crossings (`scripts/match-eval.mjs:185`), missing
-caches hard-error rather than silently skipping. It is not a ranking instrument — hence the 3-run
-requirement and the pre-committed decision rule above.
+counts hard failures and tolerance-gated invariance failures. `scripts/match-eval.mjs:175-181`
+marks a result failed only after `getInvariantGroupFailures`; its failure list is still assembled
+at `scripts/match-eval.mjs:185`. That helper uses `BAND_CROSS_TOLERANCE = 8`: a group must cross
+the published product bands *and* have a spread of at least 9 points before it fails. The
+bi-analyst clean/noisy pair sits on the 80 boundary, so its measured 4–7 point spread is tolerated
+and this particular guard is close to inert for that pair. If boilerplate sensitivity regresses,
+move the pair away from the boundary and restore a strict band-cross check rather than treating the
+tolerance as proof that boilerplate has no score effect. Missing caches still hard-error rather than
+silently skipping. It is not a ranking instrument — hence the 3-run requirement and the
+pre-committed decision rule above.
 
 One operational note: `eval/match-fixtures/*.actual.json` caches are model-dependent and committed.
 After any model change they hold the previous model's output, so a keyless run scores stale data
