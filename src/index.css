@@ -64,7 +64,7 @@
 }
 
 .character-results--optimize {
-  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 16rem);
   margin-block: 1rem;
 }
 
@@ -240,6 +240,9 @@
 
 .character-results__toggle {
   display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
   gap: 0.2rem;
   margin-block-start: 0.45rem;
   padding: 0.2rem;
@@ -253,11 +256,15 @@
 
 .character-results__toggle button {
   min-height: 1.75rem;
+  min-width: 0;
+  max-width: 100%;
   padding-inline: 0.55rem;
   border-radius: 9999px;
   color: rgb(75 85 99);
   font-size: 0.65rem;
   font-weight: 700;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .character-results__toggle button[aria-pressed='true'] {
