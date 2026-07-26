@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { JobVariantsBar } from './JobVariantsBar';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import type { OptimizationResult } from '../../types/templates';
@@ -62,6 +62,27 @@ describe('JobVariantsBar', () => {
     expect(state.activeVariantId).toBe(id);
     expect(state.optimizations).toHaveLength(1);
     expect(window.localStorage.getItem('watheq:lastJobDescription')).toBe('JD A');
+  });
+
+  it('updates the active variant and briefly confirms the save', () => {
+    vi.useFakeTimers();
+    try {
+      const store = useResumeStore.getState();
+      store.setOptimizations([sampleOpt]);
+      const id = store.saveCurrentAsVariant('Variant A', 'JD A');
+      window.localStorage.setItem('watheq:lastJobDescription', 'JD A updated');
+
+      render(<JobVariantsBar />);
+      fireEvent.click(screen.getByText('Save changes'));
+
+      expect(useResumeStore.getState().jobVariants.find((variant) => variant.id === id)?.jobDescription).toBe('JD A updated');
+      expect(screen.getByText('Saved')).toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(2000));
+      expect(screen.getByText('Save changes')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('deletes a variant', () => {

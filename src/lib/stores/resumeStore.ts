@@ -22,6 +22,25 @@ import { deduplicateByName } from '../utils/resumeUtils';
 import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { isRecommendationOnly } from '@/lib/optimize/actionability';
 
+const MAX_JOB_VARIANTS = 10;
+
+const resumeStorage = {
+  getItem: (name: string) => localStorage.getItem(name),
+  setItem: (name: string, value: string) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (error) {
+      console.warn('[ResumeStore] Failed to persist resume state:', error);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('watheq:storage-error', {
+          detail: { key: name, code: 'quota_exceeded' },
+        }));
+      }
+    }
+  },
+  removeItem: (name: string) => localStorage.removeItem(name),
+};
+
 /** Minimal valid resume skeleton — basics required fields as empty strings. */
 const emptyResume = (): ResumeSchema => ({
   basics: { name: '', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] },
@@ -640,7 +659,7 @@ export const useResumeStore = create<ResumeState>()(
           snapshot: snapshotWorkingSet(state),
         };
         set((s) => ({
-          jobVariants: [...s.jobVariants, variant],
+          jobVariants: [...s.jobVariants, variant].slice(-MAX_JOB_VARIANTS),
           activeVariantId: id,
         }));
         return id;
@@ -674,14 +693,6 @@ export const useResumeStore = create<ResumeState>()(
           hasDownloaded: false,
         });
         return variant;
-      },
-
-      renameVariant: (id, label) => {
-        set((s) => ({
-          jobVariants: s.jobVariants.map((v) =>
-            v.id === id ? { ...v, label: label.trim() || v.label, updatedAt: new Date().toISOString() } : v
-          ),
-        }));
       },
 
       deleteVariant: (id) => {
@@ -768,7 +779,7 @@ export const useResumeStore = create<ResumeState>()(
     }),
     {
       name: 'resume-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => resumeStorage),
       // v1: added jobVariants/activeVariantId slice (job-specific resume builder).
       // v2: recommendation-only cards (skills/certifications) can no longer be
       //     applied — un-apply any that the old blanket apply-all had flipped.

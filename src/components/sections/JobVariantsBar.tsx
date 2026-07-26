@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Plus, Check, Trash2, Save, X } from 'lucide-react';
 import { useResumeStore } from '../../lib/stores/resumeStore';
-import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { getCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { cn } from '../../lib/utils/cn';
 
 // Shared with MatchSection / OptimizeSection — the current job description lives here.
@@ -29,6 +29,7 @@ export function JobVariantsBar() {
 
   const [isNaming, setIsNaming] = useState(false);
   const [label, setLabel] = useState('');
+  const [justSaved, setJustSaved] = useState(false);
 
   const hasRunToSave = optimizations.length > 0;
   const hasVariants = jobVariants.length > 0;
@@ -47,38 +48,41 @@ export function JobVariantsBar() {
     const variant = openVariant(id);
     if (variant && typeof window !== 'undefined') {
       // Keep the shared job description in sync with the reopened variant.
-      window.localStorage.setItem(LAST_JOB_KEY, variant.jobDescription);
+      setCompatibleStorageItem(LAST_JOB_KEY, variant.jobDescription);
     }
   };
 
   const handleUpdateActive = () => {
     if (!activeVariantId) return;
     updateVariant(activeVariantId, readJobDescription());
+    setJustSaved(true);
+    const host = typeof window !== 'undefined' ? window : globalThis;
+    host.setTimeout(() => setJustSaved(false), 2000);
   };
 
   return (
     <div className="rounded-xl border border-[color:var(--glass-border)] dark:border-white/5 bg-[color:var(--surface-control)] dark:bg-black/20 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
           <Briefcase className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white break-words">
             {t('sections.optimize.variants.title', 'Job Variants')}
           </h4>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            {t('sections.optimize.variants.subtitle', 'Save this run to reuse for another job')}
+          <span className="min-w-0 text-xs text-gray-500 dark:text-gray-400">
+            {t('sections.optimize.variants.subtitle', "Saves this job's suggestions, applied changes, and scores so you can switch between jobs.")}
           </span>
         </div>
 
         {hasRunToSave && !isNaming && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
             {activeVariantId && (
               <button
                 type="button"
                 onClick={handleUpdateActive}
                 className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
               >
-                <Save className="w-3.5 h-3.5" />
-                {t('sections.optimize.variants.saveChanges', 'Save changes')}
+                {justSaved ? <Check className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                {justSaved ? t('sections.optimize.variants.saved', 'Saved') : t('sections.optimize.variants.saveChanges', 'Save changes')}
               </button>
             )}
             <button
@@ -127,14 +131,14 @@ export function JobVariantsBar() {
       )}
 
       {hasVariants && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex max-w-full flex-wrap gap-2">
           {jobVariants.map((variant) => {
             const isActive = variant.id === activeVariantId;
             return (
               <div
                 key={variant.id}
                 className={cn(
-                  'group inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors',
+                  'group inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors',
                   isActive
                     ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                     : 'border-[color:var(--glass-border)] dark:border-white/10 bg-[color:var(--surface-glass-elevated)] dark:bg-black/20 text-gray-700 dark:text-gray-200 hover:border-emerald-500/30'
@@ -143,11 +147,11 @@ export function JobVariantsBar() {
                 <button
                   type="button"
                   onClick={() => handleOpen(variant.id)}
-                  className="inline-flex items-center gap-1.5 font-medium max-w-[16rem] truncate"
+                  className="inline-flex min-w-0 max-w-full items-center gap-1.5 font-medium"
                   title={variant.label}
                 >
                   {isActive && <Check className="w-3 h-3 shrink-0" />}
-                  <span className="truncate">{variant.label}</span>
+                  <span className="min-w-0 max-w-[16rem] truncate">{variant.label}</span>
                 </button>
                 <button
                   type="button"

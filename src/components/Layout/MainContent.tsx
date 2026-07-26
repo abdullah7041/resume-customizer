@@ -605,6 +605,27 @@ export default function MainContent() {
     [dismissToast]
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleStorageError = (event: Event) => {
+      const detail = (event as CustomEvent<{ key?: string; code?: string }>).detail;
+      if (detail?.key !== "resume-storage" || detail.code !== "quota_exceeded") return;
+
+      pushToast({
+        type: "warning",
+        title: t("toasts.storageSaveFailedTitle", "Could not save locally"),
+        description: t(
+          "toasts.storageSaveFailedDesc",
+          "Your latest change is available for this session but could not be persisted in this browser."
+        ),
+      });
+    };
+
+    window.addEventListener("watheq:storage-error", handleStorageError);
+    return () => window.removeEventListener("watheq:storage-error", handleStorageError);
+  }, [pushToast, t]);
+
   const handleUploadToast = useCallback(
     (toast) => pushToast(toast, { id: TOAST_IDS.upload }),
     [pushToast]

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useResumeStore } from './resumeStore';
 import type { OptimizationResult } from '../../types/templates';
 
@@ -100,12 +100,36 @@ describe('resumeStore job variants (Phase 1)', () => {
     expect(variant.jobDescription).toBe('JD A updated');
   });
 
-  it('renameVariant changes only the label', () => {
+  it('keeps only the ten most recent variants', () => {
     const store = useResumeStore.getState();
-    const id = store.saveCurrentAsVariant('Old label', 'JD');
-    store.renameVariant(id, 'New label');
-    const variant = useResumeStore.getState().jobVariants.find((v) => v.id === id)!;
-    expect(variant.label).toBe('New label');
+    for (let index = 0; index < 12; index += 1) {
+      store.saveCurrentAsVariant(`Job ${index}`, `JD ${index}`);
+    }
+
+    const state = useResumeStore.getState();
+    expect(state.jobVariants).toHaveLength(10);
+    expect(state.jobVariants[0].label).toBe('Job 2');
+    expect(state.jobVariants.at(-1)?.label).toBe('Job 11');
+  });
+
+  it('keeps the in-session variant when persistence reports a storage failure', () => {
+    const storageError = vi.fn();
+    window.addEventListener('watheq:storage-error', storageError);
+    const setItem = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded');
+    });
+
+    try {
+      useResumeStore.getState().saveCurrentAsVariant('Job A', 'JD A');
+
+      expect(useResumeStore.getState().jobVariants).toHaveLength(1);
+      expect(storageError).toHaveBeenCalledWith(expect.objectContaining({
+        detail: { key: 'resume-storage', code: 'quota_exceeded' },
+      }));
+    } finally {
+      setItem.mockRestore();
+      window.removeEventListener('watheq:storage-error', storageError);
+    }
   });
 
   it('deleteVariant removes it and clears activeVariantId when it was active', () => {

@@ -398,8 +398,6 @@ export interface ResumeState {
   updateVariant: (id: string, jobDescription: string) => void;
   /** Restore a variant's snapshot into the working set; returns the variant (for JD restore) or null. */
   openVariant: (id: string) => JobVariant | null;
-  /** Rename a variant (label only). */
-  renameVariant: (id: string, label: string) => void;
   /** Delete a variant; clears activeVariantId if it was the active one. */
   deleteVariant: (id: string) => void;
 }
