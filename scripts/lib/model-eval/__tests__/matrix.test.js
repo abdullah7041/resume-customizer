@@ -18,6 +18,11 @@ const successfulAttempt = (modelId, fixtureId) => ({
   schemaValid: true,
 });
 
+const successfulAttempts = (modelId, fixtureId, count) => Array.from(
+  { length: count },
+  () => successfulAttempt(modelId, fixtureId),
+);
+
 describe('buildEvaluationStages', () => {
   it('defines the incumbent sanity, bilingual eligibility, screening, and fresh confirmation stages', () => {
     expect(buildEvaluationStages({
@@ -77,6 +82,46 @@ describe('selectAdvancingModels', () => {
     });
   });
 
+  it('requires all three stage-2 primary attempts for every fixture before advancing', () => {
+    const result = selectAdvancingModels({
+      stage: 2,
+      modelIds: [candidate],
+      requiredFixtureIds: eligibilityFixtureIds,
+      attempts: eligibilityFixtureIds.flatMap((fixtureId) => successfulAttempts(candidate, fixtureId, 1)),
+    });
+
+    expect(result).toEqual({
+      advanced: [],
+      excluded: [{
+        modelId: candidate,
+        reason: 'insufficient_primary_successes',
+        fixtureId: 'resume-en',
+        primarySuccesses: 1,
+        requiredRuns: 3,
+      }],
+    });
+  });
+
+  it('requires all five stage-3 primary attempts for every fixture before advancing', () => {
+    const result = selectAdvancingModels({
+      stage: 3,
+      modelIds: [candidate],
+      requiredFixtureIds: eligibilityFixtureIds,
+      attempts: eligibilityFixtureIds.flatMap((fixtureId) => successfulAttempts(candidate, fixtureId, 4)),
+    });
+
+    expect(result).toEqual({
+      advanced: [],
+      excluded: [{
+        modelId: candidate,
+        reason: 'insufficient_primary_successes',
+        fixtureId: 'resume-en',
+        primarySuccesses: 4,
+        requiredRuns: 5,
+      }],
+    });
+  });
+
   it('records an unavailable candidate as excluded instead of throwing', () => {
     const result = selectAdvancingModels({
       modelIds: [candidate],
@@ -88,6 +133,55 @@ describe('selectAdvancingModels', () => {
         schemaValid: false,
         failureReason: 'provider_unavailable',
       })),
+    });
+
+    expect(result).toEqual({
+      advanced: [],
+      excluded: [{ modelId: candidate, reason: 'provider_unavailable' }],
+    });
+  });
+
+  it('does not trust a caller-supplied primarySuccess flag for a Gemini result', () => {
+    const result = selectAdvancingModels({
+      modelIds: [candidate],
+      requiredFixtureIds: eligibilityFixtureIds,
+      attempts: [
+        {
+          modelId: candidate,
+          fixtureId: 'resume-en',
+          provider: 'gemini',
+          schemaValid: false,
+          primarySuccess: true,
+        },
+        successfulAttempt(candidate, 'resume-ar'),
+      ],
+    });
+
+    expect(result).toEqual({
+      advanced: [],
+      excluded: [{ modelId: candidate, reason: 'missing_primary_success', fixtureId: 'resume-en' }],
+    });
+  });
+
+  it('preserves a provider-unavailable exclusion found after an earlier failed fixture', () => {
+    const result = selectAdvancingModels({
+      modelIds: [candidate],
+      requiredFixtureIds: eligibilityFixtureIds,
+      attempts: [
+        {
+          modelId: candidate,
+          fixtureId: 'resume-en',
+          provider: 'openrouter',
+          schemaValid: false,
+        },
+        {
+          modelId: candidate,
+          fixtureId: 'resume-ar',
+          provider: 'openrouter',
+          schemaValid: false,
+          failureReason: 'provider_unavailable',
+        },
+      ],
     });
 
     expect(result).toEqual({
@@ -115,6 +209,12 @@ describe('recommendWinner', () => {
     qualityScore: 90,
     p95LatencyMs: 1_000,
     estimatedCostUsd: 1,
+    stage3Confirmation: {
+      stage: 3,
+      completed: true,
+      qualityPassed: true,
+      reliabilityPassed: true,
+    },
     ...overrides,
   });
 
@@ -160,5 +260,19 @@ describe('recommendWinner', () => {
       candidate: completeModel(candidate, { estimatedCostUsd: null }),
       qualityNoiseFloor: 1,
     })).toEqual({ decision: 'no-decision', reason: 'incomplete_metrics' });
+  });
+
+  it.each(['incumbent', 'candidate'])('requires completed stage-3 confirmation evidence for the %s', (missingModel) => {
+    const input = {
+      incumbent: completeModel(incumbent),
+      candidate: completeModel(candidate, { p95LatencyMs: 500, estimatedCostUsd: 0.1 }),
+      qualityNoiseFloor: 1,
+    };
+    delete input[missingModel].stage3Confirmation;
+
+    expect(recommendWinner(input)).toEqual({
+      decision: 'no-decision',
+      reason: 'incomplete_stage_3_confirmation',
+    });
   });
 });

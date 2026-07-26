@@ -16,11 +16,37 @@ const assertFixtureIds = (fixtureIds, label) => {
 
 const uniqueModelIds = (modelIds) => [...new Set(modelIds)];
 
-const classificationFor = (attempt) => {
-  if (attempt && typeof attempt === 'object' && typeof attempt.primarySuccess === 'boolean') {
-    return attempt;
+const REQUIRED_RUNS_BY_STAGE = new Map([
+  [0, 1],
+  [1, 1],
+  [2, 3],
+  [3, 5],
+]);
+
+const requiredRunsForStage = (stage) => {
+  const requiredRuns = REQUIRED_RUNS_BY_STAGE.get(stage);
+  if (!requiredRuns) {
+    throw new TypeError('stage must be 0, 1, 2, or 3.');
   }
-  return classifyAttempt(attempt);
+  return requiredRuns;
+};
+
+const classificationFor = (attempt) => {
+  if (!attempt || typeof attempt !== 'object') {
+    return classifyAttempt(attempt);
+  }
+
+  const { primarySuccess: _primarySuccess, ...rawAttempt } = attempt;
+  const classification = classifyAttempt(rawAttempt);
+  if (attempt.fallbackUsed === true) {
+    return {
+      ...classification,
+      fallbackUsed: true,
+      primarySuccess: false,
+      failureReasons: [...new Set([...classification.failureReasons, 'fallback_used'])],
+    };
+  }
+  return classification;
 };
 
 const isFiniteMetric = (value) => Number.isFinite(value) && value >= 0;
@@ -35,6 +61,13 @@ const completeForRecommendation = (model) => (
   && isFiniteMetric(model.estimatedCostUsd)
   && model.p95LatencyMs > 0
   && model.estimatedCostUsd > 0
+);
+
+const hasCompletedStage3Confirmation = (model) => (
+  model?.stage3Confirmation?.stage === 3
+  && model.stage3Confirmation.completed === true
+  && typeof model.stage3Confirmation.qualityPassed === 'boolean'
+  && typeof model.stage3Confirmation.reliabilityPassed === 'boolean'
 );
 
 export const buildEvaluationStages = ({
@@ -94,7 +127,7 @@ export const buildEvaluationStages = ({
   ];
 };
 
-export const selectAdvancingModels = ({ modelIds, requiredFixtureIds, attempts = [] } = {}) => {
+export const selectAdvancingModels = ({ stage = 1, modelIds, requiredFixtureIds, attempts = [] } = {}) => {
   if (!Array.isArray(modelIds) || modelIds.some((modelId) => !isNonEmptyString(modelId))) {
     throw new TypeError('modelIds must contain non-empty model IDs.');
   }
@@ -102,26 +135,40 @@ export const selectAdvancingModels = ({ modelIds, requiredFixtureIds, attempts =
   if (!Array.isArray(attempts)) {
     throw new TypeError('attempts must be an array.');
   }
+  const requiredRuns = requiredRunsForStage(stage);
 
   const advanced = [];
   const excluded = [];
 
   for (const modelId of uniqueModelIds(modelIds)) {
     const modelAttempts = attempts.filter((attempt) => attempt?.modelId === modelId);
-    const missingFixtureId = requiredFixtureIds.find((fixtureId) => !modelAttempts
-      .filter((attempt) => attempt.fixtureId === fixtureId)
-      .some((attempt) => classificationFor(attempt).primarySuccess === true));
+    if (modelAttempts.some((attempt) => classificationFor(attempt).providerUnavailable === true)) {
+      excluded.push({ modelId, reason: 'provider_unavailable' });
+      continue;
+    }
 
-    if (!missingFixtureId) {
+    const insufficientFixture = requiredFixtureIds.map((fixtureId) => {
+      const fixtureAttempts = modelAttempts.filter((attempt) => attempt.fixtureId === fixtureId);
+      const primarySuccesses = fixtureAttempts
+        .filter((attempt) => classificationFor(attempt).primarySuccess === true)
+        .length;
+      return { fixtureId, primarySuccesses };
+    }).find(({ primarySuccesses }) => primarySuccesses < requiredRuns);
+
+    if (!insufficientFixture) {
       advanced.push(modelId);
       continue;
     }
 
-    const missingFixtureAttempts = modelAttempts.filter((attempt) => attempt.fixtureId === missingFixtureId);
-    const unavailable = missingFixtureAttempts.some((attempt) => classificationFor(attempt).providerUnavailable === true);
-    excluded.push(unavailable
-      ? { modelId, reason: 'provider_unavailable' }
-      : { modelId, reason: 'missing_primary_success', fixtureId: missingFixtureId });
+    excluded.push(requiredRuns === 1
+      ? { modelId, reason: 'missing_primary_success', fixtureId: insufficientFixture.fixtureId }
+      : {
+        modelId,
+        reason: 'insufficient_primary_successes',
+        fixtureId: insufficientFixture.fixtureId,
+        primarySuccesses: insufficientFixture.primarySuccesses,
+        requiredRuns,
+      });
   }
 
   return { advanced, excluded };
@@ -131,16 +178,19 @@ export const recommendWinner = ({ incumbent, candidate, qualityNoiseFloor } = {}
   if (!completeForRecommendation(incumbent) || !completeForRecommendation(candidate) || !isFiniteMetric(qualityNoiseFloor)) {
     return { decision: 'no-decision', reason: 'incomplete_metrics' };
   }
-  if (!incumbent.qualityPassed) {
+  if (!hasCompletedStage3Confirmation(incumbent) || !hasCompletedStage3Confirmation(candidate)) {
+    return { decision: 'no-decision', reason: 'incomplete_stage_3_confirmation' };
+  }
+  if (!incumbent.qualityPassed || !incumbent.stage3Confirmation.qualityPassed) {
     return { decision: 'no-decision', reason: 'incumbent_failed_quality_gate' };
   }
-  if (!incumbent.reliabilityPassed) {
+  if (!incumbent.reliabilityPassed || !incumbent.stage3Confirmation.reliabilityPassed) {
     return { decision: 'no-decision', reason: 'incumbent_failed_reliability_gate' };
   }
-  if (!candidate.qualityPassed) {
+  if (!candidate.qualityPassed || !candidate.stage3Confirmation.qualityPassed) {
     return { decision: 'incumbent', winner: incumbent.modelId, reason: 'candidate_failed_quality_gate' };
   }
-  if (!candidate.reliabilityPassed) {
+  if (!candidate.reliabilityPassed || !candidate.stage3Confirmation.reliabilityPassed) {
     return { decision: 'incumbent', winner: incumbent.modelId, reason: 'candidate_failed_reliability_gate' };
   }
 
