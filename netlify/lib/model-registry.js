@@ -30,6 +30,11 @@ const SUPPORTED_BENCHMARK_MODELS = [
   'google/gemini-2.5-flash',
   'google/gemini-3.1-flash-lite',
   'google/gemini-3.5-flash-lite',
+  'google/gemini-3.5-flash',
+  'deepseek/deepseek-v4-flash',
+  'qwen/qwen3.5-flash-02-23',
+  'z-ai/glm-4.7-flash',
+  'mistralai/mistral-small-3.2-24b-instruct',
 ];
 
 // ---------------------------------------------------------------------------
@@ -126,6 +131,11 @@ const APPROXIMATE_PRICING = {
   'google/gemini-2.5-flash':      { prompt: 0.30, completion: 2.50 },
   'google/gemini-3.1-flash-lite': { prompt: 0.25, completion: 1.50 },
   'google/gemini-3.5-flash-lite': { prompt: 0.30, completion: 2.50 },
+  'google/gemini-3.5-flash':      { prompt: 1.50, completion: 9.00 },
+  'deepseek/deepseek-v4-flash':   { prompt: 0.14, completion: 0.28 },
+  'qwen/qwen3.5-flash-02-23':     { prompt: 0.065, completion: 0.26 },
+  'z-ai/glm-4.7-flash':           { prompt: 0.06, completion: 0.40 },
+  'mistralai/mistral-small-3.2-24b-instruct': { prompt: 0.10, completion: 0.30 },
 };
 
 /**
