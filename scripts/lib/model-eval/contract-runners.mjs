@@ -1,4 +1,5 @@
 import { getAiContract } from '../../../netlify/lib/ai-contracts/contracts/index.js';
+import { estimateCostUsd } from '../../../netlify/lib/model-registry.js';
 
 import { classifyAttempt } from './attempts.mjs';
 
@@ -408,6 +409,21 @@ const classifiedFailure = (failureReason) => {
   };
 };
 
+const approximateCostFromMetadata = (modelId, metadata) => {
+  if (
+    metadata?.provider !== 'openrouter'
+    || metadata.modelId !== modelId
+    || !metadata.tokenUsage
+  ) {
+    return null;
+  }
+  return estimateCostUsd(
+    modelId,
+    metadata.tokenUsage.promptTokens,
+    metadata.tokenUsage.completionTokens,
+  );
+};
+
 const failedAttempt = ({
   feature,
   contractId,
@@ -470,11 +486,18 @@ export const runContractAttempt = async ({
     }
     messageCount = messages.length;
 
-    const output = await contractExecutor(contractId, input, {
+    const execution = await contractExecutor(contractId, input, {
       modelId,
       disableFallback: true,
       featureName: `benchmark.${contractId}`,
+      includeResponseMetadata: true,
     });
+    const output = execution && typeof execution === 'object' && Object.hasOwn(execution, 'data')
+      ? execution.data
+      : execution;
+    const responseMetadata = execution && typeof execution === 'object'
+      ? execution.metadata ?? null
+      : null;
     const validation = contract.outputSchema.safeParse(output);
     const latencyMs = Math.max(0, now() - startedAt);
     if (!validation.success) {
@@ -507,9 +530,9 @@ export const runContractAttempt = async ({
       metrics: scored.metrics,
       status: null,
       errorCode: null,
-      approximateCostUsd: null,
+      approximateCostUsd: approximateCostFromMetadata(modelId, responseMetadata),
       classification: classifyAttempt({
-        provider: 'openrouter',
+        provider: responseMetadata?.provider ?? 'openrouter',
         schemaValid: true,
         failureReason: null,
       }),

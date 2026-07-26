@@ -23,7 +23,7 @@ const REQUIRED_RUNS_BY_STAGE = new Map([
   [3, 5],
 ]);
 
-const requiredRunsForStage = (stage) => {
+export const requiredRunsForStage = (stage) => {
   const requiredRuns = REQUIRED_RUNS_BY_STAGE.get(stage);
   if (!requiredRuns) {
     throw new TypeError('stage must be 0, 1, 2, or 3.');
@@ -36,17 +36,36 @@ const classificationFor = (attempt) => {
     return classifyAttempt(attempt);
   }
 
-  const { primarySuccess: _primarySuccess, ...rawAttempt } = attempt;
+  const source = attempt.classification && typeof attempt.classification === 'object'
+    ? attempt.classification
+    : attempt;
+  const failureReason = source.failureReason
+    ?? source.failureReasons?.find((reason) => !['cache_used', 'fallback_used'].includes(reason))
+    ?? (source.malformedJson === true ? 'malformed_json' : null)
+    ?? (source.timeout === true ? 'timeout' : null)
+    ?? (source.providerUnavailable === true ? 'provider_unavailable' : null);
+  const {
+    primarySuccess: _primarySuccess,
+    fallbackUsed: _fallbackUsed,
+    failureReasons: _failureReasons,
+    malformedJson: _malformedJson,
+    timeout: _timeout,
+    providerUnavailable: _providerUnavailable,
+    ...rawAttempt
+  } = source;
   const classification = classifyAttempt(rawAttempt);
-  if (attempt.fallbackUsed === true) {
+  const normalized = failureReason
+    ? classifyAttempt({ ...rawAttempt, failureReason })
+    : classification;
+  if (source.fallbackUsed === true) {
     return {
-      ...classification,
+      ...normalized,
       fallbackUsed: true,
       primarySuccess: false,
-      failureReasons: [...new Set([...classification.failureReasons, 'fallback_used'])],
+      failureReasons: [...new Set([...normalized.failureReasons, 'fallback_used'])],
     };
   }
-  return classification;
+  return normalized;
 };
 
 const isFiniteMetric = (value) => Number.isFinite(value) && value >= 0;
@@ -58,9 +77,11 @@ const completeForRecommendation = (model) => (
   && typeof model.reliabilityPassed === 'boolean'
   && Number.isFinite(model.qualityScore)
   && isFiniteMetric(model.p95LatencyMs)
-  && isFiniteMetric(model.estimatedCostUsd)
   && model.p95LatencyMs > 0
-  && model.estimatedCostUsd > 0
+  && (
+    model.estimatedCostUsd == null
+    || (isFiniteMetric(model.estimatedCostUsd) && model.estimatedCostUsd > 0)
+  )
 );
 
 const hasCompletedStage3Confirmation = (model) => (
@@ -203,10 +224,26 @@ export const recommendWinner = ({ incumbent, candidate, qualityNoiseFloor } = {}
   }
 
   const latencyImprovement = (incumbent.p95LatencyMs - candidate.p95LatencyMs) / incumbent.p95LatencyMs;
-  const costImprovement = (incumbent.estimatedCostUsd - candidate.estimatedCostUsd) / incumbent.estimatedCostUsd;
-  if (latencyImprovement >= 0.15 || costImprovement >= 0.20) {
-    return { decision: 'candidate', winner: candidate.modelId, reason: 'quality_tie_with_material_efficiency_gain' };
+  const costGateAvailable = isFiniteMetric(incumbent.estimatedCostUsd)
+    && isFiniteMetric(candidate.estimatedCostUsd)
+    && incumbent.estimatedCostUsd > 0
+    && candidate.estimatedCostUsd > 0;
+  const costImprovement = costGateAvailable
+    ? (incumbent.estimatedCostUsd - candidate.estimatedCostUsd) / incumbent.estimatedCostUsd
+    : null;
+  if (latencyImprovement >= 0.15 || (costGateAvailable && costImprovement >= 0.20)) {
+    return {
+      decision: 'candidate',
+      winner: candidate.modelId,
+      reason: 'quality_tie_with_material_efficiency_gain',
+      ...(costGateAvailable ? {} : { costGateAvailable: false }),
+    };
   }
 
-  return { decision: 'incumbent', winner: incumbent.modelId, reason: 'quality_tie_without_material_efficiency_gain' };
+  return {
+    decision: 'incumbent',
+    winner: incumbent.modelId,
+    reason: 'quality_tie_without_material_efficiency_gain',
+    ...(costGateAvailable ? {} : { costGateAvailable: false }),
+  };
 };

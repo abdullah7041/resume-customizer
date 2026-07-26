@@ -126,6 +126,7 @@ const FEATURE_CONFIGS = {
 // Update these when provider pricing changes.
 // Last verified against the live OpenRouter catalog on 2026-07-26.
 // ---------------------------------------------------------------------------
+const APPROXIMATE_PRICING_SNAPSHOT_DATE = '2026-07-26';
 const APPROXIMATE_PRICING = {
   'google/gemini-2.5-flash-lite': { prompt: 0.10, completion: 0.40 },
   'google/gemini-2.5-flash':      { prompt: 0.30, completion: 2.50 },
@@ -144,7 +145,15 @@ const APPROXIMATE_PRICING = {
  */
 function estimateCostUsd(modelId, promptTokens, completionTokens) {
   const rates = APPROXIMATE_PRICING[modelId];
-  if (!rates) return null;
+  if (
+    !rates
+    || !Number.isInteger(promptTokens)
+    || promptTokens < 0
+    || !Number.isInteger(completionTokens)
+    || completionTokens < 0
+  ) {
+    return null;
+  }
   const promptCost = (promptTokens / 1_000_000) * rates.prompt;
   const completionCost = (completionTokens / 1_000_000) * rates.completion;
   return Number((promptCost + completionCost).toFixed(6));
@@ -183,6 +192,7 @@ export {
   SUPPORTED_BENCHMARK_MODELS,
   DEFAULT_MAX_TOKENS,
   FEATURE_CONFIGS,
+  APPROXIMATE_PRICING_SNAPSHOT_DATE,
   APPROXIMATE_PRICING,
   estimateCostUsd,
   isOverrideGateEnabled,

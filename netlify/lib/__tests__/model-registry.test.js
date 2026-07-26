@@ -36,8 +36,12 @@ describe('model-registry', () => {
   });
 
   it('uses verified approximate pricing for every approved candidate', async () => {
-    const { APPROXIMATE_PRICING } = await import('../model-registry.js');
+    const {
+      APPROXIMATE_PRICING,
+      APPROXIMATE_PRICING_SNAPSHOT_DATE,
+    } = await import('../model-registry.js');
 
+    expect(APPROXIMATE_PRICING_SNAPSHOT_DATE).toBe('2026-07-26');
     expect(APPROXIMATE_PRICING).toMatchObject({
       'google/gemini-3.5-flash-lite': { prompt: 0.30, completion: 2.50 },
       'google/gemini-3.1-flash-lite': { prompt: 0.25, completion: 1.50 },
@@ -93,5 +97,19 @@ describe('model-registry', () => {
     const cost = estimateCostUsd('google/gemini-3.1-flash-lite', 1_000_000, 1_000_000);
     expect(typeof cost).toBe('number');
     expect(cost).toBeGreaterThan(0);
+  });
+
+  it.each([
+    [null, 500],
+    [1000, undefined],
+    [-1, 500],
+    [1000, Number.NaN],
+  ])('returns null cost for unsafe or missing token counts', async (promptTokens, completionTokens) => {
+    const { estimateCostUsd } = await import('../model-registry.js');
+    expect(estimateCostUsd(
+      'google/gemini-3.1-flash-lite',
+      promptTokens,
+      completionTokens,
+    )).toBeNull();
   });
 });

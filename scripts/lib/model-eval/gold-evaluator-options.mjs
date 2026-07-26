@@ -1,4 +1,7 @@
-import { SUPPORTED_BENCHMARK_MODELS } from '../../../netlify/lib/model-registry.js';
+import {
+  SUPPORTED_BENCHMARK_MODELS,
+  estimateCostUsd,
+} from '../../../netlify/lib/model-registry.js';
 
 import { classifyAttempt } from './attempts.mjs';
 import { parseEvaluationArgs } from './cli.mjs';
@@ -177,7 +180,29 @@ export const buildGoldContractOptions = ({ feature, mode, modelId } = {}) => {
     modelId,
     disableFallback: true,
     featureName: `benchmark.${feature}`,
+    includeResponseMetadata: true,
   };
+};
+
+export const unwrapEvaluationResponse = ({ response, modelId } = {}) => {
+  const isEnvelope = response
+    && typeof response === 'object'
+    && Object.hasOwn(response, 'metadata')
+    && (Object.hasOwn(response, 'data') || Object.hasOwn(response, 'text'));
+  const value = isEnvelope
+    ? (Object.hasOwn(response, 'data') ? response.data : response.text)
+    : response;
+  const metadata = isEnvelope ? response.metadata : null;
+  const approximateCostUsd = metadata?.provider === 'openrouter'
+    && metadata.modelId === modelId
+    ? estimateCostUsd(
+      modelId,
+      metadata.tokenUsage?.promptTokens,
+      metadata.tokenUsage?.completionTokens,
+    )
+    : null;
+
+  return { value, approximateCostUsd };
 };
 
 export const buildGoldEvaluationAttempts = ({
@@ -250,7 +275,8 @@ export const buildGoldScoreSummaries = (attempts) => {
     const { modelId, fixtureId } = entries[0];
     const scores = entries.map((entry) => entry.score).filter(Number.isFinite);
     const latencies = entries.map((entry) => entry.latencyMs).filter(Number.isFinite);
-    const costs = entries.map((entry) => entry.approximateCostUsd).filter(Number.isFinite);
+    const allCostsKnown = entries.length > 0
+      && entries.every((entry) => Number.isFinite(entry.approximateCostUsd));
     const primarySuccesses = entries.filter(
       (entry) => entry.classification?.primarySuccess === true,
     ).length;
@@ -269,8 +295,8 @@ export const buildGoldScoreSummaries = (attempts) => {
       maxScore: scores.length > 0 ? Math.max(...scores) : null,
       p50LatencyMs: latency?.p50Ms ?? null,
       p95LatencyMs: latency?.p95Ms ?? null,
-      approximateCostUsd: costs.length > 0
-        ? Number(costs.reduce((sum, cost) => sum + cost, 0).toFixed(6))
+      approximateCostUsd: allCostsKnown
+        ? Number(entries.reduce((sum, entry) => sum + entry.approximateCostUsd, 0).toFixed(6))
         : null,
     };
   });
@@ -334,7 +360,8 @@ export const aggregateGoldAttempts = (attempts) => {
   const requiredFailures = attempts.length - primarySuccesses;
   const latencies = finiteValues(attempts, 'latencyMs');
   const scores = finiteValues(attempts, 'score');
-  const costs = finiteValues(attempts, 'approximateCostUsd');
+  const allCostsKnown = attempts.length > 0
+    && attempts.every((attempt) => Number.isFinite(attempt?.approximateCostUsd));
   const failureReasons = [...new Set(attempts.flatMap(
     (attempt) => attempt?.classification?.failureReasons ?? [],
   ))];
@@ -345,8 +372,8 @@ export const aggregateGoldAttempts = (attempts) => {
       ? scores.reduce((sum, score) => sum + score, 0) / scores.length
       : null,
     latencies,
-    approximateCostUsd: costs.length > 0
-      ? costs.reduce((sum, cost) => sum + cost, 0)
+    approximateCostUsd: allCostsKnown
+      ? attempts.reduce((sum, attempt) => sum + attempt.approximateCostUsd, 0)
       : null,
     outcomeSummary: {
       attempts: attempts.length,

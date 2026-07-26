@@ -122,6 +122,101 @@ const sanitizeScoreSummaries = (scoreSummaries) => Array.isArray(scoreSummaries)
   })
   : [];
 
+const sanitizeSelectionModel = (model) => {
+  if (!model || typeof model !== 'object' || !MACHINE_ID.test(model.modelId ?? '')) {
+    return null;
+  }
+  const sanitized = {
+    modelId: model.modelId,
+    qualityPassed: model.qualityPassed === true,
+    reliabilityPassed: model.reliabilityPassed === true,
+    qualityScore: Number.isFinite(model.qualityScore) ? model.qualityScore : null,
+    p95LatencyMs: Number.isFinite(model.p95LatencyMs) && model.p95LatencyMs >= 0
+      ? model.p95LatencyMs
+      : null,
+    estimatedCostUsd: Number.isFinite(model.estimatedCostUsd) && model.estimatedCostUsd >= 0
+      ? model.estimatedCostUsd
+      : null,
+  };
+  if (model.stage3Confirmation?.stage === 3) {
+    sanitized.stage3Confirmation = {
+      stage: 3,
+      completed: model.stage3Confirmation.completed === true,
+      qualityPassed: model.stage3Confirmation.qualityPassed === true,
+      reliabilityPassed: model.stage3Confirmation.reliabilityPassed === true,
+    };
+  }
+  return sanitized;
+};
+
+const sanitizeSelection = (selection) => {
+  if (!selection || typeof selection !== 'object') return null;
+  if (selection.eligible !== true) {
+    return {
+      eligible: false,
+      reason: MACHINE_CODE.test(selection.reason ?? '') ? selection.reason : 'not_selection_eligible',
+    };
+  }
+
+  const sanitized = {
+    eligible: true,
+    stage: Number.isInteger(selection.stage) && selection.stage >= 0 && selection.stage <= 3
+      ? selection.stage
+      : null,
+    requiredRuns: Number.isInteger(selection.requiredRuns) && selection.requiredRuns > 0
+      ? selection.requiredRuns
+      : null,
+    qualityNoiseFloor: Number.isFinite(selection.qualityNoiseFloor) && selection.qualityNoiseFloor >= 0
+      ? selection.qualityNoiseFloor
+      : null,
+    advanced: sanitizeMachineIds(selection.advanced),
+    excluded: Array.isArray(selection.excluded)
+      ? selection.excluded.flatMap((entry) => {
+        if (
+          !entry
+          || typeof entry !== 'object'
+          || !MACHINE_ID.test(entry.modelId ?? '')
+          || !MACHINE_CODE.test(entry.reason ?? '')
+        ) {
+          return [];
+        }
+        return [{
+          modelId: entry.modelId,
+          reason: entry.reason,
+          ...(MACHINE_ID.test(entry.fixtureId ?? '') ? { fixtureId: entry.fixtureId } : {}),
+          ...(Number.isInteger(entry.primarySuccesses) && entry.primarySuccesses >= 0
+            ? { primarySuccesses: entry.primarySuccesses }
+            : {}),
+          ...(Number.isInteger(entry.requiredRuns) && entry.requiredRuns > 0
+            ? { requiredRuns: entry.requiredRuns }
+            : {}),
+        }];
+      })
+      : [],
+    modelSummaries: Array.isArray(selection.modelSummaries)
+      ? selection.modelSummaries.map(sanitizeSelectionModel).filter(Boolean)
+      : [],
+    recommendation: null,
+  };
+  if (
+    selection.recommendation
+    && ['candidate', 'incumbent', 'no-decision'].includes(selection.recommendation.decision)
+    && MACHINE_CODE.test(selection.recommendation.reason ?? '')
+  ) {
+    sanitized.recommendation = {
+      decision: selection.recommendation.decision,
+      ...(MACHINE_ID.test(selection.recommendation.winner ?? '')
+        ? { winner: selection.recommendation.winner }
+        : {}),
+      reason: selection.recommendation.reason,
+      ...(typeof selection.recommendation.costGateAvailable === 'boolean'
+        ? { costGateAvailable: selection.recommendation.costGateAvailable }
+        : {}),
+    };
+  }
+  return sanitized;
+};
+
 const formatTimestamp = (timestamp) => {
   if (timestamp == null) {
     return new Date().toISOString().replace(/[-:.]/g, '');
@@ -162,6 +257,12 @@ ${JSON.stringify(report.outcomeSummary, null, 2)}
 
 \`\`\`json
 ${JSON.stringify(report.scoreSummaries, null, 2)}
+\`\`\`
+
+## Selection
+
+\`\`\`json
+${JSON.stringify(report.selection, null, 2)}
 \`\`\`
 `;
 
@@ -213,6 +314,7 @@ export const writeEvaluationReport = (session, input = {}) => {
     options: sanitizeCommandOptions(input.options),
     outcomeSummary: sanitizeOutcomeSummary(input.outcomeSummary),
     scoreSummaries: sanitizeScoreSummaries(input.scoreSummaries),
+    selection: sanitizeSelection(input.selection),
     latency: Array.isArray(input.latencies) && input.latencies.length > 0
       ? summarizeLatencies(input.latencies)
       : null,

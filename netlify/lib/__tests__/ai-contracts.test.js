@@ -503,7 +503,7 @@ describe('AI contract layer', () => {
     );
   });
 
-  it('forwards only evaluation provider controls while preserving contract generation settings', async () => {
+  it('preserves a smaller caller timeout while keeping other contract generation settings immutable', async () => {
     callOpenRouterMock.mockResolvedValue(JSON.stringify({
       score: 0,
       categoryScores: {
@@ -544,13 +544,94 @@ describe('AI contract layer', () => {
         featureName: 'benchmark.ai_match',
         temperature: 0,
         maxTokens: 4096,
-        timeoutMs: 65000,
+        timeoutMs: 1,
         reasoningBudget: 512,
         schemaName: 'ai_match',
         responseFormat: undefined,
       }),
     );
     expect(callOpenRouterMock.mock.calls[0][2]).toBe(getAiContract('ai_match').jsonSchema);
+  });
+
+  it('rejects a caller timeout increase while keeping the contract deadline authoritative', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      score: 0,
+      categoryScores: {
+        hard_skills: { score: 0, max: 40, reasoning: 'No required skills found' },
+        experience: { score: 0, max: 30, reasoning: 'No relevant experience found' },
+        education: { score: 0, max: 15, reasoning: 'No relevant education found' },
+        soft_skills: { score: 0, max: 15, reasoning: 'No soft skills evidence found' },
+      },
+      strongMatches: [],
+      missingKeywords: ['React'],
+      reasoning: 'No meaningful match evidence.',
+    }));
+
+    await executeAiContract('ai_match', {
+      resumeText: 'Resume text',
+      jobDescription: 'React job',
+      language: 'en',
+    }, {
+      timeoutMs: 120000,
+    });
+
+    expect(callOpenRouterMock).toHaveBeenCalledWith(
+      'flash',
+      expect.any(Array),
+      expect.any(Object),
+      expect.objectContaining({
+        timeoutMs: 65000,
+      }),
+    );
+  });
+
+  it('returns an opt-in metadata envelope without changing the validated contract payload', async () => {
+    const output = {
+      score: 0,
+      categoryScores: {
+        hard_skills: { score: 0, max: 40, reasoning: 'No required skills found' },
+        experience: { score: 0, max: 30, reasoning: 'No relevant experience found' },
+        education: { score: 0, max: 15, reasoning: 'No relevant education found' },
+        soft_skills: { score: 0, max: 15, reasoning: 'No soft skills evidence found' },
+      },
+      strongMatches: [],
+      missingKeywords: ['React'],
+      reasoning: 'No meaningful match evidence.',
+    };
+    const metadata = {
+      provider: 'openrouter',
+      modelId: 'google/gemini-3.1-flash-lite',
+      tokenUsage: {
+        promptTokens: 1000,
+        completionTokens: 500,
+        totalTokens: 1500,
+        reasoningTokens: 0,
+      },
+    };
+    callOpenRouterMock.mockResolvedValue({
+      text: JSON.stringify(output),
+      metadata,
+    });
+
+    const result = await executeAiContract('ai_match', {
+      resumeText: 'Resume text',
+      jobDescription: 'React job',
+      language: 'en',
+    }, {
+      modelId: 'google/gemini-3.1-flash-lite',
+      includeResponseMetadata: true,
+    });
+
+    expect(result).toEqual({
+      data: expect.objectContaining({ score: 0, missingKeywords: ['React'] }),
+      metadata,
+    });
+    expect(callOpenRouterMock).toHaveBeenCalledWith(
+      'flash',
+      expect.any(Array),
+      expect.any(Object),
+      expect.objectContaining({ includeResponseMetadata: true }),
+    );
   });
 
   it('normalizes summary bullets without rejecting an otherwise valid match response', async () => {

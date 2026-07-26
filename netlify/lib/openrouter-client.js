@@ -134,6 +134,27 @@ function isFallbackEligible(error) {
   );
 }
 
+const safeTokenCount = (value) => (
+  Number.isInteger(value) && value >= 0 ? value : null
+);
+
+const buildResponseMetadata = ({ provider, modelId, usage = {}, reasoningTokens }) => ({
+  provider,
+  modelId,
+  tokenUsage: {
+    promptTokens: safeTokenCount(usage.prompt_tokens),
+    completionTokens: safeTokenCount(usage.completion_tokens),
+    totalTokens: safeTokenCount(usage.total_tokens),
+    reasoningTokens: safeTokenCount(reasoningTokens),
+  },
+});
+
+const formatResponse = ({ content, metadata }, options) => (
+  options.includeResponseMetadata === true
+    ? { text: content, metadata }
+    : content
+);
+
 /**
  * Call OpenRouter API (primary provider)
  */
@@ -245,7 +266,16 @@ async function callOpenRouterDirect(modelType, model, messages, jsonSchema, opti
     success: true,
   });
 
-  return content;
+  return {
+    content,
+    metadata: buildResponseMetadata({
+      provider: 'openrouter',
+      modelId: model,
+      usage,
+      reasoningTokens: usage.reasoning_tokens
+        ?? usage.completion_tokens_details?.reasoning_tokens,
+    }),
+  };
 }
 
 /**
@@ -340,7 +370,19 @@ async function callGeminiDirect(modelType, messages, jsonSchema, options, contro
     throw error;
   }
 
-  return content;
+  return {
+    content,
+    metadata: buildResponseMetadata({
+      provider: 'gemini',
+      modelId: geminiModel,
+      usage: {
+        prompt_tokens: gUsage.promptTokenCount,
+        completion_tokens: gUsage.candidatesTokenCount,
+        total_tokens: gUsage.totalTokenCount,
+      },
+      reasoningTokens: gUsage.thoughtsTokenCount,
+    }),
+  };
 }
 
 /**
@@ -375,9 +417,9 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
 
       const openRouterStartTime = Date.now();
       try {
-        const content = await callOpenRouterDirect(modelType, model, messages, jsonSchema, options, controller);
-        console.log(`[AI Client] OpenRouter success (${content.length} chars)`);
-        return content;
+        const result = await callOpenRouterDirect(modelType, model, messages, jsonSchema, options, controller);
+        console.log(`[AI Client] OpenRouter success (${result.content.length} chars)`);
+        return formatResponse(result, options);
       } catch (openRouterError) {
         await recordUsageEvent({
           options,
@@ -408,7 +450,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
 
           const geminiStartTime = Date.now();
           try {
-            const content = await callGeminiDirect(modelType, messages, jsonSchema, options, fallbackController);
+            const result = await callGeminiDirect(modelType, messages, jsonSchema, options, fallbackController);
             await recordUsageEvent({
               options,
               model: geminiModel,
@@ -416,8 +458,8 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
               startTime: geminiStartTime,
               success: true,
             });
-            console.log(`[AI Client] Gemini fallback success (${content.length} chars)`);
-            return content;
+            console.log(`[AI Client] Gemini fallback success (${result.content.length} chars)`);
+            return formatResponse(result, options);
           } catch (geminiError) {
             await recordUsageEvent({
               options,
@@ -452,7 +494,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
       console.log(`[AI Client] DIRECT: Gemini ${geminiModel} (${messages.length} msgs, timeout: ${TIMEOUT_MS}ms)`);
       const geminiStartTime = Date.now();
       try {
-        const content = await callGeminiDirect(modelType, messages, jsonSchema, options, controller);
+        const result = await callGeminiDirect(modelType, messages, jsonSchema, options, controller);
         await recordUsageEvent({
           options,
           model: geminiModel,
@@ -460,8 +502,8 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
           startTime: geminiStartTime,
           success: true,
         });
-        console.log(`[AI Client] Gemini success (${content.length} chars)`);
-        return content;
+        console.log(`[AI Client] Gemini success (${result.content.length} chars)`);
+        return formatResponse(result, options);
       } catch (geminiError) {
         await recordUsageEvent({
           options,

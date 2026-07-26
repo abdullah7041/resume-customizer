@@ -497,6 +497,67 @@ describe('openrouter-client fallback and timeout behavior', () => {
     }));
   });
 
+  it('returns safe provider token metadata only when explicitly requested', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"test":1}' } }],
+      usage: {
+        prompt_tokens: 1000,
+        completion_tokens: 500,
+        total_tokens: 1500,
+        reasoning_tokens: 125,
+        private_provider_field: 'must-not-escape',
+      },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+    const result = await callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      featureName: 'benchmark.parse',
+      modelId: 'google/gemini-3.1-flash-lite',
+      includeResponseMetadata: true,
+    });
+
+    expect(result).toEqual({
+      text: '{"test":1}',
+      metadata: {
+        provider: 'openrouter',
+        modelId: 'google/gemini-3.1-flash-lite',
+        tokenUsage: {
+          promptTokens: 1000,
+          completionTokens: 500,
+          totalTokens: 1500,
+          reasoningTokens: 125,
+        },
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain('private_provider_field');
+  });
+
+  it('does not invent missing or invalid token counts in response metadata', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
+      choices: [{ message: { content: '{"test":1}' } }],
+      usage: {
+        prompt_tokens: '1000',
+        completion_tokens: -1,
+      },
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+    const result = await callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      includeResponseMetadata: true,
+    });
+
+    expect(result.metadata.tokenUsage).toEqual({
+      promptTokens: null,
+      completionTokens: null,
+      totalTokens: null,
+      reasoningTokens: null,
+    });
+  });
+
   it('waits for successful usage telemetry before resolving OpenRouter content', async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(200, {
       choices: [{ message: { content: '{"test":1}' } }],

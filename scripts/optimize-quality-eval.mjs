@@ -36,13 +36,17 @@ import { callOpenRouter } from '../netlify/lib/openrouter-client.js';
 import { getAiContract } from '../netlify/lib/ai-contracts/contracts/index.js';
 import { parseAiJson } from '../netlify/lib/ai-contracts/json.js';
 import { taggedBlock } from '../netlify/lib/ai-contracts/prompt.js';
-import { MODELS } from '../netlify/lib/model-registry.js';
+import {
+  APPROXIMATE_PRICING_SNAPSHOT_DATE,
+  MODELS,
+} from '../netlify/lib/model-registry.js';
 import {
   aggregateGoldAttempts,
   buildGoldContractOptions,
   buildGoldScoreSummaries,
   classifyGoldResult,
   parseOptimizeGoldEvaluatorOptions,
+  unwrapEvaluationResponse,
   validateOptimizeJudgeResult,
 } from './lib/model-eval/gold-evaluator-options.mjs';
 import {
@@ -226,7 +230,7 @@ async function runVariant(fixture, variant) {
       mode: evaluationOptions.mode,
       modelId: variant.modelId,
     });
-    const text = await callOpenRouter(optimizeContract.modelType, messages, variant.jsonSchema || optimizeContract.jsonSchema, {
+    const response = await callOpenRouter(optimizeContract.modelType, messages, variant.jsonSchema || optimizeContract.jsonSchema, {
       modelId: variant.modelId,
       temperature: variant.temperature,
       maxTokens: variant.maxTokens || optimizeContract.maxTokens,
@@ -235,11 +239,19 @@ async function runVariant(fixture, variant) {
       featureName: `benchmark.optimize.${variant.name}`,
       ...directOptions,
     });
+    const {
+      value: text,
+      approximateCostUsd,
+    } = unwrapEvaluationResponse({
+      response,
+      modelId: variant.modelId,
+    });
     const parsed = parseAiJson(text, 'optimize');
     const validation = optimizeContract.outputSchema.safeParse(parsed);
     return {
       success: true,
       latencyMs: Date.now() - start,
+      approximateCostUsd,
       schemaValid: validation.success,
       result: parsed, // raw parsed so source_span survives for grounding + judge
       fabricationFlags: fabricationFlags(parsed, fixture),
@@ -347,7 +359,7 @@ ${blocks}`;
         mode: evaluationOptions.mode,
         modelId: judgeModel,
       });
-      const text = await callOpenRouter('flash', messages, JUDGE_SCHEMA, {
+      const response = await callOpenRouter('flash', messages, JUDGE_SCHEMA, {
         modelId: judgeModel,
         temperature: 0,
         maxTokens: 4096,
@@ -355,6 +367,10 @@ ${blocks}`;
         reasoningBudget: 1024,
         featureName: 'benchmark.optimize.judge',
         ...directOptions,
+      });
+      const { value: text } = unwrapEvaluationResponse({
+        response,
+        modelId: judgeModel,
       });
       parsed = parseAiJson(text, 'optimize_judge');
     } catch (e) {
@@ -503,6 +519,7 @@ async function main() {
           latencyMs: run.latencyMs,
           score: null,
           qualityPassed: false,
+          approximateCostUsd: run.approximateCostUsd ?? null,
           classification,
         };
         goldAttempts.push(attempt);
@@ -661,6 +678,7 @@ async function main() {
       scoreSummaries: buildGoldScoreSummaries(goldAttempts),
       latencies: aggregate.latencies,
       approximateCostUsd: aggregate.approximateCostUsd,
+      pricingSnapshotTimestamp: APPROXIMATE_PRICING_SNAPSHOT_DATE,
     });
     console.log(`[Eval] Shared report: ${report.directory}`);
   }

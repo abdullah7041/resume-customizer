@@ -18,13 +18,17 @@ import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join, resolve } from "node:path";
 
-import { MODELS } from "../netlify/lib/model-registry.js";
+import {
+  APPROXIMATE_PRICING_SNAPSHOT_DATE,
+  MODELS,
+} from "../netlify/lib/model-registry.js";
 import {
   aggregateGoldAttempts,
   buildGoldEvaluationAttempts,
   buildGoldScoreSummaries,
   classifyGoldResult,
   parseGoldEvaluatorOptions,
+  unwrapEvaluationResponse,
 } from "./lib/model-eval/gold-evaluator-options.mjs";
 import {
   createEvaluationSession,
@@ -142,7 +146,14 @@ const runCandidateEvaluation = async (options, files) => {
     const { file, fixture } = fixtureById.get(planned.fixtureId);
     const startedAt = Date.now();
     try {
-      const actual = await runMatch(fixture, planned.contractOptions, false);
+      const execution = await runMatch(fixture, planned.contractOptions, false);
+      const {
+        value: actual,
+        approximateCostUsd,
+      } = unwrapEvaluationResponse({
+        response: execution,
+        modelId: planned.modelId,
+      });
       const latencyMs = Date.now() - startedAt;
       const result = scoreMatch(fixture.expected, actual);
       const qualityPassed = result.passed && result.overall >= THRESHOLD;
@@ -163,6 +174,7 @@ const runCandidateEvaluation = async (options, files) => {
         latencyMs,
         score: result.overall,
         qualityPassed,
+        approximateCostUsd,
         classification: classifyGoldResult({ schemaValid: true }),
       });
     } catch (error) {
@@ -201,10 +213,11 @@ const runCandidateEvaluation = async (options, files) => {
     scoreSummaries: buildGoldScoreSummaries(attempts),
     latencies: aggregate.latencies,
     approximateCostUsd: aggregate.approximateCostUsd,
+    pricingSnapshotTimestamp: APPROXIMATE_PRICING_SNAPSHOT_DATE,
   });
   const qualityFailed = aggregate.outcomeSummary.qualityFailures > 0;
 
-  console.log(`\n${C.bold}═══ ${attempts.length} direct attempts, mean ${pct(aggregate.meanScore ?? 0)}, cost unknown ═══${C.reset}`);
+  console.log(`\n${C.bold}═══ ${attempts.length} direct attempts, mean ${pct(aggregate.meanScore ?? 0)}, approximate cost ${aggregate.approximateCostUsd ?? "unknown"} USD ═══${C.reset}`);
   console.log(`${C.dim}Report: ${report.directory}${C.reset}`);
   process.exit(aggregate.requiredFailure || qualityFailed ? 1 : 0);
 };

@@ -145,7 +145,19 @@ describe('runContractAttempt', () => {
         buildMessages,
         outputSchema: { safeParse },
       }));
-      const executeContract = vi.fn(async () => validOutputs[feature]);
+      const executeContract = vi.fn(async () => ({
+        data: validOutputs[feature],
+        metadata: {
+          provider: 'openrouter',
+          modelId: 'google/gemini-3.1-flash-lite',
+          tokenUsage: {
+            promptTokens: 1000,
+            completionTokens: 500,
+            totalTokens: 1500,
+            reasoningTokens: 0,
+          },
+        },
+      }));
 
       const result = await runContractAttempt({
         feature,
@@ -171,6 +183,7 @@ describe('runContractAttempt', () => {
           modelId: 'google/gemini-3.1-flash-lite',
           disableFallback: true,
           featureName: `benchmark.${FEATURE_CONTRACT_ALIASES[feature]}`,
+          includeResponseMetadata: true,
         },
       );
       expect(safeParse).toHaveBeenCalledWith(validOutputs[feature]);
@@ -182,6 +195,7 @@ describe('runContractAttempt', () => {
         run: 2,
         latencyMs: 37,
         messageCount: 2,
+        approximateCostUsd: 0.001,
         qualityPassed: true,
         classification: {
           provider: 'openrouter',
@@ -194,6 +208,33 @@ describe('runContractAttempt', () => {
       expect(result).not.toHaveProperty('messages');
     },
   );
+
+  it('records null cost when the requested model has no registry pricing', async () => {
+    const result = await runContractAttempt({
+      feature: 'metadata',
+      fixture,
+      modelId: 'unknown/unpriced-model',
+      executeContract: vi.fn(async () => ({
+        data: validOutputs.metadata,
+        metadata: {
+          provider: 'openrouter',
+          modelId: 'unknown/unpriced-model',
+          tokenUsage: {
+            promptTokens: 1000,
+            completionTokens: 500,
+            totalTokens: 1500,
+            reasoningTokens: null,
+          },
+        },
+      })),
+      now: () => 100,
+    });
+
+    expect(result).toMatchObject({
+      approximateCostUsd: null,
+      qualityPassed: true,
+    });
+  });
 
   it('classifies an executor result that fails the real output schema without exposing it', async () => {
     const result = await runContractAttempt({

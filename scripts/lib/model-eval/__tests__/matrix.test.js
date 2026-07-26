@@ -199,6 +199,25 @@ describe('selectAdvancingModels', () => {
 
     expect(result).toEqual({ advanced: [candidate], excluded: [] });
   });
+
+  it('advances runner attempts whose direct-provider classification is nested', () => {
+    const result = selectAdvancingModels({
+      modelIds: [candidate],
+      requiredFixtureIds: eligibilityFixtureIds,
+      attempts: eligibilityFixtureIds.map((fixtureId) => ({
+        modelId: candidate,
+        fixtureId,
+        classification: {
+          provider: 'openrouter',
+          schemaValid: true,
+          primarySuccess: true,
+          failureReasons: [],
+        },
+      })),
+    });
+
+    expect(result).toEqual({ advanced: [candidate], excluded: [] });
+  });
 });
 
 describe('recommendWinner', () => {
@@ -254,10 +273,23 @@ describe('recommendWinner', () => {
     });
   });
 
+  it('keeps the cost tie gate unavailable when pricing is unknown while still applying latency policy', () => {
+    expect(recommendWinner({
+      incumbent: completeModel(incumbent, { estimatedCostUsd: null }),
+      candidate: completeModel(candidate, { p95LatencyMs: 850, estimatedCostUsd: null }),
+      qualityNoiseFloor: 1,
+    })).toEqual({
+      decision: 'candidate',
+      winner: candidate,
+      reason: 'quality_tie_with_material_efficiency_gain',
+      costGateAvailable: false,
+    });
+  });
+
   it('returns no-decision when a required gate or comparison metric is incomplete', () => {
     expect(recommendWinner({
       incumbent: completeModel(incumbent),
-      candidate: completeModel(candidate, { estimatedCostUsd: null }),
+      candidate: completeModel(candidate, { qualityScore: null }),
       qualityNoiseFloor: 1,
     })).toEqual({ decision: 'no-decision', reason: 'incomplete_metrics' });
   });

@@ -8,6 +8,7 @@ import {
   classifyGoldResult,
   parseGoldEvaluatorOptions,
   parseOptimizeGoldEvaluatorOptions,
+  unwrapEvaluationResponse,
   validateOptimizeJudgeResult,
 } from '../gold-evaluator-options.mjs';
 
@@ -51,6 +52,7 @@ describe.each(Object.entries(incumbentByFeature))('%s gold evaluator options', (
       attempt.contractOptions.modelId === attempt.modelId
       && attempt.contractOptions.disableFallback === true
       && attempt.contractOptions.featureName === `benchmark.${feature}`
+      && attempt.contractOptions.includeResponseMetadata === true
     ))).toBe(true);
   });
 
@@ -87,6 +89,73 @@ describe.each(Object.entries(incumbentByFeature))('%s gold evaluator options', (
 });
 
 describe('gold evaluator guardrails', () => {
+  it('unwraps opt-in provider metadata and calculates cost without exposing raw usage', () => {
+    const data = { score: 72 };
+    expect(unwrapEvaluationResponse({
+      response: {
+        data,
+        metadata: {
+          provider: 'openrouter',
+          modelId: 'google/gemini-3.1-flash-lite',
+          tokenUsage: {
+            promptTokens: 1000,
+            completionTokens: 500,
+            totalTokens: 1500,
+            reasoningTokens: 0,
+          },
+        },
+      },
+      modelId: 'google/gemini-3.1-flash-lite',
+    })).toEqual({
+      value: data,
+      approximateCostUsd: 0.001,
+    });
+  });
+
+  it('keeps cost null when pricing or safe token metadata is unavailable', () => {
+    expect(unwrapEvaluationResponse({
+      response: {
+        text: '{"ok":true}',
+        metadata: {
+          provider: 'openrouter',
+          modelId: 'unknown/unpriced',
+          tokenUsage: {
+            promptTokens: null,
+            completionTokens: 500,
+          },
+        },
+      },
+      modelId: 'unknown/unpriced',
+    })).toEqual({
+      value: '{"ok":true}',
+      approximateCostUsd: null,
+    });
+  });
+
+  it('does not report a partial cost total when any attempt lacks cost evidence', () => {
+    const attempts = [
+      {
+        modelId: 'google/gemini-3.1-flash-lite',
+        fixtureId: 'fixture-en',
+        latencyMs: 10,
+        score: 1,
+        approximateCostUsd: 0.001,
+        classification: { primarySuccess: true },
+      },
+      {
+        modelId: 'google/gemini-3.1-flash-lite',
+        fixtureId: 'fixture-en',
+        latencyMs: 10,
+        score: 1,
+        approximateCostUsd: null,
+        classification: { primarySuccess: true },
+      },
+    ];
+
+    expect(aggregateGoldAttempts(attempts).approximateCostUsd).toBeNull();
+    expect(buildGoldScoreSummaries(attempts)[0].approximateCostUsd).toBeNull();
+  });
+
   it('permits candidate cache writes only behind --update-cache and never reads a cache', () => {
     const options = parseGoldEvaluatorOptions({
       feature: 'parse',

@@ -14,16 +14,21 @@ async function resolveRetrievedContext(contractId, input, options) {
 }
 
 function buildCallOptions(contract, options) {
+  const timeoutMs = Number.isFinite(options.timeoutMs)
+    ? Math.min(contract.timeoutMs, options.timeoutMs)
+    : contract.timeoutMs;
+
   return {
     temperature: contract.temperature,
     maxTokens: contract.maxTokens,
-    timeoutMs: contract.timeoutMs,
+    timeoutMs,
     reasoningBudget: contract.reasoningBudget,
     schemaName: contract.schemaName,
     featureName: options.featureName || contract.featureName,
     responseFormat: contract.responseFormat,
     modelId: options.modelId,
     disableFallback: options.disableFallback === true,
+    includeResponseMetadata: options.includeResponseMetadata === true,
     userRef: options.userRef,
     // Telemetry options map to user_ref / jd_fingerprint at the logger boundary.
     jdFingerprint: options.jdFingerprint,
@@ -40,12 +45,13 @@ export async function executeAiContract(contractId, input, options = {}) {
   const callOptions = buildCallOptions(contract, options);
 
   try {
-    const text = await callOpenRouter(
+    const response = await callOpenRouter(
       contract.modelType,
       messages,
       contract.jsonSchema,
       callOptions,
     );
+    const text = typeof response === 'string' ? response : response?.text;
     const parsed = parseAiJson(text, contractId);
     const validation = contract.outputSchema.safeParse(parsed);
     if (!validation.success) {
@@ -63,9 +69,15 @@ export async function executeAiContract(contractId, input, options = {}) {
         cause: validation.error,
       });
     }
-    return contract.transform
+    const data = contract.transform
       ? contract.transform(validation.data, input, options)
       : validation.data;
+    return options.includeResponseMetadata === true
+      ? {
+        data,
+        metadata: typeof response === 'object' ? response.metadata ?? null : null,
+      }
+      : data;
   } catch (error) {
     if (error instanceof AiContractError) throw error;
     if (error?.name === 'TimeoutError' || error?.status === 504) throw error;
