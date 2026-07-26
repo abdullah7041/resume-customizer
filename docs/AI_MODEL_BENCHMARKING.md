@@ -41,15 +41,12 @@ For direct-provider evaluation, set the OpenRouter credential and intentionally 
 $env:OPENROUTER_API_KEY = "<approved benchmark key>"
 Remove-Item Env:GEMINI_API_KEY -ErrorAction Ignore
 
-npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture truth-check-en-inflated-metric --stage 1
-npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture truth-check-ar-hard-stop-contradiction --stage 1
-npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture cover-letter-en-operations-positive --stage 1
-npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture cover-letter-ar-finance-positive --stage 1
-npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture interview-en-operations-positive --stage 1
-npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture interview-ar-finance-positive --stage 1
+npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --stage 1
+npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --stage 1
+npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --stage 1
 ```
 
-Every candidate must pass its English and Arabic eligibility probe for the feature. These runs execute the real AI contract, revalidate the returned Zod shape, and set `disableFallback: true`. A provider, timeout, JSON, or schema failure is a failed attempt, not a fallback success.
+Every Stage 1 command selects that feature's complete frozen eligibility corpus, including its English and Arabic cases; staged runs reject per-fixture selection. Every candidate must pass the English and Arabic eligibility coverage for the feature. These runs execute the real AI contract, revalidate the returned Zod shape, and set `disableFallback: true`. A provider, timeout, JSON, or schema failure is a failed attempt, not a fallback success.
 
 ### Stage 2 — three full-suite matrix runs
 
@@ -63,11 +60,13 @@ npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,goo
 
 The current direct benchmark runner marks truth check, cover letter, and interview as authoritative direct-contract runs. Match and optimize wrapper runs remain smoke telemetry in that runner while their focused `eval:match` and `eval:optimize` gates protect the primary corpus. The manifest preserves all six decision corpora without changing that runtime behavior.
 
-Clarification and metadata may be run only as explicit smoke probes:
+Clarification and metadata may be run only as explicit bilingual smoke probes. They are smoke-only and selection-ineligible, so do not pass `--stage`:
 
 ```powershell
-npm run benchmark:ai -- --feature clarification --models google/gemini-2.5-flash --runs 1 --fixture clarification-ar-metrics-smoke --stage 2
-npm run benchmark:ai -- --feature metadata --models google/gemini-2.5-flash --runs 1 --fixture metadata-en-explicit-smoke --stage 2
+npm run benchmark:ai -- --feature clarification --models google/gemini-2.5-flash --runs 1 --fixture clarification-en-metrics-smoke
+npm run benchmark:ai -- --feature clarification --models google/gemini-2.5-flash --runs 1 --fixture clarification-ar-metrics-smoke
+npm run benchmark:ai -- --feature metadata --models google/gemini-2.5-flash --runs 1 --fixture metadata-en-explicit-smoke
+npm run benchmark:ai -- --feature metadata --models google/gemini-2.5-flash --runs 1 --fixture metadata-ar-explicit-smoke
 ```
 
 ### Stage 3 — five fresh winner confirmations
