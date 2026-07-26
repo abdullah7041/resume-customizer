@@ -503,6 +503,56 @@ describe('AI contract layer', () => {
     );
   });
 
+  it('forwards only evaluation provider controls while preserving contract generation settings', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      score: 0,
+      categoryScores: {
+        hard_skills: { score: 0, max: 40, reasoning: 'No required skills found' },
+        experience: { score: 0, max: 30, reasoning: 'No relevant experience found' },
+        education: { score: 0, max: 15, reasoning: 'No relevant education found' },
+        soft_skills: { score: 0, max: 15, reasoning: 'No soft skills evidence found' },
+      },
+      strongMatches: [],
+      missingKeywords: ['React'],
+      reasoning: 'No meaningful match evidence.',
+    }));
+
+    await executeAiContract('ai_match', {
+      resumeText: 'Resume text',
+      jobDescription: 'React job',
+      language: 'en',
+    }, {
+      modelId: 'google/gemini-3.1-flash-lite',
+      disableFallback: true,
+      featureName: 'benchmark.ai_match',
+      temperature: 0.9,
+      maxTokens: 1,
+      timeoutMs: 1,
+      reasoningBudget: 1,
+      schemaName: 'caller_schema',
+      responseFormat: 'json_object',
+      jsonSchema: { type: 'object', properties: { caller: { type: 'string' } } },
+    });
+
+    expect(callOpenRouterMock).toHaveBeenCalledWith(
+      'flash',
+      expect.any(Array),
+      expect.objectContaining({ required: expect.arrayContaining(['score']) }),
+      expect.objectContaining({
+        modelId: 'google/gemini-3.1-flash-lite',
+        disableFallback: true,
+        featureName: 'benchmark.ai_match',
+        temperature: 0,
+        maxTokens: 4096,
+        timeoutMs: 65000,
+        reasoningBudget: 512,
+        schemaName: 'ai_match',
+        responseFormat: undefined,
+      }),
+    );
+    expect(callOpenRouterMock.mock.calls[0][2]).toBe(getAiContract('ai_match').jsonSchema);
+  });
+
   it('normalizes summary bullets without rejecting an otherwise valid match response', async () => {
     const longBullet = 'This verdict bullet is useful but longer than the compact UI limit because the provider ignored the requested maximum character count.';
     callOpenRouterMock.mockResolvedValue(JSON.stringify({

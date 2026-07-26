@@ -15,14 +15,15 @@ async function resolveRetrievedContext(contractId, input, options) {
 
 function buildCallOptions(contract, options) {
   return {
-    temperature: options.temperature ?? contract.temperature,
-    maxTokens: options.maxTokens ?? contract.maxTokens,
-    timeoutMs: options.timeoutMs ?? contract.timeoutMs,
-    reasoningBudget: options.reasoningBudget ?? contract.reasoningBudget,
-    schemaName: options.schemaName || contract.schemaName,
+    temperature: contract.temperature,
+    maxTokens: contract.maxTokens,
+    timeoutMs: contract.timeoutMs,
+    reasoningBudget: contract.reasoningBudget,
+    schemaName: contract.schemaName,
     featureName: options.featureName || contract.featureName,
-    responseFormat: options.responseFormat ?? contract.responseFormat,
+    responseFormat: contract.responseFormat,
     modelId: options.modelId,
+    disableFallback: options.disableFallback === true,
     userRef: options.userRef,
     // Telemetry options map to user_ref / jd_fingerprint at the logger boundary.
     jdFingerprint: options.jdFingerprint,

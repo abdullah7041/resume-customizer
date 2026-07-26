@@ -365,6 +365,10 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
+    if (options.disableFallback && !OPENROUTER_API_KEY) {
+      throw new Error('OpenRouter execution requires OPENROUTER_API_KEY when fallback is disabled.');
+    }
+
     // Strategy 1: Try OpenRouter (primary)
     if (OPENROUTER_API_KEY) {
       console.log(`[AI Client] PRIMARY: OpenRouter ${model} (${messages.length} msgs, timeout: ${TIMEOUT_MS}ms)`);
@@ -392,7 +396,7 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
         // callers recover deterministically from the already-extracted raw text,
         // and other callers surface the truncation directly. Gemini fallback is
         // reserved for genuine provider failures (5xx / auth / network / timeout).
-        if (GEMINI_API_KEY && isFallbackEligible(openRouterError)) {
+        if (!options.disableFallback && GEMINI_API_KEY && isFallbackEligible(openRouterError)) {
           console.warn('[AI Client] OpenRouter failed, falling back to Gemini direct:', summarizeErrorForLog(openRouterError));
           // Use the original call deadline. A fallback must never double the
           // configured timeout and overrun the hosting function's hard limit.
@@ -432,7 +436,9 @@ export async function callOpenRouter(modelType, messages, jsonSchema = null, opt
         }
 
         // No fallback available or error not eligible — log why and re-throw
-        if (!GEMINI_API_KEY) {
+        if (options.disableFallback) {
+          console.warn('[AI Client] OpenRouter fallback disabled; re-throwing OpenRouter error:', summarizeErrorForLog(openRouterError));
+        } else if (!GEMINI_API_KEY) {
           console.warn('[AI Client] No GEMINI_API_KEY set — cannot fall back from OpenRouter error:', summarizeErrorForLog(openRouterError));
         } else {
           console.warn('[AI Client] OpenRouter error not fallback-eligible:', summarizeErrorForLog(openRouterError));

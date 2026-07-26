@@ -84,6 +84,37 @@ describe('openrouter-client fallback and timeout behavior', () => {
     }));
   });
 
+  it('throws the original eligible OpenRouter error without a Gemini fallback when disabled', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse(503, { error: { message: 'OpenRouter unavailable' } }, 'Service Unavailable'),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient();
+
+    await expect(callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      disableFallback: true,
+    })).rejects.toThrow('OpenRouter API error (503)');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/chat/completions');
+  });
+
+  it('rejects Gemini-only execution when fallback is disabled', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { callOpenRouter } = await importClient({ openRouterKey: '' });
+
+    await expect(callOpenRouter('lite', MESSAGES, null, {
+      timeoutMs: 1000,
+      disableFallback: true,
+    })).rejects.toThrow('OPENROUTER_API_KEY');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('throws the original OpenRouter error when Gemini fallback also fails', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(jsonResponse(502, { error: { message: 'Bad gateway' } }, 'Bad Gateway'))
