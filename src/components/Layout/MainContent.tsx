@@ -148,6 +148,10 @@ const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
 const TRUTH_CHECK_STORAGE_KEY = "watheq:resumeTruthCheck";
 
+type PendingOptimizeContinuation = {
+  resolve: (result: unknown) => void;
+};
+
 const getId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -483,6 +487,7 @@ export default function MainContent() {
     persistentHardStops?: string[];
     freePreview?: boolean;
   } | null>(null);
+  const pendingOptimizeContinuation = useRef<PendingOptimizeContinuation | null>(null);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.DEV;
 
@@ -1655,18 +1660,22 @@ export default function MainContent() {
         );
 
         if (unansweredQuestions.length > 0) {
-          // Pause the flow — show the modal and wait for user answers
-          setClarificationQuestions(unansweredQuestions);
-          setPendingOptimizeArgs({
-            mode,
-            workHistory,
-            persistentHardStops,
-            freePreview: options?.freePreview,
+          // Keep the caller pending until the modal continuation completes. The
+          // OptimizeSection uses that completion boundary to consume a free
+          // preview and verify only the cards that were actually generated.
+          return new Promise((resolve) => {
+            pendingOptimizeContinuation.current = { resolve };
+            setClarificationQuestions(unansweredQuestions);
+            setPendingOptimizeArgs({
+              mode,
+              workHistory,
+              persistentHardStops,
+              freePreview: options?.freePreview,
+            });
+            setIsInterrogating(true);
+            setIsOptimizing(false);
+            setFlowProgress(0);
           });
-          setIsInterrogating(true);
-          setIsOptimizing(false);
-          setFlowProgress(0);
-          return null; // resume in handleClarificationSubmit / handleClarificationSkip
         }
 
         // No questions → fall through to the actual optimize call
@@ -1716,14 +1725,24 @@ export default function MainContent() {
     });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({
-      mode,
-      workHistory,
-      userClarifications,
-      userHardStops: allHardStops,
-      freePreview,
-      clarificationOutcome: 'answered',
-    });
+    try {
+      const result = await handleOptimizeActual({
+        mode,
+        workHistory,
+        userClarifications,
+        userHardStops: allHardStops,
+        freePreview,
+        clarificationOutcome: 'answered',
+      });
+      pendingOptimizeContinuation.current?.resolve(result);
+    } catch {
+      // The actual handler has already surfaced the failure. Resolve the
+      // original UI action as incomplete so it neither spends a preview nor
+      // verifies stale cards.
+      pendingOptimizeContinuation.current?.resolve(null);
+    } finally {
+      pendingOptimizeContinuation.current = null;
+    }
   }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
 
   const handleClarificationSkip = useCallback(async () => {
@@ -1737,14 +1756,23 @@ export default function MainContent() {
     });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    await handleOptimizeActual({
-      mode,
-      workHistory,
-      userClarifications: undefined,
-      userHardStops: persistentHardStops,
-      freePreview,
-      clarificationOutcome: 'skipped',
-    });
+    try {
+      const result = await handleOptimizeActual({
+        mode,
+        workHistory,
+        userClarifications: undefined,
+        userHardStops: persistentHardStops,
+        freePreview,
+        clarificationOutcome: 'skipped',
+      });
+      pendingOptimizeContinuation.current?.resolve(result);
+    } catch {
+      // See the answered path: errors are already surfaced by the optimize
+      // handler, while the original child action must remain incomplete.
+      pendingOptimizeContinuation.current?.resolve(null);
+    } finally {
+      pendingOptimizeContinuation.current = null;
+    }
   }, [clarificationQuestions.length, handleOptimizeActual, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */

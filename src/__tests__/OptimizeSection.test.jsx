@@ -439,6 +439,19 @@ describe('OptimizeSection', () => {
             }, { timeout: 3000 });
         });
 
+        it('does not consume a free preview when the parent pauses optimization', async () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User' } };
+            const onOptimize = vi.fn().mockResolvedValue(null);
+
+            renderWithProviders(<OptimizeSection onOptimize={onOptimize} />);
+            fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
+
+            await waitFor(() => {
+                expect(onOptimize).toHaveBeenCalledWith('auto', { freePreview: true });
+            });
+            expect(window.localStorage.getItem('watheq:freeOptimizeUsed')).toBeNull();
+        });
+
         it('allows guest optimization to run one free preview without credit confirmation', async () => {
             mockStoreState.originalResume = { basics: { name: 'Test User' } };
             const onRequireSignIn = vi.fn();

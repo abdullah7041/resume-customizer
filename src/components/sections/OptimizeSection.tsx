@@ -744,11 +744,13 @@ export function OptimizeSection({
   const handleGenerateActual = async (options?: { freePreview?: boolean }) => {
     // If parent provided handler, use that
     if (propOnOptimize) {
+      const result = await propOnOptimize('auto', options);
+      if (result === null) return result;
+
       setVerifyAnomaly(null);
       setVerifyRetryUsed(false);
       setOptimizationMetrics({ verifiedPotential: null, verifiedApplied: null });
 
-      const result = await propOnOptimize('auto', options);
       if (options?.freePreview) markFreePreviewUsed();
 
       const jobDescription = typeof window !== 'undefined'

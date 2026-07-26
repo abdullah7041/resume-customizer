@@ -106,10 +106,19 @@ vi.mock("../components/sections/OptimizeSection", async () => {
     __esModule: true,
     OptimizeSection: (props) => {
       const scoreState = useMockResumeStore((state) => state.optimizationMetrics);
+      const [optimizeStatus, setOptimizeStatus] = React.useState("idle");
       return React.createElement(
         "div",
         { "data-testid": "optimization-mock" },
-        React.createElement("button", { onClick: () => props.onOptimize?.("auto", { freePreview: true }) }, "Run optimize"),
+        React.createElement("button", {
+          onClick: () => {
+            setOptimizeStatus("pending");
+            void Promise.resolve(props.onOptimize?.("auto", { freePreview: true }))
+              .then((result) => setOptimizeStatus(result ? "completed" : "empty"))
+              .catch(() => setOptimizeStatus("failed"));
+          },
+        }, "Run optimize"),
+        React.createElement("span", { "data-testid": "optimization-handler-status" }, optimizeStatus),
         React.createElement(
           "span",
           { "data-testid": "optimization-companion-score-source" },
@@ -688,6 +697,43 @@ describe("MainContent resume parsing", () => {
         beforeScore: 40,
         afterScore: 68,
       });
+    });
+  });
+
+  it("keeps optimization pending through clarification and resolves after submission", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel is required");
+    generateClarificationsMock.mockResolvedValueOnce({
+      clarifications: [{
+        id: "excelExperience",
+        theme: "Excel",
+        rationale: "The role requires Excel evidence.",
+        question: "Which Excel work can you verify?",
+        type: "single",
+        options: [{ value: "dashboards", label: "Built Excel dashboards" }],
+        allowOther: false,
+      }],
+    });
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    expect(await screen.findByRole("button", { name: "Built Excel dashboards" })).toBeInTheDocument();
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(screen.getByTestId("optimization-handler-status")).toHaveTextContent("pending");
+
+    fireEvent.click(screen.getByRole("button", { name: "Built Excel dashboards" }));
+    fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
+    await waitFor(() => {
+      expect(screen.getByTestId("optimization-handler-status")).toHaveTextContent("completed");
     });
   });
 

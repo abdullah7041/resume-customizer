@@ -27,6 +27,7 @@
         "title": "Job Variants",
         "subtitle": "Saves this job's suggestions, applied changes, and scores so you can switch between jobs.",
         "saveChanges": "Save changes",
+        "saved": "Saved",
         "saveNew": "Save as variant",
         "namePlaceholder": "e.g. Senior PM @ Aramco"
       },

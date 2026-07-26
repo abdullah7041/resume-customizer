@@ -8,6 +8,8 @@
     "matchClearedDesc": "Match results and job description removed.",
     "optimizationsClearedTitle": "Optimizations cleared",
     "optimizationsClearedDesc": "Optimization results removed.",
+    "storageSaveFailedTitle": "Could not save locally",
+    "storageSaveFailedDesc": "Your latest change is available for this session but could not be persisted in this browser.",
     "parsingResume": "Parsing resume",
     "parsingResumeDesc": "AI is structuring your experience for analysis.",
     "resumeParsed": "Resume parsed",

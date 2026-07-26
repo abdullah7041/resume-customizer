@@ -8,6 +8,8 @@
     "matchClearedDesc": "تمت إزالة نتائج المطابقة والوصف الوظيفي.",
     "optimizationsClearedTitle": "تم مسح التحسينات",
     "optimizationsClearedDesc": "تمت إزالة نتائج التحسين.",
+    "storageSaveFailedTitle": "تعذر الحفظ محلياً",
+    "storageSaveFailedDesc": "أحدث تغيير متاح خلال هذه الجلسة، لكنه لم يُحفظ في هذا المتصفح.",
     "parsingResume": "يحلل سيرتك...",
     "parsingResumeDesc": "الذكاء الاصطناعي يرتب خبراتك للتحليل.",
     "resumeParsed": "تم تحليل السيرة الذاتية",
