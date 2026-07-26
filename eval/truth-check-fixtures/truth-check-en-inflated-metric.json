@@ -1,0 +1,15 @@
+{
+  "id": "truth-check-en-inflated-metric",
+  "feature": "truth-check",
+  "language": "en",
+  "caseType": "negative",
+  "synthetic": true,
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["100% error-free", "SQL dashboard"],
+  "resumeText": "SYNTHETIC PROFILE\nReporting Specialist\n\nEXPERIENCE\n- Guaranteed 100% error-free reporting for every business decision.\n- Built a SQL dashboard for weekly operations review.",
+  "expected": {
+    "scoreBand": [80, 100],
+    "flags": ["inflated_claim"],
+    "truthCheck": { "requiredClaimTerms": ["100% error-free"], "requiredRiskTypes": ["inflated"], "requiredEvidenceStatuses": ["needs_evidence"] }
+  }
+}

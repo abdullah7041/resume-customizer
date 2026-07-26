@@ -1,0 +1,14 @@
+{
+  "id": "clarification-ar-metrics-smoke",
+  "feature": "clarification",
+  "language": "ar",
+  "caseType": "smoke",
+  "synthetic": true,
+  "selectionEligible": false,
+  "evaluationMode": "smoke_only",
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["تقارير أسبوعية", "Excel"],
+  "resumeText": "ملف مهني تجريبي\nمساعد تقارير\n\nالخبرة\n- أعد تقارير أسبوعية باستخدام Excel.\n- سجل ملاحظات الاستثناءات لفريق العمليات.",
+  "jobDescription": "شركة نموذجية تبحث عن محلل تقارير لتوثيق أثر التحسينات واستخدام Excel في التقارير التشغيلية.",
+  "expected": { "scoreBand": [0, 100], "flags": ["smoke_only"], "clarification": { "minimumQuestions": 0, "maxQuestions": 3 } }
+}

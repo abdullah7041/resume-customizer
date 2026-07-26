@@ -1,111 +1,94 @@
 # AI Model Benchmarking
 
-## Overview
+## Purpose and decision boundary
 
-This document describes how to benchmark AI models for Watheq using the local-only benchmark harness.
+`eval/model-eval-fixture-manifest.json` freezes the synthetic evaluation corpus for the decision features: parse, match/reality check, optimize, truth check, cover letter, and interview preparation. It contains metadata-only references; resume and job text stay in their fixture files.
 
-**Important:** Benchmark results measure model behavior (latency, JSON reliability, hallucination risk). They do NOT prove hiring outcomes.
+Clarification and job-metadata extraction are deliberately **smoke-only**. Their two English/Arabic fixtures verify the direct contract shape and language path, but they are never evidence for a model winner. A smoke result cannot promote, demote, or change a production model default.
 
-## Prerequisites
+No production model default, fallback, prompt, or routing change may be made from a console result. First create a committed evaluation report, review it, and approve the feature-specific decision.
 
-- Node.js 20+
-- `OPENROUTER_API_KEY` or `GEMINI_API_KEY` configured in your environment
+## Fixture gate
 
-## How to Run a Benchmark
+Run this before any paid provider call:
 
-```bash
-# Compare current production model vs candidate model for optimize
-npm run benchmark:ai -- --feature optimize --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite
-
-# Run match benchmark
-npm run benchmark:ai -- --feature match --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite
-
-# Run clarification benchmark on a specific fixture
-npm run benchmark:ai -- --feature clarification --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite --fixture low-quality-resume-jd.json
+```powershell
+npm run test -- eval/__tests__/model-eval-fixture-manifest.test.js
 ```
 
-### Supported Features
+The gate requires at least eight fixtures per primary feature, with English, at least two Arabic cases, mixed language, positive, negative, and adversarial coverage. New fixtures must be synthetic, stable-ID JSON with input fields that match the real contract, safety expectations, required evidence terms, and expected score bands or flags.
 
-- `match` — `processMatchOnly()`
-- `clarification` — `generate-clarifications` prompt + schema
-- `optimize` — `optimizeResume()`
-- `metadata` — `extract-job-metadata` prompt + schema
+## Staged matrix
 
-### Supported Models
+Use the stages in order. `--stage` is persisted in the report for traceability; it does not change a contract, cache, or model default.
 
-The benchmark only accepts models explicitly listed in `SUPPORTED_BENCHMARK_MODELS`:
+### Stage 0 — local fixture and contract checks
 
-- `google/gemini-2.5-flash-lite`
-- `google/gemini-2.5-flash`
-- `google/gemini-3.1-flash-lite`
+```powershell
+npm run test -- eval/__tests__/model-eval-fixture-manifest.test.js
+npm run eval:parse
+npm run eval:match
+npm run eval:optimize
+```
 
-## How to Add Local Fixtures
+Do not start provider evaluation if the manifest gate fails. The parse, match, and optimize commands remain their focused local corpus gates.
 
-1. Create a new `.json` file in `scripts/benchmark-fixtures/`.
-2. Use **completely synthetic (fake)** data. Never use real resumes or job descriptions.
-3. Include these fields:
-   - `name` — short description of the scenario
-   - `language` — `en`, `ar`, or `mixed`
-   - `resumeText` — the synthetic resume
-   - `jobDescription` — the synthetic job description
-   - `expectedLanguageDirection` — `ltr` or `rtl`
+### Stage 1 — one direct-provider fixture per feature
 
-See `scripts/benchmark-fixtures/README.md` for the synthetic-data mandate.
+For direct-provider evaluation, set the OpenRouter credential and intentionally leave the direct Gemini credential unset. This prevents an accidental fallback from contaminating the candidate result.
 
-## How to Compare Models
+```powershell
+$env:OPENROUTER_API_KEY = "<approved benchmark key>"
+Remove-Item Env:GEMINI_API_KEY -ErrorAction Ignore
 
-The benchmark runs every fixture twice:
-- Once with the **baseline** model
-- Once with the **candidate** model
+npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture truth-check-en-inflated-metric --stage 1
+npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture cover-letter-en-operations-positive --stage 1
+npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture interview-en-operations-positive --stage 1
+```
 
-For each run it collects:
-- `success` / `failure`
-- `latency_ms`
-- `output_length`
-- `json_parse_success`
-- `hallucination_flags` (for optimize)
+These runs execute the real AI contract, revalidate the returned Zod shape, and set `disableFallback: true`. A provider, timeout, JSON, or schema failure is a failed attempt, not a fallback success.
 
-Results are printed to the console and saved as a JSON report in `scripts/benchmark-reports/`.
+### Stage 2 — feature matrix
 
-## Decision Rule for Switching
+Run every fixture and at least two repeats for the feature under evaluation:
 
-Do **not** switch `optimize` (or any production feature) to a new model unless:
+```powershell
+npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 2 --stage 2
+npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 2 --stage 2
+npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 2 --stage 2
+```
 
-1. Quality is equal or better in at least **60–70%** of benchmark cases.
-2. JSON/schema success rate is **>= 98%**.
-3. Hallucination rate is **zero or lower** than the current model.
-4. Latency is **better or acceptable**.
-5. Approximate cost is **acceptable**.
+The current direct benchmark runner marks truth check, cover letter, and interview as authoritative direct-contract runs. Match and optimize wrapper runs remain smoke telemetry in that runner while their focused `eval:match` and `eval:optimize` gates protect the primary corpus. The manifest preserves all six decision corpora without changing that runtime behavior.
 
-## Cost Caveats
+Clarification and metadata may be run only as explicit smoke probes:
 
-- `estimated_cost_usd` in benchmark reports is **approximate** only.
-- It is computed from the `APPROXIMATE_PRICING` map in `netlify/lib/model-registry.js`.
-- **Do not use it as a billing source of truth.** Actual cost comes from OpenRouter/provider billing.
-- Pricing updates may lag behind provider announcements.
+```powershell
+npm run benchmark:ai -- --feature clarification --models google/gemini-2.5-flash --runs 1 --fixture clarification-ar-metrics-smoke --stage 2
+npm run benchmark:ai -- --feature metadata --models google/gemini-2.5-flash --runs 1 --fixture metadata-en-explicit-smoke --stage 2
+```
 
-## Analytics Separation
+### Stage 3 — review and decision
 
-- Benchmark calls use feature names prefixed with `benchmark.` (e.g., `benchmark.optimize`).
-- This separates benchmark traffic from production `ai_usage_events`.
-- To suppress usage logging entirely, set:
-  ```bash
-  BENCHMARK_DISABLE_USAGE_LOGGING=true npm run benchmark:ai -- ...
-  ```
+Use the report directory printed by the command. The evaluation is reviewable only when every required attempt is primary-provider successful, schema-valid, and quality-passing. A candidate also needs a feature-specific quality improvement that is material on the frozen corpus.
 
-## Privacy Warning
+Tie policy: if the candidate is tied, results are noisy or incomplete, safety/reliability regresses, or the advantage is not clear, retain the incumbent. There is no cross-feature winner: every decision is feature-specific. Smoke-only clarification and metadata results are excluded from this decision.
 
-- **Never commit real resumes or job descriptions.**
-- All fixtures in `scripts/benchmark-fixtures/` are synthetic.
-- The benchmark script warns if fixture content looks like real personal data.
-- Reports in `scripts/benchmark-reports/` are gitignored.
+Commit the sanitized evaluation report or decision summary, review it, then make a separately reviewed production-default change if approved. Never combine an evaluation run with a default change in the same unreviewed step.
 
-## Troubleshooting
+## Cache, provider, and report handling
 
-### "Model X is not in SUPPORTED_BENCHMARK_MODELS"
+- Benchmark calls are tagged `benchmark.<contract>` and set `disableFallback: true`.
+- The benchmark report records `updateCache: false`; benchmark attempts must not update or rely on an application response-cache result. Re-run the matrix for fresh provider evidence.
+- A direct-provider run requires `OPENROUTER_API_KEY`. Keep `GEMINI_API_KEY` unset for the run so an accidental direct-Gemini route is visible as a failure.
+- Reports are written below `scripts/benchmark-reports/`, which is gitignored. The report writer stores fixture IDs, model IDs, sanitized outcome/score summaries, and latency aggregates; it does not persist raw resume text, prompts, or model outputs.
+- Keep raw local reports only in access-controlled storage and remove them after the decision review (maximum 30 days). A committed decision summary must remain metadata-only and must never contain a resume, job description, raw provider response, email address, or phone number.
 
-Add the model ID to `SUPPORTED_BENCHMARK_MODELS` in `netlify/lib/model-registry.js` and include approximate pricing before benchmarking.
+## Adding fixtures
 
-### "Model not available (HTTP 404)"
+1. Use fully synthetic text and no candidate PII.
+2. Give every new file a stable `id`, `feature`, `language`, `caseType`, `synthetic: true`, `safetyExpectations`, `requiredEvidenceTerms`, and expected score band or flags.
+3. Keep the manifest metadata-only; reference the file and never paste fixture text into it.
+4. Add English, Arabic, mixed, positive, negative, and adversarial coverage where the manifest gate requires it.
+5. Run the fixture gate and the focused privacy scan before committing.
 
-The candidate model may not yet be live on OpenRouter or direct Gemini. The benchmark reports this as a failure and continues with remaining fixtures.
+See `scripts/benchmark-fixtures/README.md` for the fixture format and synthetic-data rules.

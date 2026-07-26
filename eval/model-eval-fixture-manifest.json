@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "dataPolicy": "Manifest entries are metadata-only references. Fixture text remains in its source file and must be synthetic.",
+  "selectionPolicy": "Only primaryFeatures support feature-level model decisions. smokeOnlyFeatures are never winner-selection evidence.",
+  "primaryFeatures": {
+    "parse": [
+      { "id": "abdullah-bi-analyst", "file": "eval/fixtures/abdullah-bi-analyst.json", "language": "en", "caseType": "positive" },
+      { "id": "arabic-data-analyst", "file": "eval/fixtures/arabic-data-analyst.json", "language": "ar", "caseType": "positive" },
+      { "id": "arabic-hijri-mixed-hr", "file": "eval/fixtures/arabic-hijri-mixed-hr.json", "language": "ar", "caseType": "adversarial" },
+      { "id": "bilingual-software-engineer", "file": "eval/fixtures/bilingual-software-engineer.json", "language": "mixed", "caseType": "positive" },
+      { "id": "canva-decorative-marketer", "file": "eval/fixtures/canva-decorative-marketer.json", "language": "en", "caseType": "adversarial" },
+      { "id": "interleaved-columns-accountant", "file": "eval/fixtures/interleaved-columns-accountant.json", "language": "en", "caseType": "negative" },
+      { "id": "right-aligned-dates-engineer", "file": "eval/fixtures/right-aligned-dates-engineer.json", "language": "en", "caseType": "adversarial" },
+      { "id": "two-column-designer", "file": "eval/fixtures/two-column-designer.json", "language": "en", "caseType": "positive" }
+    ],
+    "match": [
+      { "id": "strong-match-bi-analyst", "file": "eval/match-fixtures/strong-match-bi-analyst.json", "language": "en", "caseType": "positive" },
+      { "id": "weak-match-retail-to-swe", "file": "eval/match-fixtures/weak-match-retail-to-swe.json", "language": "en", "caseType": "negative" },
+      { "id": "career-changer-teacher-to-analyst", "file": "eval/match-fixtures/career-changer-teacher-to-analyst.json", "language": "en", "caseType": "negative" },
+      { "id": "keyword-stuffing-no-evidence", "file": "eval/match-fixtures/keyword-stuffing-no-evidence.json", "language": "en", "caseType": "adversarial" },
+      { "id": "boilerplate-invariance-noisy", "file": "eval/match-fixtures/boilerplate-invariance-noisy.json", "language": "en", "caseType": "adversarial" },
+      { "id": "arabic-accountant-partial", "file": "eval/match-fixtures/arabic-accountant-partial.json", "language": "ar", "caseType": "negative" },
+      { "id": "match-reality-ar-procurement-evidence", "file": "scripts/benchmark-fixtures/match-reality-ar-procurement-evidence.json", "language": "ar", "caseType": "negative" },
+      { "id": "bilingual-resume-jd", "file": "scripts/benchmark-fixtures/bilingual-resume-jd.json", "language": "mixed", "caseType": "positive" }
+    ],
+    "optimize": [
+      { "id": "en-resume-jd", "file": "scripts/benchmark-fixtures/en-resume-jd.json", "language": "en", "caseType": "positive" },
+      { "id": "ar-resume-jd", "file": "scripts/benchmark-fixtures/ar-resume-jd.json", "language": "ar", "caseType": "positive" },
+      { "id": "optimize-ar-operations-boundary", "file": "scripts/benchmark-fixtures/optimize-ar-operations-boundary.json", "language": "ar", "caseType": "negative" },
+      { "id": "bilingual-resume-jd", "file": "scripts/benchmark-fixtures/bilingual-resume-jd.json", "language": "mixed", "caseType": "positive" },
+      { "id": "low-quality-resume-jd", "file": "scripts/benchmark-fixtures/low-quality-resume-jd.json", "language": "en", "caseType": "negative" },
+      { "id": "sparse-vague-resume", "file": "scripts/benchmark-fixtures/sparse-vague-resume.json", "language": "en", "caseType": "adversarial" },
+      { "id": "padded-inflated-resume", "file": "scripts/benchmark-fixtures/padded-inflated-resume.json", "language": "en", "caseType": "adversarial" },
+      { "id": "dense-senior-control", "file": "scripts/benchmark-fixtures/dense-senior-control.json", "language": "en", "caseType": "positive" },
+      { "id": "career-pivot-resume", "file": "scripts/benchmark-fixtures/career-pivot-resume.json", "language": "en", "caseType": "negative" }
+    ],
+    "truth-check": [
+      { "id": "truth-check-en-grounded-control", "file": "eval/truth-check-fixtures/truth-check-en-grounded-control.json", "language": "en", "caseType": "positive" },
+      { "id": "truth-check-en-inflated-metric", "file": "eval/truth-check-fixtures/truth-check-en-inflated-metric.json", "language": "en", "caseType": "negative" },
+      { "id": "truth-check-ar-grounded-control", "file": "eval/truth-check-fixtures/truth-check-ar-grounded-control.json", "language": "ar", "caseType": "positive" },
+      { "id": "truth-check-ar-hard-stop-contradiction", "file": "eval/truth-check-fixtures/truth-check-ar-hard-stop-contradiction.json", "language": "ar", "caseType": "negative" },
+      { "id": "truth-check-mixed-instruction-injection", "file": "eval/truth-check-fixtures/truth-check-mixed-instruction-injection.json", "language": "mixed", "caseType": "adversarial" },
+      { "id": "truth-check-en-conflicting-dates", "file": "eval/truth-check-fixtures/truth-check-en-conflicting-dates.json", "language": "en", "caseType": "adversarial" },
+      { "id": "truth-check-mixed-vague-scope", "file": "eval/truth-check-fixtures/truth-check-mixed-vague-scope.json", "language": "mixed", "caseType": "negative" },
+      { "id": "truth-check-en-unsupported-credential", "file": "eval/truth-check-fixtures/truth-check-en-unsupported-credential.json", "language": "en", "caseType": "negative" }
+    ],
+    "cover-letter": [
+      { "id": "cover-letter-en-operations-positive", "file": "eval/cover-letter-fixtures/cover-letter-en-operations-positive.json", "language": "en", "caseType": "positive" },
+      { "id": "cover-letter-en-career-pivot-negative", "file": "eval/cover-letter-fixtures/cover-letter-en-career-pivot-negative.json", "language": "en", "caseType": "negative" },
+      { "id": "cover-letter-ar-finance-positive", "file": "eval/cover-letter-fixtures/cover-letter-ar-finance-positive.json", "language": "ar", "caseType": "positive" },
+      { "id": "cover-letter-ar-erp-gap-negative", "file": "eval/cover-letter-fixtures/cover-letter-ar-erp-gap-negative.json", "language": "ar", "caseType": "negative" },
+      { "id": "cover-letter-mixed-instruction-injection", "file": "eval/cover-letter-fixtures/cover-letter-mixed-instruction-injection.json", "language": "mixed", "caseType": "adversarial" },
+      { "id": "cover-letter-en-credential-trap", "file": "eval/cover-letter-fixtures/cover-letter-en-credential-trap.json", "language": "en", "caseType": "adversarial" },
+      { "id": "cover-letter-mixed-evidence-boundary", "file": "eval/cover-letter-fixtures/cover-letter-mixed-evidence-boundary.json", "language": "mixed", "caseType": "negative" },
+      { "id": "cover-letter-en-metric-boundary", "file": "eval/cover-letter-fixtures/cover-letter-en-metric-boundary.json", "language": "en", "caseType": "adversarial" }
+    ],
+    "interview": [
+      { "id": "interview-en-operations-positive", "file": "eval/interview-fixtures/interview-en-operations-positive.json", "language": "en", "caseType": "positive" },
+      { "id": "interview-en-technical-gap", "file": "eval/interview-fixtures/interview-en-technical-gap.json", "language": "en", "caseType": "negative" },
+      { "id": "interview-ar-finance-positive", "file": "eval/interview-fixtures/interview-ar-finance-positive.json", "language": "ar", "caseType": "positive" },
+      { "id": "interview-ar-erp-gap", "file": "eval/interview-fixtures/interview-ar-erp-gap.json", "language": "ar", "caseType": "negative" },
+      { "id": "interview-mixed-instruction-injection", "file": "eval/interview-fixtures/interview-mixed-instruction-injection.json", "language": "mixed", "caseType": "adversarial" },
+      { "id": "interview-en-credential-trap", "file": "eval/interview-fixtures/interview-en-credential-trap.json", "language": "en", "caseType": "adversarial" },
+      { "id": "interview-mixed-procurement-boundary", "file": "eval/interview-fixtures/interview-mixed-procurement-boundary.json", "language": "mixed", "caseType": "negative" },
+      { "id": "interview-en-quality-boundary", "file": "eval/interview-fixtures/interview-en-quality-boundary.json", "language": "en", "caseType": "adversarial" }
+    ]
+  },
+  "smokeOnlyFeatures": {
+    "clarification": [
+      { "id": "clarification-en-metrics-smoke", "file": "scripts/benchmark-fixtures/clarification-en-metrics-smoke.json", "language": "en", "caseType": "smoke", "selectionEligible": false, "evaluationMode": "smoke_only" },
+      { "id": "clarification-ar-metrics-smoke", "file": "scripts/benchmark-fixtures/clarification-ar-metrics-smoke.json", "language": "ar", "caseType": "smoke", "selectionEligible": false, "evaluationMode": "smoke_only" }
+    ],
+    "metadata": [
+      { "id": "metadata-en-explicit-smoke", "file": "scripts/benchmark-fixtures/metadata-en-explicit-smoke.json", "language": "en", "caseType": "smoke", "selectionEligible": false, "evaluationMode": "smoke_only" },
+      { "id": "metadata-ar-explicit-smoke", "file": "scripts/benchmark-fixtures/metadata-ar-explicit-smoke.json", "language": "ar", "caseType": "smoke", "selectionEligible": false, "evaluationMode": "smoke_only" }
+    ]
+  }
+}

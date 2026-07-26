@@ -1,0 +1,15 @@
+{
+  "id": "truth-check-mixed-vague-scope",
+  "feature": "truth-check",
+  "language": "mixed",
+  "caseType": "negative",
+  "synthetic": true,
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["world-class", "تحسين العمليات"],
+  "resumeText": "SYNTHETIC PROFILE | ملف تجريبي\nOperations Associate\n\nEXPERIENCE\n- Delivered world-class transformation across all operations.\n- ساهم في تحسين العمليات ودعم التقارير الأسبوعية.",
+  "expected": {
+    "scoreBand": [80, 100],
+    "flags": ["vague_scope"],
+    "truthCheck": { "requiredClaimTerms": ["world-class transformation"], "requiredRiskTypes": ["vague"], "requiredEvidenceStatuses": ["needs_evidence"] }
+  }
+}

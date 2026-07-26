@@ -1,0 +1,17 @@
+{
+  "id": "metadata-en-explicit-smoke",
+  "feature": "metadata",
+  "language": "en",
+  "caseType": "smoke",
+  "synthetic": true,
+  "selectionEligible": false,
+  "evaluationMode": "smoke_only",
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["Harbor Grid", "Riyadh"],
+  "jobDescription": "Harbor Grid is hiring a Data Operations Analyst in Riyadh. This is a full-time mid-level role in software operations.",
+  "expected": {
+    "scoreBand": [0, 100],
+    "flags": ["smoke_only"],
+    "metadata": { "fields": { "companyName": "Harbor Grid", "jobTitle": "Data Operations Analyst", "location": "Riyadh", "employmentType": "full-time", "seniority": "mid-level", "sector": "software operations" } }
+  }
+}

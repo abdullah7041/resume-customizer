@@ -1,0 +1,17 @@
+{
+  "id": "metadata-ar-explicit-smoke",
+  "feature": "metadata",
+  "language": "ar",
+  "caseType": "smoke",
+  "synthetic": true,
+  "selectionEligible": false,
+  "evaluationMode": "smoke_only",
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["شركة نموذج المدار", "الرياض"],
+  "jobDescription": "شركة نموذج المدار تبحث عن محلل عمليات بيانات في الرياض. الوظيفة بدوام كامل بمستوى متوسط ضمن قطاع العمليات التقنية.",
+  "expected": {
+    "scoreBand": [0, 100],
+    "flags": ["smoke_only"],
+    "metadata": { "fields": { "companyName": "شركة نموذج المدار", "jobTitle": "محلل عمليات بيانات", "location": "الرياض", "employmentType": "دوام كامل", "seniority": "متوسط", "sector": "العمليات التقنية" } }
+  }
+}

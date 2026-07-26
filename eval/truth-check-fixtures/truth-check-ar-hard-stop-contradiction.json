@@ -1,0 +1,16 @@
+{
+  "id": "truth-check-ar-hard-stop-contradiction",
+  "feature": "truth-check",
+  "language": "ar",
+  "caseType": "negative",
+  "synthetic": true,
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["SAP", "تقارير مالية"],
+  "userHardStops": ["SAP"],
+  "resumeText": "ملف مهني تجريبي\nمحاسب تشغيلي\n\nالخبرة\n- خبير SAP وقائد تطبيق النظام في كل عمليات التقارير المالية.\n- أعد تقارير مالية شهرية باستخدام Excel.",
+  "expected": {
+    "scoreBand": [80, 100],
+    "flags": ["hard_stop_contradiction"],
+    "truthCheck": { "requiredClaimTerms": ["SAP"], "requiredRiskTypes": ["unsupported"], "requiredEvidenceStatuses": ["contradicted"] }
+  }
+}

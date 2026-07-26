@@ -1,0 +1,19 @@
+{
+  "id": "match-reality-ar-procurement-evidence",
+  "name": "Arabic procurement evidence with SAP and IFRS gap",
+  "language": "ar",
+  "caseType": "negative",
+  "synthetic": true,
+  "safetyExpectations": { "groundedOnly": true, "noInventedFacts": true, "disallowSensitiveInferences": true },
+  "requiredEvidenceTerms": ["Excel", "طلبات الموردين"],
+  "resumeText": "ملف مهني تجريبي\nمساعد مشتريات\n\nالخبرة\n- تابع طلبات الموردين المعتمدة وسجل ملاحظات التسليم.\n- راجع بيانات الفواتير باستخدام Excel.\n- أعد قائمة استثناءات أسبوعية لفريق العمليات.",
+  "jobDescription": "شركة تجريبية تبحث عن مدير مشتريات لديه خبرة SAP وIFRS والتفاوض على العقود العالمية وقيادة استراتيجية الموردين.",
+  "expectedLanguageDirection": "rtl",
+  "expected": {
+    "scoreBand": [30, 65],
+    "flags": ["missing_SAP", "missing_IFRS"],
+    "mustCredit": ["Excel"],
+    "mustFlagMissing": ["SAP", "IFRS"],
+    "proseLanguage": "ar"
+  }
+}
