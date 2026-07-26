@@ -182,6 +182,27 @@ const renderWithProviders = (ui) => {
     return render(<DirectionProvider>{ui}</DirectionProvider>);
 };
 
+const parentOptimizeHandler = async () => {
+    const response = await global.fetch('/optimize');
+    const data = await response.json();
+    mockSetOptimizations(data.cards.map((card, index) => ({
+        sectionId: `${card.section.toLowerCase()}-${index}`,
+        sectionType: card.section.toLowerCase(),
+        original: card.exampleBefore,
+        optimized: card.exampleAfter,
+        applied: false,
+        timestamp: new Date().toISOString(),
+    })));
+    mockSetOptimizationMetrics({
+        beforeScore: data.matchScoring.beforeScore,
+        improvement: data.matchScoring.estimatedImprovement,
+        jdKeywords: data.matchScoring.jdKeywords,
+        matchedKeywords: data.matchScoring.matchedKeywords,
+        reasoning: data.matchScoring.reasoning,
+        hasJobDescription: data.debug.hasJobDescription,
+    });
+};
+
 const sampleOptimization = {
     sectionId: 'summary-0',
     sectionType: 'summary',
@@ -1275,7 +1296,7 @@ describe('Optimization Card Types', () => {
                 }),
             });
 
-            renderWithProviders(<OptimizeSection />);
+            renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
             // Verification includes dynamic imports plus resume merge/format work;
@@ -1344,7 +1365,7 @@ describe('Optimization Card Types', () => {
                 }),
             });
 
-            renderWithProviders(<OptimizeSection />);
+            renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
             await waitFor(() => {
@@ -1399,7 +1420,7 @@ describe('Optimization Card Types', () => {
                 }),
             });
 
-            renderWithProviders(<OptimizeSection />);
+            renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
             await waitFor(() => {

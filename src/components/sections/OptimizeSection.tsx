@@ -5,7 +5,6 @@ import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useResumeStore, OptimizationResult } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
-import { requestValueMomentFeedbackPrompt } from '../Feedback/FeedbackPromptController';
 import { useRateLimit } from '../../hooks/useRateLimit';
 import { RateLimitBanner } from '../ui/RateLimitBanner';
 import {
@@ -229,7 +228,7 @@ export function OptimizeSection({
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
-  const { isRateLimited, retryAfter, handleError: handleRateLimitError, clearRateLimit } = useRateLimit();
+  const { isRateLimited, retryAfter, clearRateLimit } = useRateLimit();
 
   // Get data from store
   const originalResume = useResumeStore((state) => state.originalResume);
@@ -256,8 +255,6 @@ export function OptimizeSection({
 
   const [viewMode, setViewMode] = useState<'split' | 'diff'>('split');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -328,7 +325,7 @@ export function OptimizeSection({
 
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
-  const isOptimizing = propIsOptimizing || isGenerating;
+  const isOptimizing = propIsOptimizing;
 
   // Generate sessionId if we have optimizations but no sessionId yet
   // This ensures feedback buttons appear for optimizations loaded from storage
@@ -346,7 +343,6 @@ export function OptimizeSection({
   useEffect(() => {
     setVerifyAnomaly(null);
     setSessionId(null);
-    setError(null);
   }, [variantRestoreNonce]);
 
   // Rerun Vision 2030 analysis on mount if optimizations exist but vision2030 data is missing
@@ -681,7 +677,7 @@ export function OptimizeSection({
   useEffect(() => {
     // Guests keep the estimate display — the verify endpoint requires auth.
     if (isGuestMode) return;
-    if (isGenerating || isAutoVerifying) return;
+    if (isAutoVerifying) return;
     if (appliedCountForVerify === 0) {
       // Nothing applied: current score IS the baseline again — drop the metric.
       if (staleVerifiedApplied) setOptimizationMetrics({ verifiedApplied: null });
@@ -711,7 +707,7 @@ export function OptimizeSection({
     }, 1800);
     return () => window.clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- signature + gates fully describe when a re-score is owed
-  }, [liveAppliedSignature, appliedCountForVerify, appliedScoreResolved, fullSetOutcomeSettled, isGuestMode, isGenerating, isAutoVerifying, jobDescriptionForVerify, originalResume]);
+  }, [liveAppliedSignature, appliedCountForVerify, appliedScoreResolved, fullSetOutcomeSettled, isGuestMode, isAutoVerifying, jobDescriptionForVerify, originalResume]);
 
   const appliedVerifyStatus: AppliedVerifyStatus = isGuestMode && appliedCountForVerify > 0
     ? 'guest'
@@ -768,337 +764,10 @@ export function OptimizeSection({
       }
       return result;
     }
-
-    if (!resumeText && !originalResume) {
-      setError(t('sections.optimize.runMatchFirst', 'Please upload a resume first'));
-      return;
-    }
-
-    const startTime = performance.now();
-
-    // Track optimization started
-    analytics.trackOptimization('started', { has_job_description: false });
-
-    setIsGenerating(true);
-    setError(null);
-    setVerifyAnomaly(null);
-    setVerifyRetryUsed(false);
-
-    // Generate a session ID for feedback tracking
-    const newSessionId = crypto.randomUUID();
-    setSessionId(newSessionId);
-
-    try {
-      // Get authenticated headers (includes Authorization Bearer token)
-      const { getAuthHeaders } = await import('@/lib/auth/authHeaders');
-      const headers = await getAuthHeaders();
-
-      const response = await fetch('/.netlify/functions/optimize', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          resumeText: resumeText || JSON.stringify(originalResume),
-          // Get job description from localStorage (shared with MatchSection)
-          jobText: typeof window !== 'undefined'
-            ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-            : '',
-          language: i18n.language,
-          ...(options?.freePreview ? { freePreview: true } : {}),
-        }),
-      });
-
-      // Handle insufficient credits (403)
-      if (response.status === 403) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || t('credits.confirm.insufficient', 'Insufficient credits'));
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || t('toasts.optimizationFailed', 'Optimization failed'));
-      }
-
-      const data = await response.json();
-
-      // Transform API response to OptimizationResult format
-      // API returns: { cards: [{section, issue, suggestion, exampleBefore, exampleAfter}], keywords: {add, neutral, remove} }
-      const newOptimizations: OptimizationResult[] = [];
-
-      if (data.cards && Array.isArray(data.cards)) {
-        data.cards.forEach((card: { section?: string; exampleBefore?: string; exampleAfter?: string; issue?: string; suggestion?: string }, index: number) => {
-          const sectionType = (card.section || 'general').toLowerCase() as 'headline' | 'summary' | 'experience' | 'skills' | 'projects';
-
-          const originalContent = card.exampleBefore || '';
-          const optimizedContent = card.exampleAfter || '';
-
-          newOptimizations.push({
-            sectionId: `${sectionType}-${index}`,
-            sectionType: sectionType,
-            original: originalContent,
-            optimized: optimizedContent,
-            applied: false,
-          });
-        });
-      }
-
-      // Map project_improvements from API to optimization cards
-      if (data.projectImprovements && Array.isArray(data.projectImprovements)) {
-        data.projectImprovements.forEach((proj: { project_name?: string; original?: string; improved?: string; issue?: string; rationale?: string }, index: number) => {
-          newOptimizations.push({
-            sectionId: `projects-${index}`,
-            sectionType: 'projects',
-            original: proj.original || '',
-            optimized: proj.improved || '',
-            applied: false,
-          });
-        });
-      }
-
-      // Map certification_recommendations as display-only cards (not applied to template)
-      if (data.certificationRecommendations && Array.isArray(data.certificationRecommendations)) {
-        data.certificationRecommendations.forEach((cert: { name?: string; issuer?: string; relevance?: string }, index: number) => {
-          newOptimizations.push({
-            sectionId: `certifications-${index}`,
-            sectionType: 'certifications',
-            // Show recommendation as "optimized" (right side) with empty original (left side)
-            original: t('optimization.recommendation', 'Recommended Certification'),
-            optimized: `${cert.name || ''} (${cert.issuer || ''}) - ${cert.relevance || ''}`,
-            applied: false, // Certifications are display-only, never applied
-          });
-        });
-      }
-
-
-      // If no cards but we have API data, try legacy format
-      if (newOptimizations.length === 0) {
-        if (data.headline) {
-          newOptimizations.push({
-            sectionId: 'headline',
-            sectionType: 'headline',
-            original: originalResume?.basics?.label || t('sections.optimize.noOriginal', 'No headline'),
-            optimized: data.headline,
-            applied: false,
-          });
-        }
-
-        if (data.summary) {
-          newOptimizations.push({
-            sectionId: 'summary',
-            sectionType: 'summary',
-            original: originalResume?.basics?.summary || t('sections.optimize.noOriginal', 'No summary'),
-            optimized: data.summary,
-            applied: false,
-          });
-        }
-      }
-
-      // Validate that we have meaningful optimizations
-      if (newOptimizations.length === 0) {
-        throw new Error(t('optimization.noSuggestions', 'No optimizations were generated. The AI may need more context.'));
-      }
-
-      // Check if any optimizations have valid content
-      const hasValidContent = newOptimizations.some(opt => {
-        const original = Array.isArray(opt.original) ? opt.original.join('') : opt.original;
-        const optimized = Array.isArray(opt.optimized) ? opt.optimized.join('') : opt.optimized;
-        return (original && original.trim().length > 0) || (optimized && optimized.trim().length > 0);
-      });
-
-      if (!hasValidContent) {
-        throw new Error(t('optimization.noSuggestions', 'The AI returned empty suggestions. Please try again.'));
-      }
-
-      setOptimizations(newOptimizations);
-
-      // Track optimization completed
-      analytics.trackOptimization('completed', {
-        optimization_count: newOptimizations.length,
-        time_ms: performance.now() - startTime,
-      });
-      requestValueMomentFeedbackPrompt('optimize_success');
-
-      // Also update keyword suggestions from API response
-      if (data.keywords) {
-        const suggestions: { keyword: string; category: 'add' | 'keep' | 'deemphasize' }[] = [];
-
-        if (data.keywords.add) {
-          data.keywords.add.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'add' }));
-        }
-        if (data.keywords.neutral) {
-          data.keywords.neutral.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'keep' }));
-        }
-        if (data.keywords.remove) {
-          data.keywords.remove.forEach((kw: string) => suggestions.push({ keyword: kw, category: 'deemphasize' }));
-        }
-
-        // Update store with keyword suggestions
-        useResumeStore.getState().setKeywordSuggestions(suggestions);
-      }
-
-      // Initialize accumulator for consolidated update. A new generation run
-      // invalidates any previous verified potential explicitly (the signature
-      // check would drop it anyway once the card set changes).
-      const metricsToUpdate: Partial<OptimizationMetrics> = { verifiedPotential: null, verifiedApplied: null };
-
-      // Check if match analysis already provided an authoritative baseline score.
-      // The optimize API independently re-calculates match_score which can differ
-      // significantly from the match analysis (e.g., 77% vs 15%).
-      const existingBaseline = useResumeStore.getState().baselineMatchScore;
-
-      // Capture match scoring data for Results Summary
-      if (data.matchScoring) {
-        // Only use optimize API's beforeScore as FALLBACK
-        if (existingBaseline === null) {
-          metricsToUpdate.beforeScore = data.matchScoring.beforeScore;
-        }
-        // Use estimatedImprovement from backend (no fake afterScore)
-        metricsToUpdate.improvement = data.matchScoring.estimatedImprovement ?? data.matchScoring.improvement ?? null;
-        metricsToUpdate.afterScore = data.matchScoring.afterScore ?? null;
-        metricsToUpdate.jdKeywords = data.matchScoring.jdKeywords || [];
-        metricsToUpdate.matchedKeywords = data.matchScoring.matchedKeywords || [];
-        metricsToUpdate.reasoning = data.matchScoring.reasoning;
-        metricsToUpdate.hasJobDescription = data.debug?.hasJobDescription || false;
-      } else {
-        // Fallback: Use cached match analysis score if available
-        const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
-        const cachedAnalysis = resumeText && jobDesc ? getCachedAnalysis(resumeText, jobDesc) : null;
-        const cachedScore = finiteScore(cachedAnalysis?.score);
-        if (cachedScore !== null) {
-          metricsToUpdate.beforeScore = cachedScore;
-          metricsToUpdate.hasJobDescription = true;
-        }
-        // Automatic verification writes verifiedPotential; scoreModel consumes its
-        // signature-valid delta without fabricating a generation-time estimate.
-        metricsToUpdate.improvement = null;
-      }
-
-      // Capture gap analysis from API response
-      if (data.gapAnalysis && Array.isArray(data.gapAnalysis)) {
-        metricsToUpdate.gapAnalysis = data.gapAnalysis;
-      }
-
-      // Capture keyword strategy from API response
-      if (data.keywordStrategy) {
-        metricsToUpdate.keywordStrategy = data.keywordStrategy;
-      }
-
-      // Capture score breakdown from API response
-      if (data.scoreBreakdown) {
-        metricsToUpdate.scoreBreakdown = data.scoreBreakdown;
-      }
-
       // Capture category scores from API response — only as fallback
       // When a match analysis has already run, its category scores (displayed in
       // MatchSection) are authoritative. The optimize API's scores come from a
       // different AI call and can diverge significantly.
-      if (data.categoryScores && existingBaseline === null) {
-        metricsToUpdate.categoryScores = data.categoryScores;
-      }
-
-      // Capture position name suggestion from AI (only when is_necessary=true)
-      if (data.positionSuggestion?.is_necessary === true) {
-        metricsToUpdate.positionSuggestion = data.positionSuggestion;
-      } else {
-        // Clear any stale suggestion from a previous run
-        metricsToUpdate.positionSuggestion = null;
-      }
-
-      // Run Vision 2030 analysis on resume text
-      const textToAnalyze = resumeText || JSON.stringify(originalResume);
-      if (textToAnalyze) {
-        const vision2030Analysis = analyzeVision2030Alignment(
-          textToAnalyze,
-          isArabic ? 'ar' : 'en'
-        );
-
-        // Get primary sector info
-        const primarySectorData = vision2030Analysis.sectorBreakdown.find(
-          s => s.matchedCount > 0
-        );
-        const primarySector = primarySectorData ? {
-          id: primarySectorData.sectorId,
-          nameEn: primarySectorData.sectorNameEn,
-          nameAr: primarySectorData.sectorNameAr,
-          icon: primarySectorData.icon,
-        } : null;
-
-        // Get secondary sectors (next 2 with matches)
-        const secondarySectors = vision2030Analysis.sectorBreakdown
-          .filter(s => s.matchedCount > 0 && s.sectorId !== primarySectorData?.sectorId)
-          .slice(0, 2)
-          .map(s => ({
-            id: s.sectorId,
-            nameEn: s.sectorNameEn,
-            nameAr: s.sectorNameAr,
-            icon: s.icon,
-          }));
-
-        // Get detected career
-        const detectedCareer = vision2030Analysis.detectedCareer ? {
-          nameEn: vision2030Analysis.detectedCareer.archetypeNameEn,
-          nameAr: vision2030Analysis.detectedCareer.archetypeNameAr,
-        } : null;
-
-        metricsToUpdate.vision2030 = {
-          overallScore: vision2030Analysis.overallScore,
-          primarySector,
-          secondarySectors,
-          matchedSkillsCount: vision2030Analysis.matchedSkills.length,
-          topMatchedSkills: vision2030Analysis.matchedSkills.slice(0, 6).map(s => s.skillNameEn),
-          detectedCareer,
-        };
-      }
-
-      // Update the store with all accumulated metrics at once
-      if (Object.keys(metricsToUpdate).length > 0) {
-        setOptimizationMetrics(metricsToUpdate);
-
-        // Update the cache with the new match score if available
-        // This ensures subsequent renders use the fresh score instead of stale cache
-        if (finiteScore(metricsToUpdate.beforeScore) !== null && resumeText && (metricsToUpdate.hasJobDescription)) {
-          const jobDesc = typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '';
-          if (jobDesc) {
-            const matchedKeywordSet = new Set(metricsToUpdate.matchedKeywords || []);
-            useResumeStore.getState().setCachedAnalysis(resumeText, jobDesc, {
-              score: metricsToUpdate.beforeScore,
-              matchedKeywords: metricsToUpdate.matchedKeywords || [],
-              missingKeywords: metricsToUpdate.jdKeywords?.filter((k: string) => !matchedKeywordSet.has(k)) || []
-            });
-          }
-        }
-      }
-
-      // Auto-verify: Run AI re-analysis on the optimized resume (non-fatal)
-      const jobDescription = typeof window !== 'undefined'
-        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-        : '';
-
-      if (jobDescription.trim()) {
-        const beforeScore = existingBaseline ?? metricsToUpdate.beforeScore ?? resultsSummaryData.beforeScore;
-        await verifyOptimizedResume(jobDescription, beforeScore, options);
-      }
-
-    } catch (err) {
-      console.error('Optimization error:', err);
-      let errorCategory = 'unknown';
-      const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('rate limit') || msg.includes('too many requests')) errorCategory = 'rate_limit';
-      else if (msg.includes('timeout') || msg.includes('timed out')) errorCategory = 'timeout';
-      else if (msg.includes('network') || msg.includes('fetch')) errorCategory = 'network';
-      else if (msg.includes('insufficient') || msg.includes('credits')) errorCategory = 'validation';
-      else if (msg.includes('AI') || msg.includes('model')) errorCategory = 'ai_error';
-      analytics.trackOptimizationFailed(errorCategory);
-
-      // Check if this is a rate limit error
-      if (!handleRateLimitError(err)) {
-        setError(err instanceof Error ? err.message : t('toasts.optimizationFailed', 'Failed to generate optimizations'));
-      }
-    } finally {
-      setIsGenerating(false);
-      // Refresh credits after consumption
-      setTimeout(() => refetchCredits(), 500);
-      if (options?.freePreview) markFreePreviewUsed();
-    }
   };
 
   // Wrapper function that shows confirmation modal first
@@ -1417,18 +1086,6 @@ export function OptimizeSection({
             )}
           </div>
         </div >
-
-        {/* Error Message */}
-        {
-          error && (
-            <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6 backdrop-blur-sm">
-              <div className="p-2 bg-red-500/10 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-              </div>
-              <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
-            </div>
-          )
-        }
 
         {/* No Resume Warning */}
         {

@@ -178,6 +178,27 @@ const optimizeApiResponse = (cards) => ({
     }),
 });
 
+const parentOptimizeHandler = async () => {
+    const response = await global.fetch('/optimize');
+    const data = await response.json();
+    mockSetOptimizations(data.cards.map((card, index) => ({
+        sectionId: `${card.section.toLowerCase()}-${index}`,
+        sectionType: card.section.toLowerCase(),
+        original: card.exampleBefore,
+        optimized: card.exampleAfter,
+        applied: false,
+        timestamp: new Date().toISOString(),
+    })));
+    mockSetOptimizationMetrics({
+        beforeScore: data.matchScoring.beforeScore,
+        improvement: data.matchScoring.estimatedImprovement,
+        jdKeywords: data.matchScoring.jdKeywords,
+        matchedKeywords: data.matchScoring.matchedKeywords,
+        reasoning: data.matchScoring.reasoning,
+        hasJobDescription: data.debug.hasJobDescription,
+    });
+};
+
 beforeAll(() => {
     Object.defineProperty(window, 'matchMedia', {
         writable: true,
@@ -239,7 +260,7 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
     };
 
     const runOptimizeAndWaitForVerify = async () => {
-        renderWithProviders(<OptimizeSection />);
+        renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
         fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
         await waitFor(() => {
             expect(mockAnalyzeResumeWithAI).toHaveBeenCalled();
@@ -289,7 +310,7 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         }]));
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 45, topHits: [], missingKeywords: [] });
 
-        renderWithProviders(<OptimizeSection />);
+        renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
         fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
         await waitFor(() => {
             expect(mockSetOptimizations).toHaveBeenCalled();
