@@ -22,6 +22,7 @@ import { MODELS } from "../netlify/lib/model-registry.js";
 import {
   aggregateGoldAttempts,
   buildGoldEvaluationAttempts,
+  buildGoldScoreSummaries,
   classifyGoldResult,
   parseGoldEvaluatorOptions,
 } from "./lib/model-eval/gold-evaluator-options.mjs";
@@ -197,6 +198,7 @@ const runCandidateEvaluation = async (options, files) => {
       reportDir: options.reportDir,
     },
     outcomeSummary: aggregate.outcomeSummary,
+    scoreSummaries: buildGoldScoreSummaries(attempts),
     latencies: aggregate.latencies,
     approximateCostUsd: aggregate.approximateCostUsd,
   });

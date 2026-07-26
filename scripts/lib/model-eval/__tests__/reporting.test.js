@@ -41,6 +41,21 @@ describe('writeEvaluationReport', () => {
       outcomeSummary: { primarySuccesses: 5, failures: 1 },
       latencies: [100, 200, 300],
       approximateCostUsd: 0.0123,
+      scoreSummaries: [{
+        modelId: 'google/gemini-3.5-flash-lite',
+        fixtureId: 'fixture-en-001',
+        attempts: 3,
+        primarySuccesses: 2,
+        failures: 1,
+        meanScore: 0.91,
+        minScore: 0.84,
+        maxScore: 0.98,
+        p50LatencyMs: 200,
+        p95LatencyMs: 300,
+        approximateCostUsd: null,
+        resumeText: 'private score-summary resume',
+        rawOutput: 'private score-summary output',
+      }],
       pricingSnapshotTimestamp: '2026-07-26T11:00:00.000Z',
       attempts: [{
         resumeText: 'private resume',
@@ -71,9 +86,22 @@ describe('writeEvaluationReport', () => {
       fixtureCount: 2,
       latency: { p50Ms: 200, p95Ms: 300 },
       approximateCostUsd: 0.0123,
+      scoreSummaries: [{
+        modelId: 'google/gemini-3.5-flash-lite',
+        fixtureId: 'fixture-en-001',
+        attempts: 3,
+        primarySuccesses: 2,
+        failures: 1,
+        meanScore: 0.91,
+        minScore: 0.84,
+        maxScore: 0.98,
+        p50LatencyMs: 200,
+        p95LatencyMs: 300,
+        approximateCostUsd: null,
+      }],
       pricingSnapshotTimestamp: '2026-07-26T11:00:00.000Z',
     });
-    expect(contents).not.toMatch(/private resume|private job description|private prompt|private telemetry|secret-api-key|another-secret/);
+    expect(contents).not.toMatch(/private resume|private job description|private prompt|private telemetry|private score-summary resume|private score-summary output|secret-api-key|another-secret/);
     expect(contents).not.toMatch(/resumeText|jobDescription|messages|rawOutput|apiKey|OPENROUTER_API_KEY|usageEvent/);
   });
 

@@ -40,8 +40,10 @@ import { MODELS } from '../netlify/lib/model-registry.js';
 import {
   aggregateGoldAttempts,
   buildGoldContractOptions,
+  buildGoldScoreSummaries,
   classifyGoldResult,
-  parseGoldEvaluatorOptions,
+  parseOptimizeGoldEvaluatorOptions,
+  validateOptimizeJudgeResult,
 } from './lib/model-eval/gold-evaluator-options.mjs';
 import {
   createEvaluationSession,
@@ -67,35 +69,6 @@ function parseArgs(args = process.argv.slice(2)) {
 }
 const rawArgv = process.argv.slice(2);
 const cli = parseArgs(rawArgv);
-const sharedEvaluationRequested = rawArgv.some((arg) => [
-  '--models',
-  '--runs',
-  '--stage',
-  '--update-cache',
-  '--report-dir',
-  '--feature',
-].includes(arg));
-const sharedValueFlags = new Set([
-  '--feature',
-  '--models',
-  '--runs',
-  '--fixture',
-  '--stage',
-  '--report-dir',
-]);
-const sharedBooleanFlags = new Set(['--update-cache']);
-const sharedArgv = [];
-if (sharedEvaluationRequested) {
-  for (let index = 0; index < rawArgv.length; index += 1) {
-    const arg = rawArgv[index];
-    if (sharedBooleanFlags.has(arg)) {
-      sharedArgv.push(arg);
-    } else if (sharedValueFlags.has(arg)) {
-      sharedArgv.push(arg, rawArgv[index + 1]);
-      index += 1;
-    }
-  }
-}
 const DRY_RUN = cli._flags.has('dryRun');
 const FIXTURES_DIR = cli.fixtures ? cli.fixtures : join(__dirname, 'benchmark-fixtures');
 const BASELINE_MODEL = cli.baseline || 'google/gemini-2.5-flash';
@@ -103,24 +76,11 @@ const BASELINE_MODEL = cli.baseline || 'google/gemini-2.5-flash';
 const CANDIDATE_MODELS = cli.candidate
   ? cli.candidate.split(',').map(s => s.trim()).filter(Boolean)
   : [];
-const legacyEvaluationRequested = Boolean(cli.baseline || cli.candidate);
-const evaluationOptions = sharedEvaluationRequested
-  ? parseGoldEvaluatorOptions({
-    feature: 'optimize',
-    defaultModelId: MODELS.flash,
-    argv: sharedArgv,
-  })
-  : legacyEvaluationRequested
-    ? parseGoldEvaluatorOptions({
-      feature: 'optimize',
-      defaultModelId: MODELS.flash,
-      argv: ['--models', [BASELINE_MODEL, ...CANDIDATE_MODELS].join(',')],
-    })
-    : parseGoldEvaluatorOptions({
-      feature: 'optimize',
-      defaultModelId: MODELS.flash,
-      argv: [],
-    });
+const evaluationOptions = parseOptimizeGoldEvaluatorOptions({
+  defaultModelId: MODELS.flash,
+  argv: rawArgv,
+});
+const sharedEvaluationRequested = evaluationOptions.matrixRequested;
 const FIXTURE_FILTER = evaluationOptions.fixture || cli.fixture || null;
 const EVALUATION_RUNS = evaluationOptions.mode === 'evaluation' ? evaluationOptions.runs : 1;
 const JUDGE_MODEL = cli.judge || process.env.WATHEQ_EVAL_JUDGE_MODEL || null;
@@ -402,11 +362,15 @@ ${blocks}`;
       failedJudges.push(judgeModel);
       continue;
     }
-    for (const ev of (parsed.evaluations || [])) {
-      const vname = labelMap[ev.label];
-      if (!vname) continue;
+    const validation = validateOptimizeJudgeResult({ parsed, labelMap });
+    if (validation.requiredFailure) {
+      console.log(`    judge ${judgeModel} incomplete: ${validation.failureReasons.join(', ')}`);
+      failedJudges.push(judgeModel);
+      continue;
+    }
+    for (const [vname, evaluation] of Object.entries(validation.byVariant)) {
       acc[vname] = acc[vname] || { specificity: [], jd_alignment: [], truthfulness: [], readability: [] };
-      for (const d of dims) if (typeof ev[d] === 'number') acc[vname][d].push(ev[d]);
+      for (const dimension of dims) acc[vname][dimension].push(evaluation[dimension]);
     }
     const bestV = labelMap[parsed.best_label];
     if (bestV) bestVotes[bestV] = (bestVotes[bestV] || 0) + 1;
@@ -694,6 +658,7 @@ async function main() {
         reportDir: evaluationOptions.reportDir,
       },
       outcomeSummary: aggregate.outcomeSummary,
+      scoreSummaries: buildGoldScoreSummaries(goldAttempts),
       latencies: aggregate.latencies,
       approximateCostUsd: aggregate.approximateCostUsd,
     });

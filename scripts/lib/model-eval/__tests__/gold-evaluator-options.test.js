@@ -4,8 +4,11 @@ import {
   aggregateGoldAttempts,
   buildGoldContractOptions,
   buildGoldEvaluationAttempts,
+  buildGoldScoreSummaries,
   classifyGoldResult,
   parseGoldEvaluatorOptions,
+  parseOptimizeGoldEvaluatorOptions,
+  validateOptimizeJudgeResult,
 } from '../gold-evaluator-options.mjs';
 
 const incumbentByFeature = {
@@ -177,6 +180,192 @@ describe('gold evaluator guardrails', () => {
       primarySuccess: true,
       schemaValid: true,
       failureReasons: [],
+    });
+  });
+
+  it('builds auditable per-model and per-fixture score summaries', () => {
+    const summaries = buildGoldScoreSummaries([
+      {
+        modelId: 'google/gemini-3.1-flash-lite',
+        fixtureId: 'resume-en',
+        latencyMs: 100,
+        score: 0.8,
+        approximateCostUsd: 0.01,
+        classification: { primarySuccess: true },
+      },
+      {
+        modelId: 'google/gemini-3.1-flash-lite',
+        fixtureId: 'resume-en',
+        latencyMs: 300,
+        score: 1,
+        approximateCostUsd: 0.02,
+        classification: { primarySuccess: true },
+      },
+      {
+        modelId: 'mistralai/mistral-small-3.2-24b-instruct',
+        fixtureId: 'resume-en',
+        latencyMs: 250,
+        score: 0,
+        classification: { primarySuccess: false },
+      },
+    ]);
+
+    expect(summaries).toEqual([
+      {
+        modelId: 'google/gemini-3.1-flash-lite',
+        fixtureId: 'resume-en',
+        attempts: 2,
+        primarySuccesses: 2,
+        failures: 0,
+        meanScore: 0.9,
+        minScore: 0.8,
+        maxScore: 1,
+        p50LatencyMs: 200,
+        p95LatencyMs: 300,
+        approximateCostUsd: 0.03,
+      },
+      {
+        modelId: 'mistralai/mistral-small-3.2-24b-instruct',
+        fixtureId: 'resume-en',
+        attempts: 1,
+        primarySuccesses: 0,
+        failures: 1,
+        meanScore: 0,
+        minScore: 0,
+        maxScore: 0,
+        p50LatencyMs: 250,
+        p95LatencyMs: 250,
+        approximateCostUsd: null,
+      },
+    ]);
+  });
+});
+
+describe('optimize additive evaluator options', () => {
+  it('preserves a legacy candidate when runs activate the shared matrix', () => {
+    const options = parseOptimizeGoldEvaluatorOptions({
+      defaultModelId: 'google/gemini-2.5-flash',
+      argv: [
+        '--candidate',
+        'google/gemini-3.1-flash-lite',
+        '--runs',
+        '3',
+        '--report-dir',
+        'reports',
+      ],
+    });
+
+    expect(options).toMatchObject({
+      mode: 'evaluation',
+      matrixRequested: true,
+      models: [
+        'google/gemini-2.5-flash',
+        'google/gemini-3.1-flash-lite',
+      ],
+      runs: 3,
+      reportDir: 'reports',
+    });
+  });
+
+  it('combines legacy baseline and candidate with additive --models', () => {
+    const options = parseOptimizeGoldEvaluatorOptions({
+      defaultModelId: 'google/gemini-2.5-flash',
+      argv: [
+        '--baseline',
+        'google/gemini-2.5-flash',
+        '--candidate',
+        'google/gemini-3.1-flash-lite',
+        '--models',
+        'mistralai/mistral-small-3.2-24b-instruct',
+        '--stage',
+        '2',
+      ],
+    });
+
+    expect(options).toMatchObject({
+      matrixRequested: true,
+      models: [
+        'google/gemini-2.5-flash',
+        'google/gemini-3.1-flash-lite',
+        'mistralai/mistral-small-3.2-24b-instruct',
+      ],
+      stage: 2,
+    });
+  });
+});
+
+describe('optimize judge completeness', () => {
+  const completeEvaluation = (label) => ({
+    label,
+    specificity: 4,
+    jd_alignment: 4,
+    truthfulness: 5,
+    readability: 4,
+    notes: 'grounded',
+  });
+
+  it('fails a judge that omits an expected variant', () => {
+    const validation = validateOptimizeJudgeResult({
+      labelMap: { A: 'prod', B: 'candidate' },
+      parsed: {
+        evaluations: [completeEvaluation('A')],
+        best_label: 'A',
+        reasoning: 'Prod wins.',
+      },
+    });
+
+    expect(validation.requiredFailure).toBe(true);
+    expect(validation.failureReasons).toContain('missing_variant:candidate');
+  });
+
+  it.each([
+    [{ truthfulness: undefined }, 'invalid_dimension:candidate:truthfulness'],
+    [{ truthfulness: 6 }, 'invalid_dimension:candidate:truthfulness'],
+    [{ readability: Number.NaN }, 'invalid_dimension:candidate:readability'],
+  ])('fails a judge with a missing or out-of-range dimension', (override, expectedReason) => {
+    const validation = validateOptimizeJudgeResult({
+      labelMap: { A: 'prod', B: 'candidate' },
+      parsed: {
+        evaluations: [
+          completeEvaluation('A'),
+          { ...completeEvaluation('B'), ...override },
+        ],
+        best_label: 'A',
+        reasoning: 'Prod wins.',
+      },
+    });
+
+    expect(validation.requiredFailure).toBe(true);
+    expect(validation.failureReasons).toContain(expectedReason);
+  });
+
+  it('accepts a judge only when every expected variant has four bounded dimensions', () => {
+    const validation = validateOptimizeJudgeResult({
+      labelMap: { A: 'prod', B: 'candidate' },
+      parsed: {
+        evaluations: [completeEvaluation('A'), completeEvaluation('B')],
+        best_label: 'A',
+        reasoning: 'Prod wins.',
+      },
+    });
+
+    expect(validation).toMatchObject({
+      requiredFailure: false,
+      failureReasons: [],
+      byVariant: {
+        prod: {
+          specificity: 4,
+          jd_alignment: 4,
+          truthfulness: 5,
+          readability: 4,
+        },
+        candidate: {
+          specificity: 4,
+          jd_alignment: 4,
+          truthfulness: 5,
+          readability: 4,
+        },
+      },
     });
   });
 });

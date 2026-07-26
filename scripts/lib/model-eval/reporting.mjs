@@ -36,6 +36,14 @@ const OUTCOME_COUNT_FIELDS = new Set([
 const OUTCOME_CODE_FIELDS = new Set(['failureReason', 'exclusionReason']);
 const MACHINE_CODE = /^[a-z][a-z0-9_]*$/;
 const MACHINE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
+const SCORE_SUMMARY_COUNT_FIELDS = ['attempts', 'primarySuccesses', 'failures'];
+const SCORE_SUMMARY_METRIC_FIELDS = [
+  'meanScore',
+  'minScore',
+  'maxScore',
+  'p50LatencyMs',
+  'p95LatencyMs',
+];
 
 const sanitizeCommandOptions = (options) => {
   if (!options || typeof options !== 'object' || Array.isArray(options)) return {};
@@ -71,6 +79,41 @@ const sanitizeMachineIds = (values) => Array.isArray(values)
   ? values.filter((value) => typeof value === 'string' && MACHINE_ID.test(value))
   : [];
 
+const sanitizeScoreSummaries = (scoreSummaries) => Array.isArray(scoreSummaries)
+  ? scoreSummaries.flatMap((summary) => {
+    if (
+      !summary
+      || typeof summary !== 'object'
+      || !MACHINE_ID.test(summary.modelId ?? '')
+      || !MACHINE_ID.test(summary.fixtureId ?? '')
+    ) {
+      return [];
+    }
+
+    const sanitized = {
+      modelId: summary.modelId,
+      fixtureId: summary.fixtureId,
+    };
+    for (const field of SCORE_SUMMARY_COUNT_FIELDS) {
+      if (Number.isInteger(summary[field]) && summary[field] >= 0) {
+        sanitized[field] = summary[field];
+      }
+    }
+    for (const field of SCORE_SUMMARY_METRIC_FIELDS) {
+      if (Number.isFinite(summary[field]) && summary[field] >= 0) {
+        sanitized[field] = summary[field];
+      } else if (summary[field] === null) {
+        sanitized[field] = null;
+      }
+    }
+    sanitized.approximateCostUsd = Number.isFinite(summary.approximateCostUsd)
+      && summary.approximateCostUsd >= 0
+      ? summary.approximateCostUsd
+      : null;
+    return [sanitized];
+  })
+  : [];
+
 const formatTimestamp = (timestamp) => {
   if (timestamp == null) {
     return new Date().toISOString().replace(/[-:.]/g, '');
@@ -104,6 +147,12 @@ const buildMarkdown = (report) => `# Model evaluation: ${report.feature}
 
 \`\`\`json
 ${JSON.stringify(report.outcomeSummary, null, 2)}
+\`\`\`
+
+## Score summaries
+
+\`\`\`json
+${JSON.stringify(report.scoreSummaries, null, 2)}
 \`\`\`
 `;
 
@@ -153,6 +202,7 @@ export const writeEvaluationReport = (session, input = {}) => {
     fixtureCount: fixtureIds.length,
     options: sanitizeCommandOptions(input.options),
     outcomeSummary: sanitizeOutcomeSummary(input.outcomeSummary),
+    scoreSummaries: sanitizeScoreSummaries(input.scoreSummaries),
     latency: Array.isArray(input.latencies) && input.latencies.length > 0
       ? summarizeLatencies(input.latencies)
       : null,
