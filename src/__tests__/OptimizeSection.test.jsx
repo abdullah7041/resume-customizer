@@ -366,6 +366,58 @@ describe('OptimizeSection', () => {
             expect(button).not.toBeDisabled();
         });
 
+        it('auto-verifies after a parent-provided optimize handler writes new cards', async () => {
+            mockStoreState.originalResume = {
+                basics: {
+                    name: 'Test User',
+                    label: 'Backend Engineer',
+                    email: 't@example.com',
+                    phone: '',
+                    summary: 'Original summary describing production backend engineering work across payments platforms.',
+                    location: { city: 'Riyadh', countryCode: 'SA', region: '' },
+                    profiles: [],
+                },
+                work: [{
+                    name: 'Company',
+                    position: 'Engineer',
+                    startDate: '2020',
+                    endDate: '2024',
+                    summary: '',
+                    highlights: [
+                        'Improved backend APIs with measurable latency reductions and production reliability gains.',
+                        'Built React dashboards for hiring managers with accessible workflows and analytics.',
+                    ],
+                }],
+                education: [],
+                skills: [{ name: 'Technical', keywords: ['React', 'TypeScript', 'Node.js'] }],
+            };
+            mockStoreState.parsedResumeText = 'Original resume text with enough detailed work history and skills evidence for verification.'.repeat(3);
+            mockStoreState.baselineMatchScore = 45;
+            mockAnalyzeResumeWithAI.mockResolvedValue({
+                score: 52,
+                topHits: ['React'],
+                missingKeywords: [],
+            });
+
+            const onOptimize = vi.fn(async () => {
+                mockStoreState.optimizations = [sampleOptimization];
+                return { cards: [sampleOptimization] };
+            });
+
+            renderWithProviders(<OptimizeSection onOptimize={onOptimize} />);
+            fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
+
+            await waitFor(() => {
+                expect(onOptimize).toHaveBeenCalledWith('auto', { freePreview: true });
+                expect(mockAnalyzeResumeWithAI).toHaveBeenCalledWith(
+                    expect.any(String),
+                    'Backend engineer role',
+                    'en',
+                    expect.objectContaining({ mode: 'verify' })
+                );
+            }, { timeout: 3000 });
+        });
+
         it('allows guest optimization to run one free preview without credit confirmation', async () => {
             mockStoreState.originalResume = { basics: { name: 'Test User' } };
             const onRequireSignIn = vi.fn();

@@ -749,8 +749,23 @@ export function OptimizeSection({
   const handleGenerateActual = async (options?: { freePreview?: boolean }) => {
     // If parent provided handler, use that
     if (propOnOptimize) {
+      setVerifyAnomaly(null);
+      setVerifyRetryUsed(false);
+      setOptimizationMetrics({ verifiedPotential: null, verifiedApplied: null });
+
       const result = await propOnOptimize('auto', options);
       if (options?.freePreview) markFreePreviewUsed();
+
+      const jobDescription = typeof window !== 'undefined'
+        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
+        : '';
+      if (jobDescription.trim()) {
+        const state = useResumeStore.getState();
+        const beforeScore = state.baselineMatchScore
+          ?? state.optimizationMetrics.beforeScore
+          ?? resultsSummaryData.beforeScore;
+        await verifyOptimizedResume(jobDescription, beforeScore, options);
+      }
       return result;
     }
 

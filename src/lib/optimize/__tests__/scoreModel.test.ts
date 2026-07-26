@@ -229,6 +229,26 @@ describe('verification signature invalidation', () => {
 });
 
 describe('projection math', () => {
+  it('shows verified potential before applying cards and projects its delta after applying one', () => {
+    const queue = [card({ sectionId: 'summary-0' })];
+    const verifiedPotential = verifiedFor(queue, 72, 60);
+
+    const potential = present(queue, {
+      baseline: 60,
+      improvement: 0,
+      verifiedPotential,
+    });
+    expect(potential.displayState).toBe('verified_potential');
+    expect(potential.verifiedAllSuggestionsScore).toBe(72);
+
+    const applied = present(queue.map((entry) => ({ ...entry, applied: true })), {
+      baseline: 60,
+      improvement: 0,
+      verifiedPotential,
+    });
+    expect(applied.arrowTarget).not.toBeNull();
+  });
+
   it('projects a valid verified all-actionable delta across the applied cards', () => {
     const queue = [
       card({ sectionId: 'experience-0', applied: true }),
