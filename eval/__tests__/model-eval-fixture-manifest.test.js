@@ -16,6 +16,39 @@ const primaryFeatures = [
 ];
 const primaryCaseTypes = ['positive', 'negative', 'adversarial'];
 const primaryLanguages = ['en', 'ar', 'mixed'];
+const sourceCaseTypes = {
+  parse: {
+    'abdullah-bi-analyst': 'positive',
+    'arabic-data-analyst': 'positive',
+    'arabic-hijri-mixed-hr': 'adversarial',
+    'bilingual-software-engineer': 'positive',
+    'canva-decorative-marketer': 'adversarial',
+    'interleaved-columns-accountant': 'negative',
+    'right-aligned-dates-engineer': 'adversarial',
+    'two-column-designer': 'positive',
+  },
+  match: {
+    'strong-match-bi-analyst': 'positive',
+    'weak-match-retail-to-swe': 'negative',
+    'career-changer-teacher-to-analyst': 'negative',
+    'keyword-stuffing-no-evidence': 'adversarial',
+    'boilerplate-invariance-noisy': 'adversarial',
+    'arabic-accountant-partial': 'negative',
+    'match-reality-ar-procurement-evidence': 'negative',
+    'bilingual-resume-jd': 'positive',
+  },
+  optimize: {
+    'en-resume-jd': 'positive',
+    'ar-resume-jd': 'positive',
+    'optimize-ar-operations-boundary': 'negative',
+    'bilingual-resume-jd': 'positive',
+    'low-quality-resume-jd': 'negative',
+    'sparse-vague-resume': 'adversarial',
+    'padded-inflated-resume': 'adversarial',
+    'dense-senior-control': 'positive',
+    'career-pivot-resume': 'negative',
+  },
+};
 
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
@@ -25,6 +58,28 @@ const hasScoreBand = (value) => (
   && value.every((score) => Number.isFinite(score) && score >= 0 && score <= 100)
   && value[0] <= value[1]
 );
+const sourceFixtureId = (entry, fixture) => (
+  fixture.id ?? entry.file.split('/').at(-1).replace(/\.json$/u, '')
+);
+const fixtureLanguage = (fixture) => {
+  const language = fixture.language ?? fixture.lang;
+  return language === 'ar-en' ? 'mixed' : language;
+};
+
+const validateReferencedPrimaryInput = (feature, fixture) => {
+  if (feature === 'parse') {
+    expect(hasText(fixture.text)).toBe(true);
+    expect(fixture.expected).toEqual(expect.any(Object));
+    return;
+  }
+
+  expect(hasText(fixture.resumeText)).toBe(true);
+  expect(hasText(fixture.jobDescription)).toBe(true);
+  expect(fixture.expected).toEqual(expect.any(Object));
+  if (feature === 'optimize') {
+    expect(hasScoreBand(fixture.expected.matchScoreBand)).toBe(true);
+  }
+};
 
 const validateNewFixture = (fixture, feature) => {
   expect(fixture.id).toEqual(expect.any(String));
@@ -90,6 +145,23 @@ describe('model evaluation fixture manifest', () => {
           validateNewFixture(fixture, feature);
           expect(fixture.id).toBe(entry.id);
         }
+      }
+    }
+  });
+
+  it('cross-checks parse, match, and optimize manifest entries against their source fixtures', () => {
+    for (const feature of ['parse', 'match', 'optimize']) {
+      const entries = manifest.primaryFeatures[feature];
+      const expectedCaseTypes = sourceCaseTypes[feature];
+      expect(Object.keys(expectedCaseTypes)).toHaveLength(entries.length);
+
+      for (const entry of entries) {
+        const fixture = readJson(resolve(repoRoot, entry.file));
+        const sourceId = sourceFixtureId(entry, fixture);
+        expect(sourceId).toBe(entry.id);
+        expect(fixtureLanguage(fixture)).toBe(entry.language);
+        expect(expectedCaseTypes[sourceId]).toBe(entry.caseType);
+        validateReferencedPrimaryInput(feature, fixture);
       }
     }
   });

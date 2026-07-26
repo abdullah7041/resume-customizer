@@ -41,6 +41,11 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = join(__dirname, 'benchmark-fixtures');
+const DIRECT_CONTRACT_FIXTURE_DIRECTORIES = Object.freeze({
+  'truth-check': join(__dirname, '..', 'eval', 'truth-check-fixtures'),
+  'cover-letter': join(__dirname, '..', 'eval', 'cover-letter-fixtures'),
+  interview: join(__dirname, '..', 'eval', 'interview-fixtures'),
+});
 const GENERIC_FEATURES = new Set([
   'match',
   'optimize',
@@ -106,19 +111,27 @@ const fixtureMatches = (fixture, filter) => (
   || fixture?.name === filter
 );
 
-export const loadBenchmarkFixtures = ({ fixture, fixturesDir = FIXTURES_DIR } = {}) => {
-  if (!existsSync(fixturesDir)) {
-    throw new Error(`Benchmark fixture directory does not exist: ${fixturesDir}`);
+export const loadBenchmarkFixtures = ({ feature, fixture, fixturesDir } = {}) => {
+  const featureFixtureDirectory = DIRECT_CONTRACT_FIXTURE_DIRECTORIES[feature];
+  const resolvedFixturesDir = fixturesDir ?? featureFixtureDirectory ?? FIXTURES_DIR;
+  const requireStableId = Boolean(featureFixtureDirectory);
+  if (!existsSync(resolvedFixturesDir)) {
+    throw new Error(`Benchmark fixture directory does not exist: ${resolvedFixturesDir}`);
   }
 
-  const fixtures = readdirSync(fixturesDir)
+  const fixtures = readdirSync(resolvedFixturesDir)
     .filter((filename) => filename.endsWith('.json'))
     .sort()
     .map((filename) => ({
-      ...JSON.parse(readFileSync(join(fixturesDir, filename), 'utf8')),
+      ...JSON.parse(readFileSync(join(resolvedFixturesDir, filename), 'utf8')),
       _file: filename,
     }))
-    .filter((loadedFixture) => fixtureMatches(loadedFixture, fixture));
+    .filter((loadedFixture) => (
+      !fixture
+      || (requireStableId
+        ? loadedFixture.id === fixture
+        : fixtureMatches(loadedFixture, fixture))
+    ));
 
   if (fixtures.length === 0) {
     throw new Error(fixture

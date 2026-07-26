@@ -115,6 +115,32 @@ describe('benchmark module and CLI validation', () => {
   });
 });
 
+describe('feature-specific benchmark fixture loading', () => {
+  it.each([
+    ['truth-check', 'truth-check-en-inflated-metric'],
+    ['cover-letter', 'cover-letter-en-operations-positive'],
+    ['interview', 'interview-en-operations-positive'],
+  ])('loads the %s direct-contract corpus by stable fixture ID', (feature, fixtureId) => {
+    const selected = benchmark.loadBenchmarkFixtures({ feature, fixture: fixtureId });
+    const corpus = benchmark.loadBenchmarkFixtures({ feature });
+
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toMatchObject({
+      id: fixtureId,
+      feature,
+    });
+    expect(corpus).toHaveLength(8);
+    expect(corpus.every((fixture) => fixture.feature === feature)).toBe(true);
+  });
+
+  it('does not accept a direct-contract fixture filename in place of its stable ID', () => {
+    expect(() => benchmark.loadBenchmarkFixtures({
+      feature: 'truth-check',
+      fixture: 'truth-check-en-inflated-metric.json',
+    })).toThrow('No benchmark fixture matched');
+  });
+});
+
 describe('benchmark matrix execution and reporting', () => {
   it.each([
     ['match', 'processMatchOnly', { score: 72 }, 72],

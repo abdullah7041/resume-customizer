@@ -33,7 +33,7 @@ npm run eval:optimize
 
 Do not start provider evaluation if the manifest gate fails. The parse, match, and optimize commands remain their focused local corpus gates.
 
-### Stage 1 — one direct-provider fixture per feature
+### Stage 1 — English and Arabic eligibility
 
 For direct-provider evaluation, set the OpenRouter credential and intentionally leave the direct Gemini credential unset. This prevents an accidental fallback from contaminating the candidate result.
 
@@ -42,20 +42,23 @@ $env:OPENROUTER_API_KEY = "<approved benchmark key>"
 Remove-Item Env:GEMINI_API_KEY -ErrorAction Ignore
 
 npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture truth-check-en-inflated-metric --stage 1
+npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture truth-check-ar-hard-stop-contradiction --stage 1
 npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture cover-letter-en-operations-positive --stage 1
+npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture cover-letter-ar-finance-positive --stage 1
 npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture interview-en-operations-positive --stage 1
+npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 1 --fixture interview-ar-finance-positive --stage 1
 ```
 
-These runs execute the real AI contract, revalidate the returned Zod shape, and set `disableFallback: true`. A provider, timeout, JSON, or schema failure is a failed attempt, not a fallback success.
+Every candidate must pass its English and Arabic eligibility probe for the feature. These runs execute the real AI contract, revalidate the returned Zod shape, and set `disableFallback: true`. A provider, timeout, JSON, or schema failure is a failed attempt, not a fallback success.
 
-### Stage 2 — feature matrix
+### Stage 2 — three full-suite matrix runs
 
-Run every fixture and at least two repeats for the feature under evaluation:
+Run the complete feature corpus three times for each candidate and incumbent:
 
 ```powershell
-npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 2 --stage 2
-npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 2 --stage 2
-npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 2 --stage 2
+npm run benchmark:ai -- --feature truth-check --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 3 --stage 2
+npm run benchmark:ai -- --feature cover-letter --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 3 --stage 2
+npm run benchmark:ai -- --feature interview --models google/gemini-2.5-flash,google/gemini-3.1-flash-lite --runs 3 --stage 2
 ```
 
 The current direct benchmark runner marks truth check, cover letter, and interview as authoritative direct-contract runs. Match and optimize wrapper runs remain smoke telemetry in that runner while their focused `eval:match` and `eval:optimize` gates protect the primary corpus. The manifest preserves all six decision corpora without changing that runtime behavior.
@@ -67,13 +70,21 @@ npm run benchmark:ai -- --feature clarification --models google/gemini-2.5-flash
 npm run benchmark:ai -- --feature metadata --models google/gemini-2.5-flash --runs 1 --fixture metadata-en-explicit-smoke --stage 2
 ```
 
-### Stage 3 — review and decision
+### Stage 3 — five fresh winner confirmations
 
-Use the report directory printed by the command. The evaluation is reviewable only when every required attempt is primary-provider successful, schema-valid, and quality-passing. A candidate also needs a feature-specific quality improvement that is material on the frozen corpus.
+After Stage 2 identifies a provisional winner, run five fresh, uncached confirmations against the incumbent. Do not reuse Stage 2 attempts.
 
-Tie policy: if the candidate is tied, results are noisy or incomplete, safety/reliability regresses, or the advantage is not clear, retain the incumbent. There is no cross-feature winner: every decision is feature-specific. Smoke-only clarification and metadata results are excluded from this decision.
+```powershell
+npm run benchmark:ai -- --feature truth-check --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite --runs 5 --stage 3
+npm run benchmark:ai -- --feature cover-letter --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite --runs 5 --stage 3
+npm run benchmark:ai -- --feature interview --baseline google/gemini-2.5-flash --candidate google/gemini-3.1-flash-lite --runs 5 --stage 3
+```
 
-Commit the sanitized evaluation report or decision summary, review it, then make a separately reviewed production-default change if approved. Never combine an evaluation run with a default change in the same unreviewed step.
+No decision is allowed until Stage 0, every Stage 1 language-eligibility probe, all three Stage 2 full-suite runs, and all five fresh Stage 3 confirmations are complete and passing. Every required attempt must be primary-provider successful, schema-valid, and quality-passing; the candidate also needs a material feature-specific quality improvement on the frozen corpus.
+
+Tie policy: retain the incumbent when quality and reliability are tied, results are noisy or incomplete, or safety/reliability regresses. A tied candidate may win only with at least a 15% p95 latency improvement or a 20% cost improvement, with no quality or reliability regression. There is no cross-feature winner: every decision is feature-specific. Smoke-only clarification and metadata results are excluded from this decision.
+
+Commit the sanitized Stage 3 report or decision summary, review it, then make a separately reviewed production-default change if approved. Never combine an evaluation run with a default change in the same unreviewed step.
 
 ## Cache, provider, and report handling
 
