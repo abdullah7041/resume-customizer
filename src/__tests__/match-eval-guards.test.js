@@ -108,4 +108,26 @@ describe('match eval invariance groups', () => {
       { name: 'noisy', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 76 } },
     ])).toEqual([]);
   });
+
+  it('tolerates a band crossing within the measured model noise floor', () => {
+    // boilerplate-invariance-bi-analyst spread 4-7 points across three live
+    // runs at temp 0, straddling the 80 boundary each time in a different
+    // direction — noise from the noisy JD's wrapper text, not a real
+    // boilerplate-sensitivity regression.
+    expect(evalGuards.getInvariantGroupFailures([
+      { name: 'clean', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 78 } },
+      { name: 'noisy', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 85 } },
+    ])).toEqual([]);
+  });
+
+  it('still fails a band crossing that exceeds the noise-floor tolerance', () => {
+    const failures = evalGuards.getInvariantGroupFailures([
+      { name: 'clean', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 70 } },
+      { name: 'noisy', expected: { invarianceGroup: 'bi-noise' }, actual: { score: 85 } },
+    ]);
+
+    expect(failures).toEqual([
+      expect.objectContaining({ group: 'bi-noise', names: ['clean', 'noisy'] }),
+    ]);
+  });
 });

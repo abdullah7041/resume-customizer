@@ -174,7 +174,7 @@ const main = async () => {
 
   const invariantFailures = getInvariantGroupFailures(results);
   for (const failure of invariantFailures) {
-    console.log(`  ${C.red}invariance failure:${C.reset} ${failure.group} crossed bands (${failure.bands.join(', ')})`);
+    console.log(`  ${C.red}invariance failure:${C.reset} ${failure.group} crossed bands (${failure.bands.join(', ')}, spread ${failure.spread})`);
     for (const name of failure.names) {
       const result = results.find((entry) => entry.name === name);
       if (result) result.passed = false;
