@@ -21,7 +21,8 @@ export default defineConfig({
     include: [
       "src/**/*.{test,spec}.{js,jsx,ts,tsx}",
       "netlify/functions/__tests__/**/*.test.ts",
-      "netlify/lib/__tests__/**/*.test.{js,ts}"
+      "netlify/lib/__tests__/**/*.test.{js,ts}",
+      "scripts/lib/model-eval/__tests__/**/*.test.js"
     ],
     css: true,
     env: {
