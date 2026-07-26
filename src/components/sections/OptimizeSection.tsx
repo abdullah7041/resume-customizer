@@ -20,7 +20,6 @@ import {
 const ShareScoreCard = lazy(() => import('../ui/ShareScoreCard'));
 import { cn } from '../../lib/utils/cn';
 import { analyzeVision2030Alignment } from '../../lib/utils/vision2030Analyzer';
-import type { OptimizationMetrics } from '../../types/templates';
 import type { CategoryScoresData } from '../ScoreBreakdown';
 import type { GapAnalysisItem as GapItem, HiddenMatch } from '@/types/analysis';
 import { ScoreDiffBreakdown } from '../ScoreDiffBreakdown';
