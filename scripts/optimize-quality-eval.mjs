@@ -30,12 +30,23 @@
 import 'dotenv/config';
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 
 import { callOpenRouter } from '../netlify/lib/openrouter-client.js';
 import { getAiContract } from '../netlify/lib/ai-contracts/contracts/index.js';
 import { parseAiJson } from '../netlify/lib/ai-contracts/json.js';
 import { taggedBlock } from '../netlify/lib/ai-contracts/prompt.js';
+import { MODELS } from '../netlify/lib/model-registry.js';
+import {
+  aggregateGoldAttempts,
+  buildGoldContractOptions,
+  classifyGoldResult,
+  parseGoldEvaluatorOptions,
+} from './lib/model-eval/gold-evaluator-options.mjs';
+import {
+  createEvaluationSession,
+  writeEvaluationReport,
+} from './lib/model-eval/reporting.mjs';
 import { scoreBandFlags } from './lib/optimize-score-band.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,25 +55,74 @@ const __dirname = dirname(__filename);
 // ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
-function parseArgs() {
-  const args = process.argv.slice(2);
+function parseArgs(args = process.argv.slice(2)) {
   const parsed = { _flags: new Set() };
   for (let i = 0; i < args.length; i += 1) {
     const a = args[i];
     if (a === '--dry-run') { parsed._flags.add('dryRun'); continue; }
+    if (a === '--update-cache') { parsed._flags.add('updateCache'); continue; }
     if (a.startsWith('--')) { parsed[a.replace(/^--/, '')] = args[i + 1]; i += 1; }
   }
   return parsed;
 }
-const cli = parseArgs();
+const rawArgv = process.argv.slice(2);
+const cli = parseArgs(rawArgv);
+const sharedEvaluationRequested = rawArgv.some((arg) => [
+  '--models',
+  '--runs',
+  '--stage',
+  '--update-cache',
+  '--report-dir',
+  '--feature',
+].includes(arg));
+const sharedValueFlags = new Set([
+  '--feature',
+  '--models',
+  '--runs',
+  '--fixture',
+  '--stage',
+  '--report-dir',
+]);
+const sharedBooleanFlags = new Set(['--update-cache']);
+const sharedArgv = [];
+if (sharedEvaluationRequested) {
+  for (let index = 0; index < rawArgv.length; index += 1) {
+    const arg = rawArgv[index];
+    if (sharedBooleanFlags.has(arg)) {
+      sharedArgv.push(arg);
+    } else if (sharedValueFlags.has(arg)) {
+      sharedArgv.push(arg, rawArgv[index + 1]);
+      index += 1;
+    }
+  }
+}
 const DRY_RUN = cli._flags.has('dryRun');
 const FIXTURES_DIR = cli.fixtures ? cli.fixtures : join(__dirname, 'benchmark-fixtures');
-const FIXTURE_FILTER = cli.fixture || null;
 const BASELINE_MODEL = cli.baseline || 'google/gemini-2.5-flash';
 // Comma-separated to test several candidate models against prod/prod_aa in ONE run.
 const CANDIDATE_MODELS = cli.candidate
   ? cli.candidate.split(',').map(s => s.trim()).filter(Boolean)
   : [];
+const legacyEvaluationRequested = Boolean(cli.baseline || cli.candidate);
+const evaluationOptions = sharedEvaluationRequested
+  ? parseGoldEvaluatorOptions({
+    feature: 'optimize',
+    defaultModelId: MODELS.flash,
+    argv: sharedArgv,
+  })
+  : legacyEvaluationRequested
+    ? parseGoldEvaluatorOptions({
+      feature: 'optimize',
+      defaultModelId: MODELS.flash,
+      argv: ['--models', [BASELINE_MODEL, ...CANDIDATE_MODELS].join(',')],
+    })
+    : parseGoldEvaluatorOptions({
+      feature: 'optimize',
+      defaultModelId: MODELS.flash,
+      argv: [],
+    });
+const FIXTURE_FILTER = evaluationOptions.fixture || cli.fixture || null;
+const EVALUATION_RUNS = evaluationOptions.mode === 'evaluation' ? evaluationOptions.runs : 1;
 const JUDGE_MODEL = cli.judge || process.env.WATHEQ_EVAL_JUDGE_MODEL || null;
 // Judge panel: --judges "a,b,c" overrides; --judge pins a single model. Default is a
 // two-model panel — a lone judge swung up to 0.9 pt on identical configs (the 2026-07-03
@@ -84,6 +144,16 @@ const emptyCtx = { retrievedContext: { documents: [], citations: [] } };
 // Variant matrix
 // ---------------------------------------------------------------------------
 function buildVariants() {
+  if (sharedEvaluationRequested) {
+    return evaluationOptions.models.map((modelId, index) => ({
+      name: `model_${index + 1}_${modelId.split('/').pop()}`,
+      modelId,
+      temperature: 0,
+      buildMessages: optimizeContract.buildMessages,
+      note: `production prompt on ${modelId}`,
+    }));
+  }
+
   // Post-#111 (commit 8c3ec8c): the evidence prompt + required source_span schema IS
   // production. `prod` and `prod_aa` run the identical prod config twice — their score
   // gap is the run's noise floor; only candidate deltas larger than that gap are signal.
@@ -191,6 +261,11 @@ async function runVariant(fixture, variant) {
 
   const start = Date.now();
   try {
+    const directOptions = buildGoldContractOptions({
+      feature: 'optimize',
+      mode: evaluationOptions.mode,
+      modelId: variant.modelId,
+    });
     const text = await callOpenRouter(optimizeContract.modelType, messages, variant.jsonSchema || optimizeContract.jsonSchema, {
       modelId: variant.modelId,
       temperature: variant.temperature,
@@ -198,6 +273,7 @@ async function runVariant(fixture, variant) {
       timeoutMs: optimizeContract.timeoutMs,
       reasoningBudget: optimizeContract.reasoningBudget,
       featureName: `benchmark.optimize.${variant.name}`,
+      ...directOptions,
     });
     const parsed = parseAiJson(text, 'optimize');
     const validation = optimizeContract.outputSchema.safeParse(parsed);
@@ -211,7 +287,13 @@ async function runVariant(fixture, variant) {
       scoreBandFlags: scoreBandFlags(parsed, fixture),
     };
   } catch (error) {
-    return { success: false, latencyMs: Date.now() - start, error: error.message, status: error.status ?? null };
+    return {
+      success: false,
+      latencyMs: Date.now() - start,
+      error: error.message,
+      errorObject: error,
+      status: error.status ?? null,
+    };
   }
 }
 
@@ -263,8 +345,8 @@ function shuffle(arr) {
 
 async function judgeFixture(fixture, variantOutputs) {
   // Anonymize + shuffle: label -> variant name (kept private from the judge).
-  const labels = ['A', 'B', 'C', 'D', 'E'];
-  const shuffled = shuffle(variantOutputs.filter(v => v.run.success && v.run.result));
+  const labels = Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index));
+  const shuffled = shuffle(variantOutputs.filter(v => v.run.success && v.run.schemaValid && v.run.result));
   const labelMap = {};
   const blocks = shuffled.map((v, i) => {
     const label = labels[i];
@@ -296,9 +378,15 @@ ${blocks}`;
   const acc = {};        // variantName -> { dim: [scores] }
   const bestVotes = {};  // variantName -> count
   const reasonings = [];
+  const failedJudges = [];
   for (const judgeModel of JUDGE_MODELS) {
     let parsed;
     try {
+      const directOptions = buildGoldContractOptions({
+        feature: 'optimize',
+        mode: evaluationOptions.mode,
+        modelId: judgeModel,
+      });
       const text = await callOpenRouter('flash', messages, JUDGE_SCHEMA, {
         modelId: judgeModel,
         temperature: 0,
@@ -306,10 +394,12 @@ ${blocks}`;
         timeoutMs: 90000,
         reasoningBudget: 1024,
         featureName: 'benchmark.optimize.judge',
+        ...directOptions,
       });
       parsed = parseAiJson(text, 'optimize_judge');
     } catch (e) {
       console.log(`    judge ${judgeModel} failed: ${e.message}`);
+      failedJudges.push(judgeModel);
       continue;
     }
     for (const ev of (parsed.evaluations || [])) {
@@ -331,7 +421,13 @@ ${blocks}`;
   }
   let bestVariant = null; let bestCount = -1;
   for (const [vname, c] of Object.entries(bestVotes)) { if (c > bestCount) { bestCount = c; bestVariant = vname; } }
-  return { byVariant, bestVariant, reasoning: reasonings.join(' | '), labelMap };
+  return {
+    byVariant,
+    bestVariant,
+    reasoning: reasonings.join(' | '),
+    labelMap,
+    failedJudges,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -343,7 +439,7 @@ function r2(n) { return Number(n.toFixed(2)); }
 function buildMarkdown(meta, perVariant) {
   const rows = Object.entries(perVariant).map(([name, v]) => {
     const composite = r2(mean([v.specificity, v.jd_alignment, v.truthfulness, v.readability].map(x => x || 0)));
-    return `| ${name} | ${r2(v.specificity)} | ${r2(v.jd_alignment)} | ${r2(v.truthfulness)} | ${r2(v.readability)} | **${composite}** | ${v.wins} | ${v.avgLatencyMs}ms | ${v.fabricationFlagCount} | ${v.groundingFlagCount} | ${v.scoreBandFlagCount} |`;
+    return `| ${name} | ${r2(v.specificity)} | ${r2(v.jd_alignment)} | ${r2(v.truthfulness)} | ${r2(v.readability)} | **${composite}** | ${v.wins} | ${v.avgLatencyMs}ms | ${v.attempts} | ${v.requiredFailures} | ${v.schemaFailures} | ${v.judgeFailures} | ${v.fabricationFlagCount} | ${v.groundingFlagCount} | ${v.scoreBandFlagCount} |`;
   });
   return `# Optimize Rewrite-Quality Eval
 
@@ -351,6 +447,8 @@ function buildMarkdown(meta, perVariant) {
 - Judge panel: ${meta.judgeModel}
 - Baseline model: ${meta.baselineModel}${meta.candidateModel ? `\n- Candidate model: ${meta.candidateModel}` : ''}
 - Fixtures: ${meta.fixtureCount}
+- Repeats: ${meta.runs}
+- Direct OpenRouter: ${meta.disableFallback ? 'required' : 'legacy fallback behavior'}
 
 Scores are judge averages across fixtures and across the judge panel (1-5, higher is better).
 Composite = mean of the four dimensions. "Wins" = majority best picks. "fab" = deterministic
@@ -361,8 +459,8 @@ match_score outside the fixture's expected.matchScoreBand, after_score below mat
 or scores out of 0-100 (0 is the target — a rise means the optimize prompt's anti-inflation
 rubric regressed). Truthfulness is the gate.
 
-| variant | specificity | jd_align | truthful | readability | composite | wins | avg latency | fab | ungrounded | band |
-|---|---|---|---|---|---|---|---|---|---|---|
+| variant | specificity | jd_align | truthful | readability | composite | wins | avg latency | attempts | failed | schema | judge | fab | ungrounded | band |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 ${rows.join('\n')}
 
 ## How to read this
@@ -387,63 +485,152 @@ Ship ONE production change at a time, then re-run this eval to confirm.
 
 async function main() {
   console.log(`[Eval] optimize rewrite-quality  dryRun=${DRY_RUN}`);
-  console.log(`[Eval] baseline=${BASELINE_MODEL}  candidates=${CANDIDATE_MODELS.join(',') || '(none)'}  judges=${JUDGE_MODELS.join('+')}`);
+  console.log(`[Eval] baseline=${BASELINE_MODEL}  candidates=${CANDIDATE_MODELS.join(',') || '(none)'}  judges=${JUDGE_MODELS.join('+')}  runs=${EVALUATION_RUNS}`);
+
+  if (evaluationOptions.mode === 'evaluation' && !DRY_RUN && !process.env.OPENROUTER_API_KEY) {
+    throw new Error('Candidate evaluation requires OPENROUTER_API_KEY for direct OpenRouter execution.');
+  }
 
   let fixtures = loadFixtures();
   if (!fixtures.length) { console.error('No fixtures found in ' + FIXTURES_DIR); process.exit(1); }
   if (LIMIT && LIMIT > 0) fixtures = fixtures.slice(0, LIMIT);
   const variants = buildVariants();
-  console.log(`[Eval] ${fixtures.length} fixtures x ${variants.length} variants = ${fixtures.length * variants.length} generations\n`);
+  if (!variants.length) { console.error('No model variants selected.'); process.exit(1); }
+  console.log(`[Eval] ${fixtures.length} fixtures x ${variants.length} variants x ${EVALUATION_RUNS} runs = ${fixtures.length * variants.length * EVALUATION_RUNS} generations\n`);
 
   const perVariant = {};
-  for (const v of variants) perVariant[v.name] = { specificityArr: [], jdArr: [], truthArr: [], readArr: [], wins: 0, latencyArr: [], fabricationFlagCount: 0, groundingFlagCount: 0, scoreBandFlagCount: 0, note: v.note };
+  for (const v of variants) {
+    perVariant[v.name] = {
+      specificityArr: [],
+      jdArr: [],
+      truthArr: [],
+      readArr: [],
+      wins: 0,
+      latencyArr: [],
+      attempts: 0,
+      requiredFailures: 0,
+      schemaFailures: 0,
+      judgeFailures: 0,
+      fabricationFlagCount: 0,
+      groundingFlagCount: 0,
+      scoreBandFlagCount: 0,
+      note: v.note,
+    };
+  }
 
   const rawResults = [];
+  const goldAttempts = [];
 
   for (const fixture of fixtures) {
     console.log(`[Eval] Fixture: ${fixture.name || fixture._file}`);
-    const variantOutputs = [];
-    for (const variant of variants) {
-      const run = await runVariant(fixture, variant);
-      variantOutputs.push({ variant, run });
+    for (let repeat = 1; repeat <= EVALUATION_RUNS; repeat += 1) {
+      const variantOutputs = [];
+      for (const variant of variants) {
+        const run = await runVariant(fixture, variant);
+        const agg = perVariant[variant.name];
+        agg.attempts += 1;
+        const classification = run.success
+          ? classifyGoldResult({ schemaValid: run.schemaValid })
+          : classifyGoldResult({ error: run.errorObject });
+        const attempt = {
+          modelId: variant.modelId,
+          fixtureId: fixture._file.replace(/\.json$/, ''),
+          run: repeat,
+          latencyMs: run.latencyMs,
+          score: null,
+          qualityPassed: false,
+          classification,
+        };
+        goldAttempts.push(attempt);
+        variantOutputs.push({ variant, run, attempt });
+
+        if (!classification.primarySuccess) {
+          agg.requiredFailures += 1;
+          if (classification.failureReasons.includes('schema_invalid')) {
+            agg.schemaFailures += 1;
+          }
+        }
+
+        if (DRY_RUN) {
+          console.log(`  --- ${variant.name} run ${repeat} messages ---`);
+          console.log(run.messages.map(m => `[${m.role}]\n${m.content}`).join('\n').slice(0, 1600));
+          console.log('  ...(truncated)\n');
+          continue;
+        }
+
+        if (run.success) {
+          agg.latencyArr.push(run.latencyMs);
+          agg.fabricationFlagCount += (run.fabricationFlags?.length || 0);
+          agg.groundingFlagCount += (run.groundingFlags?.length || 0);
+          agg.scoreBandFlagCount += (run.scoreBandFlags?.length || 0);
+        }
+        if (classification.primarySuccess) {
+          const bandNote = run.scoreBandFlags?.length ? `  band=[${run.scoreBandFlags.join('; ')}]` : '';
+          console.log(`  ${variant.name.padEnd(22)} run ${repeat} ok  ${run.latencyMs}ms  fab=${run.fabricationFlags?.length || 0}  ungrounded=${run.groundingFlags?.length || 0}${bandNote}`);
+        } else {
+          console.log(`  ${variant.name.padEnd(22)} run ${repeat} FAIL ${run.error || classification.failureReasons.join(',')}`);
+        }
+      }
+
       if (DRY_RUN) {
-        console.log(`  --- ${variant.name} messages ---`);
-        console.log(run.messages.map(m => `[${m.role}]\n${m.content}`).join('\n').slice(0, 1600));
+        const judged = await judgeFixture(fixture, variantOutputs);
+        console.log('  --- judge prompt (label map ' + JSON.stringify(judged.labelMap) + ') ---');
+        console.log(judged.messages.map(m => `[${m.role}]\n${m.content}`).join('\n').slice(0, 1800));
         console.log('  ...(truncated)\n');
         continue;
       }
-      const agg = perVariant[variant.name];
-      if (run.success) {
-        agg.latencyArr.push(run.latencyMs);
-        agg.fabricationFlagCount += (run.fabricationFlags?.length || 0);
-        agg.groundingFlagCount += (run.groundingFlags?.length || 0);
-        agg.scoreBandFlagCount += (run.scoreBandFlags?.length || 0);
-        const bandNote = run.scoreBandFlags?.length ? `  band=[${run.scoreBandFlags.join('; ')}]` : '';
-        console.log(`  ${variant.name.padEnd(12)} ok  ${run.latencyMs}ms  fab=${run.fabricationFlags?.length || 0}  ungrounded=${run.groundingFlags?.length || 0}${bandNote}`);
-      } else {
-        console.log(`  ${variant.name.padEnd(10)} FAIL ${run.error}`);
+
+      const judged = await judgeFixture(fixture, variantOutputs);
+      for (const [name, scores] of Object.entries(judged.byVariant)) {
+        const agg = perVariant[name];
+        agg.specificityArr.push(scores.specificity);
+        agg.jdArr.push(scores.jd_alignment);
+        agg.truthArr.push(scores.truthfulness);
+        agg.readArr.push(scores.readability);
       }
+      if (judged.bestVariant && perVariant[judged.bestVariant]) {
+        perVariant[judged.bestVariant].wins += 1;
+      }
+      for (const output of variantOutputs) {
+        const scores = judged.byVariant[output.variant.name];
+        const judgeComplete = scores
+          && ['specificity', 'jd_alignment', 'truthfulness', 'readability']
+            .every((dimension) => Number.isFinite(scores[dimension]))
+          && judged.failedJudges.length === 0;
+        if (judged.failedJudges.length > 0) {
+          perVariant[output.variant.name].judgeFailures += judged.failedJudges.length;
+        }
+        output.attempt.score = scores
+          ? mean([scores.specificity, scores.jd_alignment, scores.truthfulness, scores.readability]) / 5
+          : 0;
+        output.attempt.qualityPassed = (
+          output.attempt.classification.primarySuccess
+          && judgeComplete
+          && (output.run.groundingFlags?.length || 0) === 0
+          && (output.run.scoreBandFlags?.length || 0) === 0
+        );
+      }
+      console.log(`  judge best: ${judged.bestVariant}  (${(judged.reasoning || '').slice(0, 120)})\n`);
+      rawResults.push({
+        fixture: fixture.name || fixture._file,
+        run: repeat,
+        judged: {
+          byVariant: judged.byVariant,
+          bestVariant: judged.bestVariant,
+          failedJudges: judged.failedJudges,
+        },
+        variantOutputs: variantOutputs.map(v => ({
+          name: v.variant.name,
+          modelId: v.variant.modelId,
+          success: v.run.success,
+          schemaValid: v.run.schemaValid === true,
+          latencyMs: v.run.latencyMs,
+          fabricationFlagCount: v.run.fabricationFlags?.length || 0,
+          groundingFlagCount: v.run.groundingFlags?.length || 0,
+          scoreBandFlagCount: v.run.scoreBandFlags?.length || 0,
+        })),
+      });
     }
-
-    if (DRY_RUN) {
-      const j = await judgeFixture(fixture, variantOutputs);
-      console.log('  --- judge prompt (label map ' + JSON.stringify(j.labelMap) + ') ---');
-      console.log(j.messages.map(m => `[${m.role}]\n${m.content}`).join('\n').slice(0, 1800));
-      console.log('  ...(truncated)\n');
-      continue;
-    }
-
-    const judged = await judgeFixture(fixture, variantOutputs);
-    for (const [name, e] of Object.entries(judged.byVariant)) {
-      const agg = perVariant[name];
-      agg.specificityArr.push(e.specificity);
-      agg.jdArr.push(e.jd_alignment);
-      agg.truthArr.push(e.truthfulness);
-      agg.readArr.push(e.readability);
-    }
-    if (judged.bestVariant && perVariant[judged.bestVariant]) perVariant[judged.bestVariant].wins += 1;
-    console.log(`  judge best: ${judged.bestVariant}  (${(judged.reasoning || '').slice(0, 120)})\n`);
-    rawResults.push({ fixture: fixture.name || fixture._file, judged, variantOutputs: variantOutputs.map(v => ({ name: v.variant.name, success: v.run.success, latencyMs: v.run.latencyMs, fabricationFlags: v.run.fabricationFlags, scoreBandFlags: v.run.scoreBandFlags })) });
   }
 
   if (DRY_RUN) { console.log('[Eval] Dry run complete — no API calls made.'); return; }
@@ -453,11 +640,31 @@ async function main() {
   for (const [name, a] of Object.entries(perVariant)) {
     summary[name] = {
       specificity: mean(a.specificityArr), jd_alignment: mean(a.jdArr), truthfulness: mean(a.truthArr), readability: mean(a.readArr),
-      wins: a.wins, avgLatencyMs: Math.round(mean(a.latencyArr)), fabricationFlagCount: a.fabricationFlagCount, groundingFlagCount: a.groundingFlagCount, scoreBandFlagCount: a.scoreBandFlagCount, note: a.note,
+      wins: a.wins,
+      avgLatencyMs: Math.round(mean(a.latencyArr)),
+      attempts: a.attempts,
+      requiredFailures: a.requiredFailures,
+      schemaFailures: a.schemaFailures,
+      judgeFailures: a.judgeFailures,
+      fabricationFlagCount: a.fabricationFlagCount,
+      groundingFlagCount: a.groundingFlagCount,
+      scoreBandFlagCount: a.scoreBandFlagCount,
+      note: a.note,
     };
   }
 
-  const meta = { runAt: new Date().toISOString(), judgeModel: JUDGE_MODELS.join(' + '), baselineModel: BASELINE_MODEL, candidateModel: CANDIDATE_MODELS.join(', ') || null, fixtureCount: fixtures.length };
+  const aggregate = aggregateGoldAttempts(goldAttempts);
+  const meta = {
+    runAt: new Date().toISOString(),
+    judgeModel: JUDGE_MODELS.join(' + '),
+    baselineModel: BASELINE_MODEL,
+    candidateModel: evaluationOptions.mode === 'evaluation'
+      ? evaluationOptions.models.join(', ')
+      : CANDIDATE_MODELS.join(', ') || null,
+    fixtureCount: fixtures.length,
+    runs: EVALUATION_RUNS,
+    disableFallback: evaluationOptions.mode === 'evaluation',
+  };
   if (!existsSync(REPORTS_DIR)) mkdirSync(REPORTS_DIR, { recursive: true });
   const stamp = Date.now();
   const jsonFile = join(REPORTS_DIR, `optimize-quality-${stamp}.json`);
@@ -469,6 +676,38 @@ async function main() {
   console.log('\n=== Summary ===');
   console.log(md);
   console.log(`\nReports:\n  ${jsonFile}\n  ${mdFile}`);
+
+  if (evaluationOptions.mode === 'evaluation') {
+    const session = createEvaluationSession({
+      feature: 'optimize',
+      reportDir: evaluationOptions.reportDir || undefined,
+    });
+    const report = writeEvaluationReport(session, {
+      models: evaluationOptions.models,
+      fixtureIds: fixtures.map((fixture) => fixture._file.replace(/\.json$/, '')),
+      options: {
+        runs: evaluationOptions.runs,
+        fixture: evaluationOptions.fixture,
+        stage: evaluationOptions.stage,
+        updateCache: evaluationOptions.updateCache,
+        disableFallback: true,
+        reportDir: evaluationOptions.reportDir,
+      },
+      outcomeSummary: aggregate.outcomeSummary,
+      latencies: aggregate.latencies,
+      approximateCostUsd: aggregate.approximateCostUsd,
+    });
+    console.log(`[Eval] Shared report: ${report.directory}`);
+  }
+
+  const judgeFailures = Object.values(summary)
+    .reduce((count, variant) => count + variant.judgeFailures, 0);
+  const qualityFailures = aggregate.outcomeSummary.qualityFailures;
+  if (aggregate.requiredFailure || judgeFailures > 0 || qualityFailures > 0) {
+    process.exit(1);
+  }
 }
 
-main().catch((err) => { console.error('[Eval] Unhandled error:', err); process.exit(1); });
+if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
+  main().catch((err) => { console.error('[Eval] Unhandled error:', err); process.exit(1); });
+}

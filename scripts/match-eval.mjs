@@ -16,9 +16,22 @@
 
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { MODELS } from "../netlify/lib/model-registry.js";
+import {
+  aggregateGoldAttempts,
+  buildGoldEvaluationAttempts,
+  classifyGoldResult,
+  parseGoldEvaluatorOptions,
+} from "./lib/model-eval/gold-evaluator-options.mjs";
+import {
+  createEvaluationSession,
+  writeEvaluationReport,
+} from "./lib/model-eval/reporting.mjs";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const ROOT = join(__dirname, "..");
 const FIXTURE_DIR = join(ROOT, "eval", "match-fixtures");
 const THRESHOLD = Number(process.env.EVAL_THRESHOLD ?? "0.8");
@@ -51,7 +64,7 @@ const isTransient = (err) =>
   /timed out|timeout|aborted/i.test(err?.message || "") ||
   [429, 500, 502, 503, 504].includes(err?.status);
 
-const runMatch = async (fixture) => {
+const runMatch = async (fixture, contractOptions = {}, retryTransient = true) => {
   const { executeAiContract } = await importPath(ROOT, "netlify", "lib", "ai-contracts", "executor.js");
   const input = {
     resumeText: fixture.resumeText,
@@ -60,9 +73,9 @@ const runMatch = async (fixture) => {
   };
   for (let attempt = 0; ; attempt++) {
     try {
-      return await executeAiContract(CONTRACT_ID, input);
+      return await executeAiContract(CONTRACT_ID, input, contractOptions);
     } catch (err) {
-      if (isTransient(err) && attempt < MAX_RETRY) {
+      if (retryTransient && isTransient(err) && attempt < MAX_RETRY) {
         console.log(`${C.dim}  transient (${err.message?.slice(0, 40)}…) — retry ${attempt + 1}/${MAX_RETRY}${C.reset}`);
         await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
         continue;
@@ -70,6 +83,128 @@ const runMatch = async (fixture) => {
       throw err;
     }
   }
+};
+
+const fixtureIdFor = (file) => file.replace(/\.json$/, "");
+const matchesFixture = (file, fixture, filter) => (
+  !filter
+  || filter === file
+  || filter === fixtureIdFor(file)
+  || filter === fixture.name
+);
+
+const applyInvariantFailures = (attempts, models, runs) => {
+  for (const modelId of models) {
+    for (let run = 1; run <= runs; run += 1) {
+      const group = attempts.filter((attempt) => (
+        attempt.modelId === modelId
+        && attempt.run === run
+        && attempt.actual
+      ));
+      const invariantFailures = getInvariantGroupFailures(group);
+      for (const failure of invariantFailures) {
+        console.log(`  ${C.red}invariance failure:${C.reset} ${modelId} run ${run}: ${failure.group} crossed bands (${failure.bands.join(", ")}, spread ${failure.spread})`);
+        for (const name of failure.names) {
+          const attempt = group.find((entry) => entry.name === name);
+          if (attempt) attempt.qualityPassed = false;
+        }
+      }
+    }
+  }
+};
+
+const runCandidateEvaluation = async (options, files) => {
+  if (!process.env.OPENROUTER_API_KEY) {
+    throw new Error("Candidate evaluation requires OPENROUTER_API_KEY for direct OpenRouter execution.");
+  }
+
+  const fixtures = files
+    .map((file) => ({
+      file,
+      fixture: JSON.parse(readFileSync(join(FIXTURE_DIR, file), "utf8")),
+    }))
+    .filter(({ file, fixture }) => matchesFixture(file, fixture, options.fixture));
+  if (fixtures.length === 0) {
+    throw new Error(`No fixtures matched ${options.fixture || FIXTURE_DIR}.`);
+  }
+
+  const fixtureById = new Map(fixtures.map(({ file, fixture }) => [fixtureIdFor(file), { file, fixture }]));
+  const plan = buildGoldEvaluationAttempts({
+    feature: "match",
+    fixtureIds: [...fixtureById.keys()],
+    models: options.models,
+    runs: options.runs,
+  });
+  const attempts = [];
+
+  for (const planned of plan) {
+    const { file, fixture } = fixtureById.get(planned.fixtureId);
+    const startedAt = Date.now();
+    try {
+      const actual = await runMatch(fixture, planned.contractOptions, false);
+      const latencyMs = Date.now() - startedAt;
+      const result = scoreMatch(fixture.expected, actual);
+      const qualityPassed = result.passed && result.overall >= THRESHOLD;
+      if (options.cachePolicy.write) {
+        const cachePath = join(FIXTURE_DIR, file.replace(/\.json$/, ".actual.json"));
+        writeFileSync(cachePath, JSON.stringify(actual, null, 2) + "\n");
+      }
+      printCard(
+        `${fixture.name} [${planned.modelId}, run ${planned.run}/${options.runs}]`,
+        result,
+        actual?.score,
+      );
+      attempts.push({
+        ...planned,
+        name: fixture.name,
+        expected: fixture.expected,
+        actual,
+        latencyMs,
+        score: result.overall,
+        qualityPassed,
+        classification: classifyGoldResult({ schemaValid: true }),
+      });
+    } catch (error) {
+      const latencyMs = Date.now() - startedAt;
+      console.log(`\n${C.red}FAIL ${fixture.name} [${planned.modelId}, run ${planned.run}/${options.runs}]: ${error.message}${C.reset}`);
+      attempts.push({
+        ...planned,
+        name: fixture.name,
+        expected: fixture.expected,
+        latencyMs,
+        score: 0,
+        qualityPassed: false,
+        classification: classifyGoldResult({ error }),
+      });
+    }
+  }
+
+  applyInvariantFailures(attempts, options.models, options.runs);
+  const aggregate = aggregateGoldAttempts(attempts);
+  const session = createEvaluationSession({
+    feature: "match",
+    reportDir: options.reportDir || undefined,
+  });
+  const report = writeEvaluationReport(session, {
+    models: options.models,
+    fixtureIds: [...fixtureById.keys()],
+    options: {
+      runs: options.runs,
+      fixture: options.fixture,
+      stage: options.stage,
+      updateCache: options.updateCache,
+      disableFallback: true,
+      reportDir: options.reportDir,
+    },
+    outcomeSummary: aggregate.outcomeSummary,
+    latencies: aggregate.latencies,
+    approximateCostUsd: aggregate.approximateCostUsd,
+  });
+  const qualityFailed = aggregate.outcomeSummary.qualityFailures > 0;
+
+  console.log(`\n${C.bold}═══ ${attempts.length} direct attempts, mean ${pct(aggregate.meanScore ?? 0)}, cost unknown ═══${C.reset}`);
+  console.log(`${C.dim}Report: ${report.directory}${C.reset}`);
+  process.exit(aggregate.requiredFailure || qualityFailed ? 1 : 0);
 };
 
 const printCard = (fixtureName, result, score) => {
@@ -125,12 +260,20 @@ const selftest = () => {
 };
 
 const main = async () => {
-  if (process.argv.includes("--selftest")) return selftest();
+  const options = parseGoldEvaluatorOptions({
+    feature: "match",
+    defaultModelId: MODELS.flash,
+    argv: process.argv.slice(2),
+  });
+  if (options.selftest) return selftest();
 
   const files = readdirSync(FIXTURE_DIR).filter((f) => f.endsWith(".json") && !f.endsWith(".actual.json"));
   if (files.length === 0) {
     console.error(`No fixtures in ${FIXTURE_DIR}`);
     process.exit(1);
+  }
+  if (options.mode === "evaluation") {
+    return runCandidateEvaluation(options, files);
   }
 
   const hasKey = Boolean(process.env.OPENROUTER_API_KEY);
@@ -188,7 +331,9 @@ const main = async () => {
   process.exit(below.length > 0 ? 1 : 0);
 };
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+if (process.argv[1] && resolve(process.argv[1]) === resolve(__filename)) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
