@@ -1199,7 +1199,7 @@ export default function MainContent() {
             // the "Why this score" panel from the original match after refresh.
             categoryScores: result.categoryScores ?? null,
             strategicRealityCheck: result.strategicRealityCheck ?? null,
-          });
+          }, false);
 
           // Always save match analysis score — line 500 already ensures we analyze
           // the ORIGINAL resume text regardless of showOptimized state.

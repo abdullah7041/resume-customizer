@@ -705,5 +705,18 @@ describe('resumeStore.getActiveResume()', () => {
       expect(cached?.categoryScores).toBeUndefined();
       expect(cached?.strategicRealityCheck).toBeUndefined();
     });
+
+    it('retrieves an original analysis when resume and job text differ only by surrounding whitespace', () => {
+      useResumeStore.getState().setShowOptimized(true);
+      useResumeStore.getState().setCachedAnalysis('  resume text for cache  ', '  job description for cache  ', {
+        score: 64,
+        matchedKeywords: ['React'],
+        missingKeywords: ['Docker'],
+      }, false);
+
+      const cached = useResumeStore.getState().getCachedAnalysis('resume text for cache', 'job description for cache', false);
+      expect(cached?.score).toBe(64);
+      expect(cached?.matchedKeywords).toEqual(['React']);
+    });
   });
 });

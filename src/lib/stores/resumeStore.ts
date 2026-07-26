@@ -99,7 +99,9 @@ const cacheKeyMemo = new Map<string, string>();
 const generateCacheKey = (resumeText: string, jobDescription: string, isOptimized: boolean = false): string => {
   // Use FULL text for hash to prevent collisions between original/optimized versions
   // Include isOptimized flag to separate cache entries
-  const fullKey = `${resumeText || ''}|${jobDescription || ''}|${isOptimized ? 'opt' : 'orig'}`;
+  const normalizedResumeText = (resumeText || '').trim();
+  const normalizedJobDescription = (jobDescription || '').trim();
+  const fullKey = `${normalizedResumeText}|${normalizedJobDescription}|${isOptimized ? 'opt' : 'orig'}`;
 
   // Check memo cache first (key now includes optimization flag)
   const memoKey = `${fullKey.slice(0, 100)}|${fullKey.length}|${isOptimized}`;
