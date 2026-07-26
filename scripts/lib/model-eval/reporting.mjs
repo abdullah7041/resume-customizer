@@ -6,42 +6,70 @@ import { summarizeLatencies } from './statistics.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPORTS_DIRECTORY = resolve(__dirname, '..', '..', 'benchmark-reports');
-const FORBIDDEN_KEYS = new Set([
-  'resumetext',
-  'resume',
-  'jobdescription',
-  'jobtext',
-  'messages',
-  'prompt',
-  'systemprompt',
-  'rawoutput',
-  'rawresponse',
-  'providerresponse',
-  'response',
-  'result',
-  'output',
-  'content',
-  'usageevent',
-  'usageevents',
+const COMMAND_OPTION_FIELDS = new Set([
+  'runs',
+  'fixture',
+  'stage',
+  'updateCache',
+  'selftest',
+  'disableFallback',
+  'reportDir',
 ]);
+const OUTCOME_COUNT_FIELDS = new Set([
+  'attempts',
+  'totalAttempts',
+  'primarySuccesses',
+  'successes',
+  'failures',
+  'fallbackUsed',
+  'schemaValid',
+  'malformedJson',
+  'timeout',
+  'providerUnavailable',
+  'cacheUsed',
+  'skipped',
+  'requiredFailures',
+  'excluded',
+  'availabilityFailures',
+  'qualityFailures',
+]);
+const OUTCOME_CODE_FIELDS = new Set(['failureReason', 'exclusionReason']);
+const MACHINE_CODE = /^[a-z][a-z0-9_]*$/;
+const MACHINE_ID = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
 
-const isForbiddenKey = (key) => {
-  const normalized = String(key).replace(/[^a-z0-9]/gi, '').toLowerCase();
-  return FORBIDDEN_KEYS.has(normalized)
-    || normalized.startsWith('resume')
-    || normalized.startsWith('job')
-    || normalized.startsWith('usageevent')
-    || normalized.includes('apikey');
+const sanitizeCommandOptions = (options) => {
+  if (!options || typeof options !== 'object' || Array.isArray(options)) return {};
+
+  return Object.fromEntries(Object.entries(options).filter(([key, value]) => {
+    if (!COMMAND_OPTION_FIELDS.has(key)) return false;
+    if (key === 'runs' || key === 'stage') return Number.isInteger(value) && value >= 0;
+    if (key === 'fixture' || key === 'reportDir') return typeof value === 'string';
+    return typeof value === 'boolean';
+  }));
 };
 
-const sanitizeForReport = (value) => {
-  if (Array.isArray(value)) return value.map(sanitizeForReport);
-  if (!value || typeof value !== 'object') return value;
+const sanitizeOutcomeSummary = (outcomeSummary) => {
+  if (!outcomeSummary || typeof outcomeSummary !== 'object' || Array.isArray(outcomeSummary)) return {};
 
-  return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !isForbiddenKey(key))
-    .map(([key, nestedValue]) => [key, sanitizeForReport(nestedValue)]));
+  return Object.fromEntries(Object.entries(outcomeSummary).flatMap(([key, value]) => {
+    if (OUTCOME_COUNT_FIELDS.has(key) && (Number.isFinite(value) || typeof value === 'boolean')) {
+      return [[key, value]];
+    }
+    if (OUTCOME_CODE_FIELDS.has(key) && typeof value === 'string' && MACHINE_CODE.test(value)) {
+      return [[key, value]];
+    }
+    if (key === 'failureReasons' && Array.isArray(value) && value.every((reason) => (
+      typeof reason === 'string' && MACHINE_CODE.test(reason)
+    ))) {
+      return [[key, [...value]]];
+    }
+    return [];
+  }));
 };
+
+const sanitizeMachineIds = (values) => Array.isArray(values)
+  ? values.filter((value) => typeof value === 'string' && MACHINE_ID.test(value))
+  : [];
 
 const formatTimestamp = (timestamp) => {
   if (timestamp == null) {
@@ -115,22 +143,24 @@ export const writeEvaluationReport = (session, input = {}) => {
     throw new TypeError('A report session created by createEvaluationSession is required.');
   }
 
-  const fixtureIds = Array.isArray(input.fixtureIds) ? [...input.fixtureIds] : [];
-  const report = sanitizeForReport({
+  const fixtureIds = sanitizeMachineIds(input.fixtureIds);
+  const report = {
     schemaVersion: 1,
     feature: session.feature,
     generatedAt: input.generatedAt ?? session.timestamp,
-    models: Array.isArray(input.models) ? [...input.models] : [],
+    models: sanitizeMachineIds(input.models),
     fixtureIds,
     fixtureCount: fixtureIds.length,
-    options: input.options ?? {},
-    outcomeSummary: input.outcomeSummary ?? {},
+    options: sanitizeCommandOptions(input.options),
+    outcomeSummary: sanitizeOutcomeSummary(input.outcomeSummary),
     latency: Array.isArray(input.latencies) && input.latencies.length > 0
       ? summarizeLatencies(input.latencies)
       : null,
-    approximateCostUsd: input.approximateCostUsd ?? null,
-    pricingSnapshotTimestamp: input.pricingSnapshotTimestamp ?? null,
-  });
+    approximateCostUsd: Number.isFinite(input.approximateCostUsd) ? input.approximateCostUsd : null,
+    pricingSnapshotTimestamp: typeof input.pricingSnapshotTimestamp === 'string'
+      ? input.pricingSnapshotTimestamp
+      : null,
+  };
   const manifest = {
     schemaVersion: report.schemaVersion,
     feature: report.feature,

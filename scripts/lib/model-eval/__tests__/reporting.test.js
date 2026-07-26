@@ -107,4 +107,37 @@ describe('writeEvaluationReport', () => {
     expect(contents).not.toMatch(/private job text|private system prompt|private usage event/);
     expect(contents).not.toMatch(/job_text|system_prompt|usage_event_payload/);
   });
+
+  it('allows only command and outcome metadata instead of alias-named raw outputs or credentials', () => {
+    const reportDir = createTempReportsDirectory();
+    const session = createEvaluationSession({ feature: 'truth-check', timestamp: '20260726T120003Z', reportDir });
+    const paths = writeEvaluationReport(session, {
+      options: {
+        runs: 3,
+        disableFallback: true,
+        authorization: 'Bearer private-credential',
+        accessToken: 'private-access-token',
+      },
+      outcomeSummary: {
+        primarySuccesses: 2,
+        failures: 1,
+        modelOutput: '{"raw":"private model output"}',
+        authorization: 'private-outcome-credential',
+        token: 'private-outcome-token',
+      },
+      fixtureIds: ['fixture-1'],
+      latencies: [20],
+    });
+
+    const report = JSON.parse(readFileSync(paths.jsonPath, 'utf8'));
+    const contents = Object.values(paths)
+      .filter((path) => path !== paths.directory)
+      .map((path) => readFileSync(path, 'utf8'))
+      .join('\n');
+
+    expect(report.options).toEqual({ runs: 3, disableFallback: true });
+    expect(report.outcomeSummary).toEqual({ primarySuccesses: 2, failures: 1 });
+    expect(contents).not.toMatch(/private-credential|private-access-token|private model output|private-outcome-credential|private-outcome-token/);
+    expect(contents).not.toMatch(/authorization|accessToken|modelOutput|token/);
+  });
 });
