@@ -10,6 +10,8 @@
       "clearAll": "Clear All",
       "export": "Export Report",
       "noJobWarning": "Add a job description in the Match tab to analyze results.",
+      "useUploadedResume": "Use my uploaded resume",
+      "myResumeLabel": "My resume",
       "comparisonTitle": "Detailed Comparison",
       "emptyTitle": "Ready to Analyze",
       "emptyDesc": "Upload multiple resume versions to see which one matches the job best.",

@@ -208,12 +208,17 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           : 'mx-auto flex w-full max-w-md flex-col gap-5 rounded-2xl border border-emerald-500/25 bg-white/95 p-6 text-gray-900 shadow-2xl shadow-emerald-950/10 backdrop-blur-xl sm:p-7 dark:border-emerald-400/25 dark:bg-[#061713]/95 dark:text-slate-100 dark:shadow-black/45'
       }
     >
-      {/* Inline header: a one-line "why" + a dismiss affordance. */}
+      {/* Inline header: what this is, what happens to the answer, + a dismiss affordance. */}
       {inline && (
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-            Tailor results to your goal — takes 20 seconds.
-          </p>
+          <div>
+            <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+              Set your target role
+            </p>
+            <p className="mt-0.5 text-xs text-emerald-800/80 dark:text-emerald-300/80">
+              This sharpens your match score and optimized rewrites. Saved to your profile — you can change it anytime. Skipping is fine.
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => onDismiss?.()}
@@ -230,15 +235,17 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         </p>
       )}
 
-      {/* Progress dots */}
-      <div className="flex items-center justify-center gap-2" aria-label={`Step ${answered + 1} of ${total}`}>
-        {Array.from({ length: total }).map((_, i) => (
-          <span
-            key={i}
-            className={`h-2 rounded-full transition-[width,background-color] ${i < answered ? 'w-6 bg-emerald-500' : i === answered ? 'w-6 bg-emerald-400 dark:bg-emerald-300' : 'w-2 bg-gray-300 dark:bg-slate-600'}`}
-          />
-        ))}
-      </div>
+      {/* Progress dots — a one-of-one indicator inline is noise, since Path A skips cv_basics. */}
+      {!inline && (
+        <div className="flex items-center justify-center gap-2" aria-label={`Step ${answered + 1} of ${total}`}>
+          {Array.from({ length: total }).map((_, i) => (
+            <span
+              key={i}
+              className={`h-2 rounded-full transition-[width,background-color] ${i < answered ? 'w-6 bg-emerald-500' : i === answered ? 'w-6 bg-emerald-400 dark:bg-emerald-300' : 'w-2 bg-gray-300 dark:bg-slate-600'}`}
+            />
+          ))}
+        </div>
+      )}
 
       <div className={inline ? 'text-start' : 'text-center'}>
         <h2 className={inline ? 'text-lg font-bold text-gray-900 dark:text-slate-100' : 'text-xl font-bold text-gray-900 dark:text-white'}>{copy?.title}</h2>

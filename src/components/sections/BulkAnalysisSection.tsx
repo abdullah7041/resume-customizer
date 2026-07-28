@@ -24,6 +24,7 @@ import { parseResume } from '../../services/api';
 import { cn } from '../../lib/utils/cn';
 import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { useUserCredits } from '../../hooks/useUserCredits';
+import { useResumeStore } from '../../lib/stores/resumeStore';
 import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 
@@ -57,6 +58,10 @@ interface Resume {
 interface BulkAnalysisSectionProps {
   jobDescription?: string;
 }
+
+/** A resume's text either comes from parsing an uploaded file or is already
+ * known (the "use my uploaded resume" convenience row seeds it directly). */
+type ResumeSource = { kind: 'file'; file: File } | { kind: 'text'; plainText: string };
 
 // === Sub-components ===
 const getScoreColor = (s: number) => {
@@ -212,13 +217,17 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     removeCompatibleStorageItem(STORAGE_KEY);
   }, []);
 
-  const processResumeActual = useCallback(async (resumeId: string, file: File) => {
-    setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'parsing' as const } : r));
-
+  const processResumeActual = useCallback(async (resumeId: string, source: ResumeSource) => {
     try {
-      const parseResult = await parseResume(file);
-      const plainText = parseResult?.plainText || '';
-      if (!plainText) throw new Error('Failed to extract text from resume');
+      let plainText: string;
+      if (source.kind === 'file') {
+        setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'parsing' as const } : r));
+        const parseResult = await parseResume(source.file);
+        plainText = parseResult?.plainText || '';
+        if (!plainText) throw new Error('Failed to extract text from resume');
+      } else {
+        plainText = source.plainText;
+      }
 
       setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, plainText, status: 'analyzing' as const } : r));
 
@@ -266,10 +275,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   }, [jobDescription, refetchCredits, i18n.language]);
 
   // Wrapper: collect all pending resume IDs and show one confirmation modal
-  const processResume = useCallback((resumeId: string, _file: File) => {
+  const processResume = useCallback((resumeId: string, source: ResumeSource) => {
     if (!jobDescription) {
       // If no job description, process without credits (just parsing)
-      processResumeActual(resumeId, _file);
+      processResumeActual(resumeId, source);
       return;
     }
     // Accumulate pending IDs — modal shown once for the batch
@@ -286,7 +295,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     for (const id of ids) {
       const resume = resumeById.get(id);
       if (resume?.file) {
-        await processResumeActual(id, resume.file);
+        await processResumeActual(id, { kind: 'file', file: resume.file });
+      } else if (resume?.plainText) {
+        await processResumeActual(id, { kind: 'text', plainText: resume.plainText });
       }
     }
   };
@@ -315,7 +326,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     // processResume is synchronous: it either queues the batch confirmation
     // modal or kicks off a fire-and-forget parse, so there is nothing to await.
     for (const resume of newResumes) {
-      processResume(resume.id, resume.file!);
+      processResume(resume.id, { kind: 'file', file: resume.file! });
     }
   }, [resumes.length, processResume]);
 
@@ -336,6 +347,33 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     if (e.target.files) handleFiles(e.target.files);
     e.target.value = '';
   }, [handleFiles]);
+
+  // Convenience only — parsing is free (FEATURE_COSTS.parse_resume === 0), so
+  // this seeds the list from the already-parsed resume to skip a re-upload.
+  // It does not change what ai-match analysis costs.
+  const parsedResumeText = useResumeStore((state) => state.parsedResumeText);
+  const originalResumeName = useResumeStore((state) => state.originalResume?.basics?.name);
+  const hasUploadedResumeInList = Boolean(
+    parsedResumeText && resumes.some((r) => r.plainText === parsedResumeText)
+  );
+
+  const addUploadedResume = useCallback(() => {
+    if (!parsedResumeText || hasUploadedResumeInList || resumes.length >= MAX_FILES) return;
+    const id = `uploaded-${Date.now()}`;
+    const name = originalResumeName
+      ? `${originalResumeName} (${t('sections.bulk.myResumeLabel', 'My resume')})`
+      : t('sections.bulk.myResumeLabel', 'My resume');
+    setResumes(prev => [...prev, {
+      id,
+      name,
+      file: null,
+      status: 'pending',
+      plainText: parsedResumeText,
+      analysis: null,
+      error: null,
+    }]);
+    processResume(id, { kind: 'text', plainText: parsedResumeText });
+  }, [parsedResumeText, hasUploadedResumeInList, resumes.length, originalResumeName, t, processResume]);
 
   const removeResume = useCallback((index: number) => {
     setResumes(prev => prev.filter((_, i) => i !== index));
@@ -461,6 +499,28 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
           </div>
         )}
       </GlassCard>
+
+      {/* Use my uploaded resume — convenience row, skips a re-upload of the
+          already-parsed resume. Parsing is free either way. */}
+      {canUploadMore && parsedResumeText && !hasUploadedResumeInList && (
+        <button
+          type="button"
+          onClick={addUploadedResume}
+          className="flex w-full items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-start transition-colors hover:bg-emerald-500/10 dark:border-emerald-400/20 dark:bg-emerald-400/5 dark:hover:bg-emerald-400/10"
+        >
+          <div className="rounded-lg bg-emerald-500/15 p-2 text-emerald-700 dark:text-emerald-300">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-gray-900 dark:text-white">
+              {t('sections.bulk.useUploadedResume', 'Use my uploaded resume')}
+            </p>
+            <p className="truncate text-xs text-gray-500 dark:text-gray-400" dir="auto">
+              {originalResumeName || t('sections.bulk.myResumeLabel', 'My resume')}
+            </p>
+          </div>
+        </button>
+      )}
 
       {/* Upload Area */}
       {canUploadMore && (

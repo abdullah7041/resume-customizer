@@ -32,6 +32,7 @@ import { requestValueMomentFeedbackPrompt } from "../Feedback/FeedbackPromptCont
 import TemplateRenderer from "../templates/TemplateRenderer";
 import { GlassButton } from "../ui/GlassButton";
 import { GlassCard } from "../ui/GlassCard";
+import { ConfirmActionModal } from "../Credits/ConfirmActionModal";
 import { LoadingMessages } from "../LoadingMessages";
 import { ManualDataEditor } from "../ui/ManualDataEditor";
 import { FormattingPanel } from "../ui/FormattingPanel";
@@ -142,15 +143,54 @@ const forceLightThemeForPdf = (root: HTMLElement) => {
   root.style.color = '#111827';
 };
 
+/**
+ * The client-side raster fallback (html-to-image + jsPDF) has historically
+ * produced a blank canvas for an off-screen-positioned clone on some
+ * browsers/timing without ever throwing — the download "succeeds" with a
+ * white page and no visible error. Sample a coarse grid of pixels and treat
+ * the canvas as blank when every sampled pixel is background-colored or
+ * transparent, so the caller can surface a real error instead of shipping
+ * an empty PDF.
+ */
+const isCanvasBlank = (canvas: HTMLCanvasElement): boolean => {
+  if (canvas.width === 0 || canvas.height === 0) return true;
+  try {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return false; // can't verify — don't block a possibly-valid export
+    const gridSize = 24;
+    const stepX = Math.max(1, Math.floor(canvas.width / gridSize));
+    const stepY = Math.max(1, Math.floor(canvas.height / gridSize));
+    for (let y = 0; y < canvas.height; y += stepY) {
+      const row = ctx.getImageData(0, y, canvas.width, 1).data;
+      for (let x = 0; x < canvas.width; x += stepX) {
+        const i = x * 4;
+        const isOpaque = row[i + 3] > 10;
+        const isNonWhite = row[i] < 250 || row[i + 1] < 250 || row[i + 2] < 250;
+        if (isOpaque && isNonWhite) return false;
+      }
+    }
+    return true;
+  } catch {
+    return false; // tainted canvas — can't verify, don't block export
+  }
+};
+
 
 
 interface TemplateGalleryProps {
   resumeData?: ResumeSchema | null;
   optimizationData?: unknown;
   onSelectTemplate?: (template: typeof resumeTemplates[0]) => void;
+  /**
+   * Runs one credit-charged optimize over the current job/resume before a
+   * guest-preview-origin export/save can proceed (see optimizationOrigin).
+   * Resolves with a truthy result on success; MainContent supplies this as
+   * `() => handleOptimize('auto', { freePreview: false })`.
+   */
+  onRequirePaidReoptimize?: () => Promise<unknown>;
 }
 
-export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate }: TemplateGalleryProps) {
+export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate, onRequirePaidReoptimize }: TemplateGalleryProps) {
   const { t } = useTranslation();
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -163,6 +203,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
   const [showAdvancedFormatting, setShowAdvancedFormatting] = useState(false);
 
+  // Guest-preview export/save gate — see optimizationOrigin.
+  const [pendingExportAction, setPendingExportAction] = useState<'pdf' | 'docx' | null>(null);
+  const [isReoptimizing, setIsReoptimizing] = useState(false);
+
   // Draggable template bar state
   const [barPosition, setBarPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -172,6 +216,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const storeOriginalResume = useResumeStore((state) => state.originalResume);
   const optimizations = useResumeStore((state) => state.optimizations);
   const showOptimized = useResumeStore((state) => state.showOptimized);
+  const optimizationOrigin = useResumeStore((state) => state.optimizationOrigin);
   // isSaudiNational is used by getActiveResume internally
   const getActiveResume = useResumeStore((state) => state.getActiveResume);
   const setStoreTemplate = useResumeStore((state) => state.setSelectedTemplate);
@@ -183,6 +228,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Determine if store has applied optimizations - THIS TAKES PRIORITY
   const hasAppliedOptimizations = optimizations.some(o => o.applied);
+  // Guest carryover guard: the applied optimizations came from a free/guest
+  // preview run (no credits charged) and have not been re-run since signing
+  // in. Export/save must not realize that value for free.
+  const isGuestPreviewExport = hasAppliedOptimizations && optimizationOrigin === 'guest_preview';
 
   // Use store data when:
   // 1. Store has resume data (includes manual edits from ManualDataEditor)
@@ -343,7 +392,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Download PDF — Server-side Puppeteer rendering
-  const handleDownloadPdf = async () => {
+  const performDownloadPdf = async () => {
     if (isDownloading || !hasRealResume || !resumeData) return;
     setIsDownloading(true);
     setExportError(null);
@@ -527,6 +576,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           document.body.removeChild(fallbackClone);
         }
 
+        if (isCanvasBlank(canvas)) {
+          throw new Error('[PDFDownload] Client-side fallback produced a blank canvas');
+        }
+
         const imgData = canvas.toDataURL('image/png');
         
         // Output to jsPDF (A4)
@@ -628,7 +681,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       } catch (clientErr) {
         console.error('[PDFDownload] Client-side fallback also failed:', summarizeErrorForConsole(clientErr));
-        analytics.trackExportFailed(selectedTemplate.id, 'pdf', 'client_fallback_error');
+        const isBlankCanvas = clientErr instanceof Error && clientErr.message.includes('blank canvas');
+        analytics.trackExportFailed(selectedTemplate.id, 'pdf', isBlankCanvas ? 'fallback_blank' : 'client_fallback_error');
         setExportError(exportFailureMessage);
       }
     } finally {
@@ -638,7 +692,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
 
   // Download DOCX using docx library (client-side)
-  const handleDownloadDocx = async () => {
+  const performDownloadDocx = async () => {
     if (isDownloadingDocx || !hasRealResume || !resumeData) return;
 
     setIsDownloadingDocx(true);
@@ -670,6 +724,50 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       setExportError(exportFailureMessage);
     } finally {
       setIsDownloadingDocx(false);
+    }
+  };
+
+  // Public entry points — gate a guest-preview-origin export behind one
+  // charged re-optimize before the real download runs.
+  const handleDownloadPdf = async () => {
+    if (isGuestPreviewExport) {
+      setPendingExportAction('pdf');
+      return;
+    }
+    await performDownloadPdf();
+  };
+
+  const handleDownloadDocx = async () => {
+    if (isGuestPreviewExport) {
+      setPendingExportAction('docx');
+      return;
+    }
+    await performDownloadDocx();
+  };
+
+  const handleConfirmReoptimizeAndExport = async () => {
+    if (!pendingExportAction) return;
+    const action = pendingExportAction;
+    setIsReoptimizing(true);
+    try {
+      const result = await onRequirePaidReoptimize?.();
+      if (!result) {
+        // The re-run failed or was aborted (e.g. clarification modal
+        // dismissed) — the optimize flow has already surfaced its own error;
+        // just close this gate without exporting stale/free content.
+        return;
+      }
+      setPendingExportAction(null);
+      if (action === 'pdf') {
+        await performDownloadPdf();
+      } else {
+        await performDownloadDocx();
+      }
+    } catch (err) {
+      console.error('[TemplatesSection] Paid re-optimize before export failed:', summarizeErrorForConsole(err));
+      setExportError(exportFailureMessage);
+    } finally {
+      setIsReoptimizing(false);
     }
   };
 
@@ -1018,6 +1116,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           />
         </Suspense>
       )}
+
+      {/* Guest-preview export/save gate — the applied optimizations came from
+          a free preview run; exporting/saving them requires one charged
+          re-run first. */}
+      <ConfirmActionModal
+        isOpen={pendingExportAction !== null}
+        onClose={() => setPendingExportAction(null)}
+        onConfirm={handleConfirmReoptimizeAndExport}
+        feature="optimize"
+        isLoading={isReoptimizing}
+      />
     </div >
   );
 }

@@ -1199,6 +1199,9 @@ export default function MainContent() {
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
         const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language, options);
+        // Tag provenance so a later export/save can tell a free guest-preview
+        // result apart from a credit-charged one (see optimizationOrigin).
+        result.origin = options?.freePreview ? 'guest_preview' : 'paid';
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         setMatchAnalysis(result);
         setJobDescription(trimmedJob);
@@ -1279,7 +1282,7 @@ export default function MainContent() {
     [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, t]
   );
 
-  const handleAnalyzeTruthCheck = useCallback(async () => {
+  const handleAnalyzeTruthCheck = useCallback(async (options?: { force?: boolean }) => {
     if (isGuestMode) {
       requireSignInForGuestAction();
       return null;
@@ -1299,10 +1302,12 @@ export default function MainContent() {
     const resumeHash = getResumeFingerprint(resumeTextToAnalyze);
     const userHardStops = loadPersistentHardStops();
     const hardStopsHash = getHardStopsFingerprint(userHardStops);
-    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops);
-    if (cached) {
-      setTruthCheckResult(cached);
-      return cached;
+    if (!options?.force) {
+      const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops);
+      if (cached) {
+        setTruthCheckResult(cached);
+        return cached;
+      }
     }
 
     try {
@@ -1443,6 +1448,9 @@ export default function MainContent() {
           );
         }
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        // Tag provenance on the store so export/pipeline-save can gate a free
+        // guest-preview optimize result behind one charged re-run.
+        useResumeStore.getState().setOptimizationOrigin(freePreview ? 'guest_preview' : 'paid');
         const clarificationScores = getOptimizationScorePair(result);
         if (clarificationOutcome && clarificationScores) {
           analytics.trackClarificationScoreDelta({
@@ -2288,6 +2296,7 @@ export default function MainContent() {
                 <TemplateGallery
                   resumeData={resumeData}
                   optimizationData={optimizationData}
+                  onRequirePaidReoptimize={() => handleOptimize('auto', { freePreview: false })}
                 />
               </Suspense>
             </LazyErrorBoundary>

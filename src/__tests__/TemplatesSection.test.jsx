@@ -7,6 +7,9 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import TemplateGallery from '../components/sections/TemplatesSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { exportResumeAsDocx } from '../services/exportDocx';
+import { analytics } from '../services/analytics';
+import { toCanvas } from 'html-to-image';
+import { useResumeStore } from '../lib/stores/resumeStore';
 
 let mockContentLanguage = null;
 
@@ -23,6 +26,7 @@ vi.mock('../lib/stores/resumeStore', () => {
         originalResume: null,
         parsedResumeText: null,
         optimizations: [],
+        optimizationOrigin: null,
         optimizationMetrics: { jdKeywords: [] },
         showOptimized: false,
         getActiveResume: vi.fn(() => null),
@@ -35,6 +39,10 @@ vi.mock('../lib/stores/resumeStore', () => {
     };
     const useResumeStore = (selector) => selector ? selector(storeState) : storeState;
     useResumeStore.getState = () => storeState;
+    // Test-only escape hatch — lets individual tests mutate the shared mock
+    // store state (e.g. to simulate applied guest-preview optimizations)
+    // without reimplementing a full Zustand mock.
+    useResumeStore.__setMockState = (patch) => Object.assign(storeState, patch);
     return { useResumeStore };
 });
 
@@ -70,6 +78,18 @@ vi.mock('../services/api', () => ({
 
 vi.mock('../services/exportDocx', () => ({
     exportResumeAsDocx: vi.fn(() => Promise.resolve(new Blob(['docx content'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }))),
+}));
+
+vi.mock('../components/Credits/ConfirmActionModal', () => ({
+    ConfirmActionModal: ({ isOpen, onClose, onConfirm, isLoading }) => {
+        if (!isOpen) return null;
+        return (
+            <div data-testid="confirm-reoptimize-modal">
+                <button onClick={() => onConfirm()} disabled={isLoading}>Confirm</button>
+                <button onClick={onClose}>Cancel</button>
+            </div>
+        );
+    },
 }));
 
 // Mock TemplateRenderer to avoid heavy rendering
@@ -139,6 +159,7 @@ beforeEach(() => {
         blob: () => Promise.resolve(new Blob(['pdf content'], { type: 'application/pdf' })),
     });
     exportResumeAsDocx.mockClear();
+    useResumeStore.__setMockState({ optimizations: [], optimizationOrigin: null, getActiveResume: () => null });
 });
 
 afterEach(() => {
@@ -428,6 +449,52 @@ describe('TemplatesSection', () => {
             }
         });
 
+        it('rejects a blank client-fallback canvas instead of downloading an empty PDF', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            globalThis.fetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                blob: () => Promise.resolve(new Blob([], { type: 'application/pdf' })),
+            });
+            // A canvas whose every sampled pixel is opaque white — same signature as
+            // the blank-page bug where html-to-image rasterized an empty capture.
+            const blankPixelRow = new Uint8ClampedArray(400 * 4).fill(255);
+            const blankCanvas = {
+                width: 400,
+                height: 400,
+                getContext: () => ({
+                    getImageData: () => ({ data: blankPixelRow }),
+                }),
+                toDataURL: () => 'data:image/png;base64,blank',
+            };
+            toCanvas.mockResolvedValueOnce(blankCanvas);
+
+            try {
+                renderWithProviders(<TemplateGallery resumeData={{
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    work: [],
+                    education: [],
+                    skills: [],
+                    projects: [],
+                }} />);
+
+                fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+                await waitFor(() => {
+                    expect(screen.getByRole('alert')).toHaveTextContent(
+                        'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
+                    );
+                });
+                expect(analytics.trackExportFailed).toHaveBeenCalledWith(
+                    expect.any(String),
+                    'pdf',
+                    'fallback_blank'
+                );
+            } finally {
+                consoleError.mockRestore();
+            }
+        });
+
         it('shows a localized error when DOCX export fails', async () => {
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             exportResumeAsDocx.mockRejectedValueOnce(new Error('docx failed'));
@@ -452,6 +519,96 @@ describe('TemplatesSection', () => {
             } finally {
                 consoleError.mockRestore();
             }
+        });
+    });
+
+    describe('Guest-preview export gate', () => {
+        const resumeData = {
+            basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+            work: [],
+            education: [],
+            skills: [],
+            projects: [],
+        };
+
+        it('exports directly when there are no applied optimizations', async () => {
+            useResumeStore.__setMockState({ optimizations: [], optimizationOrigin: 'guest_preview' });
+            renderWithProviders(<TemplateGallery resumeData={resumeData} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+            await waitFor(() => {
+                expect(globalThis.fetch).toHaveBeenCalled();
+            });
+            expect(screen.queryByTestId('confirm-reoptimize-modal')).not.toBeInTheDocument();
+        });
+
+        it('exports directly when applied optimizations came from a paid run', async () => {
+            useResumeStore.__setMockState({
+                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
+                optimizationOrigin: 'paid',
+                // hasAppliedOptimizations=true routes TemplatesSection to store data —
+                // give it something so hasRealResume/export can proceed.
+                getActiveResume: () => resumeData,
+            });
+            renderWithProviders(<TemplateGallery resumeData={resumeData} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+            await waitFor(() => {
+                expect(globalThis.fetch).toHaveBeenCalled();
+            });
+            expect(screen.queryByTestId('confirm-reoptimize-modal')).not.toBeInTheDocument();
+        });
+
+        it('blocks PDF export behind a re-optimize confirmation when optimizations came from a guest preview', async () => {
+            useResumeStore.__setMockState({
+                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
+                optimizationOrigin: 'guest_preview',
+                getActiveResume: () => resumeData,
+            });
+            renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={vi.fn()} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+            expect(await screen.findByTestId('confirm-reoptimize-modal')).toBeInTheDocument();
+            expect(globalThis.fetch).not.toHaveBeenCalled();
+        });
+
+        it('runs the paid re-optimize on confirm, then proceeds with the export', async () => {
+            useResumeStore.__setMockState({
+                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
+                optimizationOrigin: 'guest_preview',
+                getActiveResume: () => resumeData,
+            });
+            const onRequirePaidReoptimize = vi.fn().mockResolvedValue({ score: 80 });
+            renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={onRequirePaidReoptimize} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(await screen.findByText('Confirm'));
+
+            await waitFor(() => {
+                expect(onRequirePaidReoptimize).toHaveBeenCalledTimes(1);
+                expect(globalThis.fetch).toHaveBeenCalled();
+            });
+        });
+
+        it('does not export when the paid re-optimize fails or is aborted', async () => {
+            useResumeStore.__setMockState({
+                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
+                optimizationOrigin: 'guest_preview',
+                getActiveResume: () => resumeData,
+            });
+            const onRequirePaidReoptimize = vi.fn().mockResolvedValue(null);
+            renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={onRequirePaidReoptimize} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(await screen.findByText('Confirm'));
+
+            await waitFor(() => {
+                expect(onRequirePaidReoptimize).toHaveBeenCalledTimes(1);
+            });
+            expect(globalThis.fetch).not.toHaveBeenCalled();
         });
     });
 

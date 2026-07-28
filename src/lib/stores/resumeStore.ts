@@ -230,6 +230,7 @@ export const useResumeStore = create<ResumeState>()(
       },
       hasDownloaded: false,
       contentLanguage: null, // Detected from resume text
+      optimizationOrigin: null, // Set by handleOptimizeActual: 'guest_preview' | 'paid'
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
@@ -313,6 +314,10 @@ export const useResumeStore = create<ResumeState>()(
           optimizations,
           hasDownloaded: false
         });
+      },
+
+      setOptimizationOrigin: (origin: 'guest_preview' | 'paid' | null) => {
+        set({ optimizationOrigin: origin });
       },
 
       applyOptimization: (sectionId: string) => {
@@ -736,6 +741,7 @@ export const useResumeStore = create<ResumeState>()(
           searchIntent: null, // Full reset clears job-search intent too
           jobVariants: [], // Variants are job-specific to a resume — clear them
           activeVariantId: null,
+          optimizationOrigin: null,
         });
       },
 
@@ -774,6 +780,7 @@ export const useResumeStore = create<ResumeState>()(
           showOptimized: false,
           jobVariants: [], // Variants belong to the previous resume — clear on new upload
           activeVariantId: null,
+          optimizationOrigin: null,
         });
       },
     }),
@@ -783,7 +790,10 @@ export const useResumeStore = create<ResumeState>()(
       // v1: added jobVariants/activeVariantId slice (job-specific resume builder).
       // v2: recommendation-only cards (skills/certifications) can no longer be
       //     applied — un-apply any that the old blanket apply-all had flipped.
-      version: 2,
+      // v3: added optimizationOrigin (guest-preview export/save gating). No
+      //     migration needed — merge() below preserves the initial `null`
+      //     default for state persisted before this field existed.
+      version: 3,
       migrate: (persistedState, fromVersion) => {
         let state = (persistedState ?? {}) as Partial<ResumeState>;
         if (fromVersion < 1) {
@@ -822,6 +832,8 @@ export const useResumeStore = create<ResumeState>()(
         // Persist job variants (Phase 1, local-only)
         jobVariants: state.jobVariants,
         activeVariantId: state.activeVariantId,
+        // Persist so the guest-preview export/save gate survives a sign-in reload.
+        optimizationOrigin: state.optimizationOrigin,
       }),
       // Custom merge to properly handle nested optimizationMetrics
       merge: (persistedState, currentState) => {

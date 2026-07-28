@@ -38,8 +38,13 @@ const PAIRED_NOISE_TAGS = new Set([
 // "job-ad"/"jobad"; only explicit ad compounds are treated as noise.
 const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|consent|gdpr|banner|share|apply[-_]?button|top[-_]?card[-_]?actions|sidebar|widget|promo|advert|adsense|ad[-_]?slot|ad[-_]?banner|sponsor|subscribe|newsletter|social|follow[-_]?us|job[-_]?alert|modal|popup|overlay|pagination|comments|toolbar|menu)/i;
 const DESCRIPTION_CLASS_OR_ID_PATTERN = /job[-_]?desc|description|show-more-less-html|posting/i;
-const STANDALONE_CTA_PATTERN = /^(sign in|sign up|join now|apply|apply now|easy apply|save|save job|share|share this job|email this job|print|report this job|show more|see more jobs|view all jobs|get notified|set alert|create (job )?alert|back to (results|search)|accept (all )?cookies|cookie settings|subscribe|قدم الآن|تقديم|حفظ الوظيفة|مشاركة|سجل الدخول|انضم الآن|اشترك)$/i;
-const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more|more jobs( like this)?|related jobs|jobs you may like|share this job|get job alerts|وظائف مشابهة|وظائف ذات صلة|وظائف قد تعجبك|شارك هذه الوظيفة|تنبيهات الوظائف)$/i;
+const STANDALONE_CTA_PATTERN = /^(sign in|sign up|join now|apply|apply now|easy apply|save|save job|share|share this job|email this job|print|report this job|show more|see more jobs|view all jobs|get notified|set alert|create (job )?alert|back to (results|search)|accept (all )?cookies|cookie settings|subscribe|see who you know|قدم الآن|تقديم|حفظ الوظيفة|مشاركة|سجل الدخول|انضم الآن|اشترك)$/i;
+const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more|more jobs( like this)?|related jobs|jobs you may like|share this job|get job alerts|see who you know|وظائف مشابهة|وظائف ذات صلة|وظائف قد تعجبك|شارك هذه الوظيفة|تنبيهات الوظائف)$/i;
+// Footer CTAs whose remainder varies (company name, referral multiplier, job
+// category) — prefix-matched rather than folded into the exact-line patterns
+// above. Once one of these lines appears, everything from it onward is the
+// LinkedIn "grow your network" footer, not job content.
+const TRAILING_BOILERPLATE_PREFIX_PATTERN = /^(referrals increase your chances of interviewing at|get notified about new)\b/i;
 const HTML_TAG_PATTERN = /<\/?([a-z][\w:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi;
 const HTML_ATTRIBUTE_PATTERN = /(?:^|\s)([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
@@ -287,10 +292,17 @@ function cleanExtractedJobText(text: string): string {
   }
 
   const cleaned = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-  const halfway = cleaned.length / 2;
+  // Cut at the first footer/boilerplate line once enough real content precedes
+  // it. A halfway-of-total-length gate missed short JDs whose footer starts
+  // early; MIN_HEURISTIC_CHARS is the same "this is real content" bar used
+  // elsewhere in this file.
   let offset = 0;
   for (const line of cleaned.split('\n')) {
-    if (offset >= halfway && TRAILING_BOILERPLATE_PATTERN.test(line.trim())) {
+    const trimmedLine = line.trim();
+    if (
+      offset >= MIN_HEURISTIC_CHARS &&
+      (TRAILING_BOILERPLATE_PATTERN.test(trimmedLine) || TRAILING_BOILERPLATE_PREFIX_PATTERN.test(trimmedLine))
+    ) {
       return cleaned.slice(0, offset).trim();
     }
     offset += line.length + 1;

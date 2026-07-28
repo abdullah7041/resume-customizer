@@ -6,6 +6,7 @@
       "truthNote": "Watheq does not change your resume here. It only points out what may need proof, clarification, or verification.",
       "guestOnlySignIn": "Truth Check is only available after you sign in.",
       "run": "Run Truth Check",
+      "rerun": "Re-run Truth Check",
       "running": "Checking claims...",
       "freeNote": "Free for now.",
       "statusComplete": "Scan complete",

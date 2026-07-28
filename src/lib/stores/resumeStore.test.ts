@@ -37,6 +37,26 @@ describe('resumeStore', () => {
         expect(state.optimizationMetrics.categoryScores).toEqual({ hard_skills: { score: 10, max: 10, reasoning: 'test' } });
     });
 
+    it('should default optimizationOrigin to null and set it via setOptimizationOrigin', () => {
+        expect(useResumeStore.getState().optimizationOrigin).toBeNull();
+
+        useResumeStore.getState().setOptimizationOrigin('guest_preview');
+        expect(useResumeStore.getState().optimizationOrigin).toBe('guest_preview');
+
+        useResumeStore.getState().setOptimizationOrigin('paid');
+        expect(useResumeStore.getState().optimizationOrigin).toBe('paid');
+    });
+
+    it('should clear optimizationOrigin on clearAll and resetForNewUpload', () => {
+        useResumeStore.getState().setOptimizationOrigin('guest_preview');
+        useResumeStore.getState().clearAll();
+        expect(useResumeStore.getState().optimizationOrigin).toBeNull();
+
+        useResumeStore.getState().setOptimizationOrigin('guest_preview');
+        useResumeStore.getState().resetForNewUpload();
+        expect(useResumeStore.getState().optimizationOrigin).toBeNull();
+    });
+
     it('should reset all fields correctly including gapAnalysis and hasDownloaded', () => {
         useResumeStore.getState().setOptimizationMetrics({
             gapAnalysis: [{

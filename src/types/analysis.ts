@@ -74,6 +74,12 @@ export interface MatchResult {
     role_level?: string;
     focus_areas?: string[];
   };
+  /**
+   * Set client-side (not returned by the API) right after the request: 'guest_preview'
+   * when this result came from the free/guest preview path (no credits charged),
+   * 'paid' otherwise. A subsequent paid re-run over the same job overwrites it.
+   */
+  origin?: 'guest_preview' | 'paid';
 }
 
 export interface StoredMatchAnalysis {

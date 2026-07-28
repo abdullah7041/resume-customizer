@@ -38,6 +38,7 @@ import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
 import type { AtsExplainabilitySource } from '@/types/explainability';
 import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
 import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
+import { computeOptimizationOutlook, type OptimizationOutlookBand } from '@/lib/match/optimizationOutlook';
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -95,6 +96,21 @@ const getRealityCheckVariant = (riskTier: StrategicRealityCheck['riskTier']) => 
     badge: 'bg-red-600/15 text-red-800 dark:text-red-200 border-red-600/30',
     role: 'alert' as const,
   };
+};
+
+const OUTLOOK_STYLES: Record<OptimizationOutlookBand, { container: string; badge: string }> = {
+  high_potential: {
+    container: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100',
+    badge: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200 border-emerald-500/20',
+  },
+  worth_it_with_gaps: {
+    container: 'border-amber-500/25 bg-amber-500/10 text-amber-950 dark:text-amber-100',
+    badge: 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25',
+  },
+  low_ceiling: {
+    container: 'border-rose-500/25 bg-rose-500/10 text-rose-950 dark:text-rose-100',
+    badge: 'bg-rose-500/15 text-rose-800 dark:text-rose-200 border-rose-500/25',
+  },
 };
 
 interface Toast {
@@ -418,6 +434,7 @@ export function MatchSection({
   const found = matchAnalysis?.topHits ?? matchAnalysis?.matchedKeywords ?? [];
   const realityCheck = matchAnalysis?.strategicRealityCheck ?? null;
   const realityVariant = realityCheck ? getRealityCheckVariant(realityCheck.riskTier) : null;
+  const outlook = computeOptimizationOutlook(score, realityCheck);
   const summaryBullets = (matchAnalysis?.summary_bullets?.length
     ? matchAnalysis.summary_bullets
     : splitReasoningIntoBullets(matchAnalysis?.reasoning)
@@ -566,7 +583,16 @@ export function MatchSection({
               <label htmlFor="jobUrl" className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
                 <Link2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 {t('sections.match.urlImport.label', 'Or paste a job link (LinkedIn, career pages)')}
+                <span className="rounded-full border border-amber-500/25 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-amber-800 dark:text-amber-200">
+                  {t('sections.match.urlImport.betaBadge', 'Beta')}
+                </span>
               </label>
+              <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                {t(
+                  'sections.match.urlImport.betaHint',
+                  'Import is in beta — review the imported text below before running the AI match.'
+                )}
+              </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   id="jobUrl"
@@ -740,6 +766,41 @@ export function MatchSection({
                 </div>
               </div>
             </section>
+
+            {outlook && (
+              <div
+                className={cn('rounded-2xl border p-4', OUTLOOK_STYLES[outlook.band].container)}
+                role={outlook.band === 'low_ceiling' ? 'alert' : 'status'}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    {outlook.band === 'high_potential' && <Sparkles className="h-5 w-5" />}
+                    {outlook.band === 'worth_it_with_gaps' && <AlertCircle className="h-5 w-5" />}
+                    {outlook.band === 'low_ceiling' && <ShieldAlert className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold uppercase tracking-wide">
+                        {t('sections.match.results.outlook.title', 'Optimization outlook')}
+                      </span>
+                      <span className={cn('rounded-full border px-2 py-0.5 text-[11px] font-bold uppercase', OUTLOOK_STYLES[outlook.band].badge)}>
+                        {t(`sections.match.results.outlook.badge.${outlook.band}`, outlook.band)}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-sm leading-relaxed">
+                      {t(`sections.match.results.outlook.${outlook.band}`)}
+                    </p>
+                    {/* Blocker titles are already surfaced via the gap chips above — this
+                        card explains the "why" without repeating the same text twice. */}
+                    {outlook.band === 'low_ceiling' && (
+                      <p className="mt-2 text-xs font-semibold opacity-90">
+                        {t('sections.match.results.outlook.spendWarning', { cost: FEATURE_COSTS.optimize })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {scoreBreakdownOpen && (
               <GlassCard>

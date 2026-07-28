@@ -337,6 +337,16 @@ export interface ResumeState {
   hasDownloaded: boolean;
   contentLanguage: ContentLanguage;
 
+  /**
+   * Provenance of the current `optimizations` set: 'guest_preview' when the
+   * last optimize run that produced them used the free/guest preview path
+   * (no credits charged), 'paid' once a credit-charged run has produced them,
+   * null before any optimize has run. Gates export/pipeline-save so guest
+   * preview value can't be realized for free after signing in — see
+   * TemplatesSection's export handlers.
+   */
+  optimizationOrigin: 'guest_preview' | 'paid' | null;
+
   // Actions
   setOriginalResume: (resume: ResumeSchema) => void;
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
@@ -345,6 +355,7 @@ export interface ResumeState {
   refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string }) => void;
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
+  setOptimizationOrigin: (origin: 'guest_preview' | 'paid' | null) => void;
   applyAllOptimizations: () => void;
   revertAllOptimizations: () => void;
   toggleShowOptimized: () => void;

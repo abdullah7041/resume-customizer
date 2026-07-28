@@ -24,7 +24,7 @@ interface TruthCheckSectionProps {
   result: ResumeTruthCheckResult | null;
   isAnalyzing: boolean;
   isGuestMode?: boolean;
-  onAnalyze: () => Promise<ResumeTruthCheckResult | null> | ResumeTruthCheckResult | null | void;
+  onAnalyze: (options?: { force?: boolean }) => Promise<ResumeTruthCheckResult | null> | ResumeTruthCheckResult | null | void;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
   onToast?: (toast: Toast) => void;
@@ -127,7 +127,7 @@ export function TruthCheckSection({
       return;
     }
 
-    await onAnalyze();
+    await onAnalyze({ force: true });
   };
 
   const handleShowAll = () => {
@@ -276,7 +276,9 @@ export function TruthCheckSection({
             <ShieldCheck className={cn('h-4 w-4 me-2', isAnalyzing && 'animate-pulse')} />
             {isAnalyzing
               ? t('sections.truthCheck.running', 'Checking claims...')
-              : t('sections.truthCheck.run', 'Run Truth Check')}
+              : result
+                ? t('sections.truthCheck.rerun', 'Re-run Truth Check')
+                : t('sections.truthCheck.run', 'Run Truth Check')}
           </GlassButton>
         </div>
 

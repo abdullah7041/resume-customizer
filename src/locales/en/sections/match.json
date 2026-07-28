@@ -36,6 +36,18 @@
         },
         "calculation": {
           "title": "How is this calculated?"
+        },
+        "outlook": {
+          "title": "Optimization outlook",
+          "badge": {
+            "high_potential": "High potential",
+            "worth_it_with_gaps": "Worth it, with gaps",
+            "low_ceiling": "Low ceiling"
+          },
+          "high_potential": "Optimizing is likely to close most of what's missing — you have a strong foundation for this role.",
+          "worth_it_with_gaps": "Optimizing will help, but some gaps will remain that a rewrite alone can't fix.",
+          "low_ceiling": "Optimizing will improve your wording, but is unlikely to make you competitive for this role given the gaps below.",
+          "spendWarning": "Optimizing costs {{cost}} credits — review the blockers below before spending them."
         }
       },
       "details": {
@@ -119,6 +131,8 @@
       },
       "urlImport": {
         "label": "Or paste a job link (LinkedIn, career pages)",
+        "betaBadge": "Beta",
+        "betaHint": "Import is in beta — review the imported text below before running the AI match.",
         "placeholder": "https://www.linkedin.com/jobs/view/...",
         "import": "Import",
         "importing": "Importing...",

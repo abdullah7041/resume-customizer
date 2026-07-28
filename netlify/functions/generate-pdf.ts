@@ -146,6 +146,36 @@ export async function hardenPageForRender(page: SandboxablePage): Promise<void> 
   await page.setJavaScriptEnabled(false);
 }
 
+const DEFAULT_PAGE_MARGIN_MM = 19.05; // 0.75in — matches the client fallback default.
+const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom):\s*([\d.]+)(in|mm|px)/g;
+
+/**
+ * Reads the `--margin-top`/`--margin-bottom` CSS custom properties that
+ * TemplateRenderer sets on the `[data-resume-preview]` wrapper (serialized
+ * verbatim into the incoming HTML string's `style` attribute) and converts
+ * them to millimeters for the `@page` rule.
+ *
+ * This is done as plain string parsing rather than `page.evaluate()` because
+ * the page has JavaScript execution disabled (`hardenPageForRender`, a
+ * deliberate SSRF/XSS guard against attacker-controlled resume HTML) —
+ * `page.evaluate()` calls fail once `setJavaScriptEnabled(false)` has run.
+ */
+export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: number } {
+  const values: { top?: number; bottom?: number } = {};
+  for (const match of html.matchAll(MARGIN_CUSTOM_PROPERTY_PATTERN)) {
+    const [, side, amountStr, unit] = match;
+    const amount = Number.parseFloat(amountStr);
+    if (!Number.isFinite(amount)) continue;
+    const mm = unit === 'in' ? amount * 25.4 : unit === 'px' ? amount * (25.4 / 96) : amount;
+    if (side === 'top' && values.top === undefined) values.top = mm;
+    if (side === 'bottom' && values.bottom === undefined) values.bottom = mm;
+  }
+  return {
+    topMm: values.top ?? DEFAULT_PAGE_MARGIN_MM,
+    bottomMm: values.bottom ?? DEFAULT_PAGE_MARGIN_MM,
+  };
+}
+
 function sanitizeFilename(value: unknown): string {
   if (typeof value !== "string") return "resume-optimized";
 
@@ -220,6 +250,12 @@ const baseHandler: Handler = async (event) => {
 
     await hardenPageForRender(page);
 
+    // Read the user's margin settings from the incoming HTML string itself
+    // (plain string parsing, not page.evaluate() — the page has JavaScript
+    // execution disabled by hardenPageForRender above, so any evaluate() call
+    // here would throw and fail the whole request).
+    const { topMm, bottomMm } = extractPageMarginsMm(html);
+
     // Render the final HTML string with embedded styles. setContent and the
     // explicit network-idle wait share one deadline so this migration from
     // waitUntil: "networkidle2" does not double the render budget.
@@ -250,19 +286,24 @@ const baseHandler: Handler = async (event) => {
 
             /* Hide elements marked as non-printable (page break indicators, etc.) */
             [data-no-print] { display: none !important; }
-            
+
             /* Ensure exact color rendering in print mode */
-            * { 
-              -webkit-print-color-adjust: exact !important; 
-              print-color-adjust: exact !important; 
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
 
             /* Prevent section headers from orphaning at the bottom of a page.
                Works in both screen and print rendering modes. */
             h2 { break-after: avoid; }
-            
-            /* Remove template root padding to prevent double-padding on page 1 */
-            [data-resume-preview] > div { padding-top: 0 !important; }
+
+            /* Remove template root padding to prevent double-padding on page 1 —
+               the @page rule below is the sole source of page margins. */
+            [data-resume-preview] > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+
+            /* Overrides index.css's @page { margin: 0 } print reset with the
+               user's configured margins. */
+            @page { margin: ${topMm}mm 0 ${bottomMm}mm 0 !important; }
 
           </style>
         </head>
@@ -277,28 +318,6 @@ const baseHandler: Handler = async (event) => {
 
     // Use print media so screen-only components are hidden natively.
     await page.emulateMediaType('print');
-
-    // Dynamically extract the template's user-defined margin settings and
-    // forward them to Puppeteer's native `@page` CSS, while stripping the root
-    // padding to prevent double-margins on the first page.
-    await page.evaluate(`(() => {
-      const templateRoot = document.querySelector('[data-resume-preview] > div');
-      if (templateRoot) {
-        // Extract dynamically generated margins (e.g. "12.7mm")
-        const pt = templateRoot.style.paddingTop || '19.05mm';
-        const pb = templateRoot.style.paddingBottom || '19.05mm';
-        
-        // Strip padding from the DOM so it doesn't double-apply on page 1
-        templateRoot.style.paddingTop = '0';
-        templateRoot.style.paddingBottom = '0';
-        
-        // Inject an override for index.css's @page { margin: 0 } print reset.
-        // Puppeteer leverages this over its local marginal configurations.
-        const style = document.createElement('style');
-        style.innerHTML = '@page { margin: ' + pt + ' 0 ' + pb + ' 0 !important; }';
-        document.head.appendChild(style);
-      }
-    })()`);
 
     // Wait for fonts to ensure perfect rendering
     try {
@@ -336,7 +355,9 @@ const baseHandler: Handler = async (event) => {
         // The displayHeaderFooter property ensures no browser URL headers are printed
         // in combination with standard @page margins.
         displayHeaderFooter: false,
-        margin: { top: '10mm', bottom: '10mm', left: '0', right: '0' },
+        // No `margin` option here — the injected `@page` rule in setContent()
+        // above is the sole source of page margins. Passing both fights the
+        // Puppeteer's own margin resolution.
       }),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`PDF generation timed out after ${PDF_TIMEOUT_MS / 1000}s`)), PDF_TIMEOUT_MS)

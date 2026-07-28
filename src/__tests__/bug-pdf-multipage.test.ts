@@ -35,15 +35,22 @@ describe('Multi-page PDF pagination bugs (revised root cause)', () => {
     ).not.toContain("emulateMediaType('screen')");
   });
 
-  it('BUG 1 (corollary): page.pdf() must have a non-zero top margin so page 2+ have breathing room', () => {
-    // Puppeteer's margin option repeats on every page (including page 2+).
-    // With top: 0, page 2 content starts flush at the very top — no breathing room.
-    // The template's own paddingTop is a CSS property on the root div; it does NOT repeat per page.
-    const nonZeroTopMargin = /margin:\s*\{[^}]*?top:\s*'[^']+'/;
+  it('BUG 1 (corollary): the injected @page rule must set a non-zero top margin so page 2+ have breathing room', () => {
+    // The @page CSS rule (not a page.pdf() margin option — see the blank-PDF fix)
+    // repeats on every page, including page 2+. A zero top margin leaves page 2
+    // content flush at the very top with no breathing room. The template's own
+    // paddingTop is a CSS property on the root div; it does NOT repeat per page.
+    const nonZeroPageTopMargin = /@page\s*\{\s*margin:\s*\$\{topMm\}mm/;
     expect(
       pdfFn,
-      "page.pdf() must set a non-zero top margin string (e.g. '10mm') so every page has top breathing room"
-    ).toMatch(nonZeroTopMargin);
+      'generate-pdf.ts must inject an @page rule with a non-zero top margin (topMm) so every page has top breathing room'
+    ).toMatch(nonZeroPageTopMargin);
+
+    // page.pdf() must NOT also pass a margin option — that would fight the @page rule.
+    expect(
+      pdfFn,
+      'page.pdf() must not pass its own margin option — the injected @page rule is the sole margin source'
+    ).not.toMatch(/page\.pdf\(\{[^)]*margin:\s*\{/s);
   });
 
   it('BUG 1 (page 1 padding): server CSS must zero template paddingTop to avoid double-padding on page 1', () => {

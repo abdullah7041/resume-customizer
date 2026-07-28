@@ -199,6 +199,52 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result?.jobText).not.toContain('Another Company');
   });
 
+  it('strips the LinkedIn referral/network footer while keeping the seniority/employment criteria block', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>You will mentor engineers and improve delivery practices across the organization.</p>
+        <h3>Seniority level</h3>
+        <p>Mid-Senior level</p>
+        <h3>Employment type</h3>
+        <p>Full-time</p>
+        <h3>Job function</h3>
+        <p>Consulting, Information Technology, and Strategy/Planning</p>
+        <h3>Industries</h3>
+        <p>IT Services and IT Consulting and Business Consulting and Services</p>
+        <p>Referrals increase your chances of interviewing at QuantumBlack, AI by McKinsey by 2x</p>
+        <p>See who you know</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('mentor engineers');
+    expect(result?.jobText).toContain('Seniority level');
+    expect(result?.jobText).toContain('Mid-Senior level');
+    expect(result?.jobText).toContain('Employment type');
+    expect(result?.jobText).toContain('Full-time');
+    expect(result?.jobText).toContain('Job function');
+    expect(result?.jobText).toContain('Industries');
+    expect(result?.jobText).not.toMatch(/referrals increase your chances/i);
+    expect(result?.jobText).not.toMatch(/see who you know/i);
+  });
+
+  it('strips a "Get notified about new ... jobs" footer CTA regardless of the trailing job category', () => {
+    const page = `
+      <main>
+        ${LONG_DESCRIPTION_HTML}
+        <p>You will mentor engineers and improve delivery practices across the organization.</p>
+        <p>Get notified about new Software Engineer jobs in Riyadh, Saudi Arabia.</p>
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).toContain('mentor engineers');
+    expect(result?.jobText).not.toMatch(/get notified about new/i);
+  });
+
   it('uses the whole cleaned region when no description container is qualified', () => {
     const page = `
       <main>

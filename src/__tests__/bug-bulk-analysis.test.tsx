@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { vi, beforeEach, describe, it, expect } from 'vitest';
+import { vi, beforeEach, afterEach, describe, it, expect } from 'vitest';
 
 // Mock supabase
 vi.mock('../services/supabase', () => ({
@@ -98,6 +98,7 @@ vi.mock('../lib/auth/authHeaders', () => ({
 }));
 
 import { BulkAnalysisSection } from '../components/sections/BulkAnalysisSection';
+import { useResumeStore } from '../lib/stores/resumeStore';
 
 describe('BulkAnalysisSection', () => {
   beforeEach(() => {
@@ -281,6 +282,77 @@ describe('BulkAnalysisSection', () => {
       // Sequential processing should never have more than 1 active call at a time
       // (parseResume + fetch are interleaved for one resume before the next starts)
       expect(maxConcurrentCalls).toBeLessThanOrEqual(1);
+    });
+  });
+
+  describe('Use my uploaded resume', () => {
+    afterEach(() => {
+      useResumeStore.setState({ parsedResumeText: null, originalResume: null });
+    });
+
+    it('is hidden when no resume has been parsed yet', () => {
+      render(<BulkAnalysisSection jobDescription="Looking for Python engineer" />);
+      expect(screen.queryByText('Use my uploaded resume')).not.toBeInTheDocument();
+    });
+
+    it('seeds the list from the already-parsed resume without re-parsing, and skips straight to analysis', async () => {
+      useResumeStore.setState({
+        parsedResumeText: 'Sara Al-Otaibi — Product Manager with 5 years experience',
+        originalResume: { basics: { name: 'Sara Al-Otaibi' } } as never,
+      });
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          score: 60,
+          coverage: 0.6,
+          strongMatches: ['Product'],
+          missingKeywords: [],
+          creditsRemaining: 94,
+        }),
+      });
+
+      render(<BulkAnalysisSection jobDescription="Looking for a Product Manager" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Use my uploaded resume'));
+      });
+
+      await waitFor(() => {
+        const confirmButton = screen.queryByText(/confirm/i) || screen.queryByRole('button', { name: /confirm/i });
+        if (confirmButton) fireEvent.click(confirmButton);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Ready')).toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      // parseResume must never be called for the seeded entry — its text was
+      // already known, so parsing (which is free anyway) is skipped entirely.
+      expect(mockParseResume).not.toHaveBeenCalled();
+      expect(screen.getAllByText(/Sara Al-Otaibi/).length).toBeGreaterThan(0);
+    });
+
+    it('hides itself once the uploaded resume is already in the list', async () => {
+      useResumeStore.setState({
+        parsedResumeText: 'Sara Al-Otaibi — Product Manager with 5 years experience',
+        originalResume: { basics: { name: 'Sara Al-Otaibi' } } as never,
+      });
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ score: 60, coverage: 0.6, strongMatches: [], missingKeywords: [], creditsRemaining: 94 }),
+      });
+
+      render(<BulkAnalysisSection jobDescription="Looking for a Product Manager" />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Use my uploaded resume'));
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('Use my uploaded resume')).not.toBeInTheDocument();
+      });
     });
   });
 });
