@@ -36,6 +36,10 @@ vi.mock('@upstash/ratelimit', () => {
         success: nextCount <= this.config.limiter.maxRequests,
       };
     }
+
+    async resetUsedTokens(identifier: string) {
+      limitCounts.delete(identifier);
+    }
   }
 
   return { Ratelimit: MockRatelimit };
@@ -193,5 +197,74 @@ describe('checkGuestPreviewRateLimit', () => {
     const result = await checkGuestPreviewRateLimit(buildEvent());
     expect(result.allowed).toBe(false);
     expect(result.response?.statusCode).toBe(503);
+  });
+});
+
+describe('tryConsumeFreeAllowance', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    limitCounts.clear();
+    constructedLimiters.length = 0;
+  });
+
+  it('grants the allowance once per key, then denies on the second attempt (one-shot per user+job)', async () => {
+    setProductionUpstashEnv();
+
+    const { tryConsumeFreeAllowance } = await loadRateLimiter();
+    const key = 'user-1:jd-hash-a';
+
+    expect(await tryConsumeFreeAllowance('applied-verify-free', key)).toBe(true);
+    expect(await tryConsumeFreeAllowance('applied-verify-free', key)).toBe(false);
+  });
+
+  it('grants independently per key (different job hash for the same user)', async () => {
+    setProductionUpstashEnv();
+
+    const { tryConsumeFreeAllowance } = await loadRateLimiter();
+
+    expect(await tryConsumeFreeAllowance('applied-verify-free', 'user-1:jd-hash-a')).toBe(true);
+    expect(await tryConsumeFreeAllowance('applied-verify-free', 'user-1:jd-hash-b')).toBe(true);
+  });
+
+  it('fails closed (charges normally) when Upstash is not configured', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.NETLIFY_DEV;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    const { tryConsumeFreeAllowance } = await loadRateLimiter();
+    expect(await tryConsumeFreeAllowance('applied-verify-free', 'user-1:jd-hash-a')).toBe(false);
+  });
+
+  it('fails closed in development too when Upstash is not configured — unlike the rate-limit helpers, a bypass here means "free" not "unblocked"', async () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.NETLIFY_DEV;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+    const { tryConsumeFreeAllowance } = await loadRateLimiter();
+    expect(await tryConsumeFreeAllowance('applied-verify-free', 'user-1:jd-hash-a')).toBe(false);
+  });
+});
+
+describe('releaseFreeAllowance', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    limitCounts.clear();
+    constructedLimiters.length = 0;
+  });
+
+  it('gives back a consumed allowance so the next attempt is granted again', async () => {
+    setProductionUpstashEnv();
+
+    const { tryConsumeFreeAllowance, releaseFreeAllowance } = await loadRateLimiter();
+    const key = 'user-1:jd-hash-a';
+
+    expect(await tryConsumeFreeAllowance('applied-verify-free', key)).toBe(true);
+    expect(await tryConsumeFreeAllowance('applied-verify-free', key)).toBe(false);
+
+    await releaseFreeAllowance('applied-verify-free', key);
+
+    expect(await tryConsumeFreeAllowance('applied-verify-free', key)).toBe(true);
   });
 });

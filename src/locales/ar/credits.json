@@ -12,8 +12,10 @@
     "confirm": {
       "title": "تأكيد العملية",
       "message": "سيتم استخدام {{cost}} رصيد.",
+      "freeMessage": "أول إعادة فحص لهذه الوظيفة مجانية.",
       "current": "الرصيد الحالي: {{remaining}} / {{total}}",
       "continue": "متابعة ({{cost}} رصيد)",
+      "continueFree": "متابعة (مجانًا)",
       "insufficient": "الرصيد غير كافٍ. تحتاج {{required}} والمتاح {{available}}."
     },
     "usage": {

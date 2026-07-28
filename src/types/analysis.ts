@@ -80,6 +80,9 @@ export interface MatchResult {
    * 'paid' otherwise. A subsequent paid re-run over the same job overwrites it.
    */
   origin?: 'guest_preview' | 'paid';
+  /** True when this request consumed the one-shot "first applied-subset
+   * re-score per job" free allowance (see ai-match.ts) instead of charging. */
+  freeVerify?: boolean;
 }
 
 export interface StoredMatchAnalysis {

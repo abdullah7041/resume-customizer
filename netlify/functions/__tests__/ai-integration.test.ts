@@ -11,7 +11,12 @@ const mockGeminiClient = {
 };
 
 const mockRateLimiter = {
-    withRateLimit: (_name: string, handler: Function) => handler
+    withRateLimit: (_name: string, handler: Function) => handler,
+    checkFreePreviewRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+    // No Upstash in tests — mirrors the real fail-closed behavior (no free
+    // allowance granted, so verify mode still checks/consumes credits).
+    tryConsumeFreeAllowance: vi.fn().mockResolvedValue(false),
+    releaseFreeAllowance: vi.fn().mockResolvedValue(undefined),
 };
 
 const mockSentry = {
@@ -305,6 +310,77 @@ describe('AI Integration Functions', () => {
                 expect.objectContaining({ emailVerified: true })
             );
             expect(mockCreditManager.consumeCredits).toHaveBeenCalledWith('user@example.com', 'ai_match');
+        });
+
+        it('skips credit checks entirely when the free applied-subset verify allowance is granted', async () => {
+            mockRateLimiter.tryConsumeFreeAllowance.mockResolvedValueOnce(true);
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 84,
+                strongMatches: ['typescript'],
+                missingKeywords: [],
+                reasoning: 'Verified score',
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'optimized resume', jobText: 'job', mode: 'verify', verifyKind: 'applied_subset' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+            expect(result.statusCode).toBe(200);
+            const body = JSON.parse(result.body);
+            expect(body.score).toBe(84);
+            expect(body.freeVerify).toBe(true);
+            expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+            expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+        });
+
+        it('does not grant the free allowance for the automatic post-optimize verify (no verifyKind)', async () => {
+            mockRateLimiter.tryConsumeFreeAllowance.mockResolvedValueOnce(true);
+            mockGeminiClient.processMatchOnly.mockResolvedValue({
+                score: 84,
+                strongMatches: ['typescript'],
+                missingKeywords: [],
+                reasoning: 'Verified score',
+            });
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                // No verifyKind — this is what the automatic post-optimize verify
+                // sends. Even though the (misconfigured, for this test) mock would
+                // grant a free allowance, the handler must never consult it here.
+                body: JSON.stringify({ resumeText: 'optimized resume', jobText: 'job', mode: 'verify' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+            expect(result.statusCode).toBe(200);
+            expect(mockRateLimiter.tryConsumeFreeAllowance).not.toHaveBeenCalled();
+            expect(mockCreditManager.checkCredits).toHaveBeenCalled();
+            expect(mockCreditManager.consumeCredits).toHaveBeenCalledWith('user@example.com', 'ai_match');
+        });
+
+        it('releases the free allowance back when the AI call fails, instead of burning it on a dud request', async () => {
+            mockRateLimiter.tryConsumeFreeAllowance.mockResolvedValueOnce(true);
+            mockGeminiClient.processMatchOnly.mockRejectedValue(new Error('provider outage'));
+
+            const event = {
+                httpMethod: 'POST',
+                headers: { 'Authorization': 'Bearer test-token' },
+                body: JSON.stringify({ resumeText: 'optimized resume', jobText: 'job', mode: 'verify', verifyKind: 'applied_subset' })
+            } as Partial<HandlerEvent>;
+
+            const result = await aiMatchHandler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+
+            expect(result.statusCode).toBe(500);
+            expect(mockRateLimiter.releaseFreeAllowance).toHaveBeenCalledWith(
+                'applied-verify-free',
+                expect.stringContaining('test-user-123:')
+            );
+            expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
         });
 
         it('returns a retryable user-facing timeout response', async () => {

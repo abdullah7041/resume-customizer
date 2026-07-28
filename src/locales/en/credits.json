@@ -12,8 +12,10 @@
     "confirm": {
       "title": "Confirm Action",
       "message": "This will use {{cost}} credits.",
+      "freeMessage": "Your first re-check for this job is free.",
       "current": "Current balance: {{remaining}} / {{total}}",
       "continue": "Continue ({{cost}} credits)",
+      "continueFree": "Continue (free)",
       "insufficient": "Insufficient credits. You need {{required}} but have {{available}}."
     },
     "usage": {

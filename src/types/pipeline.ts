@@ -8,6 +8,17 @@ export type JobApplicationStatus =
   | 'rejected'
   | 'withdrawn';
 
+/** LinkedIn's "Seniority level / Employment type / Job function / Industries"
+ * sidebar, parsed verbatim server-side (netlify/lib/job-page-extract.ts) from
+ * a page import. Verbatim values win over the AI-inferred equivalents in
+ * ExtractedJobMetadata since they came directly off the page. */
+export interface ExtractedJobCriteria {
+  seniority: string | null;
+  employmentType: string | null;
+  jobFunction: string | null;
+  industries: string | null;
+}
+
 export interface ExtractedJobMetadata {
   companyName: string | null;
   jobTitle: string | null;

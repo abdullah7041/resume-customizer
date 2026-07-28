@@ -475,12 +475,17 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
     try {
       const freePreview = !!options.freePreview;
       const mode = options.mode === 'verify' ? 'verify' : undefined;
+      // Distinguishes the user-initiated applied-subset re-check (eligible for
+      // the one-shot free allowance) from the automatic post-optimize verify
+      // (always billed normally) — both send mode:'verify' but only the
+      // former should ever consume the free grant.
+      const verifyKind = options.verifyKind === 'applied_subset' ? 'applied_subset' : undefined;
       const headers = await getAuthHeaders({ requireAuth: !freePreview });
 
       const response = await fetch(MATCH_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}), ...(mode ? { mode } : {}) }),
+        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}), ...(mode ? { mode } : {}), ...(verifyKind ? { verifyKind } : {}) }),
       });
 
       const data = await handleResponse(response);

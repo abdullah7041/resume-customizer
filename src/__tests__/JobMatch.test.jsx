@@ -405,7 +405,7 @@ describe('JobMatch', () => {
     await waitFor(() => {
       expect(onAnalyzeMatchAI).toHaveBeenCalledWith(
         'Senior product manager role with roadmap ownership and stakeholder leadership.',
-        { freePreview: true },
+        { freePreview: true, importedCriteria: null },
       );
     });
     expect(screen.queryByText('Sign in to run AI analysis and save your progress.')).not.toBeInTheDocument();

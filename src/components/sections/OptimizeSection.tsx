@@ -28,7 +28,7 @@ import type { AtsExplainabilitySource } from '../../types/explainability';
 import { LoadingMessages } from '../LoadingMessages';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { getCompatibleStorageItem } from '../../lib/utils/storage-migration';
+import { getCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { getActionability, isActionable, partitionOptimizations } from '@/lib/optimize/actionability';
 import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { resolveAppliedSubsetVerification } from '@/lib/optimize/appliedSubsetVerification';
@@ -45,6 +45,24 @@ import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsC
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
+
+// FNV-1a — fast, works with Arabic, only needs to be a stable local key (the
+// server enforces the actual one-shot allowance; this just drives UI copy).
+const hashJobDescription = (jobDescription: string): string => {
+  let hash = 2166136261;
+  for (let i = 0; i < jobDescription.length; i += 1) {
+    hash ^= jobDescription.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
+
+/** Local best-effort mirror of the server's one-shot free-verify allowance,
+ * used only to decide the confirm modal's copy ("free" vs "2 credits") before
+ * the request is made — the server is the actual source of truth and enforces
+ * billing regardless of what this reads. */
+const freeVerifyUsedKey = (jobDescription: string): string =>
+  `watheq:freeVerifyUsed:${hashJobDescription(jobDescription.trim())}`;
 
 // Default match score when no analysis is available (represents neutral/baseline match)
 const DEFAULT_FALLBACK_SCORE = 55;
@@ -258,6 +276,7 @@ export function OptimizeSection({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showAppliedVerifyConfirm, setShowAppliedVerifyConfirm] = useState(false);
+  const [appliedVerifyIsFree, setAppliedVerifyIsFree] = useState(true);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
   const [verifyAnomaly, setVerifyAnomaly] = useState<VerifyAnomalyState | null>(null);
@@ -636,6 +655,11 @@ export function OptimizeSection({
       });
 
       if (outcome.status === 'verified') {
+        if (outcome.source === 'network' && typeof window !== 'undefined') {
+          // The one-shot allowance has now been attempted for this job either
+          // way (granted or already used) — the next re-score will be billed.
+          setCompatibleStorageItem(freeVerifyUsedKey(jobDescription), '1');
+        }
         setOptimizationMetrics({
           verifiedApplied: {
             score: outcome.score,
@@ -712,7 +736,12 @@ export function OptimizeSection({
     ? 'guest'
     : appliedVerifyState;
 
-  const requestAppliedVerification = () => setShowAppliedVerifyConfirm(true);
+  const requestAppliedVerification = () => {
+    const alreadyUsed = typeof window !== 'undefined'
+      && Boolean(getCompatibleStorageItem(freeVerifyUsedKey(jobDescriptionForVerify)));
+    setAppliedVerifyIsFree(!alreadyUsed);
+    setShowAppliedVerifyConfirm(true);
+  };
 
   const confirmAppliedVerification = async () => {
     setShowAppliedVerifyConfirm(false);
@@ -1506,6 +1535,7 @@ export function OptimizeSection({
         onConfirm={confirmAppliedVerification}
         feature="ai_match"
         isLoading={appliedVerifyState === 'pending'}
+        isFree={appliedVerifyIsFree}
       />
     </div >
   );

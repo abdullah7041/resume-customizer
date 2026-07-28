@@ -143,6 +143,11 @@ const forceLightThemeForPdf = (root: HTMLElement) => {
   root.style.color = '#111827';
 };
 
+// html-to-image's createImage() awaits a requestAnimationFrame callback that
+// browsers suspend indefinitely once the tab is backgrounded/hidden — with
+// no rejection of its own, that would otherwise hang "Generating..." forever.
+const CLIENT_FALLBACK_TIMEOUT_MS = 20_000;
+
 /**
  * The client-side raster fallback (html-to-image + jsPDF) has historically
  * produced a blank canvas for an off-screen-positioned clone on some
@@ -259,6 +264,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const exportFailureMessage = t(
     'sections.templates.export.failed',
     'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
+  );
+  const exportTimeoutMessage = t(
+    'sections.templates.export.timeout',
+    'Export is taking unusually long — bring this browser tab into focus (some browsers pause rendering work in background tabs) and try again.'
   );
 
   // Filter to only active templates (Modern, Classic, Technical)
@@ -564,14 +573,25 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
         let canvas: HTMLCanvasElement;
         try {
-          canvas = await toCanvas(fallbackClone, {
-            pixelRatio: 2,
-            cacheBust: true,
-            backgroundColor: '#ffffff',
-            style: {
-              transform: 'none',
-            },
-          });
+          // html-to-image's internal image-decode step waits on a
+          // requestAnimationFrame callback, which browsers suspend
+          // indefinitely for a backgrounded/hidden tab — with no rejection,
+          // that leaves this permanently stuck on "Generating..." with no
+          // error at all. A hard timeout turns that silent hang into a
+          // recoverable, distinctly-worded failure.
+          canvas = await Promise.race([
+            toCanvas(fallbackClone, {
+              pixelRatio: 2,
+              cacheBust: true,
+              backgroundColor: '#ffffff',
+              style: {
+                transform: 'none',
+              },
+            }),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('CLIENT_FALLBACK_TIMEOUT')), CLIENT_FALLBACK_TIMEOUT_MS)
+            ),
+          ]);
         } finally {
           document.body.removeChild(fallbackClone);
         }
@@ -682,8 +702,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       } catch (clientErr) {
         console.error('[PDFDownload] Client-side fallback also failed:', summarizeErrorForConsole(clientErr));
         const isBlankCanvas = clientErr instanceof Error && clientErr.message.includes('blank canvas');
-        analytics.trackExportFailed(selectedTemplate.id, 'pdf', isBlankCanvas ? 'fallback_blank' : 'client_fallback_error');
-        setExportError(exportFailureMessage);
+        const isTimeout = clientErr instanceof Error && clientErr.message === 'CLIENT_FALLBACK_TIMEOUT';
+        analytics.trackExportFailed(
+          selectedTemplate.id,
+          'pdf',
+          isTimeout ? 'fallback_timeout' : isBlankCanvas ? 'fallback_blank' : 'client_fallback_error'
+        );
+        setExportError(isTimeout ? exportTimeoutMessage : exportFailureMessage);
       }
     } finally {
       setIsDownloading(false);

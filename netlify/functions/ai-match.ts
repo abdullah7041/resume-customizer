@@ -1,6 +1,7 @@
 import { Handler } from '@netlify/functions';
+import { createHash } from "crypto";
 import { processMatchOnly } from "../lib/gemini-client.js";
-import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
+import { checkFreePreviewRateLimit, releaseFreeAllowance, tryConsumeFreeAllowance, withRateLimit } from "../lib/rate-limiter.js";
 import { MatchRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
@@ -27,6 +28,12 @@ const baseHandler: Handler = async (event) => {
     rawBody = {};
   }
   const freePreview = rawBody.freePreview === true;
+  const isVerifyMode = rawBody.mode === 'verify';
+  // Only the user-initiated applied-subset re-check is eligible for the free
+  // allowance below — the automatic post-optimize verify also sends
+  // mode:'verify' (same jobText) but must always bill normally, otherwise it
+  // silently spends the user's one free check before they ever see it.
+  const isAppliedSubsetVerify = isVerifyMode && rawBody.verifyKind === 'applied_subset';
 
   // Extract auth token from header
   const authHeader = event.headers.authorization || event.headers.Authorization;
@@ -77,8 +84,26 @@ const baseHandler: Handler = async (event) => {
     }
   }
 
+  // First applied-subset re-score per (user, job description) is free; later
+  // re-scores on the same job charge normally. `verifyKind` is client-supplied
+  // like any other request field, so this is a bound on exposure (at most one
+  // free ai_match per user+JD), not a spoof-proof gate — the Upstash one-shot
+  // allowance is what actually limits the cost of someone hand-crafting the
+  // request. Consumed BEFORE we know the AI call will succeed; if it doesn't,
+  // `freeVerifyKey` below is used to give the allowance back rather than
+  // burning it on a dud request.
+  let grantedFreeVerify = false;
+  let freeVerifyKey: string | null = null;
+  if (isAppliedSubsetVerify && userEmail && user?.id && typeof rawBody.jobText === 'string') {
+    // Normalized so a stray trailing space doesn't mint a fresh free grant.
+    const normalizedJobText = rawBody.jobText.trim().replace(/\s+/g, ' ');
+    const jdHash = createHash('sha256').update(normalizedJobText).digest('hex');
+    freeVerifyKey = `${user.id}:${jdHash}`;
+    grantedFreeVerify = await tryConsumeFreeAllowance('applied-verify-free', freeVerifyKey);
+  }
+
   // Check credits BEFORE processing (2 credits for ai_match)
-  const creditCheck = freePreview || !userEmail
+  const creditCheck = freePreview || !userEmail || grantedFreeVerify
     ? { hasCredits: true, required: 0, available: 0 }
     : await checkCredits(userEmail, 'ai_match', { ipAddress, emailVerified });
 
@@ -102,6 +127,9 @@ const baseHandler: Handler = async (event) => {
       const validationError = formatZodError(parseResult.error);
       console.error('[ai-match] Validation failed:', validationError);
       console.error('[ai-match] Received payload keys:', Object.keys(rawBody));
+      if (grantedFreeVerify && freeVerifyKey) {
+        await releaseFreeAllowance('applied-verify-free', freeVerifyKey);
+      }
       return {
         statusCode: 400,
         headers: { "Content-Type": "application/json" },
@@ -111,7 +139,7 @@ const baseHandler: Handler = async (event) => {
 
     const { resumeText, jobText, language, mode } = parseResult.data;
     if (mode === 'verify') {
-      console.log('[ai-match] verify mode requested; normal credit billing enforced');
+      console.log(`[ai-match] verify mode requested; freeVerifyGranted=${grantedFreeVerify}`);
     }
 
     // Use fast match-only function for quick scoring (~10-15 seconds)
@@ -151,7 +179,7 @@ const baseHandler: Handler = async (event) => {
     };
 
     // Consume credits AFTER successful match (BEFORE database writes to minimize latency)
-    const creditResult = freePreview || !userEmail
+    const creditResult = freePreview || !userEmail || grantedFreeVerify
       ? { creditsRemaining: null }
       : await consumeCredits(userEmail, 'ai_match');
 
@@ -185,12 +213,17 @@ const baseHandler: Handler = async (event) => {
         ...response,
         creditsRemaining: creditResult.creditsRemaining,
         freePreview,
+        freeVerify: grantedFreeVerify,
       }),
     };
 
   } catch (error) {
     const errorDetails = error as any;
     console.error("Match error details:", summarizeErrorForLog(error));
+
+    if (grantedFreeVerify && freeVerifyKey) {
+      await releaseFreeAllowance('applied-verify-free', freeVerifyKey);
+    }
 
     // Don't send timeout errors to Sentry (expected behavior under load)
     if (errorDetails?.name !== 'TimeoutError') {

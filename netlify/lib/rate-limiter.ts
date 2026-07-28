@@ -322,6 +322,11 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   "import-job-url": { maxRequests: 20 },
   "import-job-url-guest": { maxRequests: 10, windowMs: 24 * 60 * 60 * 1000 },
 
+  // One-shot "first applied-subset re-score is free" allowance, keyed per
+  // (user, job description) rather than per user-per-day — see
+  // tryConsumeFreeAllowance.
+  "applied-verify-free": { maxRequests: 1, windowMs: 24 * 60 * 60 * 1000 },
+
   // Feedback system - INCREASED from 5 to 10
 
   // Default for unlisted endpoints
@@ -695,6 +700,59 @@ export async function checkFreePreviewRateLimitForRequest(
         headers: PREVIEW_UNAVAILABLE_RESPONSE.headers as Record<string, string>,
       }),
     };
+  }
+}
+
+/**
+ * Consume a one-shot allowance (e.g. "first applied-subset re-score is
+ * free"). Unlike checkFreePreviewRateLimit, exhaustion here is not an error
+ * state — it just means "charge normally" — so this returns a plain boolean
+ * instead of a 429 response.
+ *
+ * Fails CLOSED unconditionally, including in development: if Upstash is
+ * unconfigured or the check errors, no allowance is granted (the caller
+ * charges as usual). Unlike the rate-limit helpers above — where a dev
+ * bypass just means "don't block" — a bypass here means "don't charge",
+ * which would defeat the very billing gate this function exists to enforce.
+ *
+ * The caller consumes this BEFORE knowing whether the paid work will
+ * succeed; if that work fails, call `releaseFreeAllowance` with the same
+ * arguments to give the allowance back rather than burning a user's one
+ * free check on a request that produced nothing.
+ */
+export async function tryConsumeFreeAllowance(endpoint: string, key: string): Promise<boolean> {
+  const config = ENDPOINT_RATE_LIMITS[endpoint];
+  if (!config) return false;
+  const limiter = getRateLimiter(config);
+  if (!limiter) {
+    console.warn(`[rate-limiter] Upstash not configured — no free allowance for ${endpoint}, charging normally`);
+    return false;
+  }
+
+  try {
+    const result = await limiter.limit(`${endpoint}:${key}`);
+    return result.success;
+  } catch (err) {
+    console.error(`[rate-limiter] ${endpoint} free-allowance check failed:`, summarizeErrorForLog(err));
+    return false;
+  }
+}
+
+/**
+ * Give back a one-shot allowance consumed by `tryConsumeFreeAllowance` when
+ * the work it gated turned out to fail — so a transient AI/provider error
+ * doesn't cost the user their one free check.
+ */
+export async function releaseFreeAllowance(endpoint: string, key: string): Promise<void> {
+  const config = ENDPOINT_RATE_LIMITS[endpoint];
+  if (!config) return;
+  const limiter = getRateLimiter(config);
+  if (!limiter) return;
+
+  try {
+    await limiter.resetUsedTokens(`${endpoint}:${key}`);
+  } catch (err) {
+    console.error(`[rate-limiter] ${endpoint} free-allowance release failed:`, summarizeErrorForLog(err));
   }
 }
 

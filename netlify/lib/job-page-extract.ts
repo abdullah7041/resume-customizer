@@ -16,12 +16,23 @@
  * bypassed.
  */
 
+export interface ExtractedJobCriteria {
+  seniority: string | null;
+  employmentType: string | null;
+  jobFunction: string | null;
+  industries: string | null;
+}
+
 export interface ExtractedJob {
   jobText: string;
   jobTitle: string | null;
   companyName: string | null;
   source: 'json-ld' | 'heuristic';
   confidence: 'high' | 'low';
+  /** LinkedIn's "Seniority level / Employment type / Job function / Industries"
+   * sidebar, parsed into fields and stripped from jobText. Null when the page
+   * carried no such block (most non-LinkedIn sources). */
+  criteria: ExtractedJobCriteria | null;
 }
 
 const MIN_JSONLD_DESCRIPTION_CHARS = 200;
@@ -36,7 +47,14 @@ const PAIRED_NOISE_TAGS = new Set([
 ]);
 // Bare "ad" is deliberately NOT matched — job boards class the posting itself
 // "job-ad"/"jobad"; only explicit ad compounds are treated as noise.
-const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|consent|gdpr|banner|share|apply[-_]?button|top[-_]?card[-_]?actions|sidebar|widget|promo|advert|adsense|ad[-_]?slot|ad[-_]?banner|sponsor|subscribe|newsletter|social|follow[-_]?us|job[-_]?alert|modal|popup|overlay|pagination|comments|toolbar|menu)/i;
+// "recruiter" is scoped to known chrome-container suffixes, not bare — a
+// recruitment-agency posting can legitimately class its JD container
+// "recruiter-job-description", and a bare match would strip the JD itself.
+const NOISE_CLASS_OR_ID_PATTERN = /\b(similar|related|recommend|also[-_]?viewed|footer|sign[-_]?in|login|join[-_]?now|nav|breadcrumb|cookie|consent|gdpr|banner|share|apply[-_]?button|top[-_]?card[-_]?actions|sidebar|widget|promo|advert|adsense|ad[-_]?slot|ad[-_]?banner|sponsor|subscribe|newsletter|social|follow[-_]?us|job[-_]?alert|modal|popup|overlay|pagination|comments|toolbar|menu|recruiter[-_]?(card|info|profile|contact|panel)|hiring[-_]?team|job[-_]?poster|message[-_]?the)/i;
+// Leading recruiter card ("Direct message the job poster from X / Name / Title")
+// that some LinkedIn layouts render as a plain div rather than <aside>, so the
+// PAIRED_NOISE_TAGS tag-based strip never catches it.
+const LEADING_JOB_POSTER_PATTERN = /^direct message the job poster\b/i;
 const DESCRIPTION_CLASS_OR_ID_PATTERN = /job[-_]?desc|description|show-more-less-html|posting/i;
 const STANDALONE_CTA_PATTERN = /^(sign in|sign up|join now|apply|apply now|easy apply|save|save job|share|share this job|email this job|print|report this job|show more|see more jobs|view all jobs|get notified|set alert|create (job )?alert|back to (results|search)|accept (all )?cookies|cookie settings|subscribe|see who you know|قدم الآن|تقديم|حفظ الوظيفة|مشاركة|سجل الدخول|انضم الآن|اشترك)$/i;
 const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommended for you|explore more|more jobs( like this)?|related jobs|jobs you may like|share this job|get job alerts|see who you know|وظائف مشابهة|وظائف ذات صلة|وظائف قد تعجبك|شارك هذه الوظيفة|تنبيهات الوظائف)$/i;
@@ -45,6 +63,12 @@ const TRAILING_BOILERPLATE_PATTERN = /^(similar jobs|people also viewed|recommen
 // above. Once one of these lines appears, everything from it onward is the
 // LinkedIn "grow your network" footer, not job content.
 const TRAILING_BOILERPLATE_PREFIX_PATTERN = /^(referrals increase your chances of interviewing at|get notified about new)\b/i;
+const CRITERIA_LABEL_PATTERNS: Record<keyof ExtractedJobCriteria, RegExp> = {
+  seniority: /^seniority level$/i,
+  employmentType: /^employment type$/i,
+  jobFunction: /^job function$/i,
+  industries: /^industries$/i,
+};
 const HTML_TAG_PATTERN = /<\/?([a-z][\w:-]*)\b(?:[^"'<>]|"[^"]*"|'[^']*')*>/gi;
 const HTML_ATTRIBUTE_PATTERN = /(?:^|\s)([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
@@ -272,11 +296,97 @@ function selectBestContentBlock(region: string, depth = 0): string {
   return best === null ? region : selectBestContentBlock(best, depth + 1);
 }
 
-function cleanExtractedJobText(text: string): string {
+// A recruiter card's name/title lines are short and don't read as prose —
+// unlike a JD sentence, which tends to be longer and end in punctuation.
+// Used to stop consuming lines as soon as real JD content is reached, rather
+// than always eating a fixed count regardless of what's actually there.
+const CARD_LINE_MAX_CHARS = 80;
+
+function looksLikeCardLine(trimmedLine: string): boolean {
+  if (!trimmedLine) return false;
+  if (trimmedLine.length > CARD_LINE_MAX_CHARS) return false;
+  return !/[.!?]$/.test(trimmedLine);
+}
+
+/** Drop a leading recruiter card ("Direct message the job poster from X",
+ * followed by the poster's name and title — neither has a reliable text
+ * signature of its own, so they're anchored to the card header instead).
+ * Stops at the first non-blank line that reads like real JD content rather
+ * than blindly eating a fixed count, which could otherwise consume the
+ * opening sentence of a short JD; blank lines between card lines (one per
+ * source <p>) are skipped without counting against the 2-line budget. */
+function stripLeadingBoilerplate(rawLines: string[]): string[] {
+  let start = 0;
+  while (start < rawLines.length && rawLines[start].trim() === '') start += 1;
+  if (start >= rawLines.length || !LEADING_JOB_POSTER_PATTERN.test(rawLines[start].trim())) {
+    return rawLines;
+  }
+  let end = start + 1;
+  let skippedNonBlank = 0;
+  while (end < rawLines.length && skippedNonBlank < 2) {
+    const trimmed = rawLines[end].trim();
+    if (trimmed === '') {
+      // Blank lines between card lines (e.g. one text node per <p>) don't
+      // count against the 2-line budget and aren't a stopping point on
+      // their own — only real JD-shaped content stops the skip.
+      end += 1;
+      continue;
+    }
+    if (!looksLikeCardLine(trimmed)) break;
+    skippedNonBlank += 1;
+    end += 1;
+  }
+  return rawLines.slice(end);
+}
+
+/** Parse LinkedIn's "Seniority level / Employment type / Job function /
+ * Industries" sidebar into structured fields and remove those lines from the
+ * job text — the metadata extractor gets clean verbatim values instead of
+ * inferring them from prose, and the JD body isn't cluttered with the block. */
+function extractCriteriaBlock(lines: string[]): { criteria: ExtractedJobCriteria | null; lines: string[] } {
+  const criteria: ExtractedJobCriteria = { seniority: null, employmentType: null, jobFunction: null, industries: null };
+  const consumed = new Set<number>();
+  let matchedLabelCount = 0;
+
+  const isAnyCriteriaLabel = (line: string): boolean =>
+    Object.values(CRITERIA_LABEL_PATTERNS).some((pattern) => pattern.test(line));
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) continue;
+    for (const key of Object.keys(CRITERIA_LABEL_PATTERNS) as (keyof ExtractedJobCriteria)[]) {
+      if (criteria[key] !== null || !CRITERIA_LABEL_PATTERNS[key].test(trimmed)) continue;
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === '') j += 1;
+      if (j >= lines.length) break;
+      const valueLine = lines[j].trim();
+      // The "value" is itself another label (e.g. two labels stacked with no
+      // value between them) — not this block's shape, don't misassign it.
+      if (isAnyCriteriaLabel(valueLine)) break;
+      criteria[key] = valueLine;
+      consumed.add(i);
+      consumed.add(j);
+      matchedLabelCount += 1;
+      break;
+    }
+  }
+
+  // Require at least two labels before treating this as the LinkedIn
+  // criteria sidebar — a JD using one of these words as a genuine section
+  // heading (e.g. a real "Industries" section) shouldn't lose that content
+  // on a single coincidental match.
+  if (matchedLabelCount < 2) return { criteria: null, lines };
+  return { criteria, lines: lines.filter((_, idx) => !consumed.has(idx)) };
+}
+
+function cleanExtractedJobText(text: string): { jobText: string; criteria: ExtractedJobCriteria | null } {
+  const rawLines = stripLeadingBoilerplate(text.split('\n'));
+  const { criteria, lines: withoutCriteria } = extractCriteriaBlock(rawLines);
+
   const seen = new Set<string>();
   const lines: string[] = [];
 
-  for (const rawLine of text.split('\n')) {
+  for (const rawLine of withoutCriteria) {
     const line = rawLine.trim();
     const normalized = line.replace(/\s+/g, ' ');
     if (!normalized) {
@@ -303,11 +413,11 @@ function cleanExtractedJobText(text: string): string {
       offset >= MIN_HEURISTIC_CHARS &&
       (TRAILING_BOILERPLATE_PATTERN.test(trimmedLine) || TRAILING_BOILERPLATE_PREFIX_PATTERN.test(trimmedLine))
     ) {
-      return cleaned.slice(0, offset).trim();
+      return { jobText: cleaned.slice(0, offset).trim(), criteria };
     }
     offset += line.length + 1;
   }
-  return cleaned;
+  return { jobText: cleaned, criteria };
 }
 
 function parseJsonLdBlocks(html: string): unknown[] {
@@ -380,6 +490,7 @@ function extractFromJsonLd(html: string): ExtractedJob | null {
       companyName: company ? decodeHtmlEntities(company) : null,
       source: 'json-ld',
       confidence: 'high',
+      criteria: null,
     };
   }
   return null;
@@ -408,7 +519,7 @@ function extractFromMainContent(html: string): ExtractedJob | null {
     // admitting the whole region (nav/ads/related rails would leak through).
     preferredRegion = selectBestContentBlock(cleanedRegion);
   }
-  const jobText = cleanExtractedJobText(htmlToText(preferredRegion));
+  const { jobText, criteria } = cleanExtractedJobText(htmlToText(preferredRegion));
   if (jobText.length < MIN_HEURISTIC_CHARS || jobText.length > MAX_JOB_TEXT_CHARS * 2) return null;
 
   return {
@@ -417,6 +528,7 @@ function extractFromMainContent(html: string): ExtractedJob | null {
     companyName: null,
     source: 'heuristic',
     confidence: 'low',
+    criteria,
   };
 }
 

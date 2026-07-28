@@ -5,7 +5,7 @@
  *   POST /.netlify/functions/import-job-url
  *   body: { url, language? }
  *   resp: { status: 'ok', jobText, jobTitle?, companyName?, sourceUrl, finalUrl,
- *           source, confidence }
+ *           source, confidence, criteria }
  *       | { status: 'failed', failureReason, sourceUrl, finalUrl? }
  *
  * Signed-in users authenticate with their bearer token; guests are allowed but
@@ -194,6 +194,9 @@ const baseHandler: Handler = async (event) => {
       finalUrl: page.finalUrl,
       source: extracted.source,
       confidence: extracted.confidence,
+      // Verbatim off the LinkedIn criteria sidebar — takes precedence over the
+      // AI-inferred employmentType/seniority computed later from jobText.
+      criteria: extracted.criteria,
     });
   } catch (error) {
     // Never leak internal fetch/parse errors to the client.

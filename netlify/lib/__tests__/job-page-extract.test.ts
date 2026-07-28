@@ -199,7 +199,7 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     expect(result?.jobText).not.toContain('Another Company');
   });
 
-  it('strips the LinkedIn referral/network footer while keeping the seniority/employment criteria block', () => {
+  it('strips the LinkedIn referral/network footer and parses the seniority/employment criteria block into structured fields', () => {
     const page = `
       <main>
         ${LONG_DESCRIPTION_HTML}
@@ -220,14 +220,56 @@ describe('extractJobFromHtml — main-content heuristic', () => {
     const result = extractJobFromHtml(page);
 
     expect(result?.jobText).toContain('mentor engineers');
-    expect(result?.jobText).toContain('Seniority level');
-    expect(result?.jobText).toContain('Mid-Senior level');
-    expect(result?.jobText).toContain('Employment type');
-    expect(result?.jobText).toContain('Full-time');
-    expect(result?.jobText).toContain('Job function');
-    expect(result?.jobText).toContain('Industries');
+    // Parsed out into structured fields, not left cluttering the JD body.
+    expect(result?.jobText).not.toContain('Seniority level');
+    expect(result?.jobText).not.toContain('Job function');
     expect(result?.jobText).not.toMatch(/referrals increase your chances/i);
     expect(result?.jobText).not.toMatch(/see who you know/i);
+    expect(result?.criteria).toEqual({
+      seniority: 'Mid-Senior level',
+      employmentType: 'Full-time',
+      jobFunction: 'Consulting, Information Technology, and Strategy/Planning',
+      industries: 'IT Services and IT Consulting and Business Consulting and Services',
+    });
+  });
+
+  it('strips a leading recruiter card that has no recognizable noise class name', () => {
+    const page = `
+      <main>
+        <div class="ph3 pv2">
+          <p>Direct message the job poster from Leap29</p>
+          <p>Liann Parker-Hough</p>
+          <p>Recruitment Consultant within the Managed Accounts team</p>
+        </div>
+        ${LONG_DESCRIPTION_HTML}
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).not.toMatch(/direct message the job poster/i);
+    expect(result?.jobText).not.toMatch(/liann parker-hough/i);
+    expect(result?.jobText).not.toMatch(/recruitment consultant/i);
+    expect(result?.jobText).toContain('Senior Backend Engineer');
+  });
+
+  it('strips a recruiter card div (not <aside>) by class name, independent of its position in the page', () => {
+    const page = `
+      <main>
+        <p>Some unrelated intro copy that is not part of the recruiter card at all here.</p>
+        <div class="recruiter-card">
+          <p>Message the job poster</p>
+          <p>Some Recruiter Name</p>
+        </div>
+        ${LONG_DESCRIPTION_HTML}
+      </main>
+    `;
+
+    const result = extractJobFromHtml(page);
+
+    expect(result?.jobText).not.toMatch(/message the job poster/i);
+    expect(result?.jobText).not.toMatch(/some recruiter name/i);
+    expect(result?.jobText).toContain('Senior Backend Engineer');
   });
 
   it('strips a "Get notified about new ... jobs" footer CTA regardless of the trailing job category', () => {

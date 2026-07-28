@@ -33,7 +33,7 @@ import { getCompatibleStorageItem, removeCompatibleStorageItem, setCompatibleSto
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
 import { FEATURE_COSTS } from '@/types/credits';
 import { analytics } from '@/services/analytics';
-import type { ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
+import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
 import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
 import type { AtsExplainabilitySource } from '@/types/explainability';
 import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
@@ -120,7 +120,7 @@ interface Toast {
 }
 
 interface MatchSectionProps {
-  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean }) => Promise<MatchResult>;
+  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchResult>;
   matchAnalysis: MatchResult | null;
   isAnalyzing?: boolean;
   hasResume?: boolean;
@@ -236,6 +236,10 @@ export function MatchSection({
   const [jobUrl, setJobUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  // Verbatim criteria from a URL import — takes precedence over the AI-inferred
+  // seniority/employmentType computed from jobText at analyze time. Cleared on
+  // manual edit so a stale import doesn't override a pasted-over JD.
+  const [importedCriteria, setImportedCriteria] = useState<ExtractedJobCriteria | null>(null);
   const [scoreBreakdownOpen, setScoreBreakdownOpen] = useState(false);
   const [saveJobOpen, setSaveJobOpen] = useState(false);
   const [jobEditorOpen, setJobEditorOpen] = useState(false);
@@ -296,6 +300,7 @@ export function MatchSection({
       const result = await importJobFromUrl(url, i18n.language === 'ar' ? 'ar' : 'en');
       if (result?.status === 'ok' && result.jobText) {
         setJobText(result.jobText);
+        setImportedCriteria(result.criteria ?? null);
         setJobUrl('');
         analytics.track('job_url_import_succeeded', { source: result.source, confidence: result.confidence });
         const isLowConfidence = result.confidence === 'low';
@@ -358,7 +363,7 @@ export function MatchSection({
     analytics.trackJobDescriptionSubmitted();
     analytics.trackMatchAnalysisStarted();
     try {
-      const result = await onAnalyzeMatchAI(trimmedJob, options);
+      const result = await onAnalyzeMatchAI(trimmedJob, { ...options, importedCriteria });
       if (options?.freePreview) markFreePreviewUsed();
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
@@ -536,6 +541,7 @@ export function MatchSection({
                 type="button"
                 onClick={() => {
                   setJobText('');
+                  setImportedCriteria(null);
                   onClear?.();
                 }}
                 className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-500 transition-colors hover:bg-rose-500/20 hover:text-gray-900 dark:bg-white/5 dark:hover:text-white"
@@ -567,6 +573,7 @@ export function MatchSection({
                     type="button"
                     onClick={() => {
                       setJobText('');
+                      setImportedCriteria(null);
                       onClear?.();
                     }}
                     className="rounded-lg px-3 py-2 text-xs font-bold text-gray-500 transition-colors hover:bg-rose-500/10 hover:text-rose-600 dark:text-white/60 dark:hover:text-rose-300"
@@ -645,7 +652,13 @@ export function MatchSection({
               id="jobDescription"
               name="jobDescription"
               value={jobText}
-              onChange={(event) => setJobText(event.target.value)}
+              onChange={(event) => {
+                setJobText(event.target.value);
+                // A manual edit means the text may no longer be the imported
+                // job — don't let stale seniority/employmentType override the
+                // AI's inference for whatever the user pasted over it with.
+                setImportedCriteria(null);
+              }}
               placeholder={t('sections.match.jobInput.placeholder', 'Paste the job description here...')}
               className="mb-4 h-64 w-full font-mono text-sm leading-relaxed"
               error={error}

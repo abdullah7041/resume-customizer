@@ -232,6 +232,25 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, plainText, status: 'analyzing' as const } : r));
 
       if (jobDescription) {
+        // Cache hit (e.g. the "use my resume" seeded row, same text+JD as the
+        // Match tab) is free and guarantees score parity by construction —
+        // skip the paid re-analysis entirely.
+        const cached = useResumeStore.getState().getCachedAnalysis(plainText, jobDescription, false);
+        if (cached) {
+          const cachedAnalysis: ResumeAnalysis = {
+            score: cached.score,
+            // The Match tab's cache entry never stores coverage (MainContent's
+            // setCachedAnalysis call omits it) — derive it the same way
+            // ai-match's response does so the card doesn't show "0%".
+            coverage: cached.coverage ?? cached.score / 100,
+            topHits: cached.matchedKeywords || cached.strongMatches || [],
+            matchedKeywords: cached.matchedKeywords || cached.strongMatches || [],
+            missingKeywords: cached.missingKeywords || [],
+          };
+          setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, analysis: cachedAnalysis, status: 'completed' as const } : r));
+          return;
+        }
+
         // Use authenticated AI match endpoint (costs 2 credits per resume)
         const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
         const headers = await getAuthHeaders();
@@ -278,6 +297,13 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   const processResume = useCallback((resumeId: string, source: ResumeSource) => {
     if (!jobDescription) {
       // If no job description, process without credits (just parsing)
+      processResumeActual(resumeId, source);
+      return;
+    }
+    // A known-text source (the "use my resume" seeded row) whose analysis is
+    // already cached is free by construction — skip the paid-confirm modal
+    // instead of asking the user to approve a charge that won't happen.
+    if (source.kind === 'text' && useResumeStore.getState().getCachedAnalysis(source.plainText, jobDescription, false)) {
       processResumeActual(resumeId, source);
       return;
     }
@@ -360,9 +386,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   const addUploadedResume = useCallback(() => {
     if (!parsedResumeText || hasUploadedResumeInList || resumes.length >= MAX_FILES) return;
     const id = `uploaded-${Date.now()}`;
-    const name = originalResumeName
-      ? `${originalResumeName} (${t('sections.bulk.myResumeLabel', 'My resume')})`
-      : t('sections.bulk.myResumeLabel', 'My resume');
+    const name = originalResumeName || t('sections.bulk.myResumeLabel', 'My resume');
     setResumes(prev => [...prev, {
       id,
       name,

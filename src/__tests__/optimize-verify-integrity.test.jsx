@@ -373,7 +373,10 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();
         fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue/i }));
+            // First re-check per job is free (see Item B / tryConsumeFreeAllowance),
+            // so the confirm button reads "Continue (free)" rather than the paid
+            // "credits.confirm.continue" copy — match either.
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue|continue \(free\)/i }));
             await Promise.resolve();
             await Promise.resolve();
         });
@@ -390,6 +393,35 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         expect(mockApplyAllOptimizations).not.toHaveBeenCalled();
     });
 
+    it('shows the free confirm copy when no prior free-verify has been recorded for this job', async () => {
+        setupAppliedScenario();
+        mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: [], missingKeywords: [] });
+
+        renderWithProviders(<OptimizeSection />);
+        await advancePastDebounce();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+
+        expect(screen.getByRole('button', { name: /continue \(free\)/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^credits\.confirm\.continue$/i })).toBeNull();
+    });
+
+    it('shows the paid confirm copy once this job has already recorded a free verify', async () => {
+        setupAppliedScenario();
+        mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: [], missingKeywords: [] });
+        window.localStorage.getItem.mockImplementation((key) => {
+            if (key === 'watheq:lastJobDescription') return 'Backend engineer role';
+            if (key.startsWith('watheq:freeVerifyUsed:')) return '1';
+            return null;
+        });
+
+        renderWithProviders(<OptimizeSection />);
+        await advancePastDebounce();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+
+        expect(screen.getByRole('button', { name: /^credits\.confirm\.continue$/i })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /continue \(free\)/i })).toBeNull();
+    });
+
     it('R5: a confirmation request only runs one verify call for a stable applied set', async () => {
         setupAppliedScenario();
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 58, topHits: [], missingKeywords: [] });
@@ -398,7 +430,10 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         await advancePastDebounce();
         fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue/i }));
+            // First re-check per job is free (see Item B / tryConsumeFreeAllowance),
+            // so the confirm button reads "Continue (free)" rather than the paid
+            // "credits.confirm.continue" copy — match either.
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue|continue \(free\)/i }));
             await Promise.resolve();
             await Promise.resolve();
         });

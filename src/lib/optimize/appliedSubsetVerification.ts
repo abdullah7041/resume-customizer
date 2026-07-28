@@ -13,7 +13,7 @@ export type AppliedSubsetVerificationResult =
   | { status: 'ready'; appliedCount: number }
   | { status: 'unavailable'; reason: 'missing_job_description' | 'missing_resume' }
   | { status: 'failed'; reason: 'too_short' | 'unchanged' | 'invalid_score' | 'request_error' }
-  | { status: 'verified'; score: number; appliedCount: number };
+  | { status: 'verified'; score: number; appliedCount: number; source: 'cache' | 'network'; freeVerify?: boolean };
 
 export interface AppliedSubsetVerificationInput {
   originalResume: ResumeSchema | null;
@@ -71,11 +71,11 @@ export async function resolveAppliedSubsetVerification(
   }
 
   const cachedScore = finiteScore(input.getCachedAnalysis(appliedText, input.jobDescription, true)?.score);
-  if (cachedScore !== null) return { status: 'verified', score: cachedScore, appliedCount };
+  if (cachedScore !== null) return { status: 'verified', score: cachedScore, appliedCount, source: 'cache' };
   if (!input.allowNetwork) return { status: 'ready', appliedCount };
 
   try {
-    const result = await analyzeResumeWithAI(appliedText, input.jobDescription, input.language, { mode: 'verify' });
+    const result = await analyzeResumeWithAI(appliedText, input.jobDescription, input.language, { mode: 'verify', verifyKind: 'applied_subset' });
     const score = finiteScore(result?.score);
     if (score === null) return { status: 'failed', reason: 'invalid_score' };
 
@@ -84,7 +84,7 @@ export async function resolveAppliedSubsetVerification(
       matchedKeywords: result.topHits || [],
       missingKeywords: result.missingKeywords || [],
     }, true);
-    return { status: 'verified', score, appliedCount };
+    return { status: 'verified', score, appliedCount, source: 'network', freeVerify: result.freeVerify === true };
   } catch (error) {
     console.warn('[AppliedSubsetVerification] request failed (non-fatal):', error);
     return { status: 'failed', reason: 'request_error' };

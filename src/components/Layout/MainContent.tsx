@@ -52,7 +52,7 @@ import { ParallaxContainer } from "../ui/ParallaxSection";
 import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "@/services/pipeline";
 import { shouldAutoSaveJob } from "@/lib/utils/pipelineAutoSave";
 import { analytics } from "../../services/analytics";
-import type { ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
+import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
 import type { MatchResult } from "@/types/analysis";
 import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
@@ -1149,7 +1149,7 @@ export default function MainContent() {
   );
 
   const handleAnalyzeMatchAI = useCallback(
-    async (jobDescriptionInput, options?: { freePreview?: boolean }) => {
+    async (jobDescriptionInput, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => {
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -1176,8 +1176,18 @@ export default function MainContent() {
 
         // Non-blocking metadata extraction from pasted job description. The
         // resolved value also feeds pipeline auto-save once the analysis lands.
+        const importedCriteria = options?.importedCriteria;
         const metadataPromise: Promise<ExtractedJobMetadata | null> = extractJobMetadata(trimmedJob, i18n.language)
-          .then((metadata) => {
+          .then((aiMetadata) => {
+            // Verbatim page criteria win over the AI's inference for the two
+            // fields it's most prone to guess wrong on.
+            const metadata: ExtractedJobMetadata | null = aiMetadata && importedCriteria
+              ? {
+                  ...aiMetadata,
+                  seniority: importedCriteria.seniority ?? aiMetadata.seniority,
+                  employmentType: importedCriteria.employmentType ?? aiMetadata.employmentType,
+                }
+              : aiMetadata;
             setExtractedMetadata(metadata ?? null);
             if (metadata?.companyName || metadata?.jobTitle || metadata?.location) {
               analytics.trackJobMetadataExtracted(metadata.confidence);

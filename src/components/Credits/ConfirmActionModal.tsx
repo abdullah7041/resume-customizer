@@ -23,6 +23,9 @@ interface ConfirmActionModalProps {
   onConfirm: () => Promise<void>;
   feature: FeatureName;
   isLoading?: boolean;
+  /** This particular call is a granted free allowance (e.g. the first
+   * applied-subset re-score per job) — show free copy instead of the cost. */
+  isFree?: boolean;
 }
 
 export function ConfirmActionModal({
@@ -31,6 +34,7 @@ export function ConfirmActionModal({
   onConfirm,
   feature,
   isLoading = false,
+  isFree = false,
 }: ConfirmActionModalProps) {
   const { t, i18n } = useTranslation();
   const { credits } = useUserCredits();
@@ -40,8 +44,8 @@ export function ConfirmActionModal({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const currentCredits = credits?.remaining || 0;
-  const cost = FEATURE_COSTS[feature];
-  const canProceed = currentCredits >= cost;
+  const cost = isFree ? 0 : FEATURE_COSTS[feature];
+  const canProceed = isFree || currentCredits >= cost;
   const featureLabel = FEATURE_LABELS[feature];
 
   if (!isOpen) return null;
@@ -171,23 +175,25 @@ export function ConfirmActionModal({
               {featureLabel}
             </p>
             <p className="text-gray-800 dark:text-gray-300">
-              {t('credits.confirm.message', { cost })}
+              {isFree ? t('credits.confirm.freeMessage', 'Your first re-check for this job is free.') : t('credits.confirm.message', { cost })}
             </p>
           </div>
 
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">
-              {t('credits.confirm.current', {
-                remaining: currentCredits,
-                total: credits?.total ?? 15,
-              })}
-            </span>
-            {canProceed && (
-              <span className="text-emerald-400 font-medium">
-                → {currentCredits - cost} {t('credits.remaining')}
+          {!isFree && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">
+                {t('credits.confirm.current', {
+                  remaining: currentCredits,
+                  total: credits?.total ?? 15,
+                })}
               </span>
-            )}
-          </div>
+              {canProceed && (
+                <span className="text-emerald-400 font-medium">
+                  → {currentCredits - cost} {t('credits.remaining')}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Insufficient credits - Show waitlist signup */}
           {!canProceed && (
@@ -282,7 +288,7 @@ export function ConfirmActionModal({
                 isLoading={isLoading}
                 className="flex-1"
               >
-                {t('credits.confirm.continue', { cost })}
+                {isFree ? t('credits.confirm.continueFree', 'Continue (free)') : t('credits.confirm.continue', { cost })}
               </GlassButton>
             )}
           </div>

@@ -220,6 +220,10 @@ export const MatchRequestSchema = z.object({
     language: z.enum(["en", "ar"]).optional().default("en"),
     freePreview: z.boolean().optional(),
     mode: z.enum(["match", "verify"]).optional().default("match"),
+    // Distinguishes the user-initiated applied-subset re-check (eligible for
+    // the one-shot free-verify allowance) from the automatic post-optimize
+    // verify, which always bills normally even though both send mode:'verify'.
+    verifyKind: z.enum(["applied_subset"]).optional(),
 });
 
 export const WorkHistoryEntrySchema = z.object({

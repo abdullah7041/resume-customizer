@@ -288,6 +288,7 @@ describe('BulkAnalysisSection', () => {
   describe('Use my uploaded resume', () => {
     afterEach(() => {
       useResumeStore.setState({ parsedResumeText: null, originalResume: null });
+      useResumeStore.getState().clearAnalysisCache();
     });
 
     it('is hidden when no resume has been parsed yet', () => {
@@ -331,6 +332,39 @@ describe('BulkAnalysisSection', () => {
       // already known, so parsing (which is free anyway) is skipped entirely.
       expect(mockParseResume).not.toHaveBeenCalled();
       expect(screen.getAllByText(/Sara Al-Otaibi/).length).toBeGreaterThan(0);
+    });
+
+    it('uses the cached Match-tab score for free and never calls ai-match on a cache hit', async () => {
+      const resumeText = 'Sara Al-Otaibi — Product Manager with 5 years experience';
+      const jobDescription = 'Looking for a Product Manager';
+      useResumeStore.setState({
+        parsedResumeText: resumeText,
+        originalResume: { basics: { name: 'Sara Al-Otaibi' } } as never,
+      });
+      useResumeStore.getState().setCachedAnalysis(resumeText, jobDescription, {
+        score: 82,
+        coverage: 0.82,
+        matchedKeywords: ['Product'],
+        missingKeywords: [],
+      }, false);
+
+      render(<BulkAnalysisSection jobDescription={jobDescription} />);
+
+      await act(async () => {
+        fireEvent.click(screen.getByText('Use my uploaded resume'));
+      });
+
+      await waitFor(() => {
+        const confirmButton = screen.queryByText(/confirm/i) || screen.queryByRole('button', { name: /confirm/i });
+        if (confirmButton) fireEvent.click(confirmButton);
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText('Ready')).toBeInTheDocument();
+      }, { timeout: 5000 });
+
+      expect(screen.getAllByText('82%').length).toBeGreaterThan(0);
+      expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
     it('hides itself once the uploaded resume is already in the list', async () => {
