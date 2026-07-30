@@ -100,6 +100,7 @@ interface OptimizeSectionProps {
   optimizations?: OptimizationCard[];
   keywords?: Keywords;
   isOptimizing?: boolean;
+  isCheckingQuestions?: boolean;
   onOptimize?: (mode: any, options?: { freePreview?: boolean }) => Promise<any>;
   onCopy?: (value: any) => Promise<void>;
   previewUsed?: boolean;
@@ -226,6 +227,7 @@ export function OptimizeSection({
   optimizations: propOptimizations,
   keywords = emptyKeywords,
   isOptimizing: propIsOptimizing = false,
+  isCheckingQuestions = false,
   onOptimize: propOnOptimize,
   onCopy,
   previewUsed = false,
@@ -344,6 +346,7 @@ export function OptimizeSection({
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
   const isOptimizing = propIsOptimizing;
+  const isBusy = isOptimizing || isCheckingQuestions;
 
   // Generate sessionId if we have optimizations but no sessionId yet
   // This ensures feedback buttons appear for optimizations loaded from storage
@@ -1133,13 +1136,15 @@ export function OptimizeSection({
 
         {/* Optimize Button */}
         {!hasOptimizationResults && (
+          <>
           <button
             type="button"
             onClick={handleGenerate}
-            disabled={isOptimizing || !hasResume}
+            disabled={isBusy || !hasResume}
+            aria-busy={isBusy || undefined}
             className={cn(
               "w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 transform active:scale-[0.99]",
-              (!hasResume || isOptimizing) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
+              (!hasResume || isBusy) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
             )}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />
@@ -1149,6 +1154,13 @@ export function OptimizeSection({
                   <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
                   <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
                     {t('sections.optimize.optimizingResume', 'Optimizing Resume...')}
+                  </span>
+                </>
+              ) : isCheckingQuestions ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
+                  <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
+                    {t('sections.optimize.checkingQuestions', 'Checking if a few quick questions can improve your result…')}
                   </span>
                 </>
               ) : (
@@ -1171,6 +1183,12 @@ export function OptimizeSection({
               )}
             </div>
           </button>
+          {isCheckingQuestions && (
+            <p role="status" className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
+              {t('sections.optimize.checkingQuestionsDescription', 'If useful, we’ll ask up to 3 short questions before optimizing.')}
+            </p>
+          )}
+          </>
         )}
         {hasResume && !hasOptimizationResults && (
           <p className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">

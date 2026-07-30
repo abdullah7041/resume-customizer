@@ -1,5 +1,31 @@
 import type { Vision2030AnalysisResponse } from '@/types/vision2030';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const hasTextField = (value: unknown, field: string): boolean =>
+  isRecord(value) && typeof value[field] === 'string' && value[field].trim().length > 0;
+
+/**
+ * A Vision 2030 result must provide more than aggregate scores: users need
+ * either resume-grounded evidence or a concrete improvement recommendation.
+ */
+export const isUsableVision2030Analysis = (analysis: unknown): analysis is Vision2030AnalysisResponse => {
+  if (!isRecord(analysis) || typeof analysis.overallScore !== 'number' || !Number.isFinite(analysis.overallScore)) {
+    return false;
+  }
+
+  if (!Array.isArray(analysis.sectorBreakdown) || analysis.sectorBreakdown.length === 0) return false;
+  if (!analysis.sectorBreakdown.every((sector) => isRecord(sector) && typeof sector.score === 'number' && Number.isFinite(sector.score))) {
+    return false;
+  }
+
+  const matchedSkills = Array.isArray(analysis.matchedSkills) ? analysis.matchedSkills : [];
+  const missingSuggestions = Array.isArray(analysis.missingSuggestions) ? analysis.missingSuggestions : [];
+  return matchedSkills.some((skill) => hasTextField(skill, 'context'))
+    || missingSuggestions.some((suggestion) => hasTextField(suggestion, 'reason'));
+};
+
 export const normalizeVision2030Score = (score: number): number => {
   if (!Number.isFinite(score)) return 0;
   const percentage = score > 0 && score < 1 ? score * 100 : score;

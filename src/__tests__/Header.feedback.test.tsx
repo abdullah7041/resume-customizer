@@ -200,6 +200,15 @@ describe('Header feedback action', () => {
     expect(feedbackButton).toBeInTheDocument();
     expect(settingsButton).toBeInTheDocument();
 
+    // The footer must take its own flex row so it cannot cover the last action
+    // when this menu is taller than the viewport.
+    const panel = navQueries.getByTestId('mobile-nav-panel');
+    const content = navQueries.getByTestId('mobile-nav-content');
+    const footer = navQueries.getByTestId('mobile-nav-footer');
+    expect(panel).toHaveClass('flex', 'flex-col', 'overflow-hidden');
+    expect(content).toHaveClass('flex-1', 'overflow-y-auto');
+    expect(footer).not.toHaveClass('absolute');
+
     // Secondary tools (credits, plans, invite) remain reachable.
     expect(navQueries.getAllByText(/credits/i).length).toBeGreaterThan(0);
     expect(navQueries.getByText(/view plans/i)).toBeInTheDocument();

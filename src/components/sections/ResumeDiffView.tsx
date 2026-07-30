@@ -54,7 +54,7 @@ function DiffSection({ opt, lang, t }: { opt: OptimizationResult; lang: string; 
             {t('sections.optimize.diff.added', 'Added')}
           </span>
         ) : (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
             {t('sections.optimize.diff.improved', 'Improved')}
           </span>
         )}
@@ -222,7 +222,7 @@ export default function ResumeDiffView({ isOpen, onClose, optimizations }: Resum
                           {isOptimizedView && (
                             <span className={`text-xs px-2 py-0.5 rounded-full ${isAdded
                               ? 'bg-emerald-500/20 text-emerald-400'
-                              : 'bg-blue-500/20 text-blue-400'
+                              : 'bg-emerald-500/20 text-emerald-400'
                             }`}>
                               {isAdded ? t('sections.optimize.diff.added', 'Added') : t('sections.optimize.diff.improved', 'Improved')}
                             </span>

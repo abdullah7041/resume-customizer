@@ -479,6 +479,7 @@ export default function MainContent() {
   const [extractedMetadata, setExtractedMetadata] = useState<ExtractedJobMetadata | null>(null);
   // Clarification interrogation state
   const [isInterrogating, setIsInterrogating] = useState(false);
+  const [isCheckingClarifications, setIsCheckingClarifications] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{
@@ -978,6 +979,8 @@ export default function MainContent() {
 
     // Clear persisted Zustand state (survives refresh via localStorage)
     const store = useResumeStore.getState();
+    store.setOptimizations([]);
+    store.setOptimizationOrigin(null);
     store.resetOptimizationMetrics();
     store.setKeywordSuggestions([]);
     store.setShowOptimized(false);
@@ -1623,7 +1626,7 @@ export default function MainContent() {
       }
 
       // Guard against double-clicks or re-entrant calls while already processing
-      if (isOptimizing || isInterrogating) return null;
+      if (isOptimizing || isInterrogating || isCheckingClarifications) return null;
 
       /** Helper: build typed work-history from Zustand store */
       const buildWorkHistory = (): WorkEntry[] | undefined => {
@@ -1666,11 +1669,18 @@ export default function MainContent() {
           { id: TOAST_IDS.optimize }
         );
 
-        const clarifyResult = await generateClarifications({
-          resumeText: resumeData.plainText,
-          jobDesc: jobDescription,
-          language: i18n.language,
-        });
+        const clarifyResult = await (async () => {
+          setIsCheckingClarifications(true);
+          try {
+            return await generateClarifications({
+              resumeText: resumeData.plainText,
+              jobDesc: jobDescription,
+              language: i18n.language,
+            });
+          } finally {
+            setIsCheckingClarifications(false);
+          }
+        })();
 
         const unansweredQuestions = filterClarificationQuestionsByHardStops(
           clarifyResult.clarifications ?? [],
@@ -1716,7 +1726,7 @@ export default function MainContent() {
         });
       }
     },
-    [handleOptimizeActual, i18n.language, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
+    [handleOptimizeActual, i18n.language, isCheckingClarifications, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
@@ -2278,6 +2288,7 @@ export default function MainContent() {
                   optimizations={optimizations}
                   keywords={optimizationKeywords}
                   isOptimizing={isOptimizing}
+                  isCheckingQuestions={isCheckingClarifications}
                   onOptimize={handleOptimize}
                   onCopy={handleCopy}
                   previewUsed={previewUsed}

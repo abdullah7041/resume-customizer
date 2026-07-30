@@ -9,6 +9,7 @@ import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { exportResumeAsDocx } from '../services/exportDocx';
 import { analytics } from '../services/analytics';
 import { toCanvas } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { useResumeStore } from '../lib/stores/resumeStore';
 
 let mockContentLanguage = null;
@@ -490,6 +491,63 @@ describe('TemplatesSection', () => {
                     'pdf',
                     'fallback_blank'
                 );
+            } finally {
+                consoleError.mockRestore();
+            }
+        });
+
+        it('captures the client fallback from an in-viewport sandbox and removes it after saving', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+            globalThis.fetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                blob: () => Promise.resolve(new Blob([], { type: 'application/pdf' })),
+            });
+            const nonBlankPixelRow = new Uint8ClampedArray(400 * 4).fill(255);
+            nonBlankPixelRow[0] = 32;
+            const canvas = {
+                width: 400,
+                height: 400,
+                getContext: () => ({
+                    getImageData: () => ({ data: nonBlankPixelRow }),
+                }),
+                toDataURL: () => 'data:image/png;base64,nonblank',
+            };
+            const pdf = {
+                internal: { pageSize: { getWidth: () => 210, getHeight: () => 297 } },
+                addImage: vi.fn(),
+                addPage: vi.fn(),
+                setFillColor: vi.fn(),
+                rect: vi.fn(),
+                save: vi.fn(),
+            };
+            let capturedClone;
+            let captureHost;
+            toCanvas.mockImplementationOnce((element) => {
+                capturedClone = element;
+                captureHost = element.parentElement;
+                return Promise.resolve(canvas);
+            });
+            jsPDF.mockImplementationOnce(function MockPdf() {
+                return pdf;
+            });
+
+            try {
+                renderWithProviders(<TemplateGallery resumeData={{
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    work: [],
+                    education: [],
+                    skills: [],
+                    projects: [],
+                }} />);
+
+                fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+
+                await waitFor(() => expect(pdf.save).toHaveBeenCalled());
+                expect(captureHost).toHaveAttribute('data-pdf-capture-host', 'true');
+                expect(capturedClone.style.left).not.toBe('-9999px');
+                expect(captureHost).not.toBeInTheDocument();
+                expect(analytics.trackExportSuccess).toHaveBeenCalledWith(expect.any(String), 'pdf');
             } finally {
                 consoleError.mockRestore();
             }

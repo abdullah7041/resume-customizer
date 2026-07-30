@@ -325,6 +325,18 @@ describe('OptimizeSection', () => {
             expect(screen.getByRole('button', { name: /upload resume first/i })).toBeInTheDocument();
         });
 
+        it('explains that quick questions may come before optimization while they are being checked', () => {
+            mockStoreState.originalResume = { basics: { name: 'Test User' } };
+            mockStoreState.parsedResumeText = 'Test resume content';
+
+            renderWithProviders(<OptimizeSection isCheckingQuestions />);
+
+            const button = screen.getByRole('button', { name: /checking if a few quick questions/i });
+            expect(button).toBeDisabled();
+            expect(button).toHaveAttribute('aria-busy', 'true');
+            expect(screen.getByRole('status')).toHaveTextContent('If useful, we’ll ask up to 3 short questions before optimizing.');
+        });
+
         it('renders view mode toggle (Split and Diff)', () => {
             mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection />);

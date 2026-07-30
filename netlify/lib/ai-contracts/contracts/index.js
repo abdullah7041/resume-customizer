@@ -420,11 +420,14 @@ function normalizeVision2030Output(output) {
       return score === null ? sector : { ...sector, score };
     });
 
-  // A shape-valid response with no sectors (sectorBreakdown defaults to [])
-  // used to render an empty results screen AND consume credits. Throwing here
-  // keeps the failure inside executeAiContract, before any credit consumption.
-  if (overallScore === null || sectorBreakdown.length === 0) {
-    throw new AiContractError('Vision 2030 analysis returned no usable sector data.', {
+  const hasActionableDetail = output.matchedSkills.some((skill) => skill.context.trim().length > 0)
+    || output.missingSuggestions.some((suggestion) => suggestion.reason.trim().length > 0);
+
+  // A shape-valid response with no sectors or no evidence/recommendation used to
+  // render an empty results screen AND consume credits. Throwing here keeps the
+  // failure inside executeAiContract, before any credit consumption.
+  if (overallScore === null || sectorBreakdown.length === 0 || !hasActionableDetail) {
+    throw new AiContractError('Vision 2030 analysis returned no usable evidence or recommendations.', {
       contractId: 'vision2030_alignment',
       code: 'AI_CONTRACT_EMPTY_RESULT',
       status: 502,
@@ -828,24 +831,104 @@ const vision2030JsonSchema = {
   type: 'object',
   properties: {
     overallScore: { type: 'number' },
-    matchedSkills: { type: 'array', items: { type: 'object' } },
-    missingSuggestions: { type: 'array', items: { type: 'object' } },
-    sectorBreakdown: { type: 'array', items: { type: 'object' } },
+    matchedSkills: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          skillNameEn: { type: 'string' }, skillNameAr: { type: 'string' }, sectorId: { type: 'string' },
+          sectorNameEn: { type: 'string' }, sectorNameAr: { type: 'string' }, matchedKeyword: { type: 'string' },
+          weight: { type: 'number' }, context: { type: 'string' },
+        },
+        required: ['skillNameEn', 'skillNameAr', 'sectorId', 'sectorNameEn', 'sectorNameAr', 'matchedKeyword', 'weight', 'context'],
+      },
+    },
+    missingSuggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          skillNameEn: { type: 'string' }, skillNameAr: { type: 'string' }, sectorId: { type: 'string' },
+          sectorNameEn: { type: 'string' }, sectorNameAr: { type: 'string' }, relevanceScore: { type: 'number' },
+          reason: { type: 'string' }, reasonAr: { type: 'string' },
+        },
+        required: ['skillNameEn', 'skillNameAr', 'sectorId', 'sectorNameEn', 'sectorNameAr', 'relevanceScore', 'reason', 'reasonAr'],
+      },
+    },
+    sectorBreakdown: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          sectorId: { type: 'string' }, sectorNameEn: { type: 'string' }, sectorNameAr: { type: 'string' },
+          icon: { type: 'string' }, score: { type: 'number' }, matchedCount: { type: 'number' },
+          totalSkills: { type: 'number' }, suggestedKeywords: stringArray,
+        },
+        required: ['sectorId', 'sectorNameEn', 'sectorNameAr', 'icon', 'score', 'matchedCount', 'totalSkills', 'suggestedKeywords'],
+      },
+    },
     topSectors: stringArray,
     allSectorsWithMatches: stringArray,
-    detectedCareer: { type: 'object' },
+    detectedCareer: {
+      type: 'object',
+      properties: {
+        archetypeId: { type: 'string' }, archetypeNameEn: { type: 'string' }, archetypeNameAr: { type: 'string' },
+        confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+      },
+      required: ['archetypeId', 'archetypeNameEn', 'archetypeNameAr', 'confidence'],
+    },
   },
   required: ['overallScore', 'matchedSkills', 'missingSuggestions', 'sectorBreakdown', 'topSectors', 'allSectorsWithMatches', 'detectedCareer'],
 };
 
+const vision2030MatchedSkillOutput = z.object({
+  skillNameEn: z.string(),
+  skillNameAr: z.string(),
+  sectorId: z.string(),
+  sectorNameEn: z.string(),
+  sectorNameAr: z.string(),
+  matchedKeyword: z.string(),
+  weight: z.number(),
+  context: z.string(),
+});
+
+const vision2030MissingSuggestionOutput = z.object({
+  skillNameEn: z.string(),
+  skillNameAr: z.string(),
+  sectorId: z.string(),
+  sectorNameEn: z.string(),
+  sectorNameAr: z.string(),
+  relevanceScore: z.number(),
+  reason: z.string(),
+  reasonAr: z.string(),
+});
+
+const vision2030SectorBreakdownOutput = z.object({
+  sectorId: z.string(),
+  sectorNameEn: z.string(),
+  sectorNameAr: z.string(),
+  icon: z.string(),
+  score: z.number(),
+  matchedCount: z.number(),
+  totalSkills: z.number(),
+  suggestedKeywords: z.array(z.string()),
+});
+
+const vision2030DetectedCareerOutput = z.object({
+  archetypeId: z.string(),
+  archetypeNameEn: z.string(),
+  archetypeNameAr: z.string(),
+  confidence: z.enum(['high', 'medium', 'low']),
+});
+
 const vision2030Output = z.looseObject({
   overallScore: z.number(),
-  matchedSkills: z.array(z.record(z.string(), z.unknown())).default([]),
-  missingSuggestions: z.array(z.record(z.string(), z.unknown())).default([]),
-  sectorBreakdown: z.array(z.record(z.string(), z.unknown())).default([]),
+  matchedSkills: z.array(vision2030MatchedSkillOutput).default([]),
+  missingSuggestions: z.array(vision2030MissingSuggestionOutput).default([]),
+  sectorBreakdown: z.array(vision2030SectorBreakdownOutput).default([]),
   topSectors: z.array(z.string()).default([]),
   allSectorsWithMatches: z.array(z.string()).default([]),
-  detectedCareer: z.record(z.string(), z.unknown()),
+  detectedCareer: vision2030DetectedCareerOutput,
 });
 
 function truncateText(text, maxChars) {
@@ -1124,7 +1207,7 @@ ${taggedBlock('resume_text', truncateText(input.resumeText, 50000))}`;
 
 function buildVision2030Messages(input, context) {
   const isArabic = input.language === 'ar';
-  const system = `You analyze Saudi Vision 2030 alignment from resume evidence. Do not recommend or match skills unless they are supported by resume text or clearly relevant as missing suggestions. overallScore and every sectorBreakdown score must be integers from 0 to 100, never decimals or fractions (0.85 is invalid; write 85). Always return at least one sectorBreakdown entry.`;
+  const system = `You analyze Saudi Vision 2030 alignment from resume evidence. Do not recommend or match skills unless they are supported by resume text or clearly relevant as missing suggestions. overallScore and every sectorBreakdown score must be integers from 0 to 100, never decimals or fractions (0.85 is invalid; write 85). Always return at least one sectorBreakdown entry. Always provide either at least one matchedSkills entry with exact resume context or at least one missingSuggestions entry with a concrete reason. Do not return only scores or sector cards.`;
   const sectorData = `Vision 2030 sectors: technology and digital transformation, tourism and entertainment, renewable energy, healthcare and life sciences, finance and fintech, industry and manufacturing. Include English and Arabic labels when the schema asks for them.`;
   const jobDescriptionContext = input.jobDescription ? optionalTaggedBlock('job_description', input.jobDescription) : '';
   const user = `${isArabic ? 'Analyze the resume' : 'Analyze the resume'} against Saudi Vision 2030 strategic sectors. Return JSON matching the schema with overallScore, matchedSkills, missingSuggestions, sectorBreakdown, topSectors, allSectorsWithMatches, and detectedCareer.${withRagBlock(context.retrievedContext)}

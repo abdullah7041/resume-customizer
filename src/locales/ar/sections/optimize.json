@@ -95,6 +95,8 @@
       "failedGenerate": "تعذر توليد التحسينات",
       "uploadFirst": "ارفع سيرتك الذاتية أولًا",
       "optimizingResume": "جاري التحسين...",
+      "checkingQuestions": "نتحقق مما إذا كانت بعض الأسئلة السريعة ستحسّن نتيجتك…",
+      "checkingQuestionsDescription": "إذا كانت مفيدة، سنطرح ما يصل إلى 3 أسئلة قصيرة قبل بدء التحسين.",
       "currentScore": "الحالي",
       "optimizedScore": "المُحسَّن",
       "verifyAnomalyTitle": "تعذّر التحقق من الدرجة الجديدة",

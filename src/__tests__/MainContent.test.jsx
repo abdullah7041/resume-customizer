@@ -121,6 +121,12 @@ vi.mock("../components/sections/OptimizeSection", async () => {
         React.createElement("span", { "data-testid": "optimization-handler-status" }, optimizeStatus),
         React.createElement(
           "span",
+          { "data-testid": "clarification-check-status" },
+          props.isCheckingQuestions ? "checking" : "idle",
+        ),
+        React.createElement("button", { onClick: props.onClear }, "Clear optimize"),
+        React.createElement(
+          "span",
           { "data-testid": "optimization-companion-score-source" },
           `${scoreState.beforeScore ?? "unavailable"}:${scoreState.afterScore ?? "unavailable"}`,
         ),
@@ -734,6 +740,65 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
     await waitFor(() => {
       expect(screen.getByTestId("optimization-handler-status")).toHaveTextContent("completed");
+    });
+  });
+
+  it("shows the clarification check state and prevents a second request while questions are being checked", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Excel is required");
+
+    let resolveClarifications;
+    generateClarificationsMock.mockReturnValueOnce(new Promise((resolve) => {
+      resolveClarifications = resolve;
+    }));
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+    });
+
+    render(<MainContent />);
+    const optimizeButton = await screen.findByRole("button", { name: /run optimize/i });
+    fireEvent.click(optimizeButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("clarification-check-status")).toHaveTextContent("checking");
+    });
+
+    fireEvent.click(optimizeButton);
+    expect(generateClarificationsMock).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveClarifications({ clarifications: [] });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("clarification-check-status")).toHaveTextContent("idle");
+    });
+  });
+
+  it("clears the persisted optimization cards and their origin with the parent clear action", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    useResumeStore.setState({
+      optimizations: [{
+        sectionId: "summary-1",
+        sectionType: "summary",
+        original: "Before",
+        optimized: "After",
+        applied: false,
+      }],
+      optimizationOrigin: "paid",
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: "Clear optimize" }));
+
+    await waitFor(() => {
+      expect(useResumeStore.getState().optimizations).toEqual([]);
+      expect(useResumeStore.getState().optimizationOrigin).toBeNull();
     });
   });
 

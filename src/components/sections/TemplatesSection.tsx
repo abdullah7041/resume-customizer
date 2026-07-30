@@ -148,6 +148,24 @@ const forceLightThemeForPdf = (root: HTMLElement) => {
 // no rejection of its own, that would otherwise hang "Generating..." forever.
 const CLIENT_FALLBACK_TIMEOUT_MS = 20_000;
 
+const waitForPdfCaptureLayout = async (root: HTMLElement): Promise<void> => {
+  const fontsReady = document.fonts?.ready;
+  if (fontsReady) {
+    await fontsReady.catch(() => undefined);
+  }
+
+  await Promise.all(Array.from(root.querySelectorAll('img')).map(async (image) => {
+    if (typeof image.decode === 'function') {
+      await image.decode().catch(() => undefined);
+    }
+  }));
+
+  if (typeof window.requestAnimationFrame !== 'function') return;
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  });
+};
+
 /**
  * The client-side raster fallback (html-to-image + jsPDF) has historically
  * produced a blank canvas for an off-screen-positioned clone on some
@@ -552,14 +570,32 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         if (!previewElement) throw new Error('Preview not found for fallback');
 
         // Capture an isolated light clone so fallback export never mutates the live preview.
+        // html-to-image can rasterize a blank page when a capture target sits at
+        // a large negative x-offset, especially on mobile Safari. Keep it in the
+        // viewport, behind the app, instead of rendering it visibly to the user.
+        const fallbackHost = document.createElement('div');
+        fallbackHost.setAttribute('data-pdf-capture-host', 'true');
+        fallbackHost.setAttribute('aria-hidden', 'true');
+        fallbackHost.setAttribute('inert', '');
+        Object.assign(fallbackHost.style, {
+          position: 'fixed',
+          top: '0',
+          left: '0',
+          zIndex: '-1',
+          width: '210mm',
+          minHeight: '1px',
+          overflow: 'visible',
+          pointerEvents: 'none',
+        });
         const fallbackClone = previewElement.cloneNode(true) as HTMLElement;
-        fallbackClone.style.position = 'absolute';
-        fallbackClone.style.left = '-9999px';
-        fallbackClone.style.top = '0';
+        fallbackClone.style.position = 'static';
+        fallbackClone.style.left = '';
+        fallbackClone.style.top = '';
         fallbackClone.style.width = '210mm';
         fallbackClone.style.overflow = 'visible';
         fallbackClone.style.boxSizing = 'border-box';
-        document.body.appendChild(fallbackClone);
+        fallbackHost.appendChild(fallbackClone);
+        document.body.appendChild(fallbackHost);
         forceLightThemeForPdf(fallbackClone);
         fallbackClone.querySelectorAll('[data-no-print]').forEach((element) => element.remove());
         fallbackClone.querySelectorAll('[style*="transform"]').forEach((element) => {
@@ -570,6 +606,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           htmlElement.style.height = 'auto';
           htmlElement.style.minHeight = 'auto';
         });
+        await waitForPdfCaptureLayout(fallbackClone);
 
         let canvas: HTMLCanvasElement;
         try {
@@ -593,7 +630,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             ),
           ]);
         } finally {
-          document.body.removeChild(fallbackClone);
+          fallbackHost.remove();
         }
 
         if (isCanvasBlank(canvas)) {

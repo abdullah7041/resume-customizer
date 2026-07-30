@@ -22,6 +22,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import { Vision2030CalculationModal } from '@/components/ui/Vision2030CalculationModal';
 import {
   getVision2030ScoreTextColor,
+  isUsableVision2030Analysis,
   normalizeVision2030Analysis,
 } from '@/lib/utils/vision2030Score';
 
@@ -52,15 +53,11 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       const stored = localStorage.getItem(VISION2030_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Also check if the stored analysis was for the same resume
-        if (parsed?.resumeHash && resumeText) {
-          // Simple hash comparison - use first 100 chars as quick identifier
-          const currentHash = resumeText.slice(0, 100);
-          if (parsed.resumeHash === currentHash) {
-            return normalizeVision2030Analysis(parsed.analysis);
-          }
+        const currentHash = resumeText?.slice(0, 100);
+        if (currentHash && parsed?.resumeHash === currentHash && isUsableVision2030Analysis(parsed.analysis)) {
+          return normalizeVision2030Analysis(parsed.analysis);
         }
-        return parsed.analysis ? normalizeVision2030Analysis(parsed.analysis) : null;
+        localStorage.removeItem(VISION2030_STORAGE_KEY);
       }
     } catch (err) {
       console.warn('[Vision2030Section] Failed to load cached analysis:', err);
@@ -156,9 +153,14 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         description: t('vision2030.section.analyzingDesc', 'Analyzing your resume against Vision 2030 sectors...'),
       });
 
-      const result = normalizeVision2030Analysis(
-        await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null),
-      );
+      const rawResult = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null);
+      if (!isUsableVision2030Analysis(rawResult)) {
+        throw new Error(t(
+          'vision2030.section.incompleteResult',
+          'The analysis did not include enough evidence or recommendations. Please try again.',
+        ));
+      }
+      const result = normalizeVision2030Analysis(rawResult);
       setAnalysis(result);
 
       // Save to storage immediately to persist result even if component unmounts (tab switch)

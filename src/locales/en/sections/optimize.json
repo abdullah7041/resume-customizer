@@ -95,6 +95,8 @@
       "failedGenerate": "Failed to generate optimizations",
       "uploadFirst": "Please upload a resume first",
       "optimizingResume": "Optimizing Resume...",
+      "checkingQuestions": "Checking if a few quick questions can improve your result…",
+      "checkingQuestionsDescription": "If useful, we’ll ask up to 3 short questions before optimizing.",
       "currentScore": "Current Score",
       "optimizedScore": "Optimized Score",
       "verifyAnomalyTitle": "Couldn't verify the new score",

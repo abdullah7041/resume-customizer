@@ -554,14 +554,15 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
           {/* Nav Panel - slides in from the inline-end edge (RTL-aware) */}
           <m.div
             ref={mobileNavRef}
-            className="absolute end-0 top-0 h-full w-[85%] max-w-[320px] bg-[color:var(--surface-glass-elevated)] dark:bg-[#031713] border-s border-[color:var(--glass-border)] dark:border-white/10 shadow-[-10px_0_40px_rgba(39,31,18,0.12)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)] overflow-y-auto"
+            className="absolute end-0 top-0 flex h-full w-[85%] max-w-[320px] flex-col overflow-hidden bg-[color:var(--surface-glass-elevated)] dark:bg-[#031713] border-s border-[color:var(--glass-border)] dark:border-white/10 shadow-[-10px_0_40px_rgba(39,31,18,0.12)] dark:shadow-[-10px_0_40px_rgba(0,0,0,0.3)]"
+            data-testid="mobile-nav-panel"
             initial={{ x: textDirection === "rtl" ? "-100%" : "100%" }}
             animate={{ x: 0 }}
             exit={{ x: textDirection === "rtl" ? "-100%" : "100%" }}
             transition={{ type: "spring", stiffness: 400, damping: 40 }}
           >
             {/* Header with close button */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
+            <div className="shrink-0 flex items-center justify-between p-5 border-b border-gray-200 dark:border-white/10">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
                   <Sparkles className="h-5 w-5 text-white" />
@@ -582,7 +583,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
             </div>
 
             {/* Nav content */}
-            <div className="flex flex-col p-5 space-y-4">
+            <div data-testid="mobile-nav-content" className="flex flex-1 flex-col overflow-y-auto overscroll-contain p-5 space-y-4">
               {/* Marketing nav — opens the landing page scrolled to the section */}
               {showMarketingNav && (
                 <nav className="pb-4 border-b border-gray-200 dark:border-white/10 flex flex-col" aria-label={t("header.nav.label", "Main navigation")}>
@@ -698,7 +699,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
             </div>
 
             {/* Footer */}
-            <div className="absolute bottom-0 left-0 right-0 p-5 border-t border-gray-200 dark:border-white/10">
+            <div data-testid="mobile-nav-footer" className="shrink-0 p-5 border-t border-gray-200 dark:border-white/10">
               <div className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-white/70">
                 <span>{t("common.byAuthor")}</span>
                 <a

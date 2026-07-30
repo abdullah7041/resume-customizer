@@ -749,12 +749,37 @@ describe('AI contract layer', () => {
 });
 
 describe('vision2030_alignment contract normalization', () => {
+  const matchedSkill = {
+    skillNameEn: 'React',
+    skillNameAr: 'رياكت',
+    sectorId: 'tech',
+    sectorNameEn: 'Technology',
+    sectorNameAr: 'التقنية',
+    matchedKeyword: 'React',
+    weight: 8,
+    context: 'Built React dashboards for enterprise customers.',
+  };
+  const sector = (sectorId, score) => ({
+    sectorId,
+    sectorNameEn: sectorId === 'energy' ? 'Energy' : 'Technology',
+    sectorNameAr: sectorId === 'energy' ? 'الطاقة' : 'التقنية',
+    icon: sectorId,
+    score,
+    matchedCount: 1,
+    totalSkills: 2,
+    suggestedKeywords: [],
+  });
   const baseResponse = {
-    matchedSkills: [],
+    matchedSkills: [matchedSkill],
     missingSuggestions: [],
     topSectors: [],
     allSectorsWithMatches: [],
-    detectedCareer: { archetypeNameEn: 'Software Engineer', archetypeNameAr: 'مهندس برمجيات' },
+    detectedCareer: {
+      archetypeId: 'software_engineer',
+      archetypeNameEn: 'Software Engineer',
+      archetypeNameAr: 'مهندس برمجيات',
+      confidence: 'high',
+    },
   };
 
   beforeEach(() => {
@@ -766,8 +791,8 @@ describe('vision2030_alignment contract normalization', () => {
       ...baseResponse,
       overallScore: 0.85,
       sectorBreakdown: [
-        { sectorId: 'tech', score: 0.72 },
-        { sectorId: 'energy', score: 41 },
+        sector('tech', 0.72),
+        sector('energy', 41),
       ],
     }));
 
@@ -785,7 +810,7 @@ describe('vision2030_alignment contract normalization', () => {
     callOpenRouterMock.mockResolvedValue(JSON.stringify({
       ...baseResponse,
       overallScore: 108.4,
-      sectorBreakdown: [{ sectorId: 'tech', score: 55.6 }],
+      sectorBreakdown: [sector('tech', 55.6)],
     }));
 
     const result = await executeAiContract('vision2030_alignment', {
@@ -813,6 +838,24 @@ describe('vision2030_alignment contract normalization', () => {
     });
   });
 
+  it('rejects score-only output that has no matched evidence or missing recommendation', async () => {
+    callOpenRouterMock.mockResolvedValue(JSON.stringify({
+      ...baseResponse,
+      overallScore: 62,
+      matchedSkills: [],
+      missingSuggestions: [],
+      sectorBreakdown: [sector('tech', 62)],
+    }));
+
+    await expect(executeAiContract('vision2030_alignment', {
+      resumeText: 'Software engineer resume',
+      language: 'en',
+    })).rejects.toMatchObject({
+      name: 'AiContractError',
+      code: 'AI_CONTRACT_EMPTY_RESULT',
+    });
+  });
+
   it('prompt demands integer 0-100 scores and at least one sector', () => {
     const contract = getAiContract('vision2030_alignment');
     const messages = contract.buildMessages({
@@ -823,5 +866,6 @@ describe('vision2030_alignment contract normalization', () => {
     expect(messages[0].content).toContain('integers from 0 to 100');
     expect(messages[0].content).toContain('0.85 is invalid; write 85');
     expect(messages[0].content).toContain('at least one sectorBreakdown entry');
+    expect(messages[0].content).toContain('Do not return only scores or sector cards');
   });
 });
