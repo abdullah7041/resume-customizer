@@ -30,7 +30,7 @@ const resumeStorage = {
     try {
       localStorage.setItem(name, value);
     } catch (error) {
-      console.warn('[ResumeStore] Failed to persist resume state:', error);
+      if (import.meta.env.DEV) console.warn('[ResumeStore] Failed to persist resume state:', error);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('watheq:storage-error', {
           detail: { key: name, code: 'quota_exceeded' },
