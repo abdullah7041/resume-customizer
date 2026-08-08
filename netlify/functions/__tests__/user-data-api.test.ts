@@ -1,5 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/functions';
+
+// Force the rate limiter's fail-open "not configured" path instead of real
+// network calls to the fake test.upstash.io host used elsewhere in the suite.
+const originalEnv = { ...process.env };
+delete process.env.UPSTASH_REDIS_REST_URL;
+delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
 const mockSupabaseAnon = {
   auth: {
@@ -61,6 +67,10 @@ const { handler } = await import('../user-data-api.js');
 const mockContext = {} as HandlerContext;
 
 describe('user-data-api function', () => {
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.SUPABASE_URL = 'https://example.supabase.co';
@@ -74,6 +84,22 @@ describe('user-data-api function', () => {
       },
       error: null,
     });
+  });
+
+  it('routes requests through the rate limiter', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const event = {
+      httpMethod: 'POST',
+      headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ action: 'export' }),
+    } as Partial<HandlerEvent>;
+
+    const result = await handler(event as HandlerEvent, mockContext) as HandlerResponse;
+
+    expect(result.statusCode).toBe(200);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Upstash not configured — allowing request to user-data-api')
+    );
   });
 
   it('exports user data without placing raw email in download headers', async () => {

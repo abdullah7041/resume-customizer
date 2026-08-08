@@ -10,6 +10,7 @@
 
 import { Handler } from '@netlify/functions';
 import { customAlphabet } from 'nanoid';
+import { withRateLimit } from '../lib/rate-limiter.js';
 import { getReferralStats, trackReferral } from '../lib/referral-manager.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { redactForLog } from '../lib/sentry.js';
@@ -273,7 +274,7 @@ async function handleTrack(body: { referral_code: string }, refereeEmail: string
     return { success: true, message: 'Referral tracked successfully' };
 }
 
-const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
     const method = event.httpMethod;
 
     try {
@@ -383,4 +384,4 @@ const handler: Handler = async (event) => {
     }
 };
 
-export { handler };
+export const handler = withRateLimit("referral-api", baseHandler);

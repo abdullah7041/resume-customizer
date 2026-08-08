@@ -327,7 +327,16 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // tryConsumeFreeAllowance.
   "applied-verify-free": { maxRequests: 1, windowMs: 24 * 60 * 60 * 1000 },
 
-  // Feedback system - INCREASED from 5 to 10
+  // Credit-awarding endpoints: a successful call can mint credits, so keep
+  // them well below the generic default even though both require a valid JWT.
+  "feedback-api": { maxRequests: 10 },
+  "referral-api": { maxRequests: 10 },
+  // Data export + account deletion. Low legitimate frequency; a tight cap
+  // bounds both scraping of one's own export and repeated delete attempts.
+  "user-data-api": { maxRequests: 10 },
+  // Authoritative balance read; can also realise a pending signup grant, so
+  // it is not a pure read. Modest cap, well above normal UI polling.
+  "user-credits": { maxRequests: 30 },
 
   // Default for unlisted endpoints
   default: { maxRequests: 30 },

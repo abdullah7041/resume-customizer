@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HandlerContext, HandlerEvent, HandlerResponse } from '@netlify/functions';
 
+// Force the rate limiter's fail-open "not configured" path instead of real
+// network calls to the fake test.upstash.io host used elsewhere in the suite.
+const originalEnv = { ...process.env };
+delete process.env.UPSTASH_REDIS_REST_URL;
+delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
 const {
   getReferralStatsMock,
   getSupabaseClientMock,
@@ -66,6 +72,7 @@ describe('referral-api auth binding', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    process.env = { ...originalEnv };
   });
 
   it('requires authentication for referral stats', async () => {
@@ -79,6 +86,30 @@ describe('referral-api auth binding', () => {
 
     expect(response.statusCode).toBe(401);
     expect(getReferralStatsMock).not.toHaveBeenCalled();
+  });
+
+  it('routes requests through the rate limiter', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    getReferralStatsMock.mockResolvedValue({
+      total: 0,
+      completed: 0,
+      pending: 0,
+      creditsEarned: 0,
+    });
+
+    const response = await handler(
+      makeEvent({
+        httpMethod: 'GET',
+        headers: { Authorization: 'Bearer token' },
+        queryStringParameters: { action: 'get-stats' },
+      }),
+      context
+    ) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Upstash not configured — allowing request to referral-api')
+    );
   });
 
   it('uses authenticated user id for stats instead of query email', async () => {
