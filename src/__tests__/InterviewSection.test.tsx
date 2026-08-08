@@ -70,7 +70,7 @@ const renderInterviewSection = () => render(
 
 describe('InterviewSection cross-list state isolation', () => {
   it('does not bleed card expansion between the vulnerability list and the standard list', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderInterviewSection();
 
     // Expand the vulnerability card (first card overall).
@@ -94,7 +94,7 @@ describe('InterviewSection cross-list state isolation', () => {
   });
 
   it('REGRESSION: does not let a standard card overwrite the vulnerability card practice answer', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderInterviewSection();
 
     // Expand both the vulnerability card and the first standard card.
@@ -105,21 +105,21 @@ describe('InterviewSection cross-list state isolation', () => {
     expect(textareas).toHaveLength(2);
     const [vulnTextarea, standardTextarea] = textareas;
 
-    await user.type(vulnTextarea, 'My vulnerability answer');
-    await user.type(standardTextarea, 'My standard answer');
+    await user.type(vulnTextarea, 'vuln-a');
+    await user.type(standardTextarea, 'std-b');
 
     // Before the fix, both cards keyed their answer off array position 0 in
     // their respective (different) index spaces, so the second textarea's
     // keystrokes silently overwrote the first textarea's saved value (and
     // vice versa on re-render). Both must retain their own, distinct text.
-    expect(vulnTextarea).toHaveValue('My vulnerability answer');
-    expect(standardTextarea).toHaveValue('My standard answer');
+    expect(vulnTextarea).toHaveValue('vuln-a');
+    expect(standardTextarea).toHaveValue('std-b');
   });
 });
 
 describe('InterviewSection CSV export answer pairing', () => {
   it('pairs the typed answer with the correct question in the exported CSV', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
 
     const originalCreateObjectURL = URL.createObjectURL;
     let capturedBlob: Blob | null = null;
@@ -139,8 +139,8 @@ describe('InterviewSection CSV export answer pairing', () => {
       await user.click(screen.getByText(STANDARD_QUESTION_1));
 
       const textareas = screen.getAllByPlaceholderText(/Write your answer here/i);
-      await user.type(textareas[0], 'Vulnerability answer text');
-      await user.type(textareas[1], 'Standard answer text');
+      await user.type(textareas[0], 'vuln-csv');
+      await user.type(textareas[1], 'std-csv');
 
       await user.click(screen.getByRole('button', { name: /Export/i }));
 
@@ -155,10 +155,10 @@ describe('InterviewSection CSV export answer pairing', () => {
       const vulnLine = csvText.split('\n').find((line) => line.includes(VULN_QUESTION));
       const standardLine = csvText.split('\n').find((line) => line.includes(STANDARD_QUESTION_1));
 
-      expect(vulnLine).toContain('Vulnerability answer text');
-      expect(vulnLine).not.toContain('Standard answer text');
-      expect(standardLine).toContain('Standard answer text');
-      expect(standardLine).not.toContain('Vulnerability answer text');
+      expect(vulnLine).toContain('vuln-csv');
+      expect(vulnLine).not.toContain('std-csv');
+      expect(standardLine).toContain('std-csv');
+      expect(standardLine).not.toContain('vuln-csv');
     } finally {
       URL.createObjectURL = originalCreateObjectURL;
       clickSpy.mockRestore();
