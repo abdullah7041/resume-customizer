@@ -9,6 +9,7 @@
 import { Handler } from '@netlify/functions';
 import { createClient } from '@supabase/supabase-js';
 import * as crypto from 'crypto';
+import { withRateLimit } from '../lib/rate-limiter.js';
 import { initSentry, captureError, redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { SearchIntentSchema, formatZodError } from '../lib/resume-schemas.js';
@@ -212,7 +213,7 @@ async function handleGetSearchIntent(email: string) {
     return { searchIntent: data?.search_intent ?? null };
 }
 
-export const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: 'Method not allowed' };
     }
@@ -298,3 +299,5 @@ export const handler: Handler = async (event) => {
         };
     }
 };
+
+export const handler = withRateLimit("user-data-api", baseHandler);
