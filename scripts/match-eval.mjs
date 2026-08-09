@@ -24,6 +24,7 @@ import {
 } from "../netlify/lib/model-registry.js";
 import {
   aggregateGoldAttempts,
+  buildGoldContractOptions,
   buildGoldEvaluationAttempts,
   buildGoldScoreSummaries,
   classifyGoldResult,
@@ -310,7 +311,9 @@ const main = async () => {
     let actual;
     try {
       if (hasKey) {
-        actual = await runMatch(fixture);
+        const execution = await runMatch(fixture, buildGoldContractOptions({ feature: "match", mode: options.mode }));
+        const { value } = unwrapEvaluationResponse({ response: execution, modelId: undefined });
+        actual = value;
         // Cache the live output so the set can be re-scored offline without tokens.
         writeFileSync(cachePath, JSON.stringify(actual, null, 2) + "\n");
       } else if (existsSync(cachePath)) actual = JSON.parse(readFileSync(cachePath, "utf8"));

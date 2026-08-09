@@ -22,12 +22,14 @@ import {
 } from "../netlify/lib/model-registry.js";
 import {
   aggregateGoldAttempts,
+  buildGoldContractOptions,
   buildGoldEvaluationAttempts,
   buildGoldScoreSummaries,
   classifyGoldResult,
   parseGoldEvaluatorOptions,
   unwrapEvaluationResponse,
 } from "./lib/model-eval/gold-evaluator-options.mjs";
+import { getMissingFixtureCaches } from "../eval/match-eval-guards.mjs";
 import {
   createEvaluationSession,
   writeEvaluationReport,
@@ -274,7 +276,16 @@ const main = async () => {
   }
 
   const hasKey = Boolean(process.env.OPENROUTER_API_KEY);
-  if (!hasKey) console.log(`${C.yellow}No OPENROUTER_API_KEY — scoring cached *.actual.json where present, skipping the rest.${C.reset}`);
+  const missingCaches = getMissingFixtureCaches(
+    files,
+    hasKey,
+    (file) => existsSync(join(FIXTURE_DIR, file.replace(/\.json$/, ".actual.json"))),
+  );
+  if (missingCaches.length) {
+    console.error(`${C.red}Cannot evaluate fixtures without OPENROUTER_API_KEY or caches: ${missingCaches.join(", ")}${C.reset}`);
+    process.exit(1);
+  }
+  if (!hasKey) console.log(`${C.yellow}No OPENROUTER_API_KEY — scoring cached *.actual.json.${C.reset}`);
 
   const results = [];
   for (const file of files) {
@@ -283,14 +294,13 @@ const main = async () => {
     let actual;
     try {
       if (hasKey) {
-        actual = await runParser(fixture.text);
+        const execution = await runParser(fixture.text, buildGoldContractOptions({ feature: "parse", mode: options.mode }));
+        const { value } = unwrapEvaluationResponse({ response: execution, modelId: undefined });
+        actual = value;
         // Cache the live output so the set can be re-scored offline without tokens.
         writeFileSync(cachePath, JSON.stringify(actual, null, 2) + "\n");
       } else if (existsSync(cachePath)) actual = JSON.parse(readFileSync(cachePath, "utf8"));
-      else {
-        console.log(`\n${C.dim}skip ${fixture.name} (no key, no cache)${C.reset}`);
-        continue;
-      }
+      else throw new Error(`Missing cached output for ${file}`);
     } catch (err) {
       console.log(`\n${C.red}FAIL ${fixture.name}: ${err.message}${C.reset}`);
       results.push({ name: fixture.name, overall: 0 });
@@ -302,8 +312,8 @@ const main = async () => {
   }
 
   if (results.length === 0) {
-    console.log(`\n${C.yellow}Nothing scored. Set OPENROUTER_API_KEY or add *.actual.json caches.${C.reset}`);
-    process.exit(0);
+    console.error(`\n${C.red}Nothing scored. Set OPENROUTER_API_KEY or add *.actual.json caches.${C.reset}`);
+    process.exit(1);
   }
 
   const avg = results.reduce((a, r) => a + r.overall, 0) / results.length;
