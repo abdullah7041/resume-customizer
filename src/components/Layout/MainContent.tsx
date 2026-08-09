@@ -1461,6 +1461,13 @@ export default function MainContent() {
           );
         }
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
+        // has already resolved to a single successful `result` — never inside
+        // either branch — so a user-initiated run counts once regardless of
+        // whether it succeeded via SSE or the legacy fallback. This is the
+        // save-rate denominator for the job-variant Phase-2 gate
+        // (docs/adr/ADR-job-specific-resume-builder.md).
+        analytics.trackOptimizationCompleted();
         // Tag provenance on the store so export/pipeline-save can gate a free
         // guest-preview optimize result behind one charged re-run.
         useResumeStore.getState().setOptimizationOrigin(freePreview ? 'guest_preview' : 'paid');

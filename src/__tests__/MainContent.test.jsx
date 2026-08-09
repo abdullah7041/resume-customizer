@@ -33,6 +33,7 @@ const {
     trackJobMetadataExtracted: vi.fn(),
     trackJobMetadataExtractionFailed: vi.fn(),
     trackPipelineExportAttached: vi.fn(),
+    trackOptimizationCompleted: vi.fn(),
   },
 }));
 
@@ -1192,6 +1193,58 @@ describe("MainContent resume parsing", () => {
     });
     expect(screen.getByTestId("optimization-companion-score-source")).toHaveTextContent("59:80");
     expect(optimizeResumeMock).toHaveBeenCalledTimes(1);
+    warning.mockRestore();
+  });
+
+  it("fires the optimize-completion analytics event exactly once on the SSE success path", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    useResumeStore.getState().resetOptimizationMetrics();
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+      matchScoring: { beforeScore: 59, afterScore: 80, estimatedImprovement: 21 },
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => {
+      expect(analyticsMock.trackOptimizationCompleted).toHaveBeenCalledTimes(1);
+    });
+    expect(optimizeResumeMock).not.toHaveBeenCalled();
+  });
+
+  it("fires the optimize-completion analytics event exactly once — not twice — when SSE fails and the legacy fallback succeeds", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    useResumeStore.getState().resetOptimizationMetrics();
+    optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error("stream unavailable"), {
+      isBillingStateUnknown: false,
+      status: 503,
+      code: "STREAM_UNAVAILABLE",
+    }));
+    optimizeResumeMock.mockResolvedValueOnce({
+      cards: [],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: "gemini",
+      matchScoring: { beforeScore: 59, afterScore: 80, estimatedImprovement: 21 },
+    });
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => {
+      expect(optimizeResumeMock).toHaveBeenCalledTimes(1);
+    });
+    // Both the SSE attempt AND the legacy fallback ran for this single user
+    // action, but the completion event must count the run once, not per attempt —
+    // double-counting here would deflate the ADR's variant save-rate gate.
+    expect(analyticsMock.trackOptimizationCompleted).toHaveBeenCalledTimes(1);
     warning.mockRestore();
   });
 

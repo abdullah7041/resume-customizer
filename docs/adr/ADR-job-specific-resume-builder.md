@@ -1,6 +1,6 @@
 # ADR: Job-Specific Resume Builder
 
-**Status:** Proposed
+**Status:** Phase 1 shipped; Phase 2 gated on pending measurement (see §9, §11)
 **Date:** 2026-07-05
 **Deciders:** Product owner + engineering (Watheq)
 **Related:** engineering plan §5.1 (deleted in `dee2ee3`; its persistence/retention constraints are restated in §5 of this ADR), `CLAUDE.md` (truth-preservation rules), memory `future-plan.md` (job tracker roadmap)
@@ -250,7 +250,9 @@ Do **not** advance to Phase 2 (server persistence, with its migration + export/d
 
 ## 11. Action Items
 
-1. [ ] Confirm the Phase-1 kill-criteria metric is queryable from current `ai_usage_events` + JD-fingerprint data before committing to build.
+1. [x] ~~Confirm the Phase-1 kill-criteria metric is queryable from current `ai_usage_events` + JD-fingerprint data before committing to build.~~ **Moot — Phase 1 was built.** That item concerned the pre-build signal (§9 "Build Phase 1 if…"), already resolved. **The live item now is the post-ship gate** in §9 ("Kill the idea (after Phase 1 ships)"), which `ai_usage_events` cannot answer (saving/reopening a variant makes no AI call). Instrumentation for that gate (`variant_saved`, `variant_opened`, `optimization_completed` analytics events) shipped via plan `plans/022-spike-instrument-job-variant-gate.md`; see **`docs/plans/job-variant-phase2-gate.md`** for how to compute the gate and when the ~4-week measurement window closes.
+
+   _Historical (pre-Phase-1 build signal, retained for reference only — this is NOT the post-ship gate query above, and does not need to be re-run for the Phase-2 decision):_
 
    Instrumentation shipped 2026-07-22 (plan 016); the metric is computable approximately 14 days after the maintainer applies migration `20260722000000_ai_usage_user_attribution.sql` and sets `AI_USAGE_USER_ATTRIBUTION=true`.
 

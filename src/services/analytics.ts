@@ -5,6 +5,11 @@ import type {
     FeedbackWillingnessToPay,
 } from '@/types/feedback';
 import type { GetStartedSource } from '@/types/analytics';
+import {
+    OPTIMIZATION_COMPLETED_EVENT,
+    VARIANT_OPENED_EVENT,
+    VARIANT_SAVED_EVENT,
+} from '@/types/analytics';
 
 const MIXPANEL_TOKEN = import.meta.env.VITE_MIXPANEL_TOKEN;
 let mixpanel: typeof import('mixpanel-browser').default | null = null;
@@ -369,6 +374,39 @@ class Analytics {
 
     trackOptimizationFailed(errorCategory: string) {
         this.track('optimization_failed', { error_category: errorCategory });
+    }
+
+    /**
+     * Track a completed optimize run (success path only — see
+     * trackOptimizationFailed above for the failure counterpart). This is the
+     * save-rate denominator for the job-variant Phase-2 gate
+     * (docs/adr/ADR-job-specific-resume-builder.md). No properties: counts
+     * alone answer the gate. Callers MUST fire this exactly once per
+     * user-initiated optimize run — never once per API attempt — since the
+     * SSE path falls back to a legacy request on certain failures.
+     */
+    trackOptimizationCompleted() {
+        this.track(OPTIMIZATION_COMPLETED_EVENT);
+    }
+
+    /**
+     * Track saving the current optimize run as a named job variant
+     * (docs/adr/ADR-job-specific-resume-builder.md Phase-1). No properties —
+     * never send the variant label, job title, company, or JD text.
+     */
+    trackVariantSaved() {
+        this.track(VARIANT_SAVED_EVENT);
+    }
+
+    /**
+     * Track a deliberate user action reopening a previously saved variant.
+     * Must NOT fire for store hydration / mount-time restoration of
+     * `activeVariantId` — only for an explicit click on a variant chip.
+     * No properties — never send the variant label, job title, company, or
+     * JD text.
+     */
+    trackVariantOpened() {
+        this.track(VARIANT_OPENED_EVENT);
     }
 
     trackExportClicked(templateId: string, format: string) {
