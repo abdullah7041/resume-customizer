@@ -289,6 +289,49 @@ class Analytics {
         this.track('guest_preview_signin_started', { source });
     }
 
+    // Guest-funnel events intentionally contain only counters, enums, and score
+    // buckets. Resume text, job descriptions, employers, and local fingerprints
+    // never leave the browser.
+    trackGuestRunStarted() {
+        this.track('guest_run_started');
+    }
+
+    trackGuestMatchScored(data: { attempt: number; score: number }) {
+        this.track('guest_match_scored', {
+            attempt: Math.max(1, data.attempt),
+            score_bucket: getScoreBucket(data.score),
+        });
+    }
+
+    trackGuestSuggestionApplied(data: { attempt: number; sectionType: string }) {
+        this.track('guest_suggestion_applied', {
+            attempt: Math.max(1, data.attempt),
+            section_type: data.sectionType,
+        });
+    }
+
+    trackGuestRunCompleted(data: { attempt: number; appliedCount: number }) {
+        this.track('guest_run_completed', {
+            attempt: Math.max(1, data.attempt),
+            applied_count: Math.max(0, data.appliedCount),
+        });
+    }
+
+    trackSecondJobAdRun(data: { attempt: number }) {
+        this.track('second_jobad_run', { attempt: Math.max(1, data.attempt) });
+    }
+
+    trackGuestValidationPromptShown(data: { attempt: number }) {
+        this.track('guest_validation_prompt_shown', { attempt: Math.max(1, data.attempt) });
+    }
+
+    trackGuestValidationAnswered(data: { attempt: number; trust: 'yes' | 'somewhat' | 'no' }) {
+        this.track('guest_validation_answered', {
+            attempt: Math.max(1, data.attempt),
+            trust: data.trust,
+        });
+    }
+
     trackJobDescriptionSubmitted() {
         this.track('job_description_submitted');
     }

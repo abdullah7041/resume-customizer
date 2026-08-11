@@ -128,7 +128,7 @@ npm run type:check
 
 ## Privacy
 
-API keys live server-side only. Supabase row-level security is enforced on every table. There's no analytics, no third-party cookies, and no tracking of any kind. You can delete your data whenever you want (GDPR compliant). Rate limiting runs on a Redis-backed sliding window, and the anti-hallucination rules above apply to everything the AI writes about you.
+API keys live server-side only. Supabase row-level security is enforced on every table. Optional analytics are consent-gated, respect Do Not Track, and record product events only (never resume or job-description text). The app does not use third-party advertising cookies. You can delete your data whenever you want (GDPR compliant). Rate limiting runs on a Redis-backed sliding window, and the anti-hallucination rules above apply to everything the AI writes about you.
 
 ---
 
