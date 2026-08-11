@@ -4,6 +4,7 @@ import { Briefcase, Plus, Check, Trash2, Save, X } from 'lucide-react';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { getCompatibleStorageItem, setCompatibleStorageItem } from '../../lib/utils/storage-migration';
 import { cn } from '../../lib/utils/cn';
+import { analytics } from '../../services/analytics';
 
 // Shared with MatchSection / OptimizeSection — the current job description lives here.
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -40,15 +41,22 @@ export function JobVariantsBar() {
   const commitSave = () => {
     const jd = readJobDescription();
     saveCurrentAsVariant(label, jd);
+    analytics.trackVariantSaved();
     setLabel('');
     setIsNaming(false);
   };
 
+  // Deliberate user click on a variant chip — NOT store hydration or a
+  // mount-time restore of activeVariantId (that never calls this handler),
+  // so this can't inflate the ADR's reopen-rate gate with passive restores.
   const handleOpen = (id: string) => {
     const variant = openVariant(id);
     if (variant && typeof window !== 'undefined') {
       // Keep the shared job description in sync with the reopened variant.
       setCompatibleStorageItem(LAST_JOB_KEY, variant.jobDescription);
+    }
+    if (variant) {
+      analytics.trackVariantOpened();
     }
   };
 

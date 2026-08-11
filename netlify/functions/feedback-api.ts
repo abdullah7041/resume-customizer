@@ -1,5 +1,6 @@
 import { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
 import { createHash } from 'crypto';
+import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { redactForLog, summarizeErrorForLog } from '../lib/sentry.js';
 
@@ -371,7 +372,7 @@ async function updateFeedback(event: HandlerEvent) {
   return json(200, { success: true, report: data });
 }
 
-export const handler: Handler = async (event) => {
+const baseHandler: Handler = async (event) => {
   try {
     if (event.httpMethod === 'POST') {
       return await submitFeedback(event);
@@ -402,3 +403,5 @@ export const handler: Handler = async (event) => {
     });
   }
 };
+
+export const handler = withRateLimit('feedback-api', baseHandler);

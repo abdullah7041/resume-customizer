@@ -827,5 +827,31 @@ describe('CreditManager', () => {
         message: 'Failed to add credits',
       });
     });
+
+    it('throws a structured error when the RPC rejects a non-positive amount', async () => {
+      supabaseMock.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'P0001', message: 'Credit amount must be positive' },
+      });
+
+      await expect(addCredits('user-123', 0, 'referral_reward')).rejects.toMatchObject({
+        status: 500,
+        code: 'ADD_CREDITS_RPC_FAILED',
+        message: 'Failed to add credits',
+      });
+    });
+
+    it('throws a structured error when the RPC rejects a blank email', async () => {
+      supabaseMock.rpc.mockResolvedValueOnce({
+        data: null,
+        error: { code: 'P0001', message: 'Email is required' },
+      });
+
+      await expect(addCredits('', 5, 'referral_reward')).rejects.toMatchObject({
+        status: 500,
+        code: 'ADD_CREDITS_RPC_FAILED',
+        message: 'Failed to add credits',
+      });
+    });
   });
 });

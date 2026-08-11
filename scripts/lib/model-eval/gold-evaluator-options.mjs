@@ -171,7 +171,13 @@ export const parseOptimizeGoldEvaluatorOptions = ({ defaultModelId, argv = [] } 
 
 export const buildGoldContractOptions = ({ feature, mode, modelId } = {}) => {
   assertGoldFeature(feature);
-  if (mode !== 'evaluation') return {};
+  if (mode !== 'evaluation') {
+    // Default/legacy mode still must not silently fall back to direct Gemini —
+    // a gold evaluator that measures a different provider than production is
+    // worse than one that fails. No modelId here: default mode uses whatever
+    // the contract's own model is.
+    return { disableFallback: true, includeResponseMetadata: true };
+  }
   if (typeof modelId !== 'string' || !modelId) {
     throw new TypeError('Evaluation contract options require a modelId.');
   }
@@ -249,8 +255,8 @@ const failureReasonFor = (error) => {
   return 'contract_error';
 };
 
-export const classifyGoldResult = ({ error = null, schemaValid = error == null } = {}) => classifyAttempt({
-  provider: 'openrouter',
+export const classifyGoldResult = ({ error = null, schemaValid = error == null, provider = 'openrouter' } = {}) => classifyAttempt({
+  provider,
   schemaValid: schemaValid === true && error == null,
   failureReason: error || schemaValid !== true ? failureReasonFor(error) : null,
 });
@@ -354,6 +360,9 @@ const finiteValues = (attempts, key) => attempts
 export const aggregateGoldAttempts = (attempts) => {
   if (!Array.isArray(attempts)) {
     throw new TypeError('Gold attempts must be an array.');
+  }
+  if (attempts.length === 0) {
+    throw new TypeError('Gold attempts must not be empty.');
   }
 
   const primarySuccesses = countWhere(attempts, (attempt) => attempt?.classification?.primarySuccess === true);

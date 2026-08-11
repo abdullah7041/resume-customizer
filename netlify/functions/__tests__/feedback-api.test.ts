@@ -1,7 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HandlerContext, HandlerEvent, HandlerResponse } from '@netlify/functions';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+
+// Force the rate limiter's fail-open "not configured" path instead of real
+// network calls to the fake test.upstash.io host used elsewhere in the suite.
+const originalEnv = { ...process.env };
+delete process.env.UPSTASH_REDIS_REST_URL;
+delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
 const {
   getSupabaseClientMock,
@@ -98,6 +104,10 @@ function feedbackHashInput(
 }
 
 describe('feedback-api', () => {
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     getSupabaseClientMock.mockReturnValue({
@@ -286,6 +296,23 @@ describe('feedback-api', () => {
       creditsAwarded: 5,
       creditsRemaining: 25,
     });
+  });
+
+  it('routes requests through the rate limiter', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    const response = (await handler(
+      makeEvent({
+        headers: { authorization: 'Bearer token' },
+        body: validPostBody(),
+      }),
+      context
+    )) as HandlerResponse;
+
+    expect(response.statusCode).toBe(200);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Upstash not configured — allowing request to feedback-api')
+    );
   });
 
   it('does not award unauthenticated users', async () => {

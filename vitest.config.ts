@@ -14,18 +14,11 @@ export default defineConfig({
     },
   },
   test: {
+    // Root-level options shared by every project. NOTE: `environment`,
+    // `setupFiles`, `include` and `css` deliberately do NOT live here — the
+    // DOM setup file touches `window` and must never run in the node project.
     globals: true,
     testTimeout: 10000,
-    environment: "happy-dom",
-    setupFiles: "./src/test/setup.ts",
-    include: [
-      "src/**/*.{test,spec}.{js,jsx,ts,tsx}",
-      "netlify/functions/__tests__/**/*.test.ts",
-      "netlify/lib/__tests__/**/*.test.{js,ts}",
-      "eval/__tests__/**/*.test.js",
-      "scripts/lib/model-eval/__tests__/**/*.test.js"
-    ],
-    css: true,
     env: {
       // Frontend Supabase credentials for client-side tests
       VITE_SUPABASE_URL: "https://test.supabase.co",
@@ -38,5 +31,30 @@ export default defineConfig({
       UPSTASH_REDIS_REST_URL: "https://test.upstash.io",
       UPSTASH_REDIS_REST_TOKEN: "test-token",
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          environment: "happy-dom",
+          setupFiles: "./src/test/setup.ts",
+          css: true,
+          include: ["src/**/*.{test,spec}.{js,jsx,ts,tsx}"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "node",
+          environment: "node",
+          include: [
+            "netlify/functions/__tests__/**/*.test.ts",
+            "netlify/lib/__tests__/**/*.test.{js,ts}",
+            "eval/__tests__/**/*.test.js",
+            "scripts/lib/model-eval/__tests__/**/*.test.js",
+          ],
+        },
+      },
+    ],
   },
 });

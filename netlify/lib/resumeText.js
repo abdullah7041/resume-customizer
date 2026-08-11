@@ -273,13 +273,19 @@ const extractPdfTextFallback = (arrayBuffer) => {
 const extractPdfPlainText = async (arrayBuffer) => {
   const pdfjs = await loadPdfjs();
   if (pdfjs) {
+    // pdfjs `getDocument({ data })` transfers ownership of the buffer and DETACHES it.
+    // Hand it a private copy so the raw-text fallback below can still read the original
+    // bytes when the primary path throws — otherwise `new Uint8Array(detachedBuffer)`
+    // in extractPdfTextFallback crashes with "Cannot perform Construct on a detached
+    // ArrayBuffer", turning a recoverable pdfjs failure into an empty extraction.
+    const pdfData = arrayBuffer.slice(0);
     try {
       const document = await pdfjs.getDocument({
-        data: arrayBuffer,
+        data: pdfData,
         disableWorker: true,
-        cMapUrl: "https://unpkg.com/pdfjs-dist@5.4.394/cmaps/",
+        cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/cmaps/`,
         cMapPacked: true,
-        standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.4.394/standard_fonts/",
+        standardFontDataUrl: `https://unpkg.com/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
       }).promise;
       let lines = [];
 

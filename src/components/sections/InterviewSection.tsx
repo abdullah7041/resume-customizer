@@ -201,6 +201,12 @@ const inferSkillsFromQuestion = (questionText: string, type: string): string[] =
   return skills.slice(0, 3); // Max 3 skills
 };
 
+// State key for a question. Uses the question text, which is already what the
+// rendered lists use as their React key, so this adds no new uniqueness
+// assumption — and unlike a generated id it works for question sets restored
+// from localStorage, which are NOT re-normalized on load.
+const questionKey = (question: Question): string => question.question;
+
 // Normalize question - handles different data formats
 const normalizeQuestion = (question: unknown, index: number): Question | null => {
   if (typeof question === 'object' && question !== null) {
@@ -262,8 +268,8 @@ export function InterviewSection({
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
-  const [savedAnswers, setSavedAnswers] = useState<Record<number, string>>({});
+  const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set());
+  const [savedAnswers, setSavedAnswers] = useState<Record<string, string>>({});
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingRegenerate, setPendingRegenerate] = useState(false);
@@ -477,10 +483,10 @@ export function InterviewSection({
     }
   }, [extractQuestionsFromData]);
 
-  const toggleQuestion = (index: number) => {
+  const toggleQuestion = (key: string) => {
     setExpandedQuestions(prev => {
       const newSet = new Set(prev);
-      newSet.has(index) ? newSet.delete(index) : newSet.add(index);
+      newSet.has(key) ? newSet.delete(key) : newSet.add(key);
       return newSet;
     });
   };
@@ -500,7 +506,7 @@ export function InterviewSection({
       q.type,
       q.difficulty,
       q.category,
-      `"${(savedAnswers[idx] || '').replace(/"/g, '""')}"`
+      `"${(savedAnswers[questionKey(q)] || '').replace(/"/g, '""')}"`
     ]);
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -715,25 +721,24 @@ export function InterviewSection({
 
               <div className="space-y-4">
                 {vulnerabilityQuestions.map((question, index) => {
-                  const globalIdx = questions.indexOf(question);
                   return (
                     <GlassCard
                       key={`vuln-${question.question}`}
                       padding="none"
                       className={cn(
                         "overflow-hidden transition-[border-color,box-shadow] duration-300 border-amber-500/20",
-                        expandedQuestions.has(globalIdx) ? "ring-1 ring-amber-500/30" : "hover:border-amber-500/30"
+                        expandedQuestions.has(questionKey(question)) ? "ring-1 ring-amber-500/30" : "hover:border-amber-500/30"
                       )}
                     >
                       <div
                         className="p-5 flex items-start gap-4 cursor-pointer"
                         role="button"
                         tabIndex={0}
-                        onClick={() => toggleQuestion(globalIdx)}
+                        onClick={() => toggleQuestion(questionKey(question))}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault();
-                            toggleQuestion(globalIdx);
+                            toggleQuestion(questionKey(question));
                           }
                         }}
                       >
@@ -747,7 +752,7 @@ export function InterviewSection({
                           <div className="flex items-start justify-between gap-4 mb-2">
                             <h4 className={cn(
                               "font-semibold text-gray-800 dark:text-white/90 leading-relaxed transition-colors",
-                              expandedQuestions.has(globalIdx) ? "text-amber-600 dark:text-amber-300" : ""
+                              expandedQuestions.has(questionKey(question)) ? "text-amber-600 dark:text-amber-300" : ""
                             )}>
                               {question.question}
                             </h4>
@@ -756,7 +761,7 @@ export function InterviewSection({
                               aria-label={t('sections.interview.toggleExpand', 'Toggle question details')}
                               className={cn(
                                 "p-2 rounded-full transition-[color,background-color,rotate] duration-300",
-                                expandedQuestions.has(globalIdx) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+                                expandedQuestions.has(questionKey(question)) ? "bg-amber-500/20 text-amber-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
                               )}
                             >
                               <ChevronDown className="w-4 h-4" />
@@ -778,7 +783,7 @@ export function InterviewSection({
                         </div>
                       </div>
 
-                      {expandedQuestions.has(globalIdx) && (
+                      {expandedQuestions.has(questionKey(question)) && (
                         <div className="px-5 pb-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                           <div className="h-px w-full bg-amber-500/10 mb-4" />
 
@@ -838,14 +843,14 @@ export function InterviewSection({
 
                           {/* Practice answer */}
                           <div className="pt-2">
-                            <label htmlFor={`practice-answer-vuln-${globalIdx}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
+                            <label htmlFor={`practice-answer-vuln-${index}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex justify-between">
                               {t('sections.interview.practiceAnswer', 'Practice Your Answer')}
                               <span className="text-xs text-gray-500 font-normal">{t('sections.interview.privateToYou', 'Private to you')}</span>
                             </label>
                             <textarea
-                              id={`practice-answer-vuln-${globalIdx}`}
-                              value={savedAnswers[globalIdx] || ''}
-                              onChange={(e) => setSavedAnswers(prev => ({ ...prev, [globalIdx]: e.target.value }))}
+                              id={`practice-answer-vuln-${index}`}
+                              value={savedAnswers[questionKey(question)] || ''}
+                              onChange={(e) => setSavedAnswers(prev => ({ ...prev, [questionKey(question)]: e.target.value }))}
                               placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
                               className="w-full h-32 p-4 rounded-xl bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-y focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/20 transition-[border-color,box-shadow] font-sans text-sm leading-relaxed"
                             />
@@ -955,7 +960,7 @@ export function InterviewSection({
                 padding="none"
                 className={cn(
                   "overflow-hidden transition-[border-color,box-shadow] duration-300 border-gray-100 dark:border-white/5",
-                  expandedQuestions.has(index) ? "ring-1 ring-emerald-500/30" : "hover:border-gray-200 dark:hover:border-white/10"
+                  expandedQuestions.has(questionKey(question)) ? "ring-1 ring-emerald-500/30" : "hover:border-gray-200 dark:hover:border-white/10"
                 )}
               >
                 {/* Header / Question Summary */}
@@ -963,11 +968,11 @@ export function InterviewSection({
                   className="p-5 flex items-start gap-4 cursor-pointer"
                   role="button"
                   tabIndex={0}
-                  onClick={() => toggleQuestion(index)}
+                  onClick={() => toggleQuestion(questionKey(question))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      toggleQuestion(index);
+                      toggleQuestion(questionKey(question));
                     }
                   }}
                 >
@@ -981,7 +986,7 @@ export function InterviewSection({
                     <div className="flex items-start justify-between gap-4 mb-2">
                       <h4 className={cn(
                         "font-semibold text-gray-800 dark:text-white/90 leading-relaxed transition-colors",
-                        expandedQuestions.has(index) ? "text-emerald-700 dark:text-emerald-300" : ""
+                        expandedQuestions.has(questionKey(question)) ? "text-emerald-700 dark:text-emerald-300" : ""
                       )}>
                         {question.question}
                       </h4>
@@ -990,7 +995,7 @@ export function InterviewSection({
                         aria-label={t('sections.interview.toggleExpand', 'Toggle question details')}
                         className={cn(
                           "p-2 rounded-full transition-[color,background-color,rotate] duration-300",
-                          expandedQuestions.has(index) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
+                          expandedQuestions.has(questionKey(question)) ? "bg-emerald-500/20 text-emerald-400 rotate-180" : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10"
                         )}
                       >
                         <ChevronDown className="w-4 h-4" />
@@ -1013,7 +1018,7 @@ export function InterviewSection({
                 </div>
 
                 {/* Expanded Content */}
-                {expandedQuestions.has(index) && (
+                {expandedQuestions.has(questionKey(question)) && (
                   <div className="px-5 pb-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="h-px w-full bg-gray-200 dark:bg-white/5 mb-4" />
 
@@ -1098,8 +1103,8 @@ export function InterviewSection({
                       </label>
                       <textarea
                         id={`practice-answer-${index}`}
-                        value={savedAnswers[index] || ''}
-                        onChange={(e) => setSavedAnswers(prev => ({ ...prev, [index]: e.target.value }))}
+                        value={savedAnswers[questionKey(question)] || ''}
+                        onChange={(e) => setSavedAnswers(prev => ({ ...prev, [questionKey(question)]: e.target.value }))}
                         placeholder={t('sections.interview.answerPlaceholder', 'Write your answer here using the STAR method...')}
                         className="w-full h-32 p-4 rounded-xl bg-gray-100 dark:bg-black/20 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 resize-y focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-[border-color,box-shadow] font-sans text-sm leading-relaxed"
                       />

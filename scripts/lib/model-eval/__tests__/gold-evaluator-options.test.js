@@ -84,11 +84,43 @@ describe.each(Object.entries(incumbentByFeature))('%s gold evaluator options', (
       runs: 1,
       cachePolicy: { read: true, write: true },
     });
-    expect(buildGoldContractOptions({ feature, mode: options.mode })).toEqual({});
+    expect(buildGoldContractOptions({ feature, mode: options.mode })).toEqual({
+      disableFallback: true,
+      includeResponseMetadata: true,
+    });
   });
 });
 
 describe('gold evaluator guardrails', () => {
+  it('pins disableFallback in production mode so the gold set never silently measures the Gemini fallback', () => {
+    expect(buildGoldContractOptions({ feature: 'parse', mode: 'production' })).toEqual({
+      disableFallback: true,
+      includeResponseMetadata: true,
+    });
+  });
+
+  it('still returns the full evaluation-mode option set including modelId and featureName', () => {
+    expect(buildGoldContractOptions({
+      feature: 'parse',
+      mode: 'evaluation',
+      modelId: 'google/gemini-2.5-flash-lite',
+    })).toEqual({
+      modelId: 'google/gemini-2.5-flash-lite',
+      disableFallback: true,
+      featureName: 'benchmark.parse',
+      includeResponseMetadata: true,
+    });
+  });
+
+  it('reports the actual serving provider when the caller supplies one, and defaults to openrouter otherwise', () => {
+    expect(classifyGoldResult({ provider: 'gemini' })).toMatchObject({ provider: 'gemini' });
+    expect(classifyGoldResult({})).toMatchObject({ provider: 'openrouter' });
+  });
+
+  it('rejects an empty attempts array rather than silently reporting zero required failures', () => {
+    expect(() => aggregateGoldAttempts([])).toThrow(TypeError);
+  });
+
   it('unwraps opt-in provider metadata and calculates cost without exposing raw usage', () => {
     const data = { score: 72 };
     expect(unwrapEvaluationResponse({
