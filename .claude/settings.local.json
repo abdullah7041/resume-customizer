@@ -81,7 +81,16 @@
       "Bash(git ls-tree *)",
       "Bash(rtk npx *)",
       "Bash(claude --version)",
-      "Bash(npm -g config get prefix)"
+      "Bash(npm -g config get prefix)",
+      "Bash(rtk find *)",
+      "Bash(rtk wc *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk tsc *)",
+      "Bash(awk '/const handleAnalyzeMatchAI = useCallback/,/^  \\\\\\);$/' src/components/Layout/MainContent.tsx)",
+      "Bash(codegraph explore *)",
+      "Bash(codegraph --version)",
+      "Bash(kill %beoaqdx4e)",
+      "Bash(git *)"
     ]
   },
   "enableAllProjectMcpServers": false,
@@ -89,11 +98,18 @@
     "supabase",
     "context7"
   ],
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
-  },
   "skillOverrides": {
     "fix-light-dark-mode": "off",
-    "review-parse-quality": "off"
+    "review-parse-quality": "off",
+    "bugfix": "off",
+    "debug-netlify-502": "off",
+    "debug-openrouter-503": "off",
+    "debug-resume-parsing": "off",
+    "debug-score": "off",
+    "decompose-task": "off",
+    "deploy-check": "off"
+  },
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": true
   }
 }

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watheq — agentic practice gap analysis</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface-1: #f7f7f5;
+    --surface-2: #ffffff;
+    --border: #e4e2dc;
+    --border-strong: #cfccc2;
+    --text-primary: #1c1c1a;
+    --text-secondary: #5f5e5a;
+    --text-muted: #8a887f;
+    --accent-bg: #e6f1fb; --accent-text: #0c447c; --accent-fill: #378add;
+    --danger-bg: #fcebeb; --danger-text: #791f1f; --danger-fill: #e24b4a;
+    --warning-bg: #faeeda; --warning-text: #633806; --warning-fill: #ef9f27;
+    --success-bg: #eaf3de; --success-text: #27500a; --success-fill: #639922;
+    --radius: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #171613; --surface-1: #201f1c; --surface-2: #24231f;
+      --border: #37352f; --border-strong: #4a473f;
+      --text-primary: #f2f1ec; --text-secondary: #b8b6ac; --text-muted: #8a887f;
+      --accent-bg: #0c447c; --accent-text: #b5d4f4; --accent-fill: #378add;
+      --danger-bg: #791f1f; --danger-text: #f7c1c1; --danger-fill: #e24b4a;
+      --warning-bg: #633806; --warning-text: #fac775; --warning-fill: #ef9f27;
+      --success-bg: #27500a; --success-text: #c0dd97; --success-fill: #639922;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 2.5rem 1.5rem 4rem;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 21px; font-weight: 600; margin: 0 0 6px; }
+  .sub { font-size: 14px; color: var(--text-secondary); margin: 0 0 24px; }
+  .strong-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 22px; }
+  .strong-label { font-size: 12px; color: var(--text-muted); margin-right: 2px; }
+  .pill-good {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    padding: 4px 10px; border-radius: var(--radius);
+    background: var(--success-bg); color: var(--success-text);
+  }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .filter-btn {
+    font-size: 13px; padding: 7px 13px; cursor: pointer; border-radius: var(--radius);
+    background: var(--surface-1); border: 0.5px solid var(--border); color: var(--text-primary);
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .filter-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+  .filter-btn.active { background: var(--surface-2); border: 1px solid var(--border-strong); font-weight: 500; }
+  #cards { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px;
+    padding: 14px 18px; transition: opacity 0.15s;
+  }
+  .card.adopted { opacity: 0.5; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+  .card-title-row { display: flex; align-items: center; gap: 9px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .card-title { font-size: 14.5px; font-weight: 600; }
+  .card.adopted .card-title { text-decoration: line-through; }
+  .pri { font-size: 11px; white-space: nowrap; padding-top: 2px; }
+  .card-body { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 10px; }
+  .card-bottom { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .cat-label { font-size: 11px; color: var(--text-muted); margin-right: 4px; }
+  .src-pill { font-size: 11px; padding: 2px 8px; border-radius: var(--radius); background: var(--surface-1); color: var(--text-secondary); border: 0.5px solid var(--border); }
+  .adopt-toggle { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none; }
+  .adopt-toggle input { cursor: pointer; }
+  .footnote { font-size: 12px; color: var(--text-muted); margin-top: 24px; }
+  .count { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Agentic practice gap analysis — Watheq</h1>
+  <p class="sub">Practices found in four reference repos (claude-code-best-practice, claude-cookbooks, awesome-claude-skills, ECC) that Watheq's own CLAUDE.md / .claude / .agents setup doesn't have yet. Filter by category, check off ones you've adopted.</p>
+
+  <div class="strong-row" id="strong-row"></div>
+  <div class="filters" id="filters"></div>
+  <div class="count" id="count"></div>
+  <div id="cards"></div>
+
+  <p class="footnote">Sources: shan = claude-code-best-practice &middot; cookbooks = claude-cookbooks &middot; skills = awesome-claude-skills &middot; ECC = ECC agent harness. Checkbox state is kept only in this open page (not saved between visits).</p>
+</div>
+
+<script>
+const strong = [
+  "CodeGraph-indexed code search",
+  "rtk noise-reduced shell tooling",
+  "skills-lock.json version pinning",
+  "eval:parse regression harness (8/8)",
+  "GitHub issue triage taxonomy",
+  "dual CLAUDE.md + AGENTS.md docs"
+];
+
+const categories = [
+  { id: "all", label: "All" },
+  { id: "agent", label: "Agent architecture & hooks" },
+  { id: "safety", label: "Safety & governance" },
+  { id: "context", label: "Context & memory" },
+  { id: "verify", label: "Skill craft & verification" }
+];
+
+const roleOf = { agent: "accent", safety: "danger", context: "warning", verify: "success" };
+const catLabel = { agent: "Agent & hooks", safety: "Safety & governance", context: "Context & memory", verify: "Skill & verification" };
+
+const items = [
+  { id: 1, cat: "agent", title: "Dedicated subagents directory", body: "Narrowly scoped .claude/agents/*.md (planner, security-reviewer, build-error-resolver, doc-updater) with tools:/model: frontmatter, to offload work without polluting the main thread.", src: ["shan","ECC"], pri: "High" },
+  { id: 2, cat: "agent", title: "Stop hook for self-verification", body: "A Stop hook that nudges a check of tests/diff/leftover TODOs before the turn ends, instead of relying on the agent to remember.", src: ["shan"], pri: "High" },
+  { id: 3, cat: "agent", title: "PreToolUse skill-usage telemetry", body: "Log which skills actually fire versus sit unused, to catch descriptions that under-trigger.", src: ["shan"], pri: "Medium" },
+  { id: 4, cat: "agent", title: "Auto-format PostToolUse hook", body: "Run lint:fix automatically after Edit/Write — the current single hook only runs tsc, formatting stays a manual step.", src: ["shan"], pri: "Medium" },
+  { id: 5, cat: "agent", title: "Browser MCP for visual/UI skills", body: "Chrome/Playwright/DevTools MCP so better-ui, apple-design and review-animations skills can see rendered output and console errors instead of reasoning blind.", src: ["shan"], pri: "High" },
+  { id: 6, cat: "agent", title: "MCP tool-budget ceiling documented", body: "Write down a cap like under 10 servers / 80 tools in AGENTS.md so future MCP additions don't quietly bloat every prompt.", src: ["ECC"], pri: "Low" },
+
+  { id: 7, cat: "safety", title: "Config security auditor", body: "An AgentShield-style scan of CLAUDE.md, settings.json, hooks and .mcp.json for leaked secrets, over-broad permissions and hook-injection risk — worth it given the service-role key usage.", src: ["ECC"], pri: "High" },
+  { id: 8, cat: "safety", title: "Permission allowlisting over blanket skip", body: "Wildcard settings.json permission rules plus a risk-classifier gate for auto-approving safe commands, instead of ad hoc --dangerously-skip-permissions.", src: ["shan"], pri: "Medium" },
+
+  { id: 9, cat: "context", title: "Path-scoped rule splitting", body: "Break CLAUDE.md's dense gotcha sections into .claude/rules/*.md with paths: frontmatter, so parse-resume gotchas only load when netlify/lib/ai-contracts is touched.", src: ["shan"], pri: "High" },
+  { id: 10, cat: "context", title: "Explicit context-budget guidance", body: "Document a dumb-zone threshold (roughly 40% context) and prefer /compact <hint> or a new session over auto-compact, given how dense this repo's docs already are.", src: ["shan"], pri: "Medium" },
+  { id: 11, cat: "context", title: "Portable, queryable memory vault", body: "Structured project/team/user memory docs with an explicit never-execute-recalled-text rule, instead of the ad hoc report files under .superpowers/sdd.", src: ["ECC"], pri: "Medium" },
+  { id: 12, cat: "context", title: "CLAUDE.md / AGENTS.md sync check", body: "A rule or script asserting the Claude and Codex docs don't silently drift apart, since they intentionally duplicate guidance today.", src: ["ECC"], pri: "Low" },
+
+  { id: 13, cat: "verify", title: "\"When not to use\" + gotchas in every SKILL.md", body: "Standardize skill authoring with an explicit non-use case plus an accumulating gotchas log, rather than centralizing every gotcha in CLAUDE.md.", src: ["skills","shan"], pri: "Medium" },
+  { id: 14, cat: "verify", title: "Expand eval harness past parse_resume", body: "Add eval:optimize / eval:coverletter / eval:match alongside eval:parse — the anti-inflation scoring and STAR-bullet rules are just as regression-prone.", src: ["cookbooks","ECC"], pri: "High" },
+  { id: 15, cat: "verify", title: "Cross-model plan review gate", body: "Formalize having Codex (already wired via AGENTS.md) review a plan before Claude executes it, for cross-cutting changes.", src: ["shan","ECC"], pri: "Medium" },
+  { id: 16, cat: "verify", title: "Prompt caching for repeated system prompts", body: "Evaluate OpenRouter/Gemini prompt caching for the static parts of prompts, given parse_resume already fights a tight latency budget.", src: ["cookbooks"], pri: "Medium" }
+];
+
+let active = "all";
+const adopted = new Set();
+
+function renderStrong() {
+  const row = document.getElementById("strong-row");
+  row.innerHTML = '<span class="strong-label">Already strong:</span>';
+  strong.forEach(s => {
+    const pill = document.createElement("span");
+    pill.className = "pill-good";
+    pill.textContent = "✓ " + s;
+    row.appendChild(pill);
+  });
+}
+
+function renderFilters() {
+  const wrap = document.getElementById("filters");
+  wrap.innerHTML = "";
+  categories.forEach(c => {
+    const btn = document.createElement("button");
+    const n = c.id === "all" ? items.length : items.filter(i => i.cat === c.id).length;
+    btn.textContent = c.label + " (" + n + ")";
+    btn.className = "filter-btn" + (active === c.id ? " active" : "");
+    btn.onclick = () => { active = c.id; renderFilters(); renderCards(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function renderCards() {
+  const wrap = document.getElementById("cards");
+  const countEl = document.getElementById("count");
+  wrap.innerHTML = "";
+  const list = active === "all" ? items : items.filter(i => i.cat === active);
+  countEl.textContent = list.length + " practice" + (list.length === 1 ? "" : "s") + (adopted.size ? " · " + adopted.size + " marked adopted" : "");
+  list.forEach(i => {
+    const role = roleOf[i.cat];
+    const card = document.createElement("div");
+    card.className = "card" + (adopted.has(i.id) ? " adopted" : "");
+    const srcPills = i.src.map(s => '<span class="src-pill">' + s + '</span>').join("");
+    card.innerHTML =
+      '<div class="card-top">' +
+        '<div class="card-title-row">' +
+          '<span class="dot" style="background:var(--' + role + '-fill);"></span>' +
+          '<span class="card-title">' + i.title + '</span>' +
+        '</div>' +
+        '<span class="pri" style="color:var(--' + role + '-text);">' + i.pri + ' priority</span>' +
+      '</div>' +
+      '<p class="card-body">' + i.body + '</p>' +
+      '<div class="card-bottom">' +
+        '<span class="cat-label">' + catLabel[i.cat] + '</span>' +
+        srcPills +
+        '<label class="adopt-toggle"><input type="checkbox" data-id="' + i.id + '" ' + (adopted.has(i.id) ? "checked" : "") + '/> adopted</label>' +
+      '</div>';
+    wrap.appendChild(card);
+  });
+  wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener("change", (e) => {
+      const id = parseInt(e.target.dataset.id, 10);
+      if (e.target.checked) adopted.add(id); else adopted.delete(id);
+      renderCards();
+    });
+  });
+}
+
+renderStrong();
+renderFilters();
+renderCards();
+</script>
+</body>
+</html>
