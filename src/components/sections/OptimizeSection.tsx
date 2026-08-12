@@ -42,6 +42,7 @@ import { JobGroupCard, QueueGroup } from './optimize/JobGroupCard';
 import type { Work } from '../../types/resume';
 import { JobVariantsBar } from './JobVariantsBar';
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
+import { GuestValidationPrompt } from '@/components/Feedback/GuestValidationPrompt';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -87,6 +88,9 @@ interface OptimizationCard {
   applied?: boolean;
   index?: number;
   timestamp?: string;
+  suggestion?: string;
+  rationale?: string;
+  issue?: string;
 }
 
 interface Keywords {
@@ -124,16 +128,28 @@ interface OptimizeSectionProps {
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
-const FREE_OPTIMIZE_STORAGE_KEY = 'watheq:freeOptimizeUsed';
+const FREE_OPTIMIZE_STORAGE_KEY = 'watheq:freeOptimizeRuns';
+const FREE_OPTIMIZE_LEGACY_KEY = 'watheq:freeOptimizeUsed';
+const MAX_FREE_OPTIMIZE_RUNS = 3;
 const REFINABLE_SECTIONS = new Set(['summary', 'headline', 'experience', 'projects', 'education']);
 
-const hasFreePreviewRun = () =>
-  typeof window !== 'undefined' && window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY) !== 'true';
+const getFreeOptimizeRunCount = (): number => {
+  if (typeof window === 'undefined') return 0;
+
+  const storedCount = window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY);
+  if (storedCount !== null) {
+    const parsedCount = Number.parseInt(storedCount, 10);
+    return Number.isFinite(parsedCount) && parsedCount >= 0 ? parsedCount : 0;
+  }
+
+  return window.localStorage.getItem(FREE_OPTIMIZE_LEGACY_KEY) === 'true' ? 1 : 0;
+};
+
+const hasFreePreviewRun = () => getFreeOptimizeRunCount() < MAX_FREE_OPTIMIZE_RUNS;
 
 const markFreePreviewUsed = () => {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, 'true');
-  }
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, String(getFreeOptimizeRunCount() + 1));
 };
 
 // Apply position suggestion: update only matching work positions per AI's positionChanges map
@@ -203,7 +219,7 @@ const finiteScore = (value: unknown): number | null => {
 // - Backend returns: exampleBefore/exampleAfter
 // - Legacy format: before/after  
 // - Store format: original/optimized
-const normalizeOptimization = (opt: OptimizationCard, index: number): OptimizationResult => {
+export const normalizeOptimization = (opt: OptimizationCard, index: number): OptimizationResult => {
   // Always include index in sectionId to prevent duplicate React keys
   // when multiple optimizations have the same section name (e.g., "Experience")
   const baseSection = opt.sectionType || opt.section || 'general';
@@ -218,6 +234,8 @@ const normalizeOptimization = (opt: OptimizationCard, index: number): Optimizati
     optimized: optimizedContent,
     applied: opt.applied ?? false,
     timestamp: new Date().toISOString(),
+    rationale: opt.rationale ?? opt.suggestion,
+    issue: opt.issue,
   };
 };
 
@@ -281,6 +299,7 @@ export function OptimizeSection({
   const [appliedVerifyIsFree, setAppliedVerifyIsFree] = useState(true);
   const [isAutoVerifying, setIsAutoVerifying] = useState(false);
   const [showShareCard, setShowShareCard] = useState(false);
+  const [guestValidationJobDescription, setGuestValidationJobDescription] = useState<string | null>(null);
   const [verifyAnomaly, setVerifyAnomaly] = useState<VerifyAnomalyState | null>(null);
   const [verifyRetryUsed, setVerifyRetryUsed] = useState(false);
   // Applied-subset re-verification lifecycle + the signature currently in flight
@@ -788,6 +807,12 @@ export function OptimizeSection({
       const jobDescription = typeof window !== 'undefined'
         ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
         : '';
+      if (isGuestMode) {
+        analytics.trackGuestRunCompleted({
+          attempt: getFreeOptimizeRunCount(),
+          appliedCount: 0,
+        });
+      }
       if (jobDescription.trim()) {
         const state = useResumeStore.getState();
         const beforeScore = state.baselineMatchScore
@@ -1022,12 +1047,23 @@ export function OptimizeSection({
 
   const handleApplyOptimization = useCallback((opt: OptimizationResult) => {
     analytics.trackOptimization('applied', { section_type: opt.sectionType });
+    if (isGuestMode) {
+      const jobDescription = getCompatibleStorageItem(LAST_JOB_KEY) || '';
+      analytics.trackGuestSuggestionApplied({ attempt: getFreeOptimizeRunCount(), sectionType: opt.sectionType });
+      if (jobDescription.trim()) setGuestValidationJobDescription(jobDescription);
+    }
     applyOptimization(opt.sectionId);
-  }, [applyOptimization]);
+  }, [applyOptimization, isGuestMode]);
 
   const handleApplyQueueGroup = useCallback((ids: string[]) => {
+    if (isGuestMode && ids.length > 0) {
+      const jobDescription = getCompatibleStorageItem(LAST_JOB_KEY) || '';
+      const firstOptimization = optimizations.find((optimization) => optimization.sectionId === ids[0]);
+      analytics.trackGuestSuggestionApplied({ attempt: getFreeOptimizeRunCount(), sectionType: firstOptimization?.sectionType || 'general' });
+      if (jobDescription.trim()) setGuestValidationJobDescription(jobDescription);
+    }
     ids.forEach((sectionId) => applyOptimization(sectionId));
-  }, [applyOptimization]);
+  }, [applyOptimization, isGuestMode, optimizations]);
 
   const handleRevertQueueGroup = useCallback((ids: string[]) => {
     ids.forEach((sectionId) => revertOptimization(sectionId));
@@ -1512,6 +1548,14 @@ export function OptimizeSection({
               </p>
             </div>
           </GlassCard>
+        )}
+        {isGuestMode && guestValidationJobDescription && (
+          <GuestValidationPrompt
+            key={guestValidationJobDescription}
+            jobDescription={guestValidationJobDescription}
+            attempt={Math.max(1, getFreeOptimizeRunCount())}
+            onClose={() => setGuestValidationJobDescription(null)}
+          />
         )}
       </div>
 

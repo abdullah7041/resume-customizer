@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "@/lib/assets";
 import { analytics } from "@/services/analytics";
 import type { GetStartedSource } from "@/types/analytics";
+import { PricingWaitlistModal } from "@/components/Credits/PricingWaitlistModal";
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -392,6 +393,7 @@ function ComparisonSection({ t }: { t: TranslationApi["t"] }) {
 function PricingSection({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: () => void }) {
   const freeFeatures = translatedArray<TextItem>(t, "landing.majlis.freeFeatures", []);
   const proFeatures = translatedArray<TextItem>(t, "landing.majlis.proFeatures", []);
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
 
   return (
     <section id="mj2-pricing" className="majlis-section" aria-labelledby="majlis-pricing-title">
@@ -431,13 +433,24 @@ function PricingSection({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStar
                 <Check aria-hidden="true" />
               </div>
             ))}
-            <a className="majlis-btn majlis-btn-secondary" href="#mj2-faq">
+            <button
+              type="button"
+              className="majlis-btn majlis-btn-secondary"
+              onClick={() => setShowWaitlistModal(true)}
+            >
               {localizedText(t, "landing.majlis.proCta", "Join the pricing waitlist")}
-            </a>
+            </button>
           </article>
         </div>
         <p className="majlis-pricing-note">{localizedText(t, "landing.majlis.pricingNote", "Paid plans are not live yet - the waitlist helps shape launch pricing.")}</p>
       </div>
+      <PricingWaitlistModal
+        isOpen={showWaitlistModal}
+        onClose={() => setShowWaitlistModal(false)}
+        creditsRemaining={0}
+        dismissKey="watheq:landingPricingWaitlist"
+        source="pricing"
+      />
     </section>
   );
 }

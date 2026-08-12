@@ -106,6 +106,11 @@ vi.mock('../components/sections/PricingSection', () => ({
   PricingSection: () => <section id="pricing">Public pricing plans</section>,
 }));
 
+vi.mock('../components/Credits/PricingWaitlistModal', () => ({
+  PricingWaitlistModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div role="dialog">Pricing waitlist modal</div> : null,
+}));
+
 describe('Landing pricing and comparison placement', () => {
   it('keeps full pricing and comparison available on the public landing page', () => {
     render(<LandingPage onGetStarted={vi.fn()} />);
@@ -119,7 +124,8 @@ describe('Landing pricing and comparison placement', () => {
     expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
     expect(screen.getByText('0 SAR')).toBeInTheDocument();
     expect(screen.getByText('29 SAR')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Join the pricing waitlist' })).toHaveAttribute('href', '#mj2-faq');
+    fireEvent.click(screen.getByRole('button', { name: 'Join the pricing waitlist' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Pricing waitlist modal');
     expect(screen.queryByText('Native Arabic Support')).not.toBeInTheDocument();
     expect(screen.queryByText('Professional Templates')).not.toBeInTheDocument();
     expect(screen.queryByText(RegExp(['Generic', 'Tool', 'A'].join(' '), 'i'))).not.toBeInTheDocument();

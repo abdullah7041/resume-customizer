@@ -4,7 +4,7 @@
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import OptimizeSection from '../components/sections/OptimizeSection';
+import OptimizeSection, { normalizeOptimization } from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { verificationSignature } from '@/lib/optimize/scoreModel';
 
@@ -106,6 +106,10 @@ vi.mock('../services/analytics', () => ({
         trackOptimization: mockTrackOptimization,
         trackScoreDiffExpanded: vi.fn(),
         trackExplainabilityPanelOpened: vi.fn(),
+        trackGuestRunCompleted: vi.fn(),
+        trackGuestSuggestionApplied: vi.fn(),
+        trackGuestValidationPromptShown: vi.fn(),
+        trackGuestValidationAnswered: vi.fn(),
     },
 }));
 
@@ -373,6 +377,17 @@ describe('OptimizeSection', () => {
 
             expect(screen.getByText(/run an analysis/i)).toBeInTheDocument();
             expect(screen.queryByTestId('character-results-companion')).not.toBeInTheDocument();
+        });
+
+        it('keeps the API suggestion rationale on initial optimization cards', () => {
+            expect(normalizeOptimization({
+                section: 'summary',
+                exampleBefore: 'Built web applications.',
+                exampleAfter: 'Built web applications with measurable delivery outcomes.',
+                suggestion: 'The role asks for evidence of measurable delivery impact.',
+            }, 0)).toMatchObject({
+                rationale: 'The role asks for evidence of measurable delivery impact.',
+            });
         });
     });
 

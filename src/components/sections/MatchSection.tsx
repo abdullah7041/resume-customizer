@@ -42,7 +42,10 @@ import { computeOptimizationOutlook, type OptimizationOutlookBand } from '@/lib/
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
-const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchUsed';
+const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchRuns';
+const FREE_MATCH_LEGACY_KEY = 'watheq:freeMatchUsed';
+const MAX_FREE_MATCH_RUNS = 3;
+const LAST_GUEST_JOB_FINGERPRINT_KEY = 'watheq:lastGuestJobFingerprint';
 
 const resolveVariant = (score: number) => {
   if (score >= 70) {
@@ -185,6 +188,15 @@ const splitReasoningIntoBullets = (reasoning?: string) => {
 const getJobWordCount = (value: string) =>
   value.trim().split(/\s+/).filter(Boolean).length;
 
+const fingerprintJobDescription = (jobDescription: string): string => {
+  let hash = 2166136261;
+  for (let index = 0; index < jobDescription.length; index += 1) {
+    hash ^= jobDescription.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+};
+
 const uniqueStrings = (items: string[]) => {
   const seen = new Set<string>();
   const result: string[] = [];
@@ -199,13 +211,23 @@ const uniqueStrings = (items: string[]) => {
   return result;
 };
 
-const hasFreePreviewRun = () =>
-  typeof window !== 'undefined' && window.localStorage.getItem(FREE_MATCH_STORAGE_KEY) !== 'true';
+const getFreeMatchRunCount = (): number => {
+  if (typeof window === 'undefined') return 0;
+
+  const storedCount = window.localStorage.getItem(FREE_MATCH_STORAGE_KEY);
+  if (storedCount !== null) {
+    const parsedCount = Number.parseInt(storedCount, 10);
+    return Number.isFinite(parsedCount) && parsedCount >= 0 ? parsedCount : 0;
+  }
+
+  return window.localStorage.getItem(FREE_MATCH_LEGACY_KEY) === 'true' ? 1 : 0;
+};
+
+const hasFreePreviewRun = () => getFreeMatchRunCount() < MAX_FREE_MATCH_RUNS;
 
 const markFreePreviewUsed = () => {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(FREE_MATCH_STORAGE_KEY, 'true');
-  }
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(FREE_MATCH_STORAGE_KEY, String(getFreeMatchRunCount() + 1));
 };
 
 const handleOptimizeClick = () => {
@@ -226,6 +248,7 @@ export function MatchSection({
   onJobSaved,
   savedApplicationId,
   savedApplication,
+  isGuestMode = false,
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
@@ -362,11 +385,22 @@ export function MatchSection({
     setError('');
     analytics.trackJobDescriptionSubmitted();
     analytics.trackMatchAnalysisStarted();
+    if (isGuestMode) analytics.trackGuestRunStarted();
     try {
       const result = await onAnalyzeMatchAI(trimmedJob, { ...options, importedCriteria });
       if (options?.freePreview) markFreePreviewUsed();
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
+        if (isGuestMode) {
+          const attempt = getFreeMatchRunCount();
+          analytics.trackGuestMatchScored({ attempt, score: result.score });
+          const fingerprint = fingerprintJobDescription(trimmedJob);
+          const previousFingerprint = window.localStorage.getItem(LAST_GUEST_JOB_FINGERPRINT_KEY);
+          if (previousFingerprint && previousFingerprint !== fingerprint) {
+            analytics.trackSecondJobAdRun({ attempt });
+          }
+          window.localStorage.setItem(LAST_GUEST_JOB_FINGERPRINT_KEY, fingerprint);
+        }
         requestValueMomentFeedbackPrompt('match_success');
       }
       if (result?.strategicRealityCheck) {
