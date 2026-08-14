@@ -37,7 +37,7 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                 {/* Section Header */}
                 <div className="text-center space-y-4">
                     <h2 className="inline-block text-3xl sm:text-4xl lg:text-5xl font-bold text-[#171717] dark:drop-shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-                        <span className="dark:bg-gradient-to-r dark:from-emerald-400 dark:via-teal-400 dark:to-cyan-400 dark:bg-clip-text dark:text-transparent pb-1">
+                        <span className="dark:bg-gradient-to-r dark:from-emerald-400 dark:via-teal-400 dark:to-emerald-300 dark:bg-clip-text dark:text-transparent pb-1">
                             {t('pricing.title')}
                         </span>
                     </h2>

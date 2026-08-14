@@ -5,12 +5,11 @@
     "sections": {
       "intro": {
         "title": "Introduction",
-        "content": "Watheq (\"we\", \"us\", \"our\") is committed to protecting your personal data in accordance with the Saudi Personal Data Protection Law (PDPL). This policy explains how we collect, use, and protect your information."
+        "content": "This policy explains how the Watheq beta service collects, uses, shares, stores, and protects personal data under applicable Saudi data-protection requirements. It also explains the choices and rights available to you."
       },
       "controller": {
         "title": "Data Controller",
-        "name": "Watheq",
-        "address": "Riyadh, Kingdom of Saudi Arabia",
+        "name": "Watheq beta service",
         "email": "privacy@watheqai.app"
       },
       "dataCollected": {
@@ -21,7 +20,7 @@
             "name": "Full name",
             "email": "Email address",
             "phone": "Phone number (optional)",
-            "resume": "Resume content and work history"
+            "resume": "Resume, job description, work history, AI inputs and outputs, and optional contact details"
           }
         },
         "technical": {
@@ -29,7 +28,7 @@
           "items": {
             "ip": "IP address",
             "browser": "Browser type and version",
-            "device": "Device information"
+            "device": "Device, security, diagnostic, and consent records"
           }
         }
       },
@@ -37,14 +36,14 @@
         "title": "Purpose of Processing",
         "items": {
           "service": "To provide resume optimization services",
-          "improvement": "To improve our AI algorithms and services",
+          "improvement": "To secure, diagnose, support, and improve the service; optional product analytics run only when you allow analytics",
           "communication": "To communicate with you about your account",
           "legal": "To comply with legal obligations"
         }
       },
       "legalBasis": {
         "title": "Legal Basis for Processing",
-        "content": "Under Saudi PDPL Article 5, we process your data based on: (1) Your explicit consent, (2) Performance of our contract with you, (3) Our legitimate business interests, (4) Legal obligations."
+        "content": "Depending on the activity, processing is based on your consent where required, your request to provide the service, compliance with legal obligations, or a legitimate interest permitted by applicable law and balanced against your rights. You may decline optional analytics without losing core service access."
       },
       "rights": {
         "title": "Your Rights Under PDPL",
@@ -75,18 +74,22 @@
       },
       "retention": {
         "title": "Data Retention",
-        "content": "We retain your personal data for as long as your account is active or as needed to provide services. Resume data is deleted 30 days after account deletion. Some data may be retained longer for legal compliance."
+        "content": "Resume and job data saved in your browser remains until you clear it or use the deletion controls. Account records are kept while the account is active and are deleted from active application tables when account deletion completes, except limited records that must be retained for security or legal obligations. Infrastructure backups and provider logs may expire on separate controlled schedules."
       },
       "crossBorder": {
         "title": "Cross-Border Data Transfers",
-        "content": "Your data is primarily processed within Saudi Arabia. If transferred internationally, we ensure adequate protection measures are in place as required by PDPL Article 29."
+        "content": "Watheq uses cloud and AI providers whose systems may process data outside Saudi Arabia. International transfers will be limited to what is necessary and handled using the safeguards and assessments required by applicable Saudi law. Do not submit information you are not authorized to share."
+      },
+      "providers": {
+        "title": "Service Providers and Sharing",
+        "content": "Data may be processed by Supabase for accounts and application data; Netlify for hosting and server functions; OpenRouter and Google for requested AI analysis; Sentry for security and error diagnostics with data scrubbing; Mixpanel for optional consent-based analytics; and Resend for service emails. We do not sell personal data. Each provider receives only the data needed for its function, subject to its contract and retention controls."
       },
       "contact": {
         "title": "Contact Us",
-        "content": "For any privacy-related questions or to exercise your rights, contact our Data Protection Officer:",
+        "content": "For privacy questions or to exercise a data right, contact our privacy team:",
         "button": "Contact Privacy Team"
       }
     },
-    "sdaiaReference": "This policy complies with the Saudi Personal Data Protection Law (PDPL) issued by Royal Decree M/19 dated 9/2/1443H. For more information about your data protection rights, visit the Saudi Data & AI Authority (SDAIA) website."
+    "sdaiaReference": "This policy is intended to describe current beta behavior under applicable Saudi data-protection requirements. It is not a substitute for your statutory rights. For official guidance, consult the Saudi Data & AI Authority (SDAIA)."
   }
 }

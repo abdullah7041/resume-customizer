@@ -46,7 +46,7 @@ export function Vision2030CalculationModal({
                 {t('vision2030.calculation.title', 'Calculation Methodology')}
               </h2>
               <p className="text-xs text-gray-600 dark:text-white/70">
-                {t('vision2030.calculation.subtitle', 'How we score your alignment')}
+                {t('vision2030.calculation.subtitle', 'How the estimate is produced')}
               </p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export function Vision2030CalculationModal({
               {t('vision2030.calculation.objectiveTitle', 'Analysis Objective')}
             </h3>
             <p className="text-gray-800 dark:text-white/90 leading-relaxed text-sm relative z-10 max-w-2xl">
-              {t('vision2030.calculation.objectiveDesc', 'We analyze your resume to match your skills with Vision 2030 priorities. Your score reflects alignment across 11 key economic sectors, prioritizing depth and specialization over broad, shallow matches.')}
+              {t('vision2030.calculation.objectiveDesc', 'This is an AI-generated estimate based on resume evidence compared with strategic-sector references. It is not an official Vision 2030 certification, employment assessment, or government endorsement.')}
             </p>
           </section>
 
@@ -86,14 +86,14 @@ export function Vision2030CalculationModal({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Step 1 */}
               <div className="bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5 p-4 rounded-xl hover:border-emerald-500/20 transition-colors group">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                  <Target className="w-4 h-4 text-blue-400" />
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                  <Target className="w-4 h-4 text-emerald-500" />
                 </div>
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-1.5 text-sm">
-                  {t('vision2030.calculation.step1Title', '1. Smart Matching')}
+                  {t('vision2030.calculation.step1Title', '1. Evidence Review')}
                 </h4>
                 <p className="text-[11px] text-gray-600 dark:text-white/70 leading-relaxed">
-                  {t('vision2030.calculation.step1Desc', 'We scan and weight keywords (1-3) based on importance, removing duplicates for accuracy.')}
+                  {t('vision2030.calculation.step1Desc', 'The AI reviews visible resume evidence such as work examples, projects, skills, and certifications.')}
                 </p>
               </div>
 
@@ -103,10 +103,10 @@ export function Vision2030CalculationModal({
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
                 </div>
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-1.5 text-sm">
-                  {t('vision2030.calculation.step2Title', '2. Encouragement Curve')}
+                  {t('vision2030.calculation.step2Title', '2. Sector Comparison')}
                 </h4>
                 <p className="text-[11px] text-gray-600 dark:text-white/70 leading-relaxed">
-                  {t('vision2030.calculation.step2Desc', 'We apply a curve to boost lower raw scores, setting a 60% motivational floor for everyone.')}
+                  {t('vision2030.calculation.step2Desc', 'That evidence is compared with reference descriptions for strategic Saudi sectors and their relevant capabilities.')}
                 </p>
               </div>
 
@@ -116,10 +116,10 @@ export function Vision2030CalculationModal({
                   <PieChart className="w-4 h-4 text-amber-400" />
                 </div>
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-1.5 text-sm">
-                  {t('vision2030.calculation.step3Title', '3. The 70/30 Rule')}
+                  {t('vision2030.calculation.step3Title', '3. Estimate and Guidance')}
                 </h4>
                 <p className="text-[11px] text-gray-600 dark:text-white/70 leading-relaxed">
-                  {t('vision2030.calculation.step3Desc', '70% of your score comes from your top 3 sectors. We reward specialized experts over generalists.')}
+                  {t('vision2030.calculation.step3Desc', 'The AI returns a 0–100 estimate, sector evidence, and recommendations. Results may vary after relevant resume changes or model updates.')}
                 </p>
               </div>
             </div>
@@ -136,8 +136,8 @@ export function Vision2030CalculationModal({
               {[
                 {
                   icon: CheckCircle2,
-                  title: t('vision2030.calculation.floorTitle', '60% Minimum Floor'),
-                  desc: t('vision2030.calculation.floorDesc', 'Prevents discouragement, encourages action.')
+                  title: t('vision2030.calculation.floorTitle', 'Evidence-based estimate'),
+                  desc: t('vision2030.calculation.floorDesc', 'Claims without visible resume support should not be treated as proven alignment.')
                 },
                 {
                   icon: Lightbulb,
@@ -146,13 +146,13 @@ export function Vision2030CalculationModal({
                 },
                 {
                   icon: ShieldCheck,
-                  title: t('vision2030.calculation.depthTitle', 'Depth over Breadth'),
-                  desc: t('vision2030.calculation.depthDesc', 'Mastery in one field beats average in all.')
+                  title: t('vision2030.calculation.depthTitle', 'Not a certification'),
+                  desc: t('vision2030.calculation.depthDesc', 'The result is guidance, not an official or hiring decision.')
                 },
                 {
                   icon: ShieldCheck,
-                  title: t('vision2030.calculation.privacyTitle', 'Total Privacy'),
-                  desc: t('vision2030.calculation.privacyDesc', 'Analysis happens locally on your device.')
+                  title: t('vision2030.calculation.privacyTitle', 'Server-side AI processing'),
+                  desc: t('vision2030.calculation.privacyDesc', 'The needed resume text is sent through Watheq servers to contracted AI providers; see the Privacy Policy.')
                 }
               ].map((item) => (
                 <div key={item.title} className="flex gap-3 p-3 rounded-lg bg-[color:var(--surface-glass)] dark:bg-white/[0.04] border border-[color:var(--glass-border)] dark:border-white/5">
@@ -166,22 +166,11 @@ export function Vision2030CalculationModal({
             </div>
           </section>
 
-          {/* Score Interpretation */}
+          {/* Score interpretation */}
           <section className="bg-[color:var(--surface-control)] dark:bg-black/20 rounded-xl p-4 border border-[color:var(--glass-border)] dark:border-white/5">
-            <div className="grid grid-cols-3 gap-2 text-center divide-x divide-white/10 rtl:divide-x-reverse">
-              <div className="px-2">
-                <div className="text-amber-400 font-bold text-base">60-69%</div>
-                <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-white/60 mt-1">{t('vision2030.calculation.rangeGood', 'Good')}</div>
-              </div>
-              <div className="px-2">
-                <div className="text-emerald-400 font-bold text-base">70-84%</div>
-                <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-white/60 mt-1">{t('vision2030.calculation.rangeStrong', 'Strong')}</div>
-              </div>
-              <div className="px-2">
-                <div className="text-blue-400 font-bold text-base">85%+</div>
-                <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-white/60 mt-1">{t('vision2030.calculation.rangeExpert', 'Expert')}</div>
-              </div>
-            </div>
+            <p className="text-sm leading-relaxed text-gray-700 dark:text-white/75">
+              {t('vision2030.calculation.scoreNote', 'Use the score as a directional summary. The supporting sector evidence and recommendations are more useful than the number alone, and every suggested claim still needs your verification.')}
+            </p>
           </section>
 
         </div>

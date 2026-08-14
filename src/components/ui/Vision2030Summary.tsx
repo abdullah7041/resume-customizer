@@ -258,19 +258,19 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
 
                         {/* Detected Career Path */}
                         {analysis && analysis.detectedCareer && (
-                            <div className="flex items-center gap-3 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 mb-5">
-                                <div className="p-2 rounded-full bg-blue-500/10 shrink-0">
-                                    <Crosshair className="w-4 h-4 text-blue-400" />
+                            <div className="flex items-center gap-3 p-3 rounded-xl bg-teal-500/5 border border-teal-500/10 mb-5">
+                                <div className="p-2 rounded-full bg-teal-500/10 shrink-0">
+                                    <Crosshair className="w-4 h-4 text-teal-500" />
                                 </div>
                                 <div>
-                                    <p className="text-xs text-blue-300/80 mb-0.5 uppercase tracking-wider font-semibold">
+                                    <p className="text-xs text-teal-700/80 dark:text-teal-300/80 mb-0.5 uppercase tracking-wider font-semibold">
                                         {isArabic ? 'المسار المهني' : 'Detected Career Path'}
                                     </p>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm text-blue-100 font-medium">
+                                        <span className="text-sm text-teal-950 dark:text-teal-100 font-medium">
                                             {isArabic ? analysis.detectedCareer.archetypeNameAr : analysis.detectedCareer.archetypeNameEn}
                                         </span>
-                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/20">
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-800 dark:text-teal-300 border border-teal-500/20">
                                             {analysis.detectedCareer.confidence}
                                         </span>
                                     </div>

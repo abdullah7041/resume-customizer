@@ -46,10 +46,10 @@ interface CoverLetterSectionProps {
 
 // === Tone options ===
 const tones = [
-  { value: 'professional', label: 'Professional', labelAr: 'احترافي', icon: Briefcase, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+  { value: 'professional', label: 'Professional', labelAr: 'احترافي', icon: Briefcase, color: 'text-teal-500', bg: 'bg-teal-500/10', border: 'border-teal-500/20' },
   { value: 'enthusiastic', label: 'Enthusiastic', labelAr: 'متحمس', icon: Zap, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
-  { value: 'formal', label: 'Formal', labelAr: 'رسمي', icon: BookOpen, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  { value: 'creative', label: 'Creative', labelAr: 'إبداعي', icon: Palette, color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' }
+  { value: 'formal', label: 'Formal', labelAr: 'رسمي', icon: BookOpen, color: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+  { value: 'creative', label: 'Creative', labelAr: 'إبداعي', icon: Palette, color: 'text-teal-500', bg: 'bg-teal-500/10', border: 'border-teal-500/20' }
 ];
 
 const arabicToneLabels: Record<string, string> = {
@@ -403,8 +403,8 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       {/* Configuration */}
       <GlassCard className="overflow-hidden">
         <div className="flex items-center gap-4 mb-8">
-          <GlassCircle size="lg" variant="indigo" className="shadow-lg shadow-indigo-500/20">
-            <FileText className="w-6 h-6 text-indigo-600 dark:text-indigo-300" />
+          <GlassCircle size="lg" variant="success" className="shadow-lg shadow-emerald-500/20">
+            <FileText className="w-6 h-6 text-emerald-700 dark:text-emerald-300" />
           </GlassCircle>
           <div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
@@ -468,16 +468,16 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
                     className={cn(
                       'relative px-4 py-3 rounded-xl border transition-[color,background-color,border-color,box-shadow] duration-300 flex flex-col items-center gap-2 group',
                       isSelected
-                        ? `border-indigo-500 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-white shadow-sm shadow-indigo-500/20`
+                        ? `border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-white shadow-sm shadow-emerald-500/20`
                         : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 hover:border-gray-300 dark:hover:border-white/20'
                     )}
                   >
                     {isSelected && (
-                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-indigo-500/20 dark:ring-white/20" />
+                      <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-emerald-500/20 dark:ring-white/20" />
                     )}
                     <IconComponent className={cn(
                       "w-6 h-6 transition-colors duration-300",
-                      isSelected ? "text-indigo-600 dark:text-indigo-300" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                      isSelected ? "text-emerald-700 dark:text-emerald-300" : "text-gray-400 dark:text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300"
                     )} />
                     <span className="text-sm font-medium">
                       {getToneLabel(tOption.value, tOption.label, isArabic)}
@@ -528,12 +528,12 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       {/* Loading State */}
       {isGenerating && (
         <GlassCard className="p-12 relative overflow-hidden">
-          <div className="absolute inset-0 bg-indigo-500/5 animate-pulse" />
+          <div className="absolute inset-0 bg-emerald-500/5 animate-pulse" />
           <div className="relative z-10 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 mb-6 relative">
-              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/30 border-t-indigo-500 animate-spin" />
-              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10 scale-75 animate-ping" />
-              <FileText className="absolute inset-0 m-auto w-6 h-6 text-indigo-400" />
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-500/30 border-t-emerald-500 animate-spin" />
+              <div className="absolute inset-0 rounded-full border-4 border-emerald-500/10 scale-75 animate-ping" />
+              <FileText className="absolute inset-0 m-auto w-6 h-6 text-emerald-500" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               {t('sections.coverLetter.craftingTitle', 'AI is writing...')}
@@ -547,7 +547,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
       {/* Result Display */}
       {!isGenerating && coverLetter && (
-        <GlassCard className="overflow-hidden border-t-4 border-t-indigo-500/50">
+        <GlassCard className="overflow-hidden border-t-4 border-t-emerald-500/50">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-200 dark:border-white/10">
             <div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
@@ -555,14 +555,14 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
               </h3>
               <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 text-indigo-400" />
+                  <FileText className="w-4 h-4 text-emerald-500" />
                   {wordCount} {t('sections.coverLetter.words', 'words')}
                 </span>
                 <span className="w-1 h-1 rounded-full bg-gray-600" />
                 <span className="flex items-center gap-1.5 capitalize">
                   {tones.find(t => t.value === tone)?.icon && (() => {
                     const Icon = tones.find(t => t.value === tone)!.icon;
-                    return <Icon className="w-4 h-4 text-indigo-400" />
+                    return <Icon className="w-4 h-4 text-emerald-500" />
                   })()}
                   {getToneLabel(tone, tones.find(t => t.value === tone)?.label || tone, isArabic)} {t('sections.coverLetter.toneLabel', 'tone')}
                 </span>
@@ -607,7 +607,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
               className={cn(
                 "absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-[color,background-color,box-shadow]",
                 isEditing
-                  ? "bg-indigo-600 text-white shadow-lg"
+                  ? "bg-emerald-700 text-white shadow-lg"
                   : "bg-white/80 text-gray-600 hover:bg-white shadow-md"
               )}
             >
@@ -685,11 +685,11 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-3 p-3 bg-indigo-500/5 rounded-lg border border-indigo-500/10">
-            <div className="p-1.5 bg-indigo-500/20 rounded-md">
-              <Wand2 className="w-4 h-4 text-indigo-400" />
+          <div className="mt-4 flex items-center gap-3 p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/10">
+            <div className="p-1.5 bg-emerald-500/20 rounded-md">
+              <Wand2 className="w-4 h-4 text-emerald-500" />
             </div>
-            <p className="text-sm text-indigo-700 dark:text-indigo-200/80">
+            <p className="text-sm text-emerald-800 dark:text-emerald-200/80">
               <strong>{t('sections.coverLetter.tipLabel', 'Pro Tip')}:</strong> {t('sections.coverLetter.tipText', 'Review and edit the generated text to add your personal touch before sending.')}
             </p>
           </div>

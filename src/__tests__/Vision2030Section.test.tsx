@@ -61,6 +61,8 @@ describe('Vision2030Section', () => {
     render(<Vision2030Section resumeText={resumeText} />);
 
     expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear results/i })).toHaveClass('btn-danger-glass');
+    expect(screen.getByRole('button', { name: /recommendations/i }).className).toContain('bg-emerald-50/80');
   });
 
   it('discards a cached score-only result instead of showing an empty report', () => {

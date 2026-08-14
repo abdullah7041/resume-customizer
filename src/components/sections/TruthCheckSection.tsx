@@ -24,7 +24,7 @@ interface TruthCheckSectionProps {
   result: ResumeTruthCheckResult | null;
   isAnalyzing: boolean;
   isGuestMode?: boolean;
-  onAnalyze: (options?: { force?: boolean }) => Promise<ResumeTruthCheckResult | null> | ResumeTruthCheckResult | null | void;
+  onAnalyze: () => Promise<ResumeTruthCheckResult | null> | ResumeTruthCheckResult | null | void;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
   onToast?: (toast: Toast) => void;
@@ -127,7 +127,7 @@ export function TruthCheckSection({
       return;
     }
 
-    await onAnalyze({ force: true });
+    await onAnalyze();
   };
 
   const handleShowAll = () => {
@@ -280,6 +280,14 @@ export function TruthCheckSection({
                 ? t('sections.truthCheck.rerun', 'Re-run Truth Check')
                 : t('sections.truthCheck.run', 'Run Truth Check')}
           </GlassButton>
+          {result && !isAnalyzing && (
+            <p className="text-center text-xs font-medium text-gray-500 dark:text-emerald-100/60">
+              {t(
+                'sections.truthCheck.rerunStableNote',
+                'The same resume uses the saved result. Edit the resume, language, or verification preferences to generate a new report.',
+              )}
+            </p>
+          )}
         </div>
 
         <p className="text-xs font-medium text-gray-500 dark:text-emerald-100/60">

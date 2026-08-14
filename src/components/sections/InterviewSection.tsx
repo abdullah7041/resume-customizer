@@ -550,8 +550,8 @@ export function InterviewSection({
       <GlassCard className="relative overflow-hidden">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <GlassCircle size="lg" variant="blue" className="bg-blue-500/10">
-              <MessageSquare className="w-6 h-6 text-blue-400" />
+            <GlassCircle size="lg" variant="info" className="bg-teal-500/10">
+              <MessageSquare className="w-6 h-6 text-teal-500" />
             </GlassCircle>
             <div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
@@ -587,7 +587,7 @@ export function InterviewSection({
           <GlassCard className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
             {/* Decorative background gradients */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
             <div className="relative z-10 flex items-start gap-4 p-2">
               <GlassCircle size="md" variant="warning" className="mt-1">
@@ -652,7 +652,7 @@ export function InterviewSection({
                 size={questions.length === 0 ? "lg" : "md"}
                 onClick={() => predictQuestions('behavioral', true)}
                 disabled={isLoading}
-                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white border-0 shadow-lg shadow-blue-900/20"
+                className="flex-1 bg-teal-700 hover:bg-teal-600 text-white border-0 shadow-lg shadow-teal-900/20"
               >
                 <Brain className="w-5 h-5 me-2" />
                 {questions.length > 0
@@ -665,7 +665,7 @@ export function InterviewSection({
                 size={questions.length === 0 ? "lg" : "md"}
                 onClick={() => predictQuestions('technical', true)}
                 disabled={isLoading}
-                className="flex-1 bg-purple-600 hover:bg-purple-500 text-white border-0 shadow-lg shadow-purple-900/20"
+                className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white border-0 shadow-lg shadow-emerald-900/20"
               >
                 <Code className="w-5 h-5 me-2" />
                 {questions.length > 0
@@ -776,7 +776,7 @@ export function InterviewSection({
                                 {t(`sections.interview.vulnerability.types.${question.vulnerabilityType}`, question.vulnerabilityType)}
                               </span>
                             )}
-                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
                               {question.category}
                             </span>
                           </div>
@@ -1004,13 +1004,13 @@ export function InterviewSection({
 
                     <div className="flex flex-wrap items-center gap-2">
                       <DifficultyBadge difficulty={question.difficulty} />
-                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-teal-500/10 text-teal-800 dark:text-teal-300 border border-teal-500/20">
                         {question.type === 'technical' && <Monitor className="w-3 h-3" />}
                         {question.type === 'behavioral' && <Users className="w-3 h-3" />}
                         {question.type === 'situational' && <Target className="w-3 h-3" />}
                         {question.type || 'General'}
                       </span>
-                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
                         {question.category}
                       </span>
                     </div>
@@ -1024,8 +1024,8 @@ export function InterviewSection({
 
                     {/* Skills Being Evaluated */}
                     {question.skills_tested && question.skills_tested.length > 0 && (
-                      <div className="p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
-                        <h5 className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-2 flex items-center gap-2">
+                      <div className="p-3 bg-teal-500/5 rounded-lg border border-teal-500/10">
+                        <h5 className="text-xs font-bold text-teal-700 dark:text-teal-300 mb-2 flex items-center gap-2">
                           <Target className="w-3.5 h-3.5" />
                           {t('sections.interview.skillsEvaluated', 'Skills Being Evaluated')}
                         </h5>
@@ -1033,7 +1033,7 @@ export function InterviewSection({
                           {question.skills_tested.map((skill) => (
                             <span
                               key={skill}
-                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-white/5 text-blue-600 dark:text-blue-300 border border-blue-500/20 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors cursor-default"
+                              className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-white/5 text-teal-700 dark:text-teal-300 border border-teal-500/20 hover:bg-gray-200/50 dark:hover:bg-white/10 transition-colors cursor-default"
                             >
                               {skill}
                             </span>
@@ -1083,12 +1083,12 @@ export function InterviewSection({
                     </div>
 
                     {question.answerFramework && (
-                      <div className="p-4 bg-blue-500/5 rounded-xl border border-blue-500/10">
+                      <div className="p-4 bg-teal-500/5 rounded-xl border border-teal-500/10">
                         <div className="flex items-center gap-2 mb-2">
-                          <GlassCircle size="sm" className="bg-blue-500/20">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+                          <GlassCircle size="sm" className="bg-teal-500/20">
+                            <Sparkles className="w-3.5 h-3.5 text-teal-700 dark:text-teal-300" />
                           </GlassCircle>
-                          <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                          <span className="text-sm font-bold text-teal-700 dark:text-teal-300">
                             {t('sections.interview.framework', 'Answer Framework')}
                           </span>
                         </div>

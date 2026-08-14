@@ -183,7 +183,7 @@ function Vision2030Card({
     const alignment = getAlignmentLevel(vision2030.overallScore);
 
     return (
-        <div className="p-4 bg-gradient-to-br from-emerald-500/10 via-transparent to-blue-500/5 rounded-xl border border-emerald-500/20 mb-6">
+        <div className="p-4 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/5 rounded-xl border border-emerald-500/20 mb-6">
             <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-lg">
@@ -383,7 +383,7 @@ export function OptimizationResultsSummary({
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                         <div className="text-center p-4 bg-gray-100 dark:bg-white/5 rounded-xl">
                             <div className="flex items-center justify-center gap-2 mb-1">
-                                <Sparkles className="w-4 h-4 text-purple-400" />
+                                <Sparkles className="w-4 h-4 text-emerald-500" />
                             </div>
                             <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalOptimizations}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">

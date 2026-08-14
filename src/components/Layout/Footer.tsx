@@ -84,7 +84,7 @@ export default function Footer() {
                 href="/"
                 className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200"
               >
-                {t("landing.hero.cta", "Get Started")}
+                {t("footer.landingCta", "Get started")}
               </a>
               <a
                 href="mailto:support@watheqai.app"

@@ -1180,7 +1180,7 @@ export function OptimizeSection({
             aria-busy={isBusy || undefined}
             className={cn(
               "w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 transform active:scale-[0.99]",
-              (!hasResume || isBusy) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-purple-500/20"
+              (!hasResume || isBusy) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-emerald-900/20"
             )}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />

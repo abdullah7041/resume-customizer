@@ -64,7 +64,7 @@ const features: Feature[] = [
             "showcase.optimization.benefit2",
             "showcase.optimization.benefit3",
         ],
-        gradient: "from-purple-400 to-pink-500",
+        gradient: "from-emerald-400 to-teal-500",
     },
     {
         id: "keyword-analysis",
@@ -76,7 +76,7 @@ const features: Feature[] = [
             "showcase.keywords.benefit2",
             "showcase.keywords.benefit3",
         ],
-        gradient: "from-blue-400 to-indigo-500",
+        gradient: "from-teal-400 to-emerald-600",
     },
     {
         id: "pro-templates",
@@ -88,7 +88,7 @@ const features: Feature[] = [
             "showcase.templates.benefit2",
             "showcase.templates.benefit3",
         ],
-        gradient: "from-cyan-400 to-blue-500",
+        gradient: "from-emerald-300 to-teal-600",
     },
     {
         id: "interview-prep",
@@ -112,7 +112,7 @@ const features: Feature[] = [
             "showcase.coverLetter.benefit2",
             "showcase.coverLetter.benefit3",
         ],
-        gradient: "from-violet-400 to-purple-500",
+        gradient: "from-teal-300 to-emerald-500",
     },
     {
         id: "vision-2030",

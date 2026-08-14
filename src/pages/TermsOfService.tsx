@@ -1,8 +1,15 @@
 import { useTranslation } from 'react-i18next';
 
+const TERMS_EFFECTIVE_DATE = new Date('2026-08-15T00:00:00.000Z');
+const TERMS_DATE_FORMATTERS = {
+  ar: new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long', timeZone: 'UTC' }),
+  en: new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }),
+};
+
 export function TermsOfService() {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
+  const effectiveDate = TERMS_DATE_FORMATTERS[isArabic ? 'ar' : 'en'].format(TERMS_EFFECTIVE_DATE);
 
   return (
     <div className="min-h-screen bg-[color:var(--surface)] py-12 px-4">
@@ -11,135 +18,164 @@ export function TermsOfService() {
           {t('terms.title', 'Terms of Service')}
         </h1>
         <p className="text-[color:var(--ink-muted)] mb-8">
-          {t('terms.lastUpdated', 'Last Updated')}: {new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US')}
+          {t('terms.lastUpdated')}: {effectiveDate}
         </p>
 
         {/* Introduction */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.intro.title', 'Introduction')}
+            {t('terms.sections.intro.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.intro.content', 'These Terms of Service ("Terms") govern your access to and use of Watheq\'s AI-powered resume optimization tools and related services (the "Service"). By using the Service, you agree to these Terms. If you do not agree, do not use the Service.')}
+            {t('terms.sections.intro.content')}
+          </p>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
+            {t('terms.sections.beta.title')}
+          </h2>
+          <p className="text-[color:var(--ink-muted)] leading-relaxed">
+            {t('terms.sections.beta.content')}
           </p>
         </section>
 
         {/* Eligibility */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.eligibility.title', 'Eligibility')}
+            {t('terms.sections.eligibility.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.eligibility.content', 'You must be at least 18 years old and legally able to enter into contracts to use Watheq. If you use the Service on behalf of an organization, you represent that you have authority to bind that organization.')}
+            {t('terms.sections.eligibility.content')}
           </p>
         </section>
 
         {/* Account & Security */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.account.title', 'Account & Security')}
+            {t('terms.sections.account.title')}
           </h2>
           <ul className="list-disc list-inside text-[color:var(--ink-muted)] space-y-2">
-            <li>{t('terms.sections.account.items.accurate', 'Provide accurate and complete registration information.')}</li>
-            <li>{t('terms.sections.account.items.security', 'Maintain the confidentiality of your account credentials.')}</li>
-            <li>{t('terms.sections.account.items.activity', 'You are responsible for all activity under your account.')}</li>
+            <li>{t('terms.sections.account.items.accurate')}</li>
+            <li>{t('terms.sections.account.items.security')}</li>
+            <li>{t('terms.sections.account.items.activity')}</li>
           </ul>
         </section>
 
         {/* Acceptable Use */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.use.title', 'Acceptable Use')}
+            {t('terms.sections.use.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed mb-4">
-            {t('terms.sections.use.content', 'You agree not to misuse the Service, including but not limited to:')}
+            {t('terms.sections.use.content')}
           </p>
           <ul className="list-disc list-inside text-[color:var(--ink-muted)] space-y-2">
-            <li>{t('terms.sections.use.items.upload', 'Uploading resumes or content that you do not have the right to use.')}</li>
-            <li>{t('terms.sections.use.items.abuse', 'Attempting to gain unauthorized access to systems or data.')}</li>
-            <li>{t('terms.sections.use.items.automate', 'Using automated means to scrape, mine, or interfere with the Service.')}</li>
-            <li>{t('terms.sections.use.items.misrepresent', 'Misrepresenting AI-generated outputs as human-written without disclosure.')}</li>
+            <li>{t('terms.sections.use.items.upload')}</li>
+            <li>{t('terms.sections.use.items.abuse')}</li>
+            <li>{t('terms.sections.use.items.automate')}</li>
+            <li>{t('terms.sections.use.items.misrepresent')}</li>
           </ul>
         </section>
 
         {/* AI-Generated Content Disclaimer */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.aiDisclaimer.title', 'AI-Generated Content Disclaimer')}
+            {t('terms.sections.aiDisclaimer.title')}
           </h2>
           <div className="bg-[color:var(--surface-strong)] border border-[color:var(--glass-border)] rounded-lg p-4">
             <p className="text-[color:var(--ink-muted)] leading-relaxed">
-              {t('terms.sections.aiDisclaimer.content', 'Watheq uses artificial intelligence to analyze resumes and suggest improvements. AI outputs are suggestions only and may contain errors or omissions. You are solely responsible for reviewing, verifying, and deciding whether to use any AI-generated content. Watheq does not guarantee employment outcomes, interview success, or accuracy of AI suggestions.')}
+              {t('terms.sections.aiDisclaimer.content')}
             </p>
           </div>
+        </section>
+
+        {/* Payments */}
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
+            {t('terms.sections.payments.title')}
+          </h2>
+          <p className="text-[color:var(--ink-muted)] leading-relaxed">
+            {t('terms.sections.payments.content')}
+          </p>
         </section>
 
         {/* Intellectual Property */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.ip.title', 'Intellectual Property')}
+            {t('terms.sections.ip.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.ip.content', 'Watheq retains all rights to its software, branding, and AI models. You retain ownership of your original resume content. AI-generated suggestions are provided for your personal use and may not be resold or repackaged as a competing service.')}
+            {t('terms.sections.ip.content')}
           </p>
         </section>
 
         {/* Termination */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.termination.title', 'Termination')}
+            {t('terms.sections.termination.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.termination.content', 'You may stop using the Service at any time. Watheq may suspend or terminate access if you violate these Terms. Upon termination, your data will be handled in accordance with our Privacy Policy.')}
+            {t('terms.sections.termination.content')}
           </p>
         </section>
 
         {/* Limitation of Liability */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.liability.title', 'Limitation of Liability')}
+            {t('terms.sections.liability.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.liability.content', 'To the maximum extent permitted by applicable law, Watheq and its operators shall not be liable for any indirect, incidental, or consequential damages arising from your use of the Service, including reliance on AI-generated suggestions.')}
+            {t('terms.sections.liability.content')}
           </p>
         </section>
 
         {/* Governing Law */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.law.title', 'Governing Law')}
+            {t('terms.sections.law.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.law.content', 'These Terms are governed by the laws of the Kingdom of Saudi Arabia. Any disputes shall be subject to the jurisdiction of Saudi courts.')}
+            {t('terms.sections.law.content')}
           </p>
         </section>
 
         {/* Changes */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.changes.title', 'Changes to These Terms')}
+            {t('terms.sections.changes.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('terms.sections.changes.content', 'We may update these Terms from time to time. Continued use of the Service after changes constitutes acceptance of the revised Terms.')}
+            {t('terms.sections.changes.content')}
+          </p>
+        </section>
+
+        {/* Language */}
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
+            {t('terms.sections.language.title')}
+          </h2>
+          <p className="text-[color:var(--ink-muted)] leading-relaxed">
+            {t('terms.sections.language.content')}
           </p>
         </section>
 
         {/* Contact */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
-            {t('terms.sections.contact.title', 'Contact Us')}
+            {t('terms.sections.contact.title')}
           </h2>
           <p className="text-[color:var(--ink-muted)] mb-4">
-            {t('terms.sections.contact.content', 'For legal or terms-related questions:')}
+            {t('terms.sections.contact.content')}
           </p>
           <a
             href="mailto:legal@watheqai.app"
             className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
           >
-            {t('terms.sections.contact.button', 'Contact Legal Team')}
+            {t('terms.sections.contact.button')}
           </a>
           <p className="text-[color:var(--ink-muted)] mt-4">
-            {t('terms.sections.contact.support', 'For general product support:')}{' '}
+            {t('terms.sections.contact.support')}{' '}
             <a href="mailto:support@watheqai.app" className="text-emerald-600 hover:underline">
               support@watheqai.app
             </a>
@@ -148,7 +184,7 @@ export function TermsOfService() {
 
         <section className="border-t border-[color:var(--hairline-soft)] pt-8">
           <p className="text-sm text-[color:var(--ink-muted)]">
-            {t('terms.pdplReference', 'These Terms incorporate our obligations under the Saudi Personal Data Protection Law (PDPL) and our Privacy Policy.')}
+            {t('terms.pdplReference')}
           </p>
         </section>
       </div>

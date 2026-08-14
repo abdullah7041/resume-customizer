@@ -90,7 +90,7 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
     )}>
       {/* Background Gradients */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none" />
 
       {/* Header Section */}
       <div className="flex items-start gap-4 relative z-10">
