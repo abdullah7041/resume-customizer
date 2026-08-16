@@ -60,11 +60,12 @@ describe('Light mode contrast', () => {
       expect(inputLine).toContain('var(--focus-ring)');
     });
 
-    it('button.secondary includes dark: variants', () => {
+    it('button.secondary pairs emerald light and dark variants', () => {
       const secondaryLine = glassTs.match(/secondary:\s*'([^']+)'/)?.[1] ?? '';
-      expect(secondaryLine).toContain('dark:bg-gray-900/80');
-      expect(secondaryLine).toContain('dark:text-white');
-      expect(secondaryLine).toContain('var(--surface-control)');
+      expect(secondaryLine).toContain('bg-emerald-50/80');
+      expect(secondaryLine).toContain('dark:bg-emerald-950/50');
+      expect(secondaryLine).toContain('text-emerald-950');
+      expect(secondaryLine).toContain('dark:text-emerald-50');
     });
 
     it('badge.neutral includes dark: variants', () => {
