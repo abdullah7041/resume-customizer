@@ -35,8 +35,8 @@ export function MirroredKeywordsCard({
                 {mirroredPhrases && mirroredPhrases.length > 0 && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-full bg-purple-500/10 ring-1 ring-purple-500/20">
-                                <Sparkles className="w-5 h-5 text-purple-400" />
+                            <div className="p-2 rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20">
+                                <Sparkles className="w-5 h-5 text-emerald-500" />
                             </div>
                             <div>
                                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">
@@ -79,7 +79,7 @@ export function MirroredKeywordsCard({
                 {structuralChanges && structuralChanges.length > 0 && (
                     <div className="pt-4 border-t border-gray-200 dark:border-white/5">
                         <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
                             {t('optimize.mirroredKeywords.structuralChanges', 'Structural Improvements')}
                         </h4>
                         <ul className="space-y-2.5">
@@ -88,7 +88,7 @@ export function MirroredKeywordsCard({
                                     key={index}
                                     className="flex items-start gap-3 text-sm group"
                                 >
-                                    <span className="flex-shrink-0 mt-1.5 w-4 h-[1px] bg-blue-500/50 group-hover:bg-blue-400/80 transition-colors" />
+                                    <span className="flex-shrink-0 mt-1.5 w-4 h-[1px] bg-teal-500/50 group-hover:bg-teal-400/80 transition-colors" />
                                     <span className="text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-300 transition-colors leading-relaxed">
                                         {change}
                                     </span>

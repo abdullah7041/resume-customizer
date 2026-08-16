@@ -559,15 +559,51 @@ describe("MainContent resume parsing", () => {
     expect(await screen.findByText(/Truth risk: medium/i)).toBeInTheDocument();
     expect(analyzeResumeTruthCheckMock).toHaveBeenCalledWith({
       resumeText: "Parsed resume",
-      language: undefined,
+      language: "en",
       userHardStops: ["Excel"],
     });
     expect(localStorage.setItem).toHaveBeenCalledWith(
       "watheq:resumeTruthCheck",
       expect.stringContaining("Owned transformation")
     );
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      "watheq:resumeTruthCheck",
+      expect.stringContaining('"contractVersion":1')
+    );
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      "watheq:resumeTruthCheck",
+      expect.stringContaining('"language":"en"')
+    );
     expect(screen.queryByText(/credits/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Request ID: truth-debug-1/i)).toBeInTheDocument();
+  });
+
+  it("reuses the cached Truth Check when the same resume is checked again", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "truth-check");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    analyzeResumeTruthCheckMock.mockResolvedValueOnce({
+      overallRisk: "medium",
+      summary: "Some claims need evidence.",
+      claims: [{
+        claimText: "Owned transformation",
+        section: "summary",
+        severity: "medium",
+        riskTypes: ["unsupported"],
+        evidenceStatus: "needs_evidence",
+        visibleEvidence: [],
+        whyItMatters: "Broad scope needs proof.",
+        userAction: "Add proof only if true.",
+      }],
+      limits: { cannotVerify: [] },
+    });
+
+    render(<MainContent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /run truth check/i }));
+    expect(await screen.findByText(/Truth risk: medium/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /run truth check/i }));
+
+    await waitFor(() => expect(analyzeResumeTruthCheckMock).toHaveBeenCalledTimes(1));
   });
 
   it("gates guest Truth Check before backend calls", async () => {

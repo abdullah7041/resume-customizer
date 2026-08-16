@@ -304,9 +304,9 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-white/5">
+          <div className="flex flex-col gap-3 pt-4 sm:flex-row border-t border-gray-100 dark:border-white/5">
             <GlassButton
-              variant="secondary"
+              variant="danger"
               onClick={() => {
                 setAnalysis(null);
                 setIsAnalyzing(false);
@@ -324,6 +324,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
               }}
               className="px-3"
               title={t('vision2030.section.clear', 'Clear Results')}
+              aria-label={t('vision2030.section.clear', 'Clear Results')}
             >
               <Trash2 className="w-4 h-4" />
             </GlassButton>

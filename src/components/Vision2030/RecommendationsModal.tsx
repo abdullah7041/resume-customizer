@@ -64,7 +64,7 @@ export function RecommendationsModal({
     }
     return {
       label: t('vision2030.recommendations.lowImpact', 'Low Impact'),
-      className: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+      className: 'bg-teal-500/10 text-teal-800 dark:text-teal-300 border-teal-500/20',
     };
   };
 
@@ -208,7 +208,7 @@ export function RecommendationsModal({
         ) : (
           <div className="space-y-6">
             {/* Summary */}
-            <div className={cn(glass.card, 'p-4 bg-blue-500/[0.03] border-blue-500/10')}>
+            <div className={cn(glass.card, 'p-4 bg-teal-500/[0.04] border-teal-500/15')}>
               <p className="text-sm text-gray-600 dark:text-white/70 leading-relaxed">
                 {t('vision2030.recommendations.intro', 'These recommendations will help strengthen your alignment with Saudi Vision 2030. Focus on high-impact suggestions first.')}
               </p>
@@ -234,7 +234,7 @@ export function RecommendationsModal({
             {renderSuggestionGroup(
               lowImpact,
               t('vision2030.recommendations.optional', 'Optional Enhancements'),
-              <Lightbulb className="w-4 h-4 text-blue-400" />,
+              <Lightbulb className="w-4 h-4 text-teal-500" />,
               t('vision2030.recommendations.noLow', 'No optional recommendations')
             )}
           </div>

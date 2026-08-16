@@ -37,7 +37,7 @@ describe('TruthCheckSection re-run behavior', () => {
     limits: { cannotVerify: [] },
   } as unknown as ResumeTruthCheckResult;
 
-  it('shows "Run Truth Check" and calls onAnalyze with force:true when there is no result yet', async () => {
+  it('shows "Run Truth Check" and lets the parent reuse a matching cached result', async () => {
     const onAnalyze = vi.fn();
     const user = userEvent.setup();
     render(
@@ -53,10 +53,10 @@ describe('TruthCheckSection re-run behavior', () => {
     expect(button).toBeInTheDocument();
 
     await user.click(button);
-    expect(onAnalyze).toHaveBeenCalledWith({ force: true });
+    expect(onAnalyze).toHaveBeenCalledWith();
   });
 
-  it('shows "Re-run Truth Check" and still calls onAnalyze with force:true once a result exists', async () => {
+  it('shows "Re-run Truth Check" without forcing a new model result for unchanged inputs', async () => {
     const onAnalyze = vi.fn();
     const user = userEvent.setup();
     render(
@@ -70,8 +70,9 @@ describe('TruthCheckSection re-run behavior', () => {
 
     const button = screen.getByRole('button', { name: /Re-run Truth Check/i });
     expect(button).toBeInTheDocument();
+    expect(screen.getByText(/same resume uses the saved result/i)).toBeInTheDocument();
 
     await user.click(button);
-    expect(onAnalyze).toHaveBeenCalledWith({ force: true });
+    expect(onAnalyze).toHaveBeenCalledWith();
   });
 });

@@ -91,8 +91,8 @@ export function ReferralStats({ className }: ReferralStatsProps) {
       icon: Users,
       label: t('referrals.totalReferrals'),
       value: stats.totalReferrals,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'from-blue-100 to-blue-50 dark:from-blue-500/20 dark:to-blue-500/10',
+      color: 'text-teal-700 dark:text-teal-300',
+      bgColor: 'from-teal-100 to-teal-50 dark:from-teal-500/20 dark:to-teal-500/10',
     },
     {
       icon: CheckCircle,

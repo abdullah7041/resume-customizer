@@ -26,9 +26,9 @@ const severityConfig = {
     },
     minor: {
         icon: Info,
-        color: 'text-blue-600 dark:text-blue-400',
-        bg: 'bg-blue-50 dark:bg-blue-500/10',
-        border: 'border-blue-200 dark:border-blue-500/30',
+        color: 'text-teal-700 dark:text-teal-300',
+        bg: 'bg-teal-50 dark:bg-teal-500/10',
+        border: 'border-teal-200 dark:border-teal-500/30',
         labelKey: 'minor' as const,
     }
 };
@@ -73,7 +73,7 @@ export function GapAnalysisCard({ gaps, className = '' }: GapAnalysisCardProps) 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                            <AlertCircle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                             {t('optimize.gapAnalysis.title', 'Gap Analysis')}
                         </h3>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">

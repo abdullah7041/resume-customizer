@@ -7,6 +7,7 @@
       "guestOnlySignIn": "Truth Check is only available after you sign in.",
       "run": "Run Truth Check",
       "rerun": "Re-run Truth Check",
+      "rerunStableNote": "The same resume uses the saved result. Edit the resume, language, or verification preferences to generate a new report.",
       "running": "Checking claims...",
       "freeNote": "Free for now.",
       "statusComplete": "Scan complete",

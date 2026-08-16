@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-const REFUND_POLICY_EFFECTIVE_DATE = new Date('2026-07-12T00:00:00.000Z');
+const REFUND_POLICY_EFFECTIVE_DATE = new Date('2026-08-15T00:00:00.000Z');
 const REFUND_POLICY_DATE_FORMATTERS = {
   ar: new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long', timeZone: 'UTC' }),
   en: new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }),
@@ -31,6 +31,15 @@ export function RefundPolicy() {
           </p>
         </section>
 
+        <section className="mb-8 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
+          <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-2">
+            {t('refund.sections.beta.title', 'Current Beta Status')}
+          </h2>
+          <p className="text-[color:var(--ink-muted)] leading-relaxed">
+            {t('refund.sections.beta.content', 'Watheq beta does not currently offer paid checkout. This policy will apply when paid plans launch and will be reviewed before checkout is enabled.')}
+          </p>
+        </section>
+
         {/* Credit Packs */}
         <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
@@ -49,7 +58,6 @@ export function RefundPolicy() {
           <ul className="list-disc list-inside text-[color:var(--ink-muted)] space-y-2">
             <li>{t('refund.sections.subscription.cancel', 'Cancel anytime. You keep your access and remaining credits until the end of the paid period, and you will not be charged again.')}</li>
             <li>{t('refund.sections.subscription.statutory', 'If you have not used the service, you can get a full refund within 7 days of starting any new subscription.')}</li>
-            <li>{t('refund.sections.subscription.firstTime', 'On your first subscription, we extend this: a full refund within 7 days even if you have used up to 10 credits.')}</li>
           </ul>
         </section>
 
@@ -82,7 +90,7 @@ export function RefundPolicy() {
             {t('refund.sections.method.title', 'How Refunds Are Paid')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('refund.sections.method.content', 'Refunds go back to the same payment method you paid with. We process refund requests within 3 business days; your bank may take up to 14 days to post the amount.')}
+            {t('refund.sections.method.content', 'Approved refunds will be returned to the original payment method unless applicable law requires another method. Processing and posting times depend on the payment provider and will be confirmed when the request is handled.')}
           </p>
         </section>
 
@@ -110,9 +118,6 @@ export function RefundPolicy() {
           >
             support@watheqai.app
           </a>
-          <p className="text-[color:var(--ink-muted)] mt-4">
-            {t('refund.sections.contact.reply', 'We reply within 1 business day.')}
-          </p>
         </section>
 
         <section className="border-t border-[color:var(--hairline-soft)] pt-8">

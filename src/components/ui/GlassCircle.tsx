@@ -36,24 +36,24 @@ const variantStyles = {
         boxShadow: '0 0 40px rgba(245,158,11,0.4), 0 0 80px rgba(245,158,11,0.2), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
     },
     info: {
-        background: 'linear-gradient(145deg, rgba(59,130,246,0.5) 0%, rgba(59,130,246,0.25) 50%, rgba(59,130,246,0.15) 100%)',
-        border: '1px solid rgba(59,130,246,0.6)',
-        boxShadow: '0 0 40px rgba(59,130,246,0.4), 0 0 80px rgba(59,130,246,0.2), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
+        background: 'linear-gradient(145deg, rgba(13,148,136,0.5) 0%, rgba(13,148,136,0.25) 50%, rgba(13,148,136,0.15) 100%)',
+        border: '1px solid rgba(13,148,136,0.6)',
+        boxShadow: '0 0 40px rgba(13,148,136,0.35), 0 0 80px rgba(13,148,136,0.18), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
     },
     purple: {
-        background: 'linear-gradient(145deg, rgba(168,85,247,0.5) 0%, rgba(168,85,247,0.25) 50%, rgba(168,85,247,0.15) 100%)',
-        border: '1px solid rgba(168,85,247,0.6)',
-        boxShadow: '0 0 40px rgba(168,85,247,0.4), 0 0 80px rgba(168,85,247,0.2), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
+        background: 'linear-gradient(145deg, rgba(16,185,129,0.5) 0%, rgba(16,185,129,0.25) 50%, rgba(16,185,129,0.15) 100%)',
+        border: '1px solid rgba(16,185,129,0.6)',
+        boxShadow: '0 0 40px rgba(16,185,129,0.35), 0 0 80px rgba(16,185,129,0.18), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
     },
     blue: {
-        background: 'linear-gradient(145deg, rgba(59,130,246,0.5) 0%, rgba(59,130,246,0.25) 50%, rgba(59,130,246,0.15) 100%)',
-        border: '1px solid rgba(59,130,246,0.6)',
-        boxShadow: '0 0 40px rgba(59,130,246,0.4), 0 0 80px rgba(59,130,246,0.2), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
+        background: 'linear-gradient(145deg, rgba(13,148,136,0.5) 0%, rgba(13,148,136,0.25) 50%, rgba(13,148,136,0.15) 100%)',
+        border: '1px solid rgba(13,148,136,0.6)',
+        boxShadow: '0 0 40px rgba(13,148,136,0.35), 0 0 80px rgba(13,148,136,0.18), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
     },
     indigo: {
-        background: 'linear-gradient(145deg, rgba(99,102,241,0.5) 0%, rgba(99,102,241,0.25) 50%, rgba(99,102,241,0.15) 100%)',
-        border: '1px solid rgba(99,102,241,0.6)',
-        boxShadow: '0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(99,102,241,0.2), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
+        background: 'linear-gradient(145deg, rgba(16,185,129,0.5) 0%, rgba(16,185,129,0.25) 50%, rgba(16,185,129,0.15) 100%)',
+        border: '1px solid rgba(16,185,129,0.6)',
+        boxShadow: '0 0 40px rgba(16,185,129,0.35), 0 0 80px rgba(16,185,129,0.18), 0 8px 32px rgba(0,0,0,0.15), inset 0 2px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)'
     },
     // Soft gold — restrained accent for the Warm Saudi Premium direction (calm glow)
     gold: {

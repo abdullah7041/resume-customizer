@@ -31,7 +31,7 @@ export function ParallaxContainer({
         <div className="absolute inset-0 opacity-[0.035] pointer-events-none -z-10 dark:opacity-[0.04]">
           <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl" />
           <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl" />
-          <div className="absolute bottom-1/4 left-1/2 w-72 h-72 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl" />
+          <div className="absolute bottom-1/4 left-1/2 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl" />
         </div>
       )}
 

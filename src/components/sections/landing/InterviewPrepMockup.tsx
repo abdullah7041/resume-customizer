@@ -17,7 +17,7 @@ export function InterviewPrepMockup() {
         {...float}
         className="relative overflow-hidden rounded-[1.5rem] bg-[#f5f4f0] p-5 shadow-2xl shadow-slate-950/12 ring-1 ring-slate-900/6 dark:bg-[#06231d] dark:ring-white/10"
       >
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(43,137,148,0.04)_0%,rgba(14,165,233,0.03)_100%)] dark:bg-[linear-gradient(135deg,rgba(52,211,153,0.06)_0%,rgba(14,165,233,0.04)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(43,137,148,0.04)_0%,rgba(13,148,136,0.03)_100%)] dark:bg-[linear-gradient(135deg,rgba(52,211,153,0.06)_0%,rgba(13,148,136,0.04)_100%)]" />
 
         <div className="relative">
           <div className="flex items-center gap-3">
@@ -66,7 +66,7 @@ export function InterviewPrepMockup() {
       </m.div>
 
       <div className="absolute -bottom-3 -right-3 h-24 w-24 rounded-full bg-[#2b8994]/[0.08] blur-2xl dark:bg-emerald-300/10" />
-      <div className="absolute -top-4 -left-4 h-20 w-20 rounded-full bg-sky-500/[0.06] blur-2xl dark:bg-sky-300/10" />
+      <div className="absolute -top-4 -left-4 h-20 w-20 rounded-full bg-teal-500/[0.06] blur-2xl dark:bg-teal-300/10" />
     </div>
   );
 }

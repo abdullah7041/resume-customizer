@@ -1,0 +1,77 @@
+{
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last Updated",
+    "sections": {
+      "intro": {
+        "title": "Introduction",
+        "content": "These Terms govern access to and use of Watheq's beta AI resume tools and related services. By using the Service, you agree to these Terms. If you do not agree, do not use the Service."
+      },
+      "beta": {
+        "title": "Beta Service and Availability",
+        "content": "Watheq is currently a beta service. Features may change, be interrupted, or be withdrawn while we test and improve the product. Paid checkout is not currently available. Any paid plan will be governed by the terms and refund policy presented before purchase."
+      },
+      "eligibility": {
+        "title": "Eligibility",
+        "content": "You must be at least 18 years old and legally able to enter into contracts to use Watheq. If you use the Service for an organization, you confirm that you are authorized to act for it."
+      },
+      "account": {
+        "title": "Account and Security",
+        "items": {
+          "accurate": "Provide accurate and complete account information.",
+          "security": "Keep your sign-in credentials and devices secure.",
+          "activity": "Notify us promptly if you suspect unauthorized account activity."
+        }
+      },
+      "use": {
+        "title": "Acceptable Use",
+        "content": "You must not misuse the Service, including by:",
+        "items": {
+          "upload": "Uploading personal data or content that you do not have the right to use.",
+          "abuse": "Trying to gain unauthorized access to systems, accounts, or data.",
+          "automate": "Scraping, overloading, reverse engineering, or interfering with the Service except where the law permits it.",
+          "misrepresent": "Using the Service to create false qualifications, fabricated evidence, unlawful content, or deceptive applications."
+        }
+      },
+      "aiDisclaimer": {
+        "title": "AI Outputs and User Responsibility",
+        "content": "Watheq uses third-party AI services to analyze the information you submit. Outputs are estimates and suggestions, may be incomplete or inaccurate, and are not professional, legal, recruitment, or government certification. Review every output and verify all claims before using it. Watheq does not guarantee interviews, employment, hiring outcomes, ATS performance, or Vision 2030 alignment."
+      },
+      "payments": {
+        "title": "Payments, Credits, and Refunds",
+        "content": "Paid checkout is not available during the current beta. If paid plans or credit packs launch, prices, taxes, renewal terms, included credits, and applicable refund rights will be shown before purchase and governed by the Refund Policy."
+      },
+      "ip": {
+        "title": "Content and Intellectual Property",
+        "content": "You retain ownership of the content you submit. You grant Watheq a limited right to process that content only to operate, secure, support, and improve the Service as described in the Privacy Policy. Watheq retains rights in its software, branding, interface, and other proprietary materials."
+      },
+      "termination": {
+        "title": "Suspension and Termination",
+        "content": "You may stop using the Service at any time. We may suspend or terminate access when reasonably necessary to protect users or systems, comply with law, investigate abuse, or enforce these Terms. Personal data is handled under the Privacy Policy."
+      },
+      "liability": {
+        "title": "Disclaimers and Liability",
+        "content": "The beta Service is provided on an as-available basis. To the extent permitted by applicable law, Watheq is not responsible for indirect or consequential loss caused by reliance on AI outputs, service interruptions, or third-party services. Nothing in these Terms excludes rights or liability that cannot lawfully be excluded."
+      },
+      "law": {
+        "title": "Governing Law",
+        "content": "These Terms are governed by the laws of the Kingdom of Saudi Arabia. Saudi courts have jurisdiction, subject to any mandatory consumer dispute rights."
+      },
+      "changes": {
+        "title": "Changes to These Terms",
+        "content": "We may update these Terms when the Service or applicable requirements change. We will publish the revised effective date and provide additional notice when required. Material changes apply prospectively."
+      },
+      "language": {
+        "title": "Language",
+        "content": "These Terms are available in Arabic and English. If the versions differ, the Arabic version governs to the extent permitted by applicable law."
+      },
+      "contact": {
+        "title": "Contact Us",
+        "content": "For legal or terms-related questions:",
+        "button": "Contact Legal",
+        "support": "For product support:"
+      }
+    },
+    "pdplReference": "Use of personal data is governed by the Privacy Policy and applicable Saudi data-protection requirements."
+  }
+}

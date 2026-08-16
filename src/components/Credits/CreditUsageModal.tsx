@@ -48,7 +48,7 @@ const getTransactionColor = (type: string) => {
     case 'celebration_bonus':
       return 'text-emerald-400';
     case 'monthly_reset':
-      return 'text-blue-400';
+      return 'text-teal-500 dark:text-teal-300';
     default:
       return 'text-gray-400';
   }

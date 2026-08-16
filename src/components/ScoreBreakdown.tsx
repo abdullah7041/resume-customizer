@@ -198,8 +198,8 @@ export function ScoreBreakdown({
                                 {/* Calculation Logic Footer - Grid Layout */}
                                 <div className="mt-6 pt-5 border-t border-gray-200 dark:border-white/5 pb-2">
                                     <div className="flex items-center gap-2 mb-4">
-                                        <Info className="w-4 h-4 text-blue-400" />
-                                        <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+                                        <Info className="w-4 h-4 text-teal-500" />
+                                        <span className="text-xs font-semibold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
                                             {t ? t('sections.match.calculation.title', 'Scoring Logic') : 'Scoring Logic'}
                                         </span>
                                     </div>

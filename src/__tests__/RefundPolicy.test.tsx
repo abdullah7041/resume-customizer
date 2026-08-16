@@ -21,6 +21,9 @@ describe('RefundPolicy', () => {
 
     render(<RefundPolicy />);
 
-    expect(screen.getByText(/Last Updated:/)).toHaveTextContent('Last Updated: July 12, 2026');
+    expect(screen.getByText(/Last Updated:/)).toHaveTextContent('Last Updated: August 15, 2026');
+    expect(screen.getByText(/beta does not currently offer paid checkout/i)).toBeInTheDocument();
+    expect(screen.queryByText(/within 3 business days/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/within 1 business day/i)).not.toBeInTheDocument();
   });
 });

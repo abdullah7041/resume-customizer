@@ -13,9 +13,9 @@ export const CATEGORY_COLORS = {
     barClass: 'bg-teal-500',
   },
   experience: {
-    textClass: 'text-purple-700 dark:text-purple-300',
-    backgroundClass: 'bg-purple-500/20',
-    barClass: 'bg-purple-500',
+    textClass: 'text-emerald-800 dark:text-emerald-300',
+    backgroundClass: 'bg-emerald-500/20',
+    barClass: 'bg-emerald-500',
   },
   education: {
     textClass: 'text-amber-700 dark:text-amber-300',

@@ -274,7 +274,7 @@ export const JobGroupCard = memo(function JobGroupCard({
                         className={cn(
                           'inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors sm:w-auto',
                           refiningCardId === opt.sectionId
-                            ? 'border-purple-500/30 bg-purple-500/15 text-purple-700 dark:text-purple-300'
+                            ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300'
                             : 'border-[color:var(--glass-border)] bg-[color:var(--surface-control)] text-gray-600 hover:bg-[color:var(--surface-control-hover)] hover:text-gray-900 dark:border-white/10 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white'
                         )}
                       >
@@ -297,8 +297,8 @@ export const JobGroupCard = memo(function JobGroupCard({
                   </div>
 
                   {refiningCardId === opt.sectionId && (
-                    <div className="mt-4 rounded-xl border border-purple-500/15 bg-purple-500/5 p-4">
-                      <label htmlFor={`refine-input-${opt.sectionId}`} className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                    <div className="mt-4 rounded-xl border border-emerald-500/15 bg-emerald-500/5 p-4">
+                      <label htmlFor={`refine-input-${opt.sectionId}`} className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                         <Wand2 className="h-3.5 w-3.5" />
                         {t('sections.optimize.refine.title', 'Refine this bullet')}
                       </label>
@@ -320,7 +320,7 @@ export const JobGroupCard = memo(function JobGroupCard({
                           disabled={refineLoadingId === opt.sectionId}
                           placeholder={t('sections.optimize.refine.placeholder', 'e.g. emphasize measurable impact')}
                           maxLength={500}
-                          className="min-h-11 flex-1 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/40 disabled:opacity-60 dark:border-white/10 dark:bg-black/20 dark:text-white"
+                          className="min-h-11 flex-1 rounded-lg border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 disabled:opacity-60 dark:border-white/10 dark:bg-black/20 dark:text-white"
                         />
                         <GlassButton
                           variant="primary"
