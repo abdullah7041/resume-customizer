@@ -176,23 +176,23 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
       <div className="mx-auto flex max-w-md flex-col items-center gap-4 p-6 text-center">
         <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">You&apos;re set</div>
         <div className="w-full">
-          <div className="mb-1 flex justify-between text-sm text-gray-600 dark:text-slate-400">
+          <div className="mb-1 flex justify-between text-sm text-gray-600 dark:text-emerald-100/70">
             <span>Profile completeness</span>
             <span>{completeness}%</span>
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-slate-700">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-emerald-300/25">
             <div className="h-full rounded-full bg-emerald-500 transition-[width]" style={{ width: `${completeness}%` }} />
           </div>
         </div>
         {path === 'no_cv' && (
-          <p className="text-sm text-gray-600 dark:text-slate-400">
+          <p className="text-sm text-gray-600 dark:text-emerald-100/70">
             This is a starter profile. Add one more thing — a project or a metric — to make it stronger.
           </p>
         )}
         <button
           type="button"
           onClick={() => onComplete?.()}
-          className="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.96] dark:bg-emerald-500 dark:text-slate-900"
+          className="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.96] dark:bg-emerald-500 dark:text-emerald-950"
         >
           Continue
         </button>
@@ -204,8 +204,8 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
     <div
       className={
         inline
-          ? 'flex flex-col gap-4 rounded-xl border border-emerald-500/30 bg-white/90 p-4 text-gray-900 dark:bg-slate-800/40 dark:text-slate-100'
-          : 'mx-auto flex w-full max-w-md flex-col gap-5 rounded-2xl border border-emerald-500/25 bg-white/95 p-6 text-gray-900 shadow-2xl shadow-emerald-950/10 backdrop-blur-xl sm:p-7 dark:border-emerald-400/25 dark:bg-[#061713]/95 dark:text-slate-100 dark:shadow-black/45'
+          ? 'flex flex-col gap-4 rounded-xl border border-emerald-500/30 bg-white/90 p-4 text-gray-900 dark:bg-emerald-950/45 dark:text-emerald-50'
+          : 'mx-auto flex w-full max-w-md flex-col gap-5 rounded-2xl border border-emerald-500/25 bg-white/95 p-6 text-gray-900 shadow-2xl shadow-emerald-950/10 backdrop-blur-xl sm:p-7 dark:border-emerald-400/25 dark:bg-[#061713]/95 dark:text-emerald-50 dark:shadow-black/45'
       }
     >
       {/* Inline header: what this is, what happens to the answer, + a dismiss affordance. */}
@@ -223,7 +223,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
             type="button"
             onClick={() => onDismiss?.()}
             disabled={busy}
-            className="shrink-0 text-sm text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline disabled:opacity-50 dark:text-slate-400 dark:hover:text-slate-100"
+            className="shrink-0 text-sm text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline disabled:opacity-50 dark:text-emerald-100/70 dark:hover:text-emerald-50"
           >
             Not now
           </button>
@@ -241,15 +241,15 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           {Array.from({ length: total }).map((_, i) => (
             <span
               key={i}
-              className={`h-2 rounded-full transition-[width,background-color] ${i < answered ? 'w-6 bg-emerald-500' : i === answered ? 'w-6 bg-emerald-400 dark:bg-emerald-300' : 'w-2 bg-gray-300 dark:bg-slate-600'}`}
+              className={`h-2 rounded-full transition-[width,background-color] ${i < answered ? 'w-6 bg-emerald-500' : i === answered ? 'w-6 bg-emerald-400 dark:bg-emerald-300' : 'w-2 bg-gray-300 dark:bg-emerald-300/25'}`}
             />
           ))}
         </div>
       )}
 
       <div className={inline ? 'text-start' : 'text-center'}>
-        <h2 className={inline ? 'text-lg font-bold text-gray-900 dark:text-slate-100' : 'text-xl font-bold text-gray-900 dark:text-white'}>{copy?.title}</h2>
-        <p className={inline ? 'mt-1 text-sm text-gray-600 dark:text-slate-400' : 'mt-1 text-sm font-medium text-emerald-800/80 dark:text-emerald-100/80'}>{copy?.hint}</p>
+        <h2 className={inline ? 'text-lg font-bold text-gray-900 dark:text-emerald-50' : 'text-xl font-bold text-gray-900 dark:text-white'}>{copy?.title}</h2>
+        <p className={inline ? 'mt-1 text-sm text-gray-600 dark:text-emerald-100/70' : 'mt-1 text-sm font-medium text-emerald-800/80 dark:text-emerald-100/80'}>{copy?.hint}</p>
       </div>
 
       {/* Plain text input — keyboard mic supplies voice */}
@@ -259,7 +259,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
         placeholder={copy?.placeholder}
         rows={3}
         disabled={busy}
-        className="w-full resize-none rounded-xl border border-gray-300 bg-white p-4 text-base text-gray-900 placeholder:text-gray-500 focus:border-emerald-500 focus:outline-none disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+        className="w-full resize-none rounded-xl border border-gray-300 bg-white p-4 text-base text-gray-900 placeholder:text-gray-500 focus:border-emerald-500 focus:outline-none disabled:opacity-60 dark:border-emerald-400/30 dark:bg-emerald-950/55 dark:text-emerald-50 dark:placeholder:text-emerald-100/45"
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
@@ -275,7 +275,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           type="button"
           onClick={skip}
           disabled={busy}
-          className="rounded-xl px-4 py-3 text-base font-medium text-gray-500 transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-50 dark:text-slate-400"
+          className="rounded-xl px-4 py-3 text-base font-medium text-gray-500 transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-50 dark:text-emerald-100/70"
         >
           Skip
         </button>
@@ -283,7 +283,7 @@ export default function OnboardingChat({ path: pathProp, mode = 'fullscreen', on
           type="button"
           onClick={() => void submitText()}
           disabled={busy}
-          className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60 dark:bg-emerald-500 dark:text-slate-900"
+          className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-base font-semibold text-white transition-transform duration-150 ease-out active:scale-[0.96] disabled:opacity-60 dark:bg-emerald-500 dark:text-emerald-950"
         >
           {busy ? 'Reading…' : 'Next'}
         </button>
