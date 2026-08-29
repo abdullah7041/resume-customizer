@@ -68,6 +68,8 @@ async function handleExport(email: string, userId: string) {
         { data: jobApplications },
         { data: feedbackReports },
         { data: strategicRealityChecks },
+        { data: trackedCompanies },
+        { data: jobFeedState },
         { data: legacyResumes },
         { data: legacyJobMatches },
         { data: legacyFeedback },
@@ -78,6 +80,8 @@ async function handleExport(email: string, userId: string) {
         supabase.from('job_applications').select('*').eq('user_id', userId),
         supabase.from('feedback_reports').select('*').eq('user_id', userId),
         supabase.from('strategic_reality_checks').select('*').eq('user_id', userId),
+        supabase.from('user_tracked_companies').select('*').eq('user_id', userId),
+        supabase.from('user_job_feed_state').select('*').eq('user_id', userId),
         supabase.from('resumes').select('*').eq('email', email),
         supabase.from('job_matches').select('*').eq('email', email),
         supabase.from('feedback').select('*').eq('email', email),
@@ -93,6 +97,8 @@ async function handleExport(email: string, userId: string) {
             jobApplications,
             feedbackReports,
             strategicRealityChecks,
+            trackedCompanies,
+            jobFeedState,
             legacyDeprecated: {
                 resumes: legacyResumes,
                 jobMatches: legacyJobMatches,
@@ -133,6 +139,8 @@ async function handleDelete(email: string, userId: string, confirmDelete: boolea
         { table: 'strategic_reality_checks', error: (await supabase.from('strategic_reality_checks').delete().eq('user_id', userId)).error },
         { table: 'feedback_reports', error: (await supabase.from('feedback_reports').delete().eq('user_id', userId)).error },
         { table: 'job_applications', error: (await supabase.from('job_applications').delete().eq('user_id', userId)).error },
+        { table: 'user_job_feed_state', error: (await supabase.from('user_job_feed_state').delete().eq('user_id', userId)).error },
+        { table: 'user_tracked_companies', error: (await supabase.from('user_tracked_companies').delete().eq('user_id', userId)).error },
         { table: 'credit_transactions', error: (await supabase.from('credit_transactions').delete().eq('email', email)).error },
         { table: 'job_matches', error: (await supabase.from('job_matches').delete().eq('email', email)).error },
         { table: 'resumes', error: (await supabase.from('resumes').delete().eq('email', email)).error },
@@ -166,10 +174,12 @@ async function handleDelete(email: string, userId: string, confirmDelete: boolea
 }
 
 /**
- * Persist the onboarding search intent onto the user's resume row(s).
- * Touches only the new `search_intent` jsonb column. If the user has no resume row
- * yet (guest who just signed in before saving a resume), 0 rows update and the
- * client retains the intent until a resume is saved — no insert needed.
+ * Persist the onboarding search intent on the user's profile.
+ *
+ * This used to write to public.resumes, which is deprecated and holds zero rows —
+ * so every save updated 0 rows and every read returned null, and no user has ever
+ * had a server-side intent. user_profiles is the live table, keyed by a unique
+ * email, and is created at signup, so the write lands.
  */
 async function handleSaveSearchIntent(email: string, rawIntent: unknown) {
     const parsed = SearchIntentSchema.safeParse(rawIntent);
@@ -179,7 +189,7 @@ async function handleSaveSearchIntent(email: string, rawIntent: unknown) {
 
     const supabase = getServiceClient();
     const { error } = await supabase
-        .from('resumes')
+        .from('user_profiles')
         .update({ search_intent: parsed.data })
         .eq('email', email);
 
@@ -197,12 +207,9 @@ async function handleSaveSearchIntent(email: string, rawIntent: unknown) {
 async function handleGetSearchIntent(email: string) {
     const supabase = getServiceClient();
     const { data, error } = await supabase
-        .from('resumes')
+        .from('user_profiles')
         .select('search_intent')
         .eq('email', email)
-        .not('search_intent', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
         .maybeSingle();
 
     if (error) {

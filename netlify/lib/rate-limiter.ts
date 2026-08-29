@@ -317,6 +317,11 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // Unauthenticated waitlist confirmation email — strict to prevent mail-bombing
   "waitlist-confirm": { maxRequests: 5 },
 
+  // Company resolution fans out across every ATS provider in a single call, so it
+  // is both a request amplifier and the quickest way to get this app's IP blocked
+  // by the very boards the Job Feed depends on. Tighter than import-job-url.
+  "job-sources-api": { maxRequests: 10 },
+
   // Job-URL import: an SSRF-guarded outbound fetch, so keep both tiers tight.
   // Guests are keyed by IP with a daily window (mirrors the free-preview tiers).
   "import-job-url": { maxRequests: 20 },

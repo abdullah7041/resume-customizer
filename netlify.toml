@@ -72,10 +72,20 @@
 [functions."vision2030-alignment"]
   timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer
 
+[functions."job-sources-api"]
+  timeout = 30  # Probes up to six job boards concurrently
+
 # Scheduled Functions (Cron Jobs)
 [functions."cron-reset-credits"]
   timeout = 30
   schedule = "0 23 * * *"
+
+# Dispatcher only: leases the stalest tracked companies and hands them to
+# crawl-jobs-background, which gets 15 minutes. Scheduled functions are capped at
+# 30s and run only on published production deploys.
+[functions."cron-job-crawl"]
+  timeout = 30
+  schedule = "0 3 * * *"  # 06:00 Riyadh
 
 [functions."cron-monthly-summary"]
   timeout = 30

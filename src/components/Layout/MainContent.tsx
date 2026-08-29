@@ -1,6 +1,6 @@
 import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -38,6 +38,7 @@ const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").t
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
+const JobFeedSection = lazy(() => import("../sections/JobFeedSection").then(m => ({ default: m.JobFeedSection })));
 const TemplateGallery = lazy(() => import("../sections/TemplatesSection"));
 const OnboardingChat = lazy(() => import("../onboarding/OnboardingChat"));
 const ClarificationModal = lazy(() => import("../modals/ClarificationModal").then(m => ({ default: m.ClarificationModal })));
@@ -125,6 +126,7 @@ const getTabsConfig = (t): (Tab & { icon: NonNullable<Tab["icon"]>; flag?: Featu
   { value: "bulk", label: t("tabs.bulk"), icon: FileText, flag: "bulkAnalysis" },
   { value: "cover-letter", label: t("tabs.coverLetter"), icon: Mail, flag: "coverLetter" },
   { value: "vision2030", label: t("tabs.vision2030", "Vision 2030"), icon: Target, isPremium: true, flag: "vision2030" },
+  { value: "job-feed", label: t("tabs.jobFeed", "Job Feed"), icon: Building2, flag: "jobFeed" },
   { value: "pipeline", label: t("tabs.pipeline", "Pipeline"), icon: Briefcase, flag: "pipeline" },
 ];
 const PRIMARY_TAB_VALUES = ["resume", "truth-check", "match", "optimize", "templates", "more-tools"];
@@ -2372,6 +2374,15 @@ export default function MainContent() {
                       resumeData={resumeData}
                     />
                   )}
+              </Suspense>
+            </LazyErrorBoundary>
+          )}
+          {activeTab === "job-feed" && flags.jobFeed && (
+            <LazyErrorBoundary label="Job feed section">
+              <Suspense fallback={<SectionSkeleton />}>
+                {isGuestMode
+                  ? renderGuestProtectedPanel(t("tabs.jobFeed", "Job Feed"))
+                  : <JobFeedSection />}
               </Suspense>
             </LazyErrorBoundary>
           )}
