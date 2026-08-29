@@ -132,7 +132,7 @@ const getTabsConfig = (t): (Tab & { icon: NonNullable<Tab["icon"]>; flag?: Featu
 const PRIMARY_TAB_VALUES = ["resume", "truth-check", "match", "optimize", "templates", "more-tools"];
 const PRE_UPLOAD_TAB_VALUES = new Set(PRIMARY_TAB_VALUES);
 const MOBILE_PRIMARY_TAB_VALUES = PRIMARY_TAB_VALUES;
-const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030", "pipeline"];
+const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030", "job-feed", "pipeline"];
 const SECONDARY_TAB_VALUES = new Set(MOBILE_SECONDARY_TAB_VALUES);
 
 const containerClass = "app-shell w-full";
