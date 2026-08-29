@@ -18,7 +18,7 @@ import crypto from 'node:crypto';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { batchWithConcurrency } from '../lib/rate-limiter.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
-import { fetchCompany } from '../lib/ats/index.js';
+import { fetchCompany, getProvider } from '../lib/ats/index.js';
 import type { AtsSource, RawPosting } from '../lib/ats/types.js';
 
 initSentry();
@@ -182,7 +182,12 @@ async function crawlCompany(supabase: Supabase, company: CompanyRow): Promise<Cr
     }
   }
 
-  const closed = await reconcileClosures(supabase, company, rows.map((row) => row.external_id), now);
+  // Some sources cannot be believed about absence — a careers page with no
+  // structured data means "unreadable today", not "every role is gone".
+  const trusted = getProvider(company.source)?.closureSignal !== 'untrusted';
+  const closed = trusted
+    ? await reconcileClosures(supabase, company, rows.map((row) => row.external_id), now)
+    : 0;
 
   await supabase
     .from('ats_companies')

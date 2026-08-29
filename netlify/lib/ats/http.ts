@@ -4,6 +4,7 @@
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_BYTES = 4 * 1024 * 1024;
+const RETRY_DELAY_MS = 800;
 
 /** Only the request options these readers actually set — avoids depending on DOM lib types. */
 interface RequestOptions {
@@ -48,8 +49,30 @@ async function request(url: string, init: RequestOptions, timeoutMs: number): Pr
   }
 }
 
+/**
+ * A transient failure is worth exactly one more try.
+ *
+ * A live crawl saw Salla time out once and lose its whole daily refresh, while the
+ * same board answered in about a second on the next three attempts. Only network
+ * and 5xx failures are retried — a 404 is an answer, and retrying it just doubles
+ * the load on a board that already said no.
+ */
+function isTransient(response: JsonResponse): boolean {
+  if (response.ok) return false;
+  if (response.status === null) return true;
+  return response.status >= 500;
+}
+
+async function withRetry(attempt: () => Promise<JsonResponse>): Promise<JsonResponse> {
+  const first = await attempt();
+  if (!isTransient(first)) return first;
+
+  await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+  return attempt();
+}
+
 export function getJson(url: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<JsonResponse> {
-  return request(url, { method: 'GET' }, timeoutMs);
+  return withRetry(() => request(url, { method: 'GET' }, timeoutMs));
 }
 
 export function postJson(
@@ -57,10 +80,12 @@ export function postJson(
   payload: unknown,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<JsonResponse> {
-  return request(
-    url,
-    { method: 'POST', body: JSON.stringify(payload), headers: { 'content-type': 'application/json' } },
-    timeoutMs,
+  return withRetry(() =>
+    request(
+      url,
+      { method: 'POST', body: JSON.stringify(payload), headers: { 'content-type': 'application/json' } },
+      timeoutMs,
+    ),
   );
 }
 

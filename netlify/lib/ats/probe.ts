@@ -9,9 +9,25 @@
 
 import { NAME_PROBEABLE, URL_ONLY } from './index.js';
 import { parseWorkdayUrl, formatWorkdayToken, workday } from './workday.js';
+import { jsonld } from './jsonld.js';
 import type { AtsSource } from './types.js';
 
-export const CONTROL_TOKEN = 'watheq-control-not-a-real-company-9931';
+/**
+ * Control tokens, deliberately of different shapes.
+ *
+ * A single long hyphenated token was not a guard: Workable 404s on
+ * "watheq-control-not-a-real-company-9931" but answers 200 with a zero count for a
+ * short plausible handle, so the probe passed its own control and still credited a
+ * company that does not exist there. A provider must miss on EVERY shape.
+ */
+export const CONTROL_TOKENS = [
+  'watheq-control-not-a-real-company-9931',
+  'zqxjkvw',
+  'qqzzxx12',
+] as const;
+
+/** Kept for callers that just want one; the guard itself uses every shape. */
+export const CONTROL_TOKEN = CONTROL_TOKENS[0];
 
 export interface ResolutionCandidate {
   source: AtsSource;
@@ -35,7 +51,8 @@ async function reliableProviders(): Promise<{ usable: typeof NAME_PROBEABLE; unr
     NAME_PROBEABLE.map(async (provider) => {
       let answered = false;
       try {
-        answered = (await provider.probe(CONTROL_TOKEN)).found;
+        const results = await Promise.all(CONTROL_TOKENS.map((token) => provider.probe(token)));
+        answered = results.some((result) => result.found);
       } catch {
         answered = false;
       }
@@ -68,7 +85,7 @@ export async function resolveCompany(input: string): Promise<ResolutionReport> {
   }
 
   const handle = toHandle(trimmed);
-  if (!handle) return { candidates: [], unreliable: [], exhausted: true };
+  if (!handle) return await tierTwo(trimmed, []);
 
   const { usable, unreliable } = await reliableProviders();
 
@@ -85,8 +102,31 @@ export async function resolveCompany(input: string): Promise<ResolutionReport> {
     }),
   );
 
+  if (candidates.length === 0) return await tierTwo(trimmed, unreliable);
+
   candidates.sort((a, b) => b.jobCount - a.jobCount);
-  return { candidates, unreliable, exhausted: candidates.length === 0 };
+  return { candidates, unreliable, exhausted: false };
+}
+
+/**
+ * Last resort before giving up: read the company's own careers page for the
+ * JobPosting data it publishes for search engines. Only attempted for a URL — there
+ * is no way to guess an employer's careers page from its name, and guessing would
+ * mean fetching arbitrary hosts on a user's say-so.
+ */
+async function tierTwo(input: string, unreliable: AtsSource[]): Promise<ResolutionReport> {
+  if (!/^https?:\/\//i.test(input) || !jsonld.isValidToken(input)) {
+    return { candidates: [], unreliable, exhausted: true };
+  }
+
+  const result = await jsonld.probe(input);
+  if (!result.found) return { candidates: [], unreliable, exhausted: true };
+
+  return {
+    candidates: [{ source: 'jsonld', token: input, jobCount: result.count }],
+    unreliable,
+    exhausted: false,
+  };
 }
 
 /**

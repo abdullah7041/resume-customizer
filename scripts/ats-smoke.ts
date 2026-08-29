@@ -1,7 +1,7 @@
 // Live smoke test for the ATS readers. Hits the real public board APIs — no keys.
 // Run: npx tsx scripts/ats-smoke.ts
 import { fetchCompany } from '../netlify/lib/ats/index.js';
-import { CONTROL_TOKEN } from '../netlify/lib/ats/probe.js';
+import { CONTROL_TOKENS } from '../netlify/lib/ats/probe.js';
 import { NAME_PROBEABLE } from '../netlify/lib/ats/index.js';
 import type { CompanyRef } from '../netlify/lib/ats/types.js';
 
@@ -17,8 +17,9 @@ const TARGETS: CompanyRef[] = [
 async function main() {
   console.log('=== control probe: every provider must MISS a nonsense token ===');
   for (const provider of NAME_PROBEABLE) {
-    const result = await provider.probe(CONTROL_TOKEN);
-    console.log(`${provider.source.padEnd(12)} ${result.found ? 'ANSWERED -> UNRELIABLE' : 'miss (good)'}`);
+    const results = await Promise.all(CONTROL_TOKENS.map((token) => provider.probe(token)));
+    const answered = results.some((result) => result.found);
+    console.log(`${provider.source.padEnd(12)} ${answered ? 'ANSWERED -> UNRELIABLE' : 'miss on all shapes (good)'}`);
   }
 
   console.log('\n=== live board reads ===');

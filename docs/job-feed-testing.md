@@ -64,18 +64,26 @@ toggleable at `/dev/flags`). Like every other tab it needs a resume uploaded fir
 - **Search for a company that is on none of the boards.** It should say so and point at
   pasting a job link, never return silently empty.
 
-## Not built yet — two things the design calls for
+## Tier 2 is built, and it does not reach the big employers
 
-**Tier 2, the `jsonld` reader.** The schema accepts the source and the resolver has a slot
-for it, but nothing implements it, so the cascade currently stops at the six board APIs. A
-company with no public board — stc, NEOM, Aramco — resolves to nothing and falls through to
-the paste path. Those employers were the reason for widening coverage in the first place,
-so this is the next thing to build, not an optional extra.
+The `jsonld` reader is implemented and wired into the resolver as the last step before
+giving up. It is SSRF-guarded, it follows a bounded set of same-origin links when the
+listing page carries no structured data, and its absence of results is never trusted as
+closure — a careers page with no JSON-LD means "unreadable today", not "every role gone".
 
-**The `flushSearchIntent` backfill.** `search_intent` now writes to `user_profiles`, but no
-existing user has one, because the old target was a deprecated 0-row table. Until the flush
-runs on sign-in, anyone who onboarded before this change has intent only in localStorage
-and will see the "set your target role" state.
+**But measured against real sites on 2026-08-29, it does not close the coverage gap it was
+meant to close.** Ten career sites across eight platforms were checked for a server-rendered
+`JobPosting` block — Greenhouse and Ashby board pages, Workable and Pinpoint posting pages,
+SmartRecruiters, `careers.stc.com.sa`, `saudia.com/careers`, Microsoft, Tesla. Every one
+returned zero. These sites emit their structured data client-side for Googlebot, so a plain
+fetch cannot see it, and reading it would need a headless browser — hundreds of megabytes
+and minutes per run, which this project refuses on the same grounds it refuses scraping.
+
+So the honest position: the reader is worth keeping because it is cheap and will pick up any
+employer that does server-render, but **stc, NEOM and Aramco are still out of reach.** Do
+not plan around Tier 2 rescuing them. Reaching those employers is an open problem.
+
+`npx tsx scripts/jsonld-smoke.ts` re-runs that check, including the SSRF guard cases.
 
 ## Not built, on purpose
 

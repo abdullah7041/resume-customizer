@@ -81,10 +81,17 @@ export const workable: AtsProvider = {
     const response = await postJson(listUrl(token), {});
     if (!response.ok) return { found: false, count: 0 };
     const body = response.body as WorkablePage;
-    if (typeof body?.total !== 'number' && !Array.isArray(body?.results)) {
-      return { found: false, count: 0 };
-    }
-    return { found: true, count: body.total ?? body.results?.length ?? 0 };
+    const count = body?.total ?? body?.results?.length ?? 0;
+
+    // Workable answers 200 {"total":0,"results":[]} for a handle that is not an
+    // account at all — verified live 2026-08-29 with "tabby", which is a Pinpoint
+    // company. That is the SmartRecruiters pathology, so a zero from Workable is
+    // not evidence the company exists and must never become a candidate. The cost
+    // is a real Workable employer with no open roles today going unresolved, which
+    // is the right way round: a miss can be corrected by pasting a board link, an
+    // invented company cannot be noticed at all.
+    if (count <= 0) return { found: false, count: 0 };
+    return { found: true, count };
   },
 };
 

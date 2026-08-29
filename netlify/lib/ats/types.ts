@@ -50,6 +50,15 @@ export interface ProbeResult {
 
 export interface AtsProvider {
   source: AtsSource;
+  /**
+   * Whether a successful fetch's absence of a posting can be believed as closure.
+   *
+   * A board API returning an empty array means the board is empty. A careers page
+   * returning no structured data usually means a layout change or a bot wall, so
+   * the jsonld reader is 'untrusted' and the crawler never closes from it.
+   * Omitted means trusted.
+   */
+  closureSignal?: 'trusted' | 'untrusted';
   /** Reject anything that cannot be a token for this provider before it reaches a URL. */
   isValidToken(token: string): boolean;
   fetchPostings(ref: CompanyRef): Promise<FetchOutcome>;

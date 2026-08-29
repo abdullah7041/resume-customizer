@@ -3,6 +3,7 @@
 
 import { ashby } from './ashby.js';
 import { greenhouse } from './greenhouse.js';
+import { jsonld } from './jsonld.js';
 import { lever } from './lever.js';
 import { pinpoint } from './pinpoint.js';
 import { workable } from './workable.js';
@@ -12,8 +13,11 @@ import type { AtsProvider, AtsSource, CompanyRef, FetchOutcome } from './types.j
 /** Providers that can be probed by a bare company handle. */
 export const NAME_PROBEABLE: AtsProvider[] = [greenhouse, ashby, workable, lever, pinpoint];
 
-/** Workday is resolved from a pasted careers URL — a tenant alone cannot name a site. */
-export const URL_ONLY: AtsProvider[] = [workday];
+/**
+ * Resolved from a pasted careers URL rather than a name. Workday needs a site name
+ * that a tenant alone cannot supply; jsonld IS the careers URL.
+ */
+export const URL_ONLY: AtsProvider[] = [workday, jsonld];
 
 export const PROVIDERS: Record<string, AtsProvider> = Object.fromEntries(
   [...NAME_PROBEABLE, ...URL_ONLY].map((provider) => [provider.source, provider]),
@@ -44,5 +48,5 @@ export async function fetchCompany(ref: CompanyRef): Promise<FetchOutcome> {
   }
 }
 
-export { ashby, greenhouse, lever, pinpoint, workable, workday };
+export { ashby, greenhouse, jsonld, lever, pinpoint, workable, workday };
 export * from './types.js';
