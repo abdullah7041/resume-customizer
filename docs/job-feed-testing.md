@@ -64,7 +64,20 @@ toggleable at `/dev/flags`). Like every other tab it needs a resume uploaded fir
 - **Search for a company that is on none of the boards.** It should say so and point at
   pasting a job link, never return silently empty.
 
-## Not built
+## Not built yet — two things the design calls for
+
+**Tier 2, the `jsonld` reader.** The schema accepts the source and the resolver has a slot
+for it, but nothing implements it, so the cascade currently stops at the six board APIs. A
+company with no public board — stc, NEOM, Aramco — resolves to nothing and falls through to
+the paste path. Those employers were the reason for widening coverage in the first place,
+so this is the next thing to build, not an optional extra.
+
+**The `flushSearchIntent` backfill.** `search_intent` now writes to `user_profiles`, but no
+existing user has one, because the old target was a deprecated 0-row table. Until the flush
+runs on sign-in, anyone who onboarded before this change has intent only in localStorage
+and will see the "set your target role" state.
+
+## Not built, on purpose
 
 Email digests, saved keyword searches, a pre-filled company roster, and auto-tailoring —
 the last one deliberately: the feed routes into Match, Optimize and Cover Letter, and the

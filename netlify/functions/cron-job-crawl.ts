@@ -45,41 +45,29 @@ export const handler: Handler = async () => {
 
     const now = Date.now();
     const staleBefore = new Date(now - MIN_HOURS_BETWEEN_CRAWLS * 60 * 60 * 1000).toISOString();
-    const leaseFreeBefore = new Date(now).toISOString();
     const leaseUntil = new Date(now + LEASE_MINUTES * 60 * 1000).toISOString();
 
-    // Only companies somebody actually follows. The inner join is what keeps cost
-    // proportional to distinct tracked companies rather than to the registry.
-    const { data: candidates, error } = await supabase
-      .from('ats_companies')
-      .select('id, last_fetched_at, crawl_lease_until, user_tracked_companies!inner(user_id)')
-      .or(`last_fetched_at.is.null,last_fetched_at.lt.${staleBefore}`)
-      .or(`crawl_lease_until.is.null,crawl_lease_until.lt.${leaseFreeBefore}`)
-      .order('last_fetched_at', { ascending: true, nullsFirst: true })
-      .limit(BATCH_SIZE);
+    // Selecting candidates and then writing the lease was wrong twice over: two
+    // overlapping runs could read the same rows before either wrote, and expressing
+    // "stale AND lease-free" as two chained PostgREST .or() filters does not AND the
+    // way it reads — a leased company could be dispatched again, defeating the lease
+    // this was all built for. The RPC does it in one statement with
+    // FOR UPDATE SKIP LOCKED, and only ever sets a lease, never a completion.
+    const { data: claimed, error } = await supabase.rpc('claim_job_crawl_batch', {
+      p_lease_until: leaseUntil,
+      p_stale_before: staleBefore,
+      p_limit: BATCH_SIZE,
+    });
 
     if (error) {
-      console.error('[JobCrawlCron] Candidate query failed:', summarizeErrorForLog(error));
-      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Query failed' }) };
+      console.error('[JobCrawlCron] Claim failed:', summarizeErrorForLog(error));
+      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Claim failed' }) };
     }
 
-    const companyIds = [...new Set((candidates ?? []).map((row) => (row as CompanyIdRow).id))];
+    const companyIds = [...new Set(((claimed ?? []) as CompanyIdRow[]).map((row) => row.id))];
     if (companyIds.length === 0) {
       console.log('[JobCrawlCron] Nothing due');
       return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ dispatched: 0 }) };
-    }
-
-    // The lease claims the work; it does NOT record it as done. last_fetched_at is
-    // stamped by the crawler after its upsert lands, so a background run that dies
-    // leaves these companies eligible again the moment the lease expires.
-    const { error: leaseError } = await supabase
-      .from('ats_companies')
-      .update({ crawl_lease_until: leaseUntil })
-      .in('id', companyIds);
-
-    if (leaseError) {
-      console.error('[JobCrawlCron] Lease failed:', summarizeErrorForLog(leaseError));
-      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Lease failed' }) };
     }
 
     // Background functions answer 202 and keep running; this call is the handoff,

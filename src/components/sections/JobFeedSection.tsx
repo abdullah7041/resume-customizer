@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Building2, ExternalLink, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
@@ -105,11 +105,24 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     void load();
   }, [load]);
 
-  // Advancing the marker is what makes "new" mean "since you last looked".
+  /**
+   * Advance the marker when the user leaves, not when the list finishes loading.
+   *
+   * Stamping on load marks every currently-new posting as seen the instant the tab
+   * opens — including rows below the fold, and including someone who opens the tab
+   * and immediately leaves. That is exactly the flood the two-clause predicate
+   * exists to prevent, reintroduced at the call site.
+   */
+  const hasLoadedRef = useRef(false);
   useEffect(() => {
-    if (loading) return;
-    void touchLastFeedSeenAt();
+    if (!loading) hasLoadedRef.current = true;
   }, [loading]);
+  useEffect(
+    () => () => {
+      if (hasLoadedRef.current) void touchLastFeedSeenAt();
+    },
+    [],
+  );
 
   const trackedSinceById = useMemo(
     () => new Map(companies.map((company) => [company.companyId, company.trackedSince])),
@@ -190,7 +203,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const handleSave = useCallback(
     async (scored: ScoredPosting) => {
       const description = await getPostingDescription(scored.posting.id);
-      await createJobApplication({
+      const { error: saveError } = await createJobApplication({
         company_name: scored.posting.companyName,
         job_title: scored.posting.title,
         job_description: description,
@@ -198,6 +211,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         location: scored.posting.location,
         status: 'saved',
       });
+
+      // createJobApplication returns an error rather than throwing. Hiding the row
+      // regardless would lose the posting from both views at once: gone from the
+      // feed, never in the pipeline.
+      if (saveError) {
+        setError(saveError);
+        return;
+      }
+
       setFeedStateMap((previous) => new Map(previous).set(scored.posting.id, 'saved'));
       await setFeedState(scored.posting.id, 'saved');
     },

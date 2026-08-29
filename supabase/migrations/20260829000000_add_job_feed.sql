@@ -198,3 +198,52 @@ create policy "Users delete own feed state"
   on public.user_job_feed_state for delete
   to authenticated
   using ((select auth.uid()) = user_id);
+
+-- ---------------------------------------------------------------------------
+-- claim_job_crawl_batch
+--
+-- The cron claims work atomically. Doing this as a select-then-update in the
+-- function raced two ways: two overlapping runs could read the same rows before
+-- either wrote a lease, and expressing "stale AND lease-free" as two chained
+-- PostgREST .or() filters does not AND the way it reads — which would have let a
+-- leased company be dispatched again and quietly defeated the lease entirely.
+--
+-- FOR UPDATE SKIP LOCKED makes concurrent runs pick disjoint sets.
+--
+-- This only ever sets a lease. last_fetched_at is still stamped by the crawler
+-- after its upsert lands, so a background run that dies leaves its companies
+-- eligible again as soon as the lease expires.
+-- ---------------------------------------------------------------------------
+create or replace function public.claim_job_crawl_batch(
+  p_lease_until timestamptz,
+  p_stale_before timestamptz,
+  p_limit integer
+)
+returns table (id uuid)
+language sql
+security definer
+set search_path = public
+as $$
+  update public.ats_companies c
+     set crawl_lease_until = p_lease_until
+   where c.id in (
+     select candidate.id
+       from public.ats_companies candidate
+      where exists (
+              select 1
+                from public.user_tracked_companies tracked
+               where tracked.company_id = candidate.id
+            )
+        and (candidate.last_fetched_at is null or candidate.last_fetched_at < p_stale_before)
+        and (candidate.crawl_lease_until is null or candidate.crawl_lease_until < now())
+      order by candidate.last_fetched_at nulls first
+      limit p_limit
+      for update skip locked
+   )
+  returning c.id;
+$$;
+
+revoke all on function public.claim_job_crawl_batch(timestamptz, timestamptz, integer) from public;
+revoke all on function public.claim_job_crawl_batch(timestamptz, timestamptz, integer) from anon;
+revoke all on function public.claim_job_crawl_batch(timestamptz, timestamptz, integer) from authenticated;
+grant execute on function public.claim_job_crawl_batch(timestamptz, timestamptz, integer) to service_role;
