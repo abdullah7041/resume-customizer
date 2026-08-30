@@ -50,6 +50,17 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [serverIntent, setServerIntent] = useState<FeedIntent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Whether the last load failed, kept as a flag rather than a translated string.
+   *
+   * Storing the sentence meant `load` had to close over `t`, which put `t` in its
+   * dependency list and made the load effect re-run whenever react-i18next handed
+   * back a new `t` — six setState calls, a re-render, another `t`, and so on. That
+   * loop is React error #185, and it only ever fired in production, where i18n
+   * emits load events that dev never produced. The view decides the wording; the
+   * state only records that something failed.
+   */
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const [query, setQuery] = useState('');
   const [resolving, setResolving] = useState(false);
@@ -104,10 +115,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setLoadFailed(false);
 
     const { companies: tracked, error: companiesError } = await listTrackedCompanies();
     if (companiesError) {
-      setError(t('jobFeed.errors.loadFailed', 'Could not load your feed. Try again.'));
+      setLoadFailed(true);
       setLoading(false);
       return;
     }
@@ -120,7 +132,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     ]);
 
     if (postingsError) {
-      setError(t('jobFeed.errors.loadFailed', 'Could not load your feed. Try again.'));
+      setLoadFailed(true);
     }
 
     setCompanies(tracked);
@@ -129,7 +141,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     setLastSeenAt(seen);
     setServerIntent(profileIntent);
     setLoading(false);
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -336,6 +348,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           </p>
         )}
 
+        {loadFailed && (
+          <p className="mt-2 text-sm text-destructive">
+            {t('jobFeed.errors.loadFailed', 'Could not load your feed. Try again.')}
+          </p>
+        )}
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
           {starters.length > 0 && (

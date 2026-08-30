@@ -2,6 +2,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
+// A fresh `t` per render, which is what react-i18next does in production when the
+// i18n instance emits load events. Anything that puts `t` in an effect dependency
+// list loops forever against this mock — which is exactly what shipped once.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) =>
@@ -229,5 +232,33 @@ describe('JobFeedSection feed rows', () => {
 
     await waitFor(() => expect(screen.getAllByText(/Senior AI Engineer/)).toHaveLength(1));
     expect(screen.queryByText(/Bangkok/)).not.toBeInTheDocument();
+  });
+});
+
+describe('render stability', () => {
+  /**
+   * React error #185 in production: `load` closed over `t`, so it sat in the load
+   * effect's dependency list. Each load fired six setState calls, the re-render
+   * produced a new `t`, and the effect ran again — forever. Dev never showed it
+   * because `t` happened to stay stable there.
+   */
+  it('loads once even though every render produces a new t', async () => {
+    render(<JobFeedSection />);
+
+    await screen.findByText('Follow a company to start seeing roles.');
+    // Give any runaway effect several frames to prove itself.
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(mockListTracked).toHaveBeenCalledTimes(1);
+    expect(mockListPostings).toHaveBeenCalledTimes(1);
+  });
+
+  it('still reports a failed load to the user', async () => {
+    mockListTracked.mockResolvedValue({ companies: [], error: 'boom' });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Could not load your feed. Try again.')).toBeInTheDocument();
+    expect(mockListTracked).toHaveBeenCalledTimes(1);
   });
 });
