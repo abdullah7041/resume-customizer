@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { PartialResumeSchema, ResumeSchema } from '../../types/resume';
@@ -859,17 +860,31 @@ export const useResumeStore = create<ResumeState>()(
 /**
  * Selector hooks for common use cases
  */
+/**
+ * The resume as the user currently sees it.
+ *
+ * This must NOT be written as `useResumeStore((s) => s.getActiveResume())`.
+ * `getActiveResume` returns `originalResume` unchanged in the simple case, but
+ * builds a fresh object — a structuredClone for the Saudi summary prepend, or a
+ * merge when optimizations are shown. zustand 5 reads selectors through
+ * `useSyncExternalStore`, which compares snapshots by reference, so a selector
+ * that allocates on every call never settles: React re-renders forever and throws
+ * error #185. It shipped that way and only broke for accounts with
+ * `isSaudiNational` or `showOptimized` set, which is why no local test saw it.
+ *
+ * Subscribing to the four stable inputs and deriving once per real change keeps
+ * the reference steady between renders.
+ */
 export const useActiveResume = () => {
-  // Fixed: Subscribe to actual state fields that affect the active resume
-  // This ensures re-renders happen when the merged resume changes
-  return useResumeStore((state) => {
-    // Trigger re-render when any of these change:
-    // - originalResume (base data)
-    // - optimizations (array reference or applied states)
-    // - showOptimized (toggle flag)
-    // - isSaudiNational (affects summary)
-    return state.getActiveResume();
-  });
+  const originalResume = useResumeStore((state) => state.originalResume);
+  const optimizations = useResumeStore((state) => state.optimizations);
+  const showOptimized = useResumeStore((state) => state.showOptimized);
+  const isSaudiNational = useResumeStore((state) => state.isSaudiNational);
+
+  return useMemo(
+    () => useResumeStore.getState().getActiveResume(),
+    [originalResume, optimizations, showOptimized, isSaudiNational],
+  );
 };
 
 export const useShowOptimized = () =>
