@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { m, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Building2, ExternalLink, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
@@ -40,6 +41,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const { t, i18n } = useTranslation();
   // Defensive: consumers can render this without a full i18n instance.
   const language = i18n?.language ?? 'en';
+  const reduceMotion = useReducedMotion();
   const searchIntent = useSearchIntent();
   const resume = useActiveResume();
 
@@ -311,8 +313,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
-        <p className="text-sm text-muted-foreground mb-4">
+        <h2 className="text-2xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
+        <p className="text-base text-muted-foreground mb-5">
           {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
         </p>
 
@@ -326,7 +328,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             }}
             placeholder={t('jobFeed.companies.placeholder', 'Company name or careers page link')}
             aria-label={t('jobFeed.companies.add', 'Add a company')}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-gray-900 dark:text-white"
+            className="flex-1 min-h-12 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-gray-900 placeholder:text-muted-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-white"
           />
           <GlassButton
             variant="secondary"
@@ -357,10 +359,10 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
           {starters.length > 0 && (
           <div className="mt-4">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
+            <p className="text-base font-medium text-gray-900 dark:text-white">
               {t('jobFeed.empty.starters', 'Saudi employers we can read')}
             </p>
-            <p className="text-xs text-muted-foreground mb-2">
+            <p className="text-sm text-muted-foreground mb-3">
               {t('jobFeed.empty.startersHelp', 'Verified job boards. Tap one to start following it.')}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -370,7 +372,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   type="button"
                   onClick={() => void handleStarter(company)}
                   disabled={busyCompany === company.token}
-                  className="rounded-lg border border-border px-3 py-1 text-sm text-gray-900 dark:text-white hover:border-primary disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
                 >
                   {language === 'ar' ? company.displayNameAr : company.displayName}
                 </button>
@@ -381,18 +383,18 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
 
         {resolution && (
-          <div className="mt-3 rounded-lg border border-border p-3">
+          <div className="mt-4 rounded-xl border border-border p-4">
             {resolution.candidates.length > 0 ? (
               <>
                 {resolution.candidates.length > 1 && (
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-base text-muted-foreground mb-3">
                     {t('jobFeed.resolve.multiple', 'More than one board matched. Pick the right one:')}
                   </p>
                 )}
                 <ul className="space-y-2">
                   {resolution.candidates.map((candidate) => (
                     <li key={`${candidate.source}:${candidate.token}`} className="flex items-center gap-2">
-                      <span className="flex-1 text-sm text-gray-900 dark:text-white">
+                      <span className="flex-1 text-base text-gray-900 dark:text-white">
                         {t('jobFeed.resolve.found', {
                           source: candidate.source,
                           count: candidate.jobCount,
@@ -412,7 +414,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               </>
             ) : (
               /* A total miss is said out loud and pointed somewhere useful — never a blank list. */
-              <div className="text-sm">
+              <div className="text-base">
                 <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.resolve.notFound', 'No public job board found for that name.')}</p>
                 <p className="text-muted-foreground mt-1">
                   {t('jobFeed.resolve.notFoundHelp', 'Open their careers page and paste the link instead.')}
@@ -425,10 +427,12 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         {companies.length > 0 && (
           <ul className="mt-4 divide-y divide-border">
             {companies.map((company) => (
-              <li key={company.companyId} className="flex items-center gap-3 py-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <span className="flex-1 text-sm text-gray-900 dark:text-white">{company.displayName}</span>
-                <span className="text-xs text-muted-foreground">
+              <li key={company.companyId} className="flex items-center gap-3 py-3">
+                <Building2 className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="flex-1 truncate text-base font-medium text-gray-900 dark:text-white">
+                  {company.displayName}
+                </span>
+                <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
                   {/* A board we have not read yet says so. Showing "0 open roles"
                       would claim the employer is not hiring, which we do not know. */}
                   {company.lastStatus === 'failed'
@@ -442,7 +446,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   onClick={() => void handleUntrack(company.companyId)}
                   disabled={busyCompany === company.companyId}
                   aria-label={t('jobFeed.companies.remove', 'Stop following')}
-                  className="text-muted-foreground hover:text-destructive"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[color,background-color,scale] duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.96] disabled:opacity-60"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
@@ -455,14 +459,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       {/* Three distinct empty states — a blank list would read as broken. */}
       {companies.length === 0 && (
         <GlassCard className="p-6">
-          <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noCompanies', 'Follow a company to start seeing roles.')}</p>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-lg font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noCompanies', 'Follow a company to start seeing roles.')}</p>
+          <p className="text-base text-muted-foreground mt-1">
             {t('jobFeed.empty.noCompaniesHelp', 'Add the employers you actually want to work for.')}
           </p>
           {suggestions.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.suggestions', 'From your CV')}</p>
-              <p className="text-xs text-muted-foreground mb-2">
+              <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.suggestions', 'From your CV')}</p>
+              <p className="text-sm text-muted-foreground mb-3">
                 {t('jobFeed.empty.suggestionsHelp', 'Companies you have worked at — a quick place to start.')}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -471,7 +475,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                     key={name}
                     type="button"
                     onClick={() => void handleSuggestion(name)}
-                    className="rounded-lg border border-border px-3 py-1 text-sm text-gray-900 dark:text-white hover:border-primary"
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
                   >
                     {name}
                   </button>
@@ -484,8 +488,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       {companies.length > 0 && !intent && (
         <GlassCard className="p-6">
-          <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noIntent', 'Set your target role first.')}</p>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-lg font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noIntent', 'Set your target role first.')}</p>
+          <p className="text-base text-muted-foreground mt-1">
             {t('jobFeed.empty.noIntentHelp', 'The feed matches roles against what you are looking for.')}
           </p>
         </GlassCard>
@@ -493,38 +497,53 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       {feed && feed.kept.length === 0 && postings.length > 0 && (
         <GlassCard className="p-6">
-          <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-lg font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
+          <p className="text-base text-muted-foreground mt-1">
             {t('jobFeed.empty.allFilteredHelp', { count: feed.dropped.length })}
           </p>
         </GlassCard>
       )}
 
-      {feed?.kept.map((scored) => {
+      {feed?.kept.map((scored, index) => {
         const trackedSince = trackedSinceById.get(scored.posting.companyId) ?? scored.posting.firstSeenAt;
         const fresh = isNew(scored.posting, trackedSince, lastSeenAt);
 
         return (
-          <GlassCard key={scored.posting.id} className="p-4">
-            <div className="flex items-start gap-3">
-              <span className="rounded-lg bg-emerald-100 px-2 py-1 text-sm font-medium text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200">
+          /* Rows arrive together after an async load, so they are staggered rather
+             than appearing as one block. Capped so a long feed does not crawl in. */
+          <m.div
+            key={scored.posting.id}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 6) * 0.04 }}
+          >
+          <GlassCard className="p-5">
+            <div className="flex items-start gap-4">
+              <span
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg font-semibold tabular-nums text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200"
+                title={t('jobFeed.why.label', 'Why this is here')}
+              >
                 {scored.score}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-medium text-gray-900 dark:text-white">{scored.posting.title}</h3>
+                  <h3 className="text-lg font-semibold leading-snug text-gray-900 dark:text-white">
+                    {scored.posting.title}
+                  </h3>
                   {fresh && (
-                    <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                    <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-primary">
                       {t('jobFeed.newBadge', 'New')}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {scored.posting.companyName} · {scored.posting.location}
+                <p className="mt-0.5 text-base text-muted-foreground">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{scored.posting.companyName}</span>
+                  {' · '}
+                  {scored.posting.location}
                 </p>
                 {scored.matched.length > 0 && (
                   /* Deterministic, non-AI reason. Never a model's opinion dressed as one. */
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="mt-1.5 text-sm text-muted-foreground">
                     {t('jobFeed.why.matched', { terms: scored.matched.join(', ') })}
                   </p>
                 )}
@@ -533,7 +552,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 type="button"
                 onClick={() => void handleDismiss(scored.posting.id)}
                 aria-label={t('jobFeed.actions.dismiss', 'Not interested')}
-                className="text-muted-foreground hover:text-destructive"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[color,background-color,scale] duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.96]"
               >
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
@@ -541,7 +560,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
             {/* Routes into the sections that already own this work. Nothing here
                 changes the CV on its own. */}
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap items-center gap-2">
               {onMatchPosting && (
                 <GlassButton variant="secondary" onClick={() => void handleMatch(scored)}>
                   {t('jobFeed.actions.match', 'Check the match')}
@@ -554,13 +573,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 href={scored.posting.applyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-base font-medium text-primary transition-[color,background-color] duration-200 hover:bg-primary/10 hover:underline"
               >
                 {t('jobFeed.actions.apply', 'View posting')}
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                <ExternalLink className="h-4 w-4" aria-hidden="true" />
               </a>
             </div>
           </GlassCard>
+          </m.div>
         );
       })}
     </div>
