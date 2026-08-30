@@ -35,6 +35,7 @@ vi.mock('@/services/jobFeed', () => ({
   listOpenPostings: () => mockListPostings(),
   listFeedState: () => Promise.resolve(new Map()),
   readLastFeedSeenAt: () => Promise.resolve(null),
+  fetchServerSearchIntent: () => Promise.resolve(null),
   touchLastFeedSeenAt: () => Promise.resolve(),
   getPostingDescription: () => Promise.resolve(''),
   resolveCompany: vi.fn(),
@@ -137,7 +138,8 @@ describe('JobFeedSection feed rows', () => {
     render(<JobFeedSection />);
 
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
-    expect(screen.getByText('55')).toBeInTheDocument();
+    // ai + engineer both matched: 40 + 15 + 15.
+    expect(screen.getByText('70')).toBeInTheDocument();
     // Salla appears both in the followed-companies list and on the posting row.
     expect(screen.getAllByText(/Salla/).length).toBeGreaterThan(0);
     expect(screen.getByText('jobFeed.why.matched')).toBeInTheDocument();

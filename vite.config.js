@@ -37,6 +37,16 @@ export default defineConfig({
     warmup: {
       clientFiles: ["./src/main.tsx", "./src/App.tsx"],
     },
+    // Dev only. `netlify dev` bundles every function at once and OOMs esbuild on
+    // low-RAM machines, so `npx tsx scripts/functions-server.ts` runs the real
+    // handlers behind a tiny HTTP shim and this forwards to it. Without the shim
+    // running, function calls simply fail as they already would under plain vite.
+    proxy: {
+      "/.netlify/functions": {
+        target: `http://localhost:${process.env.FUNCTIONS_PORT ?? 9999}`,
+        changeOrigin: true,
+      },
+    },
   },
 
   build: {

@@ -14,8 +14,12 @@
       "lastChecked": "آخر تحديث {{when}}",
       "neverChecked": "لم يتم التحديث بعد",
       "checkFailed": "تعذّرت قراءة وظائف هذه الشركة في آخر محاولة",
-      "openRoles": "{{count}} وظيفة متاحة",
-      "openRoles_plural": "{{count}} وظيفة متاحة"
+      "openRoles_zero": "{{count}} وظيفة متاحة",
+      "openRoles_one": "{{count}} وظيفة متاحة",
+      "openRoles_two": "{{count}} وظيفتان متاحتان",
+      "openRoles_few": "{{count}} وظائف متاحة",
+      "openRoles_many": "{{count}} وظيفة متاحة",
+      "openRoles_other": "{{count}} وظيفة متاحة"
     },
     "resolve": {
       "found": "وجدناها على {{source}} — {{count}} وظيفة متاحة",

@@ -37,9 +37,14 @@ const LEVEL_WORDS = normalizeTerms([
   'entry', 'level', 'i', 'ii', 'iii', 'iv', 'أول', 'أقدم', 'مبتدئ',
 ]);
 
+/**
+ * Function words, including the two-letter ones. These carry the filtering that a
+ * minimum token length used to do crudely — see `deriveRoleTerms`.
+ */
 const STOPWORDS = normalizeTerms([
-  'and', 'or', 'the', 'of', 'for', 'a', 'an', 'in', 'at', 'to', 'with',
-  'في', 'من', 'الى', 'على', 'و', 'أو',
+  'and', 'or', 'the', 'of', 'for', 'a', 'an', 'in', 'at', 'to', 'with', 'on', 'by',
+  'as', 'is', 'be', 'it', 'we', 'do', 'up', 'no', 'so', 'if', 'my', 'me',
+  'في', 'من', 'الى', 'على', 'و', 'أو', 'عن', 'مع', 'ما', 'ان', 'لا',
 ]);
 
 const SENIORITY_RANK: Record<Seniority, number> = {
@@ -56,7 +61,13 @@ export function deriveRoleTerms(targetRoles: readonly string[]): string[] {
 
   for (const role of targetRoles) {
     for (const token of normalizeText(role).split(/[\s/,·|()-]+/)) {
-      if (token.length < 3) continue;
+      // Two characters is the floor, not three. A three-character minimum silently
+      // discarded AI, ML, BI, QA, UX and HR — precisely the terms that distinguish
+      // roles in this market. With them gone every engineering role scored an
+      // identical 40 + 15, so "Senior AI Backend Engineer" ranked level with
+      // "Senior Product Designer" and the ordering meant nothing. Function words
+      // are excluded by STOPWORDS rather than by length.
+      if (token.length < 2) continue;
       if (LEVEL_WORDS.includes(token)) continue;
       if (STOPWORDS.includes(token)) continue;
       terms.add(token);

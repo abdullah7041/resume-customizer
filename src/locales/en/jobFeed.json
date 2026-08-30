@@ -14,8 +14,12 @@
       "lastChecked": "Checked {{when}}",
       "neverChecked": "Not checked yet",
       "checkFailed": "Could not read this board last time",
-      "openRoles": "{{count}} open role",
-      "openRoles_plural": "{{count}} open roles"
+      "openRoles_zero": "{{count}} open roles",
+      "openRoles_one": "{{count}} open role",
+      "openRoles_two": "{{count}} open roles",
+      "openRoles_few": "{{count}} open roles",
+      "openRoles_many": "{{count}} open roles",
+      "openRoles_other": "{{count}} open roles"
     },
     "resolve": {
       "found": "Found on {{source}} — {{count}} open roles",

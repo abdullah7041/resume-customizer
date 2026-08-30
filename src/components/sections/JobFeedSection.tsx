@@ -10,6 +10,7 @@ import {
   listFeedState,
   listOpenPostings,
   listTrackedCompanies,
+  fetchServerSearchIntent,
   readLastFeedSeenAt,
   resolveCompany,
   setFeedState,
@@ -39,6 +40,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [postings, setPostings] = useState<FeedPosting[]>([]);
   const [feedState, setFeedStateMap] = useState<Map<string, 'dismissed' | 'saved'>>(new Map());
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
+  const [serverIntent, setServerIntent] = useState<FeedIntent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,10 +49,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [resolution, setResolution] = useState<ResolutionReport | null>(null);
   const [busyCompany, setBusyCompany] = useState<string | null>(null);
 
+  // Local store first — it is the freshest — then whatever the profile holds.
   const intent: FeedIntent | null = useMemo(() => {
-    if (!searchIntent?.targetRoles?.length) return null;
-    return { targetRoles: searchIntent.targetRoles, seniority: searchIntent.seniority };
-  }, [searchIntent]);
+    if (searchIntent?.targetRoles?.length) {
+      return { targetRoles: searchIntent.targetRoles, seniority: searchIntent.seniority };
+    }
+    return serverIntent;
+  }, [searchIntent, serverIntent]);
 
   /**
    * Past employers from the parsed CV, offered as one-tap starting points.
@@ -84,10 +89,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       return;
     }
 
-    const [{ postings: open, error: postingsError }, state, seen] = await Promise.all([
+    const [{ postings: open, error: postingsError }, state, seen, profileIntent] = await Promise.all([
       listOpenPostings(tracked),
       listFeedState(),
       readLastFeedSeenAt(),
+      fetchServerSearchIntent(),
     ]);
 
     if (postingsError) {
@@ -98,6 +104,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     setPostings(open);
     setFeedStateMap(state);
     setLastSeenAt(seen);
+    setServerIntent(profileIntent);
     setLoading(false);
   }, [t]);
 
@@ -250,7 +257,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="text-xl font-semibold mb-1">{t('jobFeed.title', 'Job feed')}</h2>
+        <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
         <p className="text-sm text-muted-foreground mb-4">
           {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
         </p>
@@ -265,7 +272,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             }}
             placeholder={t('jobFeed.companies.placeholder', 'Company name or careers page link')}
             aria-label={t('jobFeed.companies.add', 'Add a company')}
-            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-gray-900 dark:text-white"
           />
           <GlassButton
             variant="secondary"
@@ -301,7 +308,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 <ul className="space-y-2">
                   {resolution.candidates.map((candidate) => (
                     <li key={`${candidate.source}:${candidate.token}`} className="flex items-center gap-2">
-                      <span className="flex-1 text-sm">
+                      <span className="flex-1 text-sm text-gray-900 dark:text-white">
                         {t('jobFeed.resolve.found', {
                           source: candidate.source,
                           count: candidate.jobCount,
@@ -322,7 +329,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             ) : (
               /* A total miss is said out loud and pointed somewhere useful — never a blank list. */
               <div className="text-sm">
-                <p className="font-medium">{t('jobFeed.resolve.notFound', 'No public job board found for that name.')}</p>
+                <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.resolve.notFound', 'No public job board found for that name.')}</p>
                 <p className="text-muted-foreground mt-1">
                   {t('jobFeed.resolve.notFoundHelp', 'Open their careers page and paste the link instead.')}
                 </p>
@@ -336,11 +343,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             {companies.map((company) => (
               <li key={company.companyId} className="flex items-center gap-3 py-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <span className="flex-1 text-sm">{company.displayName}</span>
+                <span className="flex-1 text-sm text-gray-900 dark:text-white">{company.displayName}</span>
                 <span className="text-xs text-muted-foreground">
+                  {/* A board we have not read yet says so. Showing "0 open roles"
+                      would claim the employer is not hiring, which we do not know. */}
                   {company.lastStatus === 'failed'
                     ? t('jobFeed.companies.checkFailed', 'Could not read this board last time')
-                    : t('jobFeed.companies.openRoles', { count: company.lastJobCount })}
+                    : !company.lastFetchedAt
+                      ? t('jobFeed.companies.neverChecked', 'Not checked yet')
+                      : t('jobFeed.companies.openRoles', { count: company.lastJobCount })}
                 </span>
                 <button
                   type="button"
@@ -360,7 +371,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       {/* Three distinct empty states — a blank list would read as broken. */}
       {companies.length === 0 && (
         <GlassCard className="p-6">
-          <p className="font-medium">{t('jobFeed.empty.noCompanies', 'Follow a company to start seeing roles.')}</p>
+          <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noCompanies', 'Follow a company to start seeing roles.')}</p>
           <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.noCompaniesHelp', 'Add the employers you actually want to work for.')}
           </p>
@@ -376,7 +387,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                     key={name}
                     type="button"
                     onClick={() => void handleSuggestion(name)}
-                    className="rounded-lg border border-border px-3 py-1 text-sm hover:border-primary"
+                    className="rounded-lg border border-border px-3 py-1 text-sm text-gray-900 dark:text-white hover:border-primary"
                   >
                     {name}
                   </button>
@@ -389,7 +400,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       {companies.length > 0 && !intent && (
         <GlassCard className="p-6">
-          <p className="font-medium">{t('jobFeed.empty.noIntent', 'Set your target role first.')}</p>
+          <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noIntent', 'Set your target role first.')}</p>
           <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.noIntentHelp', 'The feed matches roles against what you are looking for.')}
           </p>
@@ -398,7 +409,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       {feed && feed.kept.length === 0 && postings.length > 0 && (
         <GlassCard className="p-6">
-          <p className="font-medium">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
+          <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
           <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.allFilteredHelp', { count: feed.dropped.length })}
           </p>
@@ -417,7 +428,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-medium">{scored.posting.title}</h3>
+                  <h3 className="font-medium text-gray-900 dark:text-white">{scored.posting.title}</h3>
                   {fresh && (
                     <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-xs text-primary">
                       {t('jobFeed.newBadge', 'New')}

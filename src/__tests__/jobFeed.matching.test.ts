@@ -89,7 +89,36 @@ describe('seniority bounds both ends', () => {
 
 describe('role terms derive from the user, not a tech vocabulary', () => {
   it('drops the level words and keeps the function', () => {
-    expect(deriveRoleTerms(['Senior AI Engineer'])).toEqual(['engineer']);
+    // "Senior" is a level word; "AI" and "Engineer" both describe the work.
+    expect(deriveRoleTerms(['Senior AI Engineer'])).toEqual(['ai', 'engineer']);
+  });
+
+  it('keeps two-letter domain terms like AI and ML', () => {
+    // A three-character floor dropped these, which flattened every engineering
+    // role to the same score and made the ranking meaningless.
+    expect(deriveRoleTerms(['Senior AI Engineer'])).toEqual(['ai', 'engineer']);
+    expect(deriveRoleTerms(['ML Engineer'])).toContain('ml');
+    expect(deriveRoleTerms(['BI Developer'])).toContain('bi');
+  });
+
+  it('still drops two-letter function words', () => {
+    expect(deriveRoleTerms(['Head of Data'])).not.toContain('of');
+    expect(deriveRoleTerms(['Analyst in Riyadh'])).not.toContain('in');
+  });
+
+  it('ranks a role matching more of the target above one matching less', () => {
+    const intent: FeedIntent = { targetRoles: ['Senior AI Engineer'], seniority: 'senior' };
+    const feed = buildFeed(
+      [
+        posting({ id: 'designer', title: 'Senior Product Designer' }),
+        posting({ id: 'ai', title: 'Senior AI Backend Engineer' }),
+        posting({ id: 'backend', title: 'Senior Backend Engineer' }),
+      ],
+      intent,
+    );
+
+    expect(feed.kept[0].posting.id).toBe('ai');
+    expect(feed.kept[0].score).toBeGreaterThan(feed.kept[1].score);
   });
 
   it('works for a non-tech role', () => {
@@ -102,7 +131,8 @@ describe('role terms derive from the user, not a tech vocabulary', () => {
 describe('scoring', () => {
   it('is 40 for clearing the filters, plus 15 per supported term', () => {
     const terms = deriveRoleTerms(['Senior AI Engineer', 'Backend Developer']);
-    expect(scorePosting(posting({ title: 'AI Backend Engineer' }), terms).score).toBe(70);
+    // ai + backend + engineer = three supported terms.
+    expect(scorePosting(posting({ title: 'AI Backend Engineer' }), terms).score).toBe(85);
     expect(scorePosting(posting({ title: 'Product Owner' }), terms).score).toBe(40);
   });
 

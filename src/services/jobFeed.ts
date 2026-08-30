@@ -6,7 +6,7 @@
 // Netlify function (job-sources-api).
 
 import { supabase } from './supabase';
-import type { FeedPosting } from '@/lib/jobs/types';
+import type { FeedIntent, FeedPosting } from '@/lib/jobs/types';
 
 const COMPANIES_TABLE = 'ats_companies';
 const TRACKED_TABLE = 'user_tracked_companies';
@@ -245,6 +245,36 @@ export async function setFeedState(postingId: string, state: FeedStateValue): Pr
     return { error: summarizeError(error).message };
   }
   return { error: null };
+}
+
+/**
+ * The intent stored on the profile, for when the local store has none.
+ *
+ * The feed reads intent from the Zustand store, which is per-browser. A signed-in
+ * user who onboarded on another device — or cleared local storage — has an intent
+ * on the server and none locally, and would otherwise be told to set a target role
+ * they have already set. Moving intent server-side is what makes this fixable, and
+ * the feed is its first consumer.
+ */
+export async function fetchServerSearchIntent(): Promise<FeedIntent | null> {
+  const headers = await authHeaders();
+  if (!headers) return null;
+
+  try {
+    const response = await fetch('/.netlify/functions/user-data-api', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'get_search_intent' }),
+    });
+    if (!response.ok) return null;
+
+    const body = (await response.json()) as { searchIntent?: FeedIntent | null };
+    const intent = body?.searchIntent;
+    return intent?.targetRoles?.length ? intent : null;
+  } catch (error) {
+    console.error('[JobFeed] Failed to read server search intent:', summarizeError(error));
+    return null;
+  }
 }
 
 /** Read and advance the "new since your last visit" marker. */
