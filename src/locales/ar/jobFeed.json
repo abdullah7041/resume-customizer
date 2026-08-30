@@ -33,7 +33,9 @@
       "found_two": "وجدناها على {{source}} — {{count}} وظيفتان متاحتان",
       "found_few": "وجدناها على {{source}} — {{count}} وظائف متاحة",
       "found_many": "وجدناها على {{source}} — {{count}} وظيفة متاحة",
-      "found_other": "وجدناها على {{source}} — {{count}} وظيفة متاحة"
+      "found_other": "وجدناها على {{source}} — {{count}} وظيفة متاحة",
+      "knownCompany": "شركة {{name}} من المواقع التي نستطيع قراءتها.",
+      "notFoundArabic": "جرّب اسم الشركة بالإنجليزية، أو الصق رابط صفحة الوظائف لديها."
     },
     "empty": {
       "noCompanies": "تابع شركة لتبدأ برؤية الوظائف.",

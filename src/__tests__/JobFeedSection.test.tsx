@@ -34,6 +34,7 @@ vi.mock('@/services/pipeline', () => ({ createJobApplication: vi.fn() }));
 const mockListTracked = vi.fn();
 const mockListPostings = vi.fn();
 const mockTrackCompany = vi.fn();
+const mockUntrackCompany = vi.fn();
 const mockResolveCompany = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
@@ -46,7 +47,7 @@ vi.mock('@/services/jobFeed', () => ({
   getPostingDescription: () => Promise.resolve(''),
   resolveCompany: (query: string) => mockResolveCompany(query),
   trackCompany: (input: unknown) => mockTrackCompany(input),
-  untrackCompany: vi.fn(),
+  untrackCompany: (id: string) => mockUntrackCompany(id),
   setFeedState: vi.fn(),
 }));
 
@@ -91,6 +92,7 @@ beforeEach(() => {
   mockListPostings.mockResolvedValue({ postings: [], error: null });
   mockTrackCompany.mockResolvedValue({ data: null, error: null });
   mockResolveCompany.mockResolvedValue({ data: null, error: null });
+  mockUntrackCompany.mockResolvedValue({ data: null, error: null });
 });
 
 describe('Saudi starter companies', () => {
@@ -188,7 +190,9 @@ describe('JobFeedSection feed rows', () => {
 
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
     // ai + engineer both matched: 40 + 15 + 15.
-    expect(screen.getByText('70')).toBeInTheDocument();
+    // The badge reads as a share of what the intent can reach, not a raw score:
+    // this posting matches both derived terms (ai, engineer), so it is a 100.
+    expect(screen.getByText('100')).toBeInTheDocument();
     // Salla appears both in the followed-companies list and on the posting row.
     expect(screen.getAllByText(/Salla/).length).toBeGreaterThan(0);
     expect(screen.getByText('jobFeed.why.matched')).toBeInTheDocument();
@@ -260,5 +264,124 @@ describe('render stability', () => {
 
     expect(await screen.findByText('Could not load your feed. Try again.')).toBeInTheDocument();
     expect(mockListTracked).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('searching by company name', () => {
+  it('finds a known company typed in Arabic', async () => {
+    /*
+     * toHandle strips everything outside [a-z0-9-], so an Arabic name collapsed to
+     * an empty string and no board was ever probed: "تامارا" could not resolve
+     * while "Tamara" could. Known companies match on either name, before any
+     * network call.
+     */
+    render(<JobFeedSection />);
+    await screen.findByRole('button', { name: 'Tabby' });
+
+    fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
+    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+
+    expect(await screen.findByRole('button', { name: /Follow this board/ })).toBeInTheDocument();
+    // Matched locally, so nothing fanned out across the providers.
+    expect(mockResolveCompany).not.toHaveBeenCalled();
+  });
+
+  it('follows the company that Arabic search matched', async () => {
+    render(<JobFeedSection />);
+    await screen.findByRole('button', { name: 'Tabby' });
+
+    fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
+    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Follow this board/ }));
+
+    await waitFor(() =>
+      expect(mockTrackCompany).toHaveBeenCalledWith({
+        source: 'greenhouse',
+        token: 'tamara',
+        displayName: 'Tamara',
+      }),
+    );
+  });
+
+  it('clears the search once the company is followed', async () => {
+    // The follow succeeded but the panel stayed put, so the click read as a
+    // no-op even though the company had been tracked.
+    render(<JobFeedSection />);
+    await screen.findByRole('button', { name: 'Tabby' });
+
+    fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
+    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Follow this board/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Follow this board/ })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByLabelText('Add a company')).toHaveValue('');
+  });
+
+  it('hides the starter chips while a result is on screen', async () => {
+    render(<JobFeedSection />);
+    await screen.findByRole('button', { name: 'Tabby' });
+
+    fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
+    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+
+    await screen.findByRole('button', { name: /Follow this board/ });
+    // A followable row of chips under a search result read as a contradiction.
+    expect(screen.queryByRole('button', { name: 'Tabby' })).not.toBeInTheDocument();
+  });
+});
+
+describe('removing a company', () => {
+  it('drops the row immediately rather than waiting on the network', async () => {
+    let resolveUntrack: (value: { data: null; error: null }) => void = () => {};
+    mockUntrackCompany.mockReturnValue(new Promise((resolve) => { resolveUntrack = resolve; }));
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Salla');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop following' }));
+
+    // Gone before the request settles. Asserted on the row's own control, because
+    // the name reappears as a starter chip the moment it stops being followed.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Stop following' })).not.toBeInTheDocument(),
+    );
+    resolveUntrack({ data: null, error: null });
+    // And no full refetch to remove one row.
+    expect(mockListTracked).toHaveBeenCalledTimes(1);
+  });
+
+  it('puts the row back when the server refuses', async () => {
+    mockUntrackCompany.mockResolvedValue({ data: null, error: 'nope' });
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Salla');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop following' }));
+
+    expect(await screen.findByText('nope')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Stop following' })).toBeInTheDocument();
+  });
+});
+
+describe('score colour bands', () => {
+  // The intent is "Senior AI Engineer", so the terms are ai and engineer and the
+  // ceiling is 70. A posting matching both has everything the user asked for and
+  // is green; one matching half is not.
+  it.each([
+    ['Senior AI Engineer', 'emerald'],
+    ['Senior Engineer', 'amber'],
+  ])('tones %s by how much of the intent it covers', async (title, tone) => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title })], error: null });
+
+    const { container } = render(<JobFeedSection />);
+    await screen.findByText(title);
+
+    // A 40 rendered in the same green as a 100 told the user they were equal.
+    expect(container.innerHTML).toContain(tone);
   });
 });

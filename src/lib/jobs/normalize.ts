@@ -79,3 +79,18 @@ export function matchedRoleTerms(title: string, terms: readonly string[]): strin
   const tokens = tokenize(title);
   return terms.filter((term) => tokens.some((token) => sharesStem(token, term)));
 }
+
+/**
+ * A loose key for comparing Arabic names that differ only in long vowels.
+ *
+ * Transliterated company names are spelled inconsistently — Tamara appears as both
+ * تمارا and تامارا — so exact comparison fails on the spelling a user happens to
+ * pick. Dropping the long vowels leaves a consonant skeleton that both spellings
+ * share. Applied only to Arabic text: doing this to Latin script would collapse
+ * genuinely different words.
+ */
+export function looseArabicKey(value: string): string {
+  const normalized = normalizeText(value);
+  if (!/[؀-ۿ]/.test(normalized)) return normalized;
+  return normalized.replace(/[اويه]/g, '');
+}

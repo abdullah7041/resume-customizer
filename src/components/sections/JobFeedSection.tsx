@@ -22,7 +22,9 @@ import {
   type ResolutionReport,
   type TrackedCompany,
 } from '@/services/jobFeed';
-import { buildFeed, isNew } from '@/lib/jobs/score';
+import { BASE_SCORE, buildFeed, isNew, TERM_WEIGHT } from '@/lib/jobs/score';
+import { deriveRoleTerms } from '@/lib/jobs/filters';
+import { looseArabicKey, normalizeText } from '@/lib/jobs/normalize';
 import {
   SAUDI_STARTER_COMPANIES,
   unfollowedStarters,
@@ -67,6 +69,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [query, setQuery] = useState('');
   const [resolving, setResolving] = useState(false);
   const [resolution, setResolution] = useState<ResolutionReport | null>(null);
+  /**
+   * A query that names a company we already know, matched on either language.
+   *
+   * Kept apart from the server's resolution because it needs no probe at all: the
+   * source and token are already verified, so this path is instant and cannot fail.
+   */
+  const [starterMatch, setStarterMatch] = useState<StarterCompany | null>(null);
   const [busyCompany, setBusyCompany] = useState<string | null>(null);
 
   // Local store first — it is the freshest — then whatever the profile holds.
@@ -173,6 +182,21 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     [companies],
   );
 
+  /**
+   * The best score this user's intent can produce.
+   *
+   * A raw score is meaningless on its own: with one target role the ceiling is 70,
+   * with three it is 85. Showing 70 identically in both cases is what made every
+   * row look the same shade — in the one-role case a 70 really is a full match, and
+   * painting it amber would be as wrong as painting a partial one green. Rows are
+   * scored against this ceiling so the badge answers "how much of what you asked
+   * for does this have", which is the only question the number can honestly answer.
+   */
+  const maxScore = useMemo(() => {
+    if (!intent) return BASE_SCORE;
+    return Math.min(100, BASE_SCORE + deriveRoleTerms(intent.targetRoles).length * TERM_WEIGHT);
+  }, [intent]);
+
   const feed = useMemo(() => {
     if (!intent) return null;
     const visible = postings.filter((posting) => !feedState.has(posting.id));
@@ -185,6 +209,34 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
     setResolving(true);
     setResolution(null);
+    setStarterMatch(null);
+
+    /*
+     * Try the registry first, in either language.
+     *
+     * `toHandle` derives an ATS handle by stripping everything outside [a-z0-9-],
+     * so an Arabic company name collapsed to an empty string and no board was ever
+     * probed — "تامارا" could never resolve while "Tamara" did. The registry
+     * already carries both names, so a known company matches before any network
+     * call, and Arabic reaches the same place English does.
+     */
+    const normalized = normalizeText(trimmed);
+    const loose = looseArabicKey(trimmed);
+    const known = SAUDI_STARTER_COMPANIES.find(
+      (company) =>
+        normalizeText(company.displayName) === normalized ||
+        normalizeText(company.displayNameAr) === normalized ||
+        normalizeText(company.token) === normalized ||
+        // Arabic spellings vary in their long vowels — تمارا and تامارا are the
+        // same company — so fall back to the consonant skeleton.
+        (loose.length > 1 && looseArabicKey(company.displayNameAr) === loose),
+    );
+
+    if (known) {
+      setStarterMatch(known);
+      setResolving(false);
+      return;
+    }
     const { data, error: resolveError } = await resolveCompany(trimmed);
     setResolving(false);
 
@@ -212,6 +264,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       setQuery('');
       setResolution(null);
+      setStarterMatch(null);
       await load();
     },
     [load],
@@ -231,6 +284,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         setError(trackError);
         return;
       }
+
+      // Clear the search and its result. Leaving them on screen after a successful
+      // follow made the click look like it had done nothing — the company was
+      // tracked, but the panel that prompted it was still sitting there.
+      setQuery('');
+      setStarterMatch(null);
+      setResolution(null);
       await load();
     },
     [load],
@@ -250,12 +310,30 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
   const handleUntrack = useCallback(
     async (companyId: string) => {
-      setBusyCompany(companyId);
-      await untrackCompany(companyId);
-      setBusyCompany(null);
-      await load();
+      /*
+       * Drop the row immediately and let the request catch up.
+       *
+       * This used to await the delete and then call load(), refetching every
+       * company, posting and feed-state row to remove one line — two round trips
+       * of visible lag for something the user has already decided. The row and its
+       * postings disappear now; if the server refuses, both come back and the
+       * error says why.
+       */
+      const removedCompany = companies.find((company) => company.companyId === companyId);
+      const removedPostings = postings.filter((posting) => posting.companyId === companyId);
+
+      setCompanies((previous) => previous.filter((company) => company.companyId !== companyId));
+      setPostings((previous) => previous.filter((posting) => posting.companyId !== companyId));
+
+      const { error: untrackError } = await untrackCompany(companyId);
+
+      if (untrackError) {
+        if (removedCompany) setCompanies((previous) => [...previous, removedCompany]);
+        if (removedPostings.length > 0) setPostings((previous) => [...previous, ...removedPostings]);
+        setError(untrackError);
+      }
     },
-    [load],
+    [companies, postings],
   );
 
   const handleDismiss = useCallback(async (postingId: string) => {
@@ -313,8 +391,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="text-2xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
-        <p className="text-base text-muted-foreground mb-5">
+        <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
+        <p className="text-sm text-muted-foreground mb-4">
           {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
         </p>
 
@@ -322,13 +400,18 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           <input
             type="text"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              // A result from the previous query must never sit under a new one.
+              setResolution(null);
+              setStarterMatch(null);
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void handleResolve();
             }}
             placeholder={t('jobFeed.companies.placeholder', 'Company name or careers page link')}
             aria-label={t('jobFeed.companies.add', 'Add a company')}
-            className="flex-1 min-h-12 rounded-xl border border-border bg-background px-4 py-2.5 text-base text-gray-900 placeholder:text-muted-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-white"
+            className="flex-1 min-h-12 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-gray-900 placeholder:text-muted-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-white"
           />
           <GlassButton
             variant="secondary"
@@ -357,12 +440,12 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         )}
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
-          {starters.length > 0 && (
+          {starters.length > 0 && !resolution && !starterMatch && (
           <div className="mt-4">
-            <p className="text-base font-medium text-gray-900 dark:text-white">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
               {t('jobFeed.empty.starters', 'Saudi employers we can read')}
             </p>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-xs text-muted-foreground mb-3">
               {t('jobFeed.empty.startersHelp', 'Verified job boards. Tap one to start following it.')}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -382,19 +465,35 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         )}
 
 
+        {starterMatch && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-border p-4">
+            <span className="flex-1 text-sm text-gray-900 dark:text-white">
+              {t('jobFeed.resolve.knownCompany', { name: starterMatch.displayName })}
+            </span>
+            <GlassButton
+              variant="secondary"
+              onClick={() => void handleStarter(starterMatch)}
+              disabled={busyCompany === starterMatch.token}
+            >
+              <Plus className="h-4 w-4 me-1" aria-hidden="true" />
+              {t('jobFeed.resolve.pick', 'Follow this board')}
+            </GlassButton>
+          </div>
+        )}
+
         {resolution && (
           <div className="mt-4 rounded-xl border border-border p-4">
             {resolution.candidates.length > 0 ? (
               <>
                 {resolution.candidates.length > 1 && (
-                  <p className="text-base text-muted-foreground mb-3">
+                  <p className="text-sm text-muted-foreground mb-3">
                     {t('jobFeed.resolve.multiple', 'More than one board matched. Pick the right one:')}
                   </p>
                 )}
                 <ul className="space-y-2">
-                  {resolution.candidates.map((candidate) => (
+                  {resolution.candidates.filter((candidate) => candidate.token.trim().length > 0).map((candidate) => (
                     <li key={`${candidate.source}:${candidate.token}`} className="flex items-center gap-2">
-                      <span className="flex-1 text-base text-gray-900 dark:text-white">
+                      <span className="flex-1 text-sm text-gray-900 dark:text-white">
                         {t('jobFeed.resolve.found', {
                           source: candidate.source,
                           count: candidate.jobCount,
@@ -414,10 +513,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               </>
             ) : (
               /* A total miss is said out loud and pointed somewhere useful — never a blank list. */
-              <div className="text-base">
+              <div className="text-sm">
                 <p className="font-medium text-gray-900 dark:text-white">{t('jobFeed.resolve.notFound', 'No public job board found for that name.')}</p>
                 <p className="text-muted-foreground mt-1">
-                  {t('jobFeed.resolve.notFoundHelp', 'Open their careers page and paste the link instead.')}
+                  {/* An Arabic name cannot become an ATS handle, so the advice differs. */}
+                  {/[؀-ۿ]/.test(query)
+                    ? t('jobFeed.resolve.notFoundArabic', "Try the company's English name, or paste their careers page link.")
+                    : t('jobFeed.resolve.notFoundHelp', 'Open their careers page and paste the link instead.')}
                 </p>
               </div>
             )}
@@ -429,7 +531,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             {companies.map((company) => (
               <li key={company.companyId} className="flex items-center gap-3 py-3">
                 <Building2 className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="flex-1 truncate text-base font-medium text-gray-900 dark:text-white">
+                <span className="flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">
                   {company.displayName}
                 </span>
                 <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
@@ -459,14 +561,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       {/* Three distinct empty states — a blank list would read as broken. */}
       {companies.length === 0 && (
         <GlassCard className="p-6">
-          <p className="text-lg font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noCompanies', 'Follow a company to start seeing roles.')}</p>
-          <p className="text-base text-muted-foreground mt-1">
+          <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noCompanies', 'Follow a company to start seeing roles.')}</p>
+          <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.noCompaniesHelp', 'Add the employers you actually want to work for.')}
           </p>
           {suggestions.length > 0 && (
             <div className="mt-4">
-              <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.suggestions', 'From your CV')}</p>
-              <p className="text-sm text-muted-foreground mb-3">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.suggestions', 'From your CV')}</p>
+              <p className="text-xs text-muted-foreground mb-3">
                 {t('jobFeed.empty.suggestionsHelp', 'Companies you have worked at — a quick place to start.')}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -488,8 +590,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       {companies.length > 0 && !intent && (
         <GlassCard className="p-6">
-          <p className="text-lg font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noIntent', 'Set your target role first.')}</p>
-          <p className="text-base text-muted-foreground mt-1">
+          <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.noIntent', 'Set your target role first.')}</p>
+          <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.noIntentHelp', 'The feed matches roles against what you are looking for.')}
           </p>
         </GlassCard>
@@ -497,8 +599,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       {feed && feed.kept.length === 0 && postings.length > 0 && (
         <GlassCard className="p-6">
-          <p className="text-lg font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
-          <p className="text-base text-muted-foreground mt-1">
+          <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
+          <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.allFilteredHelp', { count: feed.dropped.length })}
           </p>
         </GlassCard>
@@ -507,6 +609,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       {feed?.kept.map((scored, index) => {
         const trackedSince = trackedSinceById.get(scored.posting.companyId) ?? scored.posting.firstSeenAt;
         const fresh = isNew(scored.posting, trackedSince, lastSeenAt);
+        const matchPercent = Math.round((scored.score / maxScore) * 100);
+        const scoreTone =
+          matchPercent >= 90
+            ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200'
+            : matchPercent >= 70
+              ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200'
+              : 'bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200';
 
         return (
           /* Rows arrive together after an async load, so they are staggered rather
@@ -517,17 +626,17 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 6) * 0.04 }}
           >
-          <GlassCard className="p-5">
+          <GlassCard className="p-4">
             <div className="flex items-start gap-4">
               <span
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg font-semibold tabular-nums text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200"
+                className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-semibold tabular-nums ${scoreTone}`}
                 title={t('jobFeed.why.label', 'Why this is here')}
               >
-                {scored.score}
+                {matchPercent}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-lg font-semibold leading-snug text-gray-900 dark:text-white">
+                  <h3 className="text-base font-semibold leading-snug text-gray-900 dark:text-white">
                     {scored.posting.title}
                   </h3>
                   {fresh && (
@@ -536,14 +645,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-base text-muted-foreground">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   <span className="font-medium text-gray-700 dark:text-gray-300">{scored.posting.companyName}</span>
                   {' · '}
                   {scored.posting.location}
                 </p>
                 {scored.matched.length > 0 && (
                   /* Deterministic, non-AI reason. Never a model's opinion dressed as one. */
-                  <p className="mt-1.5 text-sm text-muted-foreground">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     {t('jobFeed.why.matched', { terms: scored.matched.join(', ') })}
                   </p>
                 )}
@@ -573,7 +682,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 href={scored.posting.applyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-base font-medium text-primary transition-[color,background-color] duration-200 hover:bg-primary/10 hover:underline"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-primary transition-[color,background-color] duration-200 hover:bg-primary/10 hover:underline"
               >
                 {t('jobFeed.actions.apply', 'View posting')}
                 <ExternalLink className="h-4 w-4" aria-hidden="true" />

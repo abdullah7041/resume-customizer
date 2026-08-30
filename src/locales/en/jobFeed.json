@@ -33,7 +33,9 @@
       "found_two": "Found on {{source}} — {{count}} open roles",
       "found_few": "Found on {{source}} — {{count}} open roles",
       "found_many": "Found on {{source}} — {{count}} open roles",
-      "found_other": "Found on {{source}} — {{count}} open roles"
+      "found_other": "Found on {{source}} — {{count}} open roles",
+      "knownCompany": "{{name}} is one of the boards we can read.",
+      "notFoundArabic": "Try the company's English name, or paste their careers page link."
     },
     "empty": {
       "noCompanies": "Follow a company to start seeing roles.",
