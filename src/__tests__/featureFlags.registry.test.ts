@@ -14,6 +14,7 @@ const ALL_FLAG_NAMES: FeatureFlagName[] = [
   "coverLetter",
   "vision2030",
   "pipeline",
+  "jobFeed",
   "onboardingChat",
   "referral",
   "feedback",

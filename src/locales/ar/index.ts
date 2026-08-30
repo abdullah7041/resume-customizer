@@ -53,6 +53,7 @@ import quota from './quota.json';
 import resume from './resume.json';
 import tour from './tour.json';
 import pipeline from './pipeline.json';
+import jobFeed from './jobFeed.json';
 import feedback from './feedback.json';
 
 import { deepMerge } from '../utils';
@@ -113,6 +114,7 @@ const sources = [
     resume,
     tour,
     pipeline,
+    jobFeed,
     feedback,
 ];
 

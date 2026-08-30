@@ -1,0 +1,71 @@
+{
+  "jobFeed": {
+    "title": "Job feed",
+    "subtitle": "New roles from the company boards you follow, matched against your target role.",
+    "newBadge": "New",
+    "companies": {
+      "heading": "Companies you follow",
+      "add": "Add a company",
+      "placeholder": "Company name or careers page link",
+      "addButton": "Find their job board",
+      "searching": "Checking the job boards…",
+      "remove": "Stop following",
+      "limitReached": "You can follow up to {{max}} companies. Remove one to add another.",
+      "lastChecked": "Checked {{when}}",
+      "neverChecked": "Not checked yet",
+      "checkFailed": "Could not read this board last time",
+      "openRoles_zero": "{{count}} open roles",
+      "openRoles_one": "{{count}} open role",
+      "openRoles_two": "{{count}} open roles",
+      "openRoles_few": "{{count}} open roles",
+      "openRoles_many": "{{count}} open roles",
+      "openRoles_other": "{{count}} open roles"
+    },
+    "resolve": {
+      "found": "Found on {{source}} — {{count}} open roles",
+      "pick": "Follow this board",
+      "multiple": "More than one board matched. Pick the right one:",
+      "notFound": "No public job board found for that name.",
+      "notFoundHelp": "Some companies use a handle that differs from their name. Open their careers page and paste the link, or paste a single job link into the Match tab instead.",
+      "manualToken": "I know their board handle",
+      "unreliable": "{{sources}} answered for a name that does not exist, so its results were ignored."
+    },
+    "empty": {
+      "noCompanies": "Follow a company to start seeing roles.",
+      "noCompaniesHelp": "Add the employers you actually want to work for. Watheq checks their job boards once a day.",
+      "suggestions": "From your CV",
+      "suggestionsHelp": "Companies you have worked at — a quick place to start.",
+      "noIntent": "Set your target role first.",
+      "noIntentHelp": "The feed matches roles against what you are looking for, so it has nothing to match on yet.",
+      "setIntent": "Set target role",
+      "allFiltered": "Nothing matched today.",
+      "allFilteredHelp": "{{count}} roles were checked and none cleared your filters."
+    },
+    "why": {
+      "label": "Why this is here",
+      "matched": "Matches {{terms}} in your target role",
+      "location": "In {{location}}"
+    },
+    "dropped": {
+      "heading": "Filtered out",
+      "location": "Outside your locations",
+      "location_conflict": "Title says the job is elsewhere",
+      "seniority": "Not your level",
+      "role": "Different role"
+    },
+    "actions": {
+      "match": "Check the match",
+      "optimize": "Optimize for this role",
+      "coverLetter": "Draft a cover letter",
+      "save": "Save to pipeline",
+      "saved": "Saved",
+      "dismiss": "Not interested",
+      "apply": "View posting"
+    },
+    "errors": {
+      "loadFailed": "Could not load your feed. Try again.",
+      "trackFailed": "Could not follow that company.",
+      "signInRequired": "Sign in to follow companies."
+    }
+  }
+}

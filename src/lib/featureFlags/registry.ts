@@ -83,6 +83,14 @@ export const FEATURE_FLAGS: Record<FeatureFlagName, FeatureFlagDefinition> = {
     defaultEnabled: true,
     testFiles: ["src/lib/utils/__tests__/vision2030Analyzer.test.ts"],
   },
+  jobFeed: {
+    name: "jobFeed",
+    label: "Job Feed",
+    description: "Job Feed tab — daily roles from the company boards you track, matched against your target role.",
+    maturity: "beta",
+    defaultEnabled: true,
+    testFiles: ["jobFeed.matching.test.ts"],
+  },
   pipeline: {
     name: "pipeline",
     label: "Job Pipeline",

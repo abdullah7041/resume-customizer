@@ -17,6 +17,7 @@ export type FeatureFlagName =
   | "coverLetter"
   | "vision2030"
   | "pipeline"
+  | "jobFeed"
   | "onboardingChat"
   | "referral"
   | "feedback"
