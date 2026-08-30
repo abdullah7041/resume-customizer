@@ -149,6 +149,7 @@ const JOB_STORAGE_KEY = "watheq:lastJobDescription";
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
 const TRUTH_CHECK_STORAGE_KEY = "watheq:resumeTruthCheck";
+const TRUTH_CHECK_CONTRACT_VERSION = 1;
 
 type PendingOptimizeContinuation = {
   resolve: (result: unknown) => void;
@@ -166,7 +167,17 @@ const scheduleTimeout = (callback, delay) => {
   return host.setTimeout(callback, delay);
 };
 
-const getResumeFingerprint = (text: string) => `${text.length}:${text.slice(0, 120)}`;
+const getResumeFingerprint = (text: string) => {
+  let first = 0x811c9dc5;
+  let second = 0x9e3779b9;
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    first = Math.imul(first ^ code, 0x01000193);
+    second = Math.imul(second ^ code, 0x85ebca6b);
+  }
+  return `${text.length}:${(first >>> 0).toString(36)}:${(second >>> 0).toString(36)}`;
+};
+const getTruthCheckLanguage = (language?: string) => language?.toLowerCase().startsWith('ar') ? 'ar' : 'en';
 const getHardStopsFingerprint = (hardStops: string[]) => hardStops
   .flatMap(value => {
     const normalized = value.trim().toLocaleLowerCase();
@@ -175,18 +186,26 @@ const getHardStopsFingerprint = (hardStops: string[]) => hardStops
   .sort()
   .join('|');
 
-const loadCachedTruthCheck = (resumeText: string, hardStops: string[] = []): ResumeTruthCheckResult | null => {
+const loadCachedTruthCheck = (
+  resumeText: string,
+  hardStops: string[] = [],
+  language?: string,
+): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
     const stored = window.localStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as {
+      contractVersion?: number;
       resumeHash?: string;
       hardStopsHash?: string;
+      language?: string;
       result?: ResumeTruthCheckResult;
     };
-    return parsed?.resumeHash === getResumeFingerprint(resumeText)
+    return parsed?.contractVersion === TRUTH_CHECK_CONTRACT_VERSION
+      && parsed?.resumeHash === getResumeFingerprint(resumeText)
       && (parsed.hardStopsHash ?? '') === getHardStopsFingerprint(hardStops)
+      && parsed.language === getTruthCheckLanguage(language)
       && parsed.result
       ? parsed.result
       : null;
@@ -463,6 +482,7 @@ export default function MainContent() {
     loadCachedTruthCheck(
       typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
       loadPersistentHardStops(),
+      i18n.language,
     )
   );
   const [optimizations, setOptimizations] = useState([]);
@@ -1297,7 +1317,7 @@ export default function MainContent() {
     [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, t]
   );
 
-  const handleAnalyzeTruthCheck = useCallback(async (options?: { force?: boolean }) => {
+  const handleAnalyzeTruthCheck = useCallback(async () => {
     if (isGuestMode) {
       requireSignInForGuestAction();
       return null;
@@ -1317,12 +1337,11 @@ export default function MainContent() {
     const resumeHash = getResumeFingerprint(resumeTextToAnalyze);
     const userHardStops = loadPersistentHardStops();
     const hardStopsHash = getHardStopsFingerprint(userHardStops);
-    if (!options?.force) {
-      const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops);
-      if (cached) {
-        setTruthCheckResult(cached);
-        return cached;
-      }
+    const truthCheckLanguage = getTruthCheckLanguage(i18n.language);
+    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops, truthCheckLanguage);
+    if (cached) {
+      setTruthCheckResult(cached);
+      return cached;
     }
 
     try {
@@ -1338,7 +1357,7 @@ export default function MainContent() {
 
       const result = await analyzeResumeTruthCheck({
         resumeText: resumeTextToAnalyze,
-        language: i18n.language,
+        language: truthCheckLanguage,
         userHardStops,
       }) as ResumeTruthCheckResult;
 
@@ -1346,8 +1365,10 @@ export default function MainContent() {
       setTruthCheckResult(result);
       if (typeof window !== "undefined") {
         window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
+          contractVersion: TRUTH_CHECK_CONTRACT_VERSION,
           resumeHash,
           hardStopsHash,
+          language: truthCheckLanguage,
           result,
           timestamp: new Date().toISOString(),
         }));

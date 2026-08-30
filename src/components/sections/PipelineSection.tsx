@@ -161,7 +161,7 @@ export function PipelineSection() {
                   <button
                     type="button"
                     onClick={() => handleQuickUpdate(job, 'withdrawn')}
-                    className="px-2 py-1 rounded-md text-xs bg-blue-500/10 text-blue-600 dark:text-blue-300 hover:bg-blue-500/20 transition-colors"
+                    className="px-2 py-1 rounded-md text-xs bg-teal-500/10 text-teal-700 dark:text-teal-300 hover:bg-teal-500/20 transition-colors"
                   >
                     {t('pipeline.updateToWithdrawn', 'Withdrawn')}
                   </button>

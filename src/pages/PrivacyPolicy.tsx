@@ -1,8 +1,15 @@
 import { useTranslation } from 'react-i18next';
 
+const PRIVACY_POLICY_EFFECTIVE_DATE = new Date('2026-08-15T00:00:00.000Z');
+const PRIVACY_POLICY_DATE_FORMATTERS = {
+  ar: new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long', timeZone: 'UTC' }),
+  en: new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'UTC' }),
+};
+
 export function PrivacyPolicy() {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
+  const effectiveDate = PRIVACY_POLICY_DATE_FORMATTERS[isArabic ? 'ar' : 'en'].format(PRIVACY_POLICY_EFFECTIVE_DATE);
 
   return (
     <div className="min-h-screen bg-[color:var(--surface)] py-12 px-4">
@@ -11,7 +18,7 @@ export function PrivacyPolicy() {
           {t('privacy.title')}
         </h1>
         <p className="text-[color:var(--ink-muted)] mb-8">
-          {t('privacy.lastUpdated')}: {new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'en-US')}
+          {t('privacy.lastUpdated')}: {effectiveDate}
         </p>
 
         {/* Introduction */}
@@ -31,7 +38,6 @@ export function PrivacyPolicy() {
           </h2>
           <div className="bg-[color:var(--surface-strong)] rounded-lg p-4">
             <p className="text-[color:var(--ink-muted)]">{t('privacy.sections.controller.name')}</p>
-            <p className="text-[color:var(--ink-muted)]">{t('privacy.sections.controller.address')}</p>
             <p className="text-[color:var(--ink-muted)]">{t('privacy.sections.controller.email')}</p>
           </div>
         </section>
@@ -137,6 +143,15 @@ export function PrivacyPolicy() {
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
             {t('privacy.sections.crossBorder.content')}
+          </p>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
+            {t('privacy.sections.providers.title')}
+          </h2>
+          <p className="text-[color:var(--ink-muted)] leading-relaxed">
+            {t('privacy.sections.providers.content')}
           </p>
         </section>
 

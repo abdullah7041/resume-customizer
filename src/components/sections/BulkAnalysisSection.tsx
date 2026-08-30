@@ -90,7 +90,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
               "p-2 rounded-lg transition-colors",
               status === 'completed' ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" :
                 status === 'error' ? "bg-rose-500/10 text-rose-700 dark:text-rose-400" :
-                  "bg-blue-500/10 text-blue-400"
+                  "bg-teal-500/10 text-teal-500 dark:text-teal-300"
             )}>
               <FileText className="w-5 h-5" />
             </div>
@@ -132,7 +132,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
           <div className="mt-4 mb-2">
             <div className="w-full bg-gray-200 dark:bg-white/5 rounded-full h-1.5 overflow-hidden">
               <div
-                className="bg-blue-500 h-full rounded-full animate-pulse"
+                className="bg-teal-500 h-full rounded-full animate-pulse"
                 style={{ width: '60%' }}
               />
             </div>
@@ -497,8 +497,8 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       {/* Header */}
       <GlassCard className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <GlassCircle size="lg" variant="purple" className="shadow-lg shadow-purple-500/20">
-            <BarChart3 className="w-8 h-8 text-purple-400" />
+          <GlassCircle size="lg" variant="success" className="shadow-lg shadow-emerald-500/20">
+            <BarChart3 className="w-8 h-8 text-emerald-500" />
           </GlassCircle>
           <div>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
@@ -559,7 +559,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               : 'border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-black/60 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-gray-200 dark:hover:bg-black/70'
           )}
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
           <div className="relative py-16 px-6 text-center">
             <div className={cn(
@@ -633,7 +633,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
         <GlassCard className="overflow-hidden animate-fade-in">
           <div className="px-6 py-5 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-purple-400" />
+              <BarChart3 className="w-5 h-5 text-emerald-500" />
               {t('sections.bulk.comparisonTitle', 'Detailed Comparison')}
             </h3>
             <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400">
@@ -676,7 +676,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="font-medium text-gray-900 dark:text-white group-hover:text-purple-400 transition-colors">
+                        <div className="font-medium text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">
                           {resume.name}
                         </div>
                       </td>

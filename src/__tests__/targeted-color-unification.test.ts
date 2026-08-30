@@ -59,7 +59,8 @@ describe('targeted green and teal color unification', () => {
     expect(matchSectionSource).toContain('group-hover:text-emerald-700 dark:group-hover:text-emerald-300');
   });
 
-  it('preserves the explicitly protected Vision 2030 blue identity', () => {
-    expect(summarySource).toContain('from-emerald-500/10 via-transparent to-blue-500/5');
+  it('keeps the Vision 2030 summary in the emerald and teal family', () => {
+    expect(summarySource).toContain('from-emerald-500/10 via-transparent to-teal-500/5');
+    expect(summarySource).not.toMatch(/\bblue-/);
   });
 });

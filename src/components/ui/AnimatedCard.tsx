@@ -95,7 +95,7 @@ export const AnimatedCard = forwardRef<HTMLElement, AnimatedCardProps>(function 
         {/* Animated gradient border glow on hover */}
         {isHovered && (
           <div className="absolute inset-0 rounded-card pointer-events-none opacity-0 animate-fade-in">
-            <div className="absolute inset-0 rounded-card bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 blur-xl" />
+            <div className="absolute inset-0 rounded-card bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-emerald-300/20 blur-xl" />
           </div>
         )}
 

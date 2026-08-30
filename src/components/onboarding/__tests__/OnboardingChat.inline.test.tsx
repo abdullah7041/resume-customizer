@@ -36,6 +36,20 @@ describe('OnboardingChat — inline (Path A) mode', () => {
     expect(screen.queryByRole('button', { name: /remote|hybrid|onsite/i })).toBeNull();
   });
 
+  it('uses an emerald dark surface for the role field in both entry flows', () => {
+    const { unmount } = render(<OnboardingChat path="has_cv" mode="inline" />);
+
+    expect(screen.getByPlaceholderText('e.g. Senior Frontend Engineer')).toHaveClass(
+      'dark:bg-emerald-950/55',
+    );
+    unmount();
+
+    render(<OnboardingChat path="no_cv" mode="fullscreen" />);
+    fireEvent.click(screen.getByRole('button', { name: /^skip$/i }));
+
+    expect(screen.getByPlaceholderText('e.g. Product Designer')).toHaveClass('dark:bg-emerald-950/55');
+  });
+
   it('calls onComplete after the final slot (role) is resolved', () => {
     const onComplete = vi.fn();
     render(<OnboardingChat path="has_cv" mode="inline" onComplete={onComplete} />);
