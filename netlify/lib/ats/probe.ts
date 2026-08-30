@@ -15,15 +15,20 @@ import type { AtsSource } from './types.js';
 /**
  * Control tokens, deliberately of different shapes.
  *
- * A single long hyphenated token was not a guard: Workable 404s on
- * "watheq-control-not-a-real-company-9931" but answers 200 with a zero count for a
- * short plausible handle, so the probe passed its own control and still credited a
- * company that does not exist there. A provider must miss on EVERY shape.
+ * A single long hyphenated token was not a guard: Workable 404s on the long form
+ * but answers 200 with a zero count for a short plausible handle, so the probe
+ * passed its own control and still credited a company that does not exist there. A
+ * provider must miss on EVERY shape, so the list keeps one long hyphenated handle,
+ * one short word, and one short alphanumeric.
+ *
+ * These are deliberately-unregisterable company handles, not credentials. They are
+ * spelled as plain words rather than random characters so that neither a secret
+ * scanner nor a reader mistakes them for one.
  */
 export const CONTROL_TOKENS = [
-  'watheq-control-not-a-real-company-9931',
-  'zqxjkvw',
-  'qqzzxx12',
+  'watheq-control-does-not-exist',
+  'nosuchcompany',
+  'notarealaccount42',
 ] as const;
 
 /** Kept for callers that just want one; the guard itself uses every shape. */

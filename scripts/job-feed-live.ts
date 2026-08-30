@@ -11,9 +11,21 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { resolveCompany } from '../netlify/lib/ats/probe.js';
 
-process.env.JOB_CRAWL_SECRET ||= 'local-harness-secret';
+// No default secret. A hardcoded fallback is a secret in the repository, and one
+// that would silently let the crawler accept a guessable value anywhere the real
+// variable is missing. Fail loudly instead.
+if (!process.env.JOB_CRAWL_SECRET) {
+  console.error('Set JOB_CRAWL_SECRET (see .env) before running this harness.');
+  process.exit(1);
+}
 
-const USER_ID = 'f9ef22d5-c18f-41f2-a2c9-8b05c62eca67';
+// The account to seed against. Kept out of the repository: it is someone's auth id,
+// not test data, and committing it publishes an internal identifier for no benefit.
+const USER_ID = process.env.JOB_FEED_TEST_USER_ID;
+if (!USER_ID) {
+  console.error('Set JOB_FEED_TEST_USER_ID to the Supabase auth user id to seed against.');
+  process.exit(1);
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL as string,
@@ -26,7 +38,7 @@ const FIXTURES = [
   { source: 'greenhouse', token: 'hala', display_name: 'HALA' },
   { source: 'pinpoint', token: 'tabby', display_name: 'Tabby' },
   // Deliberately broken: proves a failed fetch closes nothing.
-  { source: 'greenhouse', token: 'watheq-not-a-company-9931', display_name: 'Broken Board' },
+  { source: 'greenhouse', token: 'nosuchboard', display_name: 'Broken Board' },
 ];
 
 async function cleanup() {
@@ -45,7 +57,7 @@ async function main() {
   if (process.argv.includes('--cleanup')) return cleanup();
 
   console.log('=== 1. resolver, live ===');
-  for (const query of ['salla', 'tabby', 'definitely-not-a-real-company-9931']) {
+  for (const query of ['salla', 'tabby', 'nosuchcompany']) {
     const report = await resolveCompany(query);
     console.log(
       `${query.padEnd(38)} candidates=${report.candidates.map((c) => `${c.source}(${c.jobCount})`).join(',') || 'none'}` +
@@ -113,7 +125,7 @@ async function main() {
   const { data: broken } = await supabase
     .from('ats_companies')
     .select('display_name, last_status, last_error, last_job_count, crawl_lease_until')
-    .eq('token', 'watheq-not-a-company-9931')
+    .eq('token', 'nosuchboard')
     .single();
   console.log(broken);
 

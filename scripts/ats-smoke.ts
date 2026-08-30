@@ -39,7 +39,7 @@ async function main() {
   }
 
   console.log('\n=== failure must not look like an empty board ===');
-  const bad = await fetchCompany({ source: 'greenhouse', token: 'watheq-nope-9931' });
+  const bad = await fetchCompany({ source: 'greenhouse', token: 'nosuchboard' });
   console.log(`bad token -> ok=${bad.ok} postings=${bad.postings.length} error=${bad.error}`);
   const badToken = await fetchCompany({ source: 'pinpoint', token: 'has spaces/../etc' });
   console.log(`unsafe token -> ok=${badToken.ok} error=${badToken.error}`);
