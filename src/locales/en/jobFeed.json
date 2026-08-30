@@ -22,13 +22,18 @@
       "openRoles_other": "{{count}} open roles"
     },
     "resolve": {
-      "found": "Found on {{source}} — {{count}} open roles",
       "pick": "Follow this board",
       "multiple": "More than one board matched. Pick the right one:",
       "notFound": "No public job board found for that name.",
       "notFoundHelp": "Some companies use a handle that differs from their name. Open their careers page and paste the link, or paste a single job link into the Match tab instead.",
       "manualToken": "I know their board handle",
-      "unreliable": "{{sources}} answered for a name that does not exist, so its results were ignored."
+      "unreliable": "{{sources}} answered for a name that does not exist, so its results were ignored.",
+      "found_zero": "Found on {{source}} — {{count}} open roles",
+      "found_one": "Found on {{source}} — {{count}} open role",
+      "found_two": "Found on {{source}} — {{count}} open roles",
+      "found_few": "Found on {{source}} — {{count}} open roles",
+      "found_many": "Found on {{source}} — {{count}} open roles",
+      "found_other": "Found on {{source}} — {{count}} open roles"
     },
     "empty": {
       "noCompanies": "Follow a company to start seeing roles.",
