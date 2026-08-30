@@ -39,7 +39,9 @@
       "noIntentHelp": "The feed matches roles against what you are looking for, so it has nothing to match on yet.",
       "setIntent": "Set target role",
       "allFiltered": "Nothing matched today.",
-      "allFilteredHelp": "{{count}} roles were checked and none cleared your filters."
+      "allFilteredHelp": "{{count}} roles were checked and none cleared your filters.",
+      "starters": "Saudi employers we can read",
+      "startersHelp": "Verified job boards. Tap one to start following it."
     },
     "why": {
       "label": "Why this is here",

@@ -22,6 +22,11 @@ import {
   type TrackedCompany,
 } from '@/services/jobFeed';
 import { buildFeed, isNew } from '@/lib/jobs/score';
+import {
+  SAUDI_STARTER_COMPANIES,
+  unfollowedStarters,
+  type StarterCompany,
+} from '@/lib/jobs/saudiStarterCompanies';
 import type { FeedIntent, FeedPosting, ScoredPosting } from '@/lib/jobs/types';
 
 const MAX_TRACKED_COMPANIES = 25;
@@ -32,7 +37,9 @@ interface JobFeedSectionProps {
 }
 
 export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Defensive: consumers can render this without a full i18n instance.
+  const language = i18n?.language ?? 'en';
   const searchIntent = useSearchIntent();
   const resume = useActiveResume();
 
@@ -65,18 +72,34 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    */
   const suggestions = useMemo(() => {
     const tracked = new Set(companies.map((company) => company.displayName.toLowerCase()));
+    // A company already offered as a starter is skipped here: that chip tracks it
+    // directly from a known token, while this path has to probe every provider for
+    // a name that may not even be the handle.
+    const alreadyOffered = new Set(
+      SAUDI_STARTER_COMPANIES.map((company) => company.displayName.toLowerCase()),
+    );
     const seen = new Set<string>();
     const names: string[] = [];
 
     for (const entry of resume?.work ?? []) {
       const name = (entry?.name ?? '').trim();
       const key = name.toLowerCase();
-      if (!name || seen.has(key) || tracked.has(key)) continue;
+      if (!name || seen.has(key) || tracked.has(key) || alreadyOffered.has(key)) continue;
       seen.add(key);
       names.push(name);
     }
     return names.slice(0, 6);
   }, [resume, companies]);
+
+  /**
+   * Saudi employers whose boards are already verified readable. Tapping one skips
+   * resolution entirely — the source and token are known, so there is nothing to
+   * probe and no fan-out across providers.
+   */
+  const starters = useMemo(
+    () => unfollowedStarters(companies.map((company) => company.token)),
+    [companies],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -175,6 +198,25 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       setQuery('');
       setResolution(null);
+      await load();
+    },
+    [load],
+  );
+
+  const handleStarter = useCallback(
+    async (company: StarterCompany) => {
+      setBusyCompany(company.token);
+      const { error: trackError } = await trackCompany({
+        source: company.source,
+        token: company.token,
+        displayName: company.displayName,
+      });
+      setBusyCompany(null);
+
+      if (trackError) {
+        setError(trackError);
+        return;
+      }
       await load();
     },
     [load],
@@ -296,6 +338,31 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
+          {starters.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {t('jobFeed.empty.starters', 'Saudi employers we can read')}
+            </p>
+            <p className="text-xs text-muted-foreground mb-2">
+              {t('jobFeed.empty.startersHelp', 'Verified job boards. Tap one to start following it.')}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {starters.map((company) => (
+                <button
+                  key={`${company.source}:${company.token}`}
+                  type="button"
+                  onClick={() => void handleStarter(company)}
+                  disabled={busyCompany === company.token}
+                  className="rounded-lg border border-border px-3 py-1 text-sm text-gray-900 dark:text-white hover:border-primary disabled:opacity-60"
+                >
+                  {language === 'ar' ? company.displayNameAr : company.displayName}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+
         {resolution && (
           <div className="mt-3 rounded-lg border border-border p-3">
             {resolution.candidates.length > 0 ? (
@@ -377,7 +444,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           </p>
           {suggestions.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium">{t('jobFeed.empty.suggestions', 'From your CV')}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.suggestions', 'From your CV')}</p>
               <p className="text-xs text-muted-foreground mb-2">
                 {t('jobFeed.empty.suggestionsHelp', 'Companies you have worked at — a quick place to start.')}
               </p>

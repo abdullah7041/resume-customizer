@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) =>
       typeof fallbackOrOptions === 'string' ? fallbackOrOptions : key,
+    i18n: { language: 'en' },
   }),
 }));
 
@@ -29,6 +30,8 @@ vi.mock('@/services/pipeline', () => ({ createJobApplication: vi.fn() }));
 
 const mockListTracked = vi.fn();
 const mockListPostings = vi.fn();
+const mockTrackCompany = vi.fn();
+const mockResolveCompany = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
   listTrackedCompanies: () => mockListTracked(),
@@ -38,8 +41,8 @@ vi.mock('@/services/jobFeed', () => ({
   fetchServerSearchIntent: () => Promise.resolve(null),
   touchLastFeedSeenAt: () => Promise.resolve(),
   getPostingDescription: () => Promise.resolve(''),
-  resolveCompany: vi.fn(),
-  trackCompany: vi.fn(),
+  resolveCompany: (query: string) => mockResolveCompany(query),
+  trackCompany: (input: unknown) => mockTrackCompany(input),
   untrackCompany: vi.fn(),
   setFeedState: vi.fn(),
 }));
@@ -83,6 +86,49 @@ beforeEach(() => {
   mockActiveResume.mockReturnValue(null);
   mockListTracked.mockResolvedValue({ companies: [], error: null });
   mockListPostings.mockResolvedValue({ postings: [], error: null });
+  mockTrackCompany.mockResolvedValue({ data: null, error: null });
+  mockResolveCompany.mockResolvedValue({ data: null, error: null });
+});
+
+describe('Saudi starter companies', () => {
+  it('offers verified Saudi employers before the user has followed anything', async () => {
+    render(<JobFeedSection />);
+
+    expect(await screen.findByRole('button', { name: 'Salla' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tabby' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lean Technologies' })).toBeInTheDocument();
+  });
+
+  it('tracks a starter directly instead of probing every provider for its name', async () => {
+    render(<JobFeedSection />);
+
+    const salla = await screen.findByRole('button', { name: 'Salla' });
+    fireEvent.click(salla);
+
+    await waitFor(() =>
+      expect(mockTrackCompany).toHaveBeenCalledWith({
+        source: 'workable',
+        token: 'salla',
+        displayName: 'Salla',
+      }),
+    );
+    // The handle is already known, so nothing should fan out across the boards.
+    expect(mockResolveCompany).not.toHaveBeenCalled();
+  });
+
+  it('stops offering a company once it is followed, and keeps offering the rest', async () => {
+    // Discovery must survive the first follow — the chips live in the add-company
+    // card, not the empty state, so they do not vanish the moment a user starts.
+    mockListTracked.mockResolvedValue({
+      companies: [{ ...company, token: 'salla' }],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByRole('button', { name: 'Tabby' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salla' })).not.toBeInTheDocument();
+  });
 });
 
 describe('JobFeedSection empty states', () => {
