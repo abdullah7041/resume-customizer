@@ -111,6 +111,9 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, []);
 
   const [maxAgeDays, setMaxAgeDays] = useState<number | null>(DEFAULT_MAX_AGE_DAYS);
+  /** Once the user picks a window themselves, nothing widens it behind their back. */
+  const [ageChosenByUser, setAgeChosenByUser] = useState(false);
+  const [autoWidened, setAutoWidened] = useState(false);
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
   const [showAllCompanyChips, setShowAllCompanyChips] = useState(false);
 
@@ -177,16 +180,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     setError(null);
     setLoadFailed(false);
 
-    const finish = () => {
+    // A load that failed has not updated anything, so it must not stamp the
+    // clock — "Updated just now" beside "Could not load your feed" is a lie the
+    // user has no way to see through.
+    const finish = (ok: boolean) => {
       setLoading(false);
       setRefreshing(false);
-      setLastLoadedAt(Date.now());
+      if (ok) setLastLoadedAt(Date.now());
     };
 
     const { companies: tracked, error: companiesError } = await listTrackedCompanies();
     if (companiesError) {
       setLoadFailed(true);
-      finish();
+      finish(false);
       return;
     }
 
@@ -213,7 +219,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       const next = new Set([...previous].filter((id) => trackedIds.has(id)));
       return next.size === previous.size ? previous : next;
     });
-    finish();
+    finish(!postingsError);
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -278,6 +284,29 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     () => feed?.dropped.filter((entry) => entry.reason === 'age').length ?? 0,
     [feed],
   );
+
+  /**
+   * Widen the window once rather than open on an empty feed.
+   *
+   * Measured against the live starter boards on 2026-08-31: Careem had 20 open
+   * roles and none posted in the last seven days; HALA 4 of 16, Tamara 3 of 36,
+   * Salla 3 of 27, Lean 1 of 4. So a hard seven-day default shows a first-time
+   * follower of one company nothing at all, which reads as a broken feature
+   * rather than a narrow filter. A week stays the default because it is the
+   * honest answer when there is one; when there is not, the feed widens itself
+   * once and says so, and the user's own choice is never overridden.
+   */
+  useEffect(() => {
+    if (ageChosenByUser || autoWidened) return;
+    if (!feed || feed.kept.length > 0 || agedOut === 0) return;
+    setMaxAgeDays(30);
+    setAutoWidened(true);
+  }, [feed, agedOut, ageChosenByUser, autoWidened]);
+
+  const chooseAge = useCallback((days: number | null) => {
+    setAgeChosenByUser(true);
+    setMaxAgeDays(days);
+  }, []);
 
   /**
    * Relative times in the user's own language.
@@ -723,7 +752,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                       key={option.key}
                       type="button"
                       aria-pressed={active}
-                      onClick={() => setMaxAgeDays(option.days)}
+                      onClick={() => chooseAge(option.days)}
                       className={`inline-flex min-h-10 items-center rounded-2xl px-3 text-xs font-medium transition-[color,background-color,scale] duration-200 active:scale-[0.96] ${
                         active
                           ? 'bg-primary/10 text-primary'
@@ -737,6 +766,12 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               </div>
             </div>
           </div>
+
+          {autoWidened && !ageChosenByUser && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t('jobFeed.filters.widened', 'Nothing was posted in the last week, so this is the last 30 days.')}
+            </p>
+          )}
 
           {/* A filter with one option is not a filter, so the row starts at two. */}
           {companies.length > 1 && (
@@ -872,7 +907,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   defaultValue: '{{total}} matching roles are older than the window you picked.',
                 })}
               </p>
-              <GlassButton variant="secondary" className="mt-4" onClick={() => setMaxAgeDays(null)}>
+              <GlassButton variant="secondary" className="mt-4" onClick={() => chooseAge(null)}>
                 {t('jobFeed.empty.showOlder', 'Show older roles')}
               </GlassButton>
             </>
@@ -946,12 +981,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   <span className="font-medium text-gray-700 dark:text-gray-300">{scored.posting.companyName}</span>
                   {' · '}
                   {scored.posting.location}
-                  {' · '}
                   {/* "Posted" and "First seen" are deliberately different words. Half
                       the boards publish no posting date, and our first sighting of a
-                      role is not a claim about when the employer put it up. */}
+                      role is not a claim about when the employer put it up. An
+                      unreadable date shows nothing rather than inventing "today". */}
+                  {age.kind !== 'unknown' && (
+                  <>
+                  {' · '}
                   <time
-                    dateTime={age.iso}
+                    dateTime={age.iso ?? undefined}
                     title={dated ? undefined : t('jobFeed.date.seenHint', 'This job board does not publish posting dates.')}
                     className={dated ? undefined : 'underline decoration-dotted underline-offset-2'}
                   >
@@ -965,6 +1003,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                           defaultValue: 'First seen {{when}}',
                         })}
                   </time>
+                  </>
+                  )}
                 </p>
                 {scored.matched.length > 0 && (
                   /* Deterministic, non-AI reason. Never a model's opinion dressed as one. */

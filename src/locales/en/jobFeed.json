@@ -74,7 +74,8 @@
       "companyAllLabel": "Show roles from every company",
       "companySelect": "Show only {{name}}",
       "showMore": "Show all {{total}} companies",
-      "showLess": "Show fewer companies"
+      "showLess": "Show fewer companies",
+      "widened": "Nothing was posted in the last week, so this is the last 30 days."
     },
     "date": {
       "posted": "Posted {{when}}",

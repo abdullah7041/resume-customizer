@@ -16,13 +16,17 @@ import type { FeedPosting } from './types';
 /** The feed's default window: recent enough to act on, wide enough to be non-empty. */
 export const DEFAULT_MAX_AGE_DAYS = 7;
 
-export type PostingAgeKind = 'posted' | 'seen';
+export type PostingAgeKind = 'posted' | 'seen' | 'unknown';
 
 export interface PostingAge {
-  /** `posted` means the employer's own date. `seen` means our first sighting. */
+  /**
+   * `posted` is the employer's own date, `seen` our first sighting, `unknown`
+   * means neither timestamp could be read. `unknown` carries no number to show:
+   * printing "today" for a date we just failed to parse would invent one.
+   */
   kind: PostingAgeKind;
-  iso: string;
-  /** Whole days elapsed, floored, never negative. */
+  iso: string | null;
+  /** Whole days elapsed, floored, never negative. Meaningless when `unknown`. */
   days: number;
 }
 
@@ -43,11 +47,9 @@ export function postingAge(posting: FeedPosting, now: number = Date.now()): Post
   }
 
   const seen = parse(posting.firstSeenAt);
-  return {
-    kind: 'seen',
-    iso: posting.firstSeenAt,
-    days: seen === null ? 0 : elapsedDays(seen, now),
-  };
+  if (seen === null) return { kind: 'unknown', iso: null, days: 0 };
+
+  return { kind: 'seen', iso: posting.firstSeenAt, days: elapsedDays(seen, now) };
 }
 
 /**

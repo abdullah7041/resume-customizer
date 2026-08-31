@@ -85,6 +85,8 @@ Verification here means the thing was watched working, not that a test asserted 
 | Arabic company search | `سلة` resolved to Salla in the browser and the follow landed in the database |
 | Score colour bands | Live feed showed 82 amber and 65 red, not uniform green |
 | Type scale and hit targets | Looked at in a signed-in browser after the restyle |
+| Posting-date coverage per provider | Live fetch, 2026-08-31: Greenhouse, Workable and Ashby date every posting; Pinpoint dates none (Tabby, 33 roles) |
+| A seven-day window is too narrow alone | Same run: Careem 0 of 20 roles inside 7 days, HALA 4 of 16, Tamara 3 of 36, Salla 3 of 27, Lean 1 of 4 — which is why the feed widens itself once to 30 days rather than opening empty |
 
 ## Not proven yet
 
@@ -109,6 +111,15 @@ reported `closed: 0`, because no tracked board has dropped a posting yet. The lo
 decides what to close is the most dangerous code here — it deletes rows from a user's
 feed — and it has only been exercised in the direction that closes nothing. The first
 real closure is worth watching.
+
+**The feed's filters and dates have never been seen rendered.** Company filter
+chips, the age window, the posting-date labels and the Refresh control have unit
+and component coverage only — 41 tests across `jobFeed.age.test.ts` and
+`JobFeedSection.test.tsx`, all in jsdom. The Job Feed sits behind `isGuestMode`,
+so reaching it in a browser needs a signed-in session, and nobody has looked at
+the result. What is unproven is the rendering: layout at the 25-company cap, the
+chips under RTL, and whether the widened-window notice reads as reassurance or
+as an error.
 
 **Nothing has run at more than one user.** Load, the 25-company cap, and crawl timing
 are all reasoned about rather than observed. Distinct companies drive cost, not users,

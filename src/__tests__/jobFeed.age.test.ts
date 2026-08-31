@@ -40,6 +40,11 @@ describe('postingAge', () => {
     expect(age).toMatchObject({ kind: 'seen', days: 1 });
   });
 
+  it('reports unknown, with no date to show, when neither timestamp can be read', () => {
+    const age = postingAge(posting({ postedAt: null, firstSeenAt: 'not-a-date' }), NOW);
+    expect(age).toEqual({ kind: 'unknown', iso: null, days: 0 });
+  });
+
   it('never reports negative age for a board whose clock runs ahead', () => {
     expect(postingAge(posting({ postedAt: daysAgo(-2) }), NOW).days).toBe(0);
   });

@@ -441,7 +441,13 @@ describe('recency', () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
   });
 
-  it('hides a role posted outside the default week and offers a way past it', async () => {
+  it('widens the window once rather than opening on an empty feed, and says it did', async () => {
+    /*
+     * Measured on the live starter boards 2026-08-31: Careem had 20 open roles and
+     * none posted inside seven days; HALA 4 of 16, Tamara 3 of 36, Salla 3 of 27.
+     * A hard week shows a first-time follower of one company nothing at all, which
+     * reads as broken rather than narrow.
+     */
     mockListPostings.mockResolvedValue({
       postings: [posting({ postedAt: daysAgo(20), firstSeenAt: daysAgo(20) })],
       error: null,
@@ -449,7 +455,40 @@ describe('recency', () => {
 
     render(<JobFeedSection />);
 
-    // The window is named as the rule, not left as a blank feed.
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+    // Widening silently would be its own small lie about how current the feed is.
+    expect(
+      screen.getByText('Nothing was posted in the last week, so this is the last 30 days.'),
+    ).toBeInTheDocument();
+  });
+
+  it('never widens behind a window the user chose', async () => {
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: daysAgo(20), firstSeenAt: daysAgo(20) })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    fireEvent.click(screen.getByRole('button', { name: '24 hours' }));
+
+    expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
+    expect(screen.queryByText('Senior AI Engineer')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nothing was posted in the last week, so this is the last 30 days.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('names the window as the rule when even the widened one is empty, and offers a way past it', async () => {
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: daysAgo(200), firstSeenAt: daysAgo(200) })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    // The rule that emptied the feed is named, never a blank screen.
     expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
     expect(screen.queryByText('Senior AI Engineer')).not.toBeInTheDocument();
 
@@ -470,6 +509,21 @@ describe('recency', () => {
 
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
     expect(screen.getByText('jobFeed.date.seen')).toBeInTheDocument();
+    expect(screen.queryByText('jobFeed.date.posted')).not.toBeInTheDocument();
+  });
+
+  it('shows no date at all when neither timestamp can be read', async () => {
+    // "First seen today" derived from a value we just failed to parse is the same
+    // class of invention the two-word labelling exists to prevent.
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: null, firstSeenAt: 'not-a-date' })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+    expect(screen.queryByText('jobFeed.date.seen')).not.toBeInTheDocument();
     expect(screen.queryByText('jobFeed.date.posted')).not.toBeInTheDocument();
   });
 
