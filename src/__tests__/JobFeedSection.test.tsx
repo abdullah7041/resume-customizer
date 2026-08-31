@@ -140,6 +140,33 @@ describe('Saudi starter companies', () => {
   });
 });
 
+describe('starter chips that lead nowhere today', () => {
+  it('does not offer an empty board under the same promise as a hiring one', async () => {
+    // Seven of the thirteen starters are readable accounts with nothing posted.
+    // Offered identically, tapping one means a wait and then an empty feed, which
+    // a user cannot tell apart from a broken feature.
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Saudi employers we can read')).toBeInTheDocument();
+    expect(screen.getByText('Readable boards with nothing posted')).toBeInTheDocument();
+  });
+
+  it('still lets an empty board be followed, so its first role arrives', async () => {
+    render(<JobFeedSection />);
+
+    const jahez = await screen.findByRole('button', { name: 'Jahez' });
+    fireEvent.click(jahez);
+
+    await waitFor(() =>
+      expect(mockTrackCompany).toHaveBeenCalledWith({
+        source: 'workable',
+        token: 'jahez',
+        displayName: 'Jahez',
+      }),
+    );
+  });
+});
+
 describe('JobFeedSection empty states', () => {
   it('asks for a company when none are followed', async () => {
     render(<JobFeedSection />);

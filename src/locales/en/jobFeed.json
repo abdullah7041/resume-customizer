@@ -54,7 +54,9 @@
       "startersHelp": "Verified job boards. Tap one to start following it.",
       "allFilteredCompany": "No open roles from the companies you picked.",
       "allFilteredCompanyHelp": "Other followed companies may still have something.",
-      "showAllCompanies": "Show all companies"
+      "showAllCompanies": "Show all companies",
+      "startersQuiet": "Readable boards with nothing posted",
+      "startersQuietHelp": "Their boards read fine and were empty when we last checked. Follow one to hear the moment it posts."
     },
     "lastUpdated": {
       "action": "Refresh",

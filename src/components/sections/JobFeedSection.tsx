@@ -27,6 +27,7 @@ import { DEFAULT_MAX_AGE_DAYS, postingAge } from '@/lib/jobs/age';
 import { deriveRoleTerms } from '@/lib/jobs/filters';
 import { looseArabicKey, normalizeText } from '@/lib/jobs/normalize';
 import {
+  partitionStarters,
   SAUDI_STARTER_COMPANIES,
   unfollowedStarters,
   type StarterCompany,
@@ -172,6 +173,20 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const starters = useMemo(
     () => unfollowedStarters(companies.map((company) => company.token)),
     [companies],
+  );
+
+  /**
+   * Boards that had roles when we last read them, and boards that did not.
+   *
+   * Seven of the thirteen starters are real, readable accounts with nothing
+   * posted. Offered in the same row under "tap one to start following it", they
+   * send a first-time user to a wait and then an empty feed, which reads as a
+   * broken feature rather than a company being watched. Split, they read as what
+   * they are: one group to follow for roles, one to follow for news of roles.
+   */
+  const { hiring: hiringStarters, quiet: quietStarters } = useMemo(
+    () => partitionStarters(starters),
+    [starters],
   );
 
   const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
@@ -593,26 +608,56 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
 
           {starters.length > 0 && !resolution && !starterMatch && (
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {t('jobFeed.empty.starters', 'Saudi employers we can read')}
-            </p>
-            <p className="text-xs text-muted-foreground mb-3">
-              {t('jobFeed.empty.startersHelp', 'Verified job boards. Tap one to start following it.')}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {starters.map((company) => (
-                <button
-                  key={`${company.source}:${company.token}`}
-                  type="button"
-                  onClick={() => void handleStarter(company)}
-                  disabled={busyCompany === company.token}
-                  className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
-                >
-                  {language === 'ar' ? company.displayNameAr : company.displayName}
-                </button>
-              ))}
-            </div>
+          <div className="mt-4 space-y-4">
+            {hiringStarters.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {t('jobFeed.empty.starters', 'Saudi employers we can read')}
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('jobFeed.empty.startersHelp', 'Verified job boards. Tap one to start following it.')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {hiringStarters.map((company) => (
+                    <button
+                      key={`${company.source}:${company.token}`}
+                      type="button"
+                      onClick={() => void handleStarter(company)}
+                      disabled={busyCompany === company.token}
+                      className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
+                    >
+                      {language === 'ar' ? company.displayNameAr : company.displayName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Real accounts with nothing posted. Following one is how you hear
+                when that changes — but it must not be sold as roles waiting. */}
+            {quietStarters.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  {t('jobFeed.empty.startersQuiet', 'Readable boards with nothing posted')}
+                </p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('jobFeed.empty.startersQuietHelp', 'Their boards read fine and were empty when we last checked. Follow one to hear the moment it posts.')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {quietStarters.map((company) => (
+                    <button
+                      key={`${company.source}:${company.token}`}
+                      type="button"
+                      onClick={() => void handleStarter(company)}
+                      disabled={busyCompany === company.token}
+                      className="inline-flex min-h-10 items-center rounded-xl border border-dashed border-border px-4 text-sm font-medium text-muted-foreground transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 hover:text-gray-900 active:scale-[0.96] disabled:opacity-60 dark:hover:text-white"
+                    >
+                      {language === 'ar' ? company.displayNameAr : company.displayName}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
