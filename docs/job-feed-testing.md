@@ -1,22 +1,26 @@
 # Job Feed — how to try it
 
-Branch `feat/job-feed`, worktree `.worktrees/job-feed`. Design doc: the plan file this
-was built from.
+Shipped and merged to `main`; live on watheqai.app. This file is the record of how to
+exercise it, what is verified, and what is not.
 
-## Before it can run
+## Setup — already done in production
 
-**1. Apply the migration.** Open `supabase/migrations/20260829000000_add_job_feed.sql`
-and run it in the Supabase dashboard SQL editor. It is not applied automatically and
-nothing here works until it is: four tables plus two columns on `user_profiles`.
+Both steps below are complete on the live project. They are recorded because a fresh
+environment needs them again.
 
-**2. Set one env var** in Netlify (and in `.env` for local function testing):
+**1. The migration.** `supabase/migrations/20260829000000_add_job_feed.sql` — four
+tables, two columns on `user_profiles`, and the `claim_job_crawl_batch` RPC. Migrations
+are never applied automatically here; run it in the Supabase SQL editor.
+
+**2. `JOB_CRAWL_SECRET`.** Not a vendor key — generate one and set it in Netlify (and in
+`.env` for local function testing):
 
 ```bash
-JOB_CRAWL_SECRET=<any long random string>
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-The background crawler is invocable by URL, unlike a scheduled function, so it refuses
-to run without this and rejects any call that does not present it.
+Background functions are invocable by URL, unlike scheduled ones, so the crawler refuses
+to run without it and rejects any call that does not present it.
 
 ## What runs where
 
@@ -48,8 +52,9 @@ unsuccessful rather than as an empty board.
 The Job Feed tab lives under **More tools**, behind the `jobFeed` flag (on by default,
 toggleable at `/dev/flags`). Like every other tab it needs a resume uploaded first.
 
-1. Add a company by name (`salla`, `hala`, `tabby`) or paste a careers URL. A Workday
-   employer must be added by URL — a tenant alone cannot name its site.
+1. Add a company by name (`salla`, `hala`, `tabby`), in Arabic (`سلة`, `تامارا`), or by
+   pasting a careers URL. A Workday employer must be added by URL — a tenant alone
+   cannot name its site. Thirteen verified Saudi employers are offered as one-tap chips.
 2. Tracking triggers an immediate crawl, so roles appear without waiting for the cron.
 3. The feed filters and scores against your target role from onboarding. With no target
    role set, it says so rather than showing an empty list.
@@ -63,6 +68,71 @@ toggleable at `/dev/flags`). Like every other tab it needs a resume uploaded fir
   gone.
 - **Search for a company that is on none of the boards.** It should say so and point at
   pasting a job link, never return silently empty.
+
+## What is verified, and how
+
+Verification here means the thing was watched working, not that a test asserted it.
+
+| Behaviour | Verified by |
+| --- | --- |
+| Six board readers return real postings | Live fetch against HALA, Tamara, Lean, Salla, Tabby and a Workday tenant (`scripts/ats-smoke.ts`) |
+| The control guard rejects invented companies | All five name-probeable providers miss all three control shapes, live |
+| A failed board closes nothing | Live crawl with a 404 token: `last_status=failed`, zero postings closed |
+| The crawl lease is real | `claim_job_crawl_batch` claims 4, an immediate second call claims 0 |
+| RLS denies anonymous access | Anon client gets `42501` on all four tables, and on insert |
+| The background function runs under Netlify | Tapping a chip on watheqai.app fired the cold-start crawl; Careem landed 20 postings |
+| The resolver works in production | Typing `deel` on watheqai.app returned a Pinpoint candidate |
+| Arabic company search | `سلة` resolved to Salla in the browser and the follow landed in the database |
+| Score colour bands | Live feed showed 82 amber and 65 red, not uniform green |
+| Type scale and hit targets | Looked at in a signed-in browser after the restyle |
+
+## Not proven yet
+
+Read this before assuming the feature is fully exercised.
+
+**The cron has never fired.** Every crawl so far was triggered by hand or by the
+cold-start path. Netlify scheduled functions only run on published production deploys,
+so `cron-job-crawl` at `0 3 * * *` (06:00 Riyadh) has not yet run once on its own. The
+handler behind it *has* run under Netlify's runtime via cold start, so what is unproven
+is the scheduler firing and the lease/claim path under it — not the crawl itself. Check
+`ats_companies.last_fetched_at` after 06:00 Riyadh; if the timestamps moved without
+anyone clicking, this is closed.
+
+**Optimistic remove was verified by test only.** Two tests cover it — one holds the
+delete request unresolved and asserts the row is already gone, one asserts it returns on
+failure — but browser tab navigation kept failing under automation, so nobody has
+watched an (x) click in a real browser. The risk is low (it is local state) but it is
+the one user-facing behaviour in this feature with no human confirmation.
+
+**Closure reconciliation has never actually closed anything.** Every crawl so far
+reported `closed: 0`, because no tracked board has dropped a posting yet. The logic that
+decides what to close is the most dangerous code here — it deletes rows from a user's
+feed — and it has only been exercised in the direction that closes nothing. The first
+real closure is worth watching.
+
+**Nothing has run at more than one user.** Load, the 25-company cap, and crawl timing
+are all reasoned about rather than observed. Distinct companies drive cost, not users,
+so this should hold — but it is arithmetic, not evidence.
+
+**No Workday employer is actually tracked.** The Workday reader was verified against
+NVIDIA's tenant, which is not a Saudi employer and is not in the starter registry. The
+provider works; nobody has followed a real Workday company through the UI.
+
+## Known limits, deliberately
+
+**Coverage stops at company ATS boards.** Every Saudi job platform checked either blocks
+datacenter IPs (Bayt and GulfTalent return 403) or renders client-side (Taqat, Qiwa,
+Jadarat). LinkedIn and Indeed are not scraped, and will not be: no open API, an auth
+wall, and terms that `hiQ v. LinkedIn` upheld. Pasting a single posting URL already
+works through `import-job-url`.
+
+**The `jsonld` reader finds nothing on the employers it was built for.** See the section
+below. It stays because it is cheap and catches any site that server-renders, but it is
+not the answer for stc, NEOM or Aramco.
+
+**Reaching the big Saudi employers is an open problem.** The only remaining routes are a
+licensed aggregator (JSearch via RapidAPI — costs money, ruled out at this user count)
+or evading a deliberate IP block, which is not on the table.
 
 ## Tier 2 is built, and it does not reach the big employers
 
