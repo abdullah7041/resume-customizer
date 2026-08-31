@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Building2, ExternalLink, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
+import { Building2, ExternalLink, Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useActiveResume, useSearchIntent } from '@/lib/stores/resumeStore';
@@ -23,6 +23,7 @@ import {
   type TrackedCompany,
 } from '@/services/jobFeed';
 import { BASE_SCORE, buildFeed, isNew, TERM_WEIGHT } from '@/lib/jobs/score';
+import { DEFAULT_MAX_AGE_DAYS, postingAge } from '@/lib/jobs/age';
 import { deriveRoleTerms } from '@/lib/jobs/filters';
 import { looseArabicKey, normalizeText } from '@/lib/jobs/normalize';
 import {
@@ -33,6 +34,24 @@ import {
 import type { FeedIntent, FeedPosting, ScoredPosting } from '@/lib/jobs/types';
 
 const MAX_TRACKED_COMPANIES = 25;
+
+/** How many company chips fit before the row is collapsed behind a "show all". */
+const COLLAPSED_COMPANY_CHIPS = 8;
+
+/**
+ * The age windows offered, in days. `null` is "any time".
+ *
+ * A one-week default is what makes the feed read as current, but it cannot be a
+ * hard rule: half the boards publish no posting date at all, so the window only
+ * ever tests a real one (see `age.ts`), and this control exists so a user who
+ * finds the week too narrow can widen it rather than conclude the feed is empty.
+ */
+const AGE_OPTIONS: { days: number | null; key: string; fallback: string }[] = [
+  { days: 1, key: 'jobFeed.filters.ageDay', fallback: '24 hours' },
+  { days: DEFAULT_MAX_AGE_DAYS, key: 'jobFeed.filters.ageWeek', fallback: '7 days' },
+  { days: 30, key: 'jobFeed.filters.ageMonth', fallback: '30 days' },
+  { days: null, key: 'jobFeed.filters.ageAll', fallback: 'Any time' },
+];
 
 interface JobFeedSectionProps {
   /** Hands a posting to the Match tab. The feed never scores against the CV itself. */
@@ -65,6 +84,35 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    * state only records that something failed.
    */
   const [loadFailed, setLoadFailed] = useState(false);
+
+  /**
+   * A refresh must not blank the page.
+   *
+   * `loading` swaps the whole section for a spinner card, which is right on first
+   * mount and wrong for every reload after it — a user who presses Refresh would
+   * watch their feed disappear and come back. The first load owns `loading`;
+   * everything after it owns this.
+   */
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
+
+  /**
+   * A ticking clock, so relative times stay true.
+   *
+   * "Updated just now" that still says "just now" an hour later is the same class
+   * of lie as a first-seen date labelled as a posting date. One minute is finer
+   * than any label here needs, and it re-ages the feed as postings cross the
+   * window boundary.
+   */
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const [maxAgeDays, setMaxAgeDays] = useState<number | null>(DEFAULT_MAX_AGE_DAYS);
+  const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
+  const [showAllCompanyChips, setShowAllCompanyChips] = useState(false);
 
   const [query, setQuery] = useState('');
   const [resolving, setResolving] = useState(false);
@@ -123,15 +171,22 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     [companies],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async ({ silent = false }: { silent?: boolean } = {}) => {
+    if (silent) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     setLoadFailed(false);
+
+    const finish = () => {
+      setLoading(false);
+      setRefreshing(false);
+      setLastLoadedAt(Date.now());
+    };
 
     const { companies: tracked, error: companiesError } = await listTrackedCompanies();
     if (companiesError) {
       setLoadFailed(true);
-      setLoading(false);
+      finish();
       return;
     }
 
@@ -151,8 +206,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     setFeedStateMap(state);
     setLastSeenAt(seen);
     setServerIntent(profileIntent);
-    setLoading(false);
+    // A company filter that outlives the company it names silently empties the
+    // feed, so selections are pruned against whatever is still followed.
+    const trackedIds = new Set(tracked.map((company) => company.companyId));
+    setSelectedCompanyIds((previous) => {
+      const next = new Set([...previous].filter((id) => trackedIds.has(id)));
+      return next.size === previous.size ? previous : next;
+    });
+    finish();
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    void load({ silent: true });
+  }, [load]);
 
   useEffect(() => {
     void load();
@@ -199,9 +265,60 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
   const feed = useMemo(() => {
     if (!intent) return null;
-    const visible = postings.filter((posting) => !feedState.has(posting.id));
-    return buildFeed(visible, intent);
-  }, [postings, feedState, intent]);
+    const visible = postings.filter(
+      (posting) =>
+        !feedState.has(posting.id) &&
+        (selectedCompanyIds.size === 0 || selectedCompanyIds.has(posting.companyId)),
+    );
+    return buildFeed(visible, intent, { maxAgeDays: maxAgeDays ?? undefined, now });
+  }, [postings, feedState, intent, selectedCompanyIds, maxAgeDays, now]);
+
+  /** How many matching roles the age window alone is holding back. */
+  const agedOut = useMemo(
+    () => feed?.dropped.filter((entry) => entry.reason === 'age').length ?? 0,
+    [feed],
+  );
+
+  /**
+   * Relative times in the user's own language.
+   *
+   * `Intl.RelativeTimeFormat` already knows that Arabic has six plural forms and
+   * that zero days ago is "today", so none of that is re-encoded as translation
+   * keys that would then have to be kept in step with it.
+   */
+  const relativeTime = useMemo(() => {
+    try {
+      return new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
+    } catch {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    }
+  }, [language]);
+
+  const formatSince = useCallback(
+    (from: number) => {
+      const minutes = Math.floor((now - from) / 60_000);
+      if (minutes < 1) return t('jobFeed.lastUpdated.justNow', 'just now');
+      if (minutes < 60) return relativeTime.format(-minutes, 'minute');
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return relativeTime.format(-hours, 'hour');
+      return relativeTime.format(-Math.floor(hours / 24), 'day');
+    },
+    [now, relativeTime, t],
+  );
+
+  const toggleCompanyFilter = useCallback((companyId: string) => {
+    setSelectedCompanyIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(companyId)) next.delete(companyId);
+      else next.add(companyId);
+      return next;
+    });
+  }, []);
+
+  const visibleCompanyChips = useMemo(
+    () => (showAllCompanyChips ? companies : companies.slice(0, COLLAPSED_COMPANY_CHIPS)),
+    [companies, showAllCompanyChips],
+  );
 
   const handleResolve = useCallback(async () => {
     const trimmed = query.trim();
@@ -265,7 +382,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       setQuery('');
       setResolution(null);
       setStarterMatch(null);
-      await load();
+      await load({ silent: true });
     },
     [load],
   );
@@ -291,7 +408,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       setQuery('');
       setStarterMatch(null);
       setResolution(null);
-      await load();
+      await load({ silent: true });
     },
     [load],
   );
@@ -324,6 +441,12 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
       setCompanies((previous) => previous.filter((company) => company.companyId !== companyId));
       setPostings((previous) => previous.filter((posting) => posting.companyId !== companyId));
+      setSelectedCompanyIds((previous) => {
+        if (!previous.has(companyId)) return previous;
+        const next = new Set(previous);
+        next.delete(companyId);
+        return next;
+      });
 
       const { error: untrackError } = await untrackCompany(companyId);
 
@@ -421,9 +544,9 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             {resolving ? (
               <Loader2 className="h-4 w-4 animate-spin me-2" aria-hidden="true" />
             ) : (
-              <Search className="h-4 w-4 me-2" aria-hidden="true" />
+              <Plus className="h-4 w-4 me-2" aria-hidden="true" />
             )}
-            {t('jobFeed.companies.addButton', 'Find their job board')}
+            {t('jobFeed.companies.addButton', 'Add company')}
           </GlassButton>
         </div>
 
@@ -558,6 +681,142 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         )}
       </GlassCard>
 
+      {companies.length > 0 && (
+        <GlassCard className="p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                title={t('jobFeed.lastUpdated.explain', 'Re-reads what the last board check found.')}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
+              >
+                <RotateCw
+                  className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                {refreshing
+                  ? t('jobFeed.lastUpdated.refreshing', 'Refreshing…')
+                  : t('jobFeed.lastUpdated.action', 'Refresh')}
+              </button>
+              {lastLoadedAt !== null && (
+                <span className="text-xs text-muted-foreground">
+                  {t('jobFeed.lastUpdated.label', {
+                    when: formatSince(lastLoadedAt),
+                    defaultValue: 'Updated {{when}}',
+                  })}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t('jobFeed.filters.ageLegend', 'Posted within')}
+              </span>
+              {/* Outer radius = inner radius + padding, so the pills sit concentric. */}
+              <div className="inline-flex gap-1 rounded-[1.375rem] border border-border p-1">
+                {AGE_OPTIONS.map((option) => {
+                  const active = maxAgeDays === option.days;
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setMaxAgeDays(option.days)}
+                      className={`inline-flex min-h-10 items-center rounded-2xl px-3 text-xs font-medium transition-[color,background-color,scale] duration-200 active:scale-[0.96] ${
+                        active
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-muted-foreground hover:bg-primary/5 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {t(option.key, option.fallback)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* A filter with one option is not a filter, so the row starts at two. */}
+          {companies.length > 1 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+              <button
+                type="button"
+                aria-pressed={selectedCompanyIds.size === 0}
+                aria-label={t('jobFeed.filters.companyAllLabel', 'Show roles from every company')}
+                onClick={() => setSelectedCompanyIds(new Set())}
+                className={`inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-medium transition-[color,border-color,background-color,scale] duration-200 active:scale-[0.96] ${
+                  selectedCompanyIds.size === 0
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-gray-900 hover:border-primary hover:bg-primary/5 dark:text-white'
+                }`}
+              >
+                {t('jobFeed.filters.companyAll', 'All')}
+              </button>
+
+              {visibleCompanyChips.map((company) => {
+                const active = selectedCompanyIds.has(company.companyId);
+                return (
+                  <button
+                    key={company.companyId}
+                    type="button"
+                    aria-pressed={active}
+                    aria-label={t('jobFeed.filters.companySelect', {
+                      name: company.displayName,
+                      defaultValue: 'Show only {{name}}',
+                    })}
+                    onClick={() => toggleCompanyFilter(company.companyId)}
+                    className={`group inline-flex min-h-10 items-center gap-2 rounded-full border ps-1.5 pe-3 text-sm font-medium transition-[color,border-color,background-color,scale] duration-200 active:scale-[0.96] ${
+                      active
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border text-gray-900 hover:border-primary hover:bg-primary/5 dark:text-white'
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold uppercase ${
+                        active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {company.displayName.trim().charAt(0) || '?'}
+                    </span>
+                    <span className="max-w-[10rem] truncate">{company.displayName}</span>
+                    {/* A board we could not read must not read as an employer with no roles. */}
+                    {company.lastStatus === 'failed' ? (
+                      <span
+                        aria-hidden="true"
+                        title={t('jobFeed.companies.checkFailed', 'Could not read this board last time')}
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-destructive"
+                      />
+                    ) : company.lastFetchedAt ? (
+                      <span className="text-xs tabular-nums text-muted-foreground">
+                        {company.lastJobCount}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+
+              {companies.length > COLLAPSED_COMPANY_CHIPS && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllCompanyChips((previous) => !previous)}
+                  className="inline-flex min-h-10 items-center rounded-full px-3 text-sm font-medium text-primary transition-[color,background-color,scale] duration-200 hover:bg-primary/10 active:scale-[0.96]"
+                >
+                  {showAllCompanyChips
+                    ? t('jobFeed.filters.showLess', 'Show fewer companies')
+                    : t('jobFeed.filters.showMore', {
+                        total: companies.length,
+                        defaultValue: 'Show all {{total}} companies',
+                      })}
+                </button>
+              )}
+            </div>
+          )}
+        </GlassCard>
+      )}
+
       {/* Three distinct empty states — a blank list would read as broken. */}
       {companies.length === 0 && (
         <GlassCard className="p-6">
@@ -597,18 +856,56 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         </GlassCard>
       )}
 
+      {/* An empty feed always names the rule that emptied it. The age window gets
+          its own wording and its own way out, because it is the one rule the user
+          just chose and can undo in a click. */}
       {feed && feed.kept.length === 0 && postings.length > 0 && (
         <GlassCard className="p-6">
-          <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('jobFeed.empty.allFilteredHelp', { count: feed.dropped.length })}
-          </p>
+          {agedOut > 0 ? (
+            <>
+              <p className="text-base font-medium text-gray-900 dark:text-white">
+                {t('jobFeed.empty.allFilteredAge', 'Nothing posted in that window.')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('jobFeed.empty.allFilteredAgeHelp', {
+                  total: agedOut,
+                  defaultValue: '{{total}} matching roles are older than the window you picked.',
+                })}
+              </p>
+              <GlassButton variant="secondary" className="mt-4" onClick={() => setMaxAgeDays(null)}>
+                {t('jobFeed.empty.showOlder', 'Show older roles')}
+              </GlassButton>
+            </>
+          ) : selectedCompanyIds.size > 0 && feed.dropped.length === 0 ? (
+            /* A company filter that hides everything must not report "0 roles were
+               checked" — nothing was rejected, the user narrowed the question. */
+            <>
+              <p className="text-base font-medium text-gray-900 dark:text-white">
+                {t('jobFeed.empty.allFilteredCompany', 'No open roles from the companies you picked.')}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('jobFeed.empty.allFilteredCompanyHelp', 'Other followed companies may still have something.')}
+              </p>
+              <GlassButton variant="secondary" className="mt-4" onClick={() => setSelectedCompanyIds(new Set())}>
+                {t('jobFeed.empty.showAllCompanies', 'Show all companies')}
+              </GlassButton>
+            </>
+          ) : (
+            <>
+              <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('jobFeed.empty.allFilteredHelp', { count: feed.dropped.length })}
+              </p>
+            </>
+          )}
         </GlassCard>
       )}
 
       {feed?.kept.map((scored, index) => {
         const trackedSince = trackedSinceById.get(scored.posting.companyId) ?? scored.posting.firstSeenAt;
         const fresh = isNew(scored.posting, trackedSince, lastSeenAt);
+        const age = postingAge(scored.posting, now);
+        const dated = age.kind === 'posted';
         const matchPercent = Math.round((scored.score / maxScore) * 100);
         const scoreTone =
           matchPercent >= 90
@@ -649,6 +946,25 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   <span className="font-medium text-gray-700 dark:text-gray-300">{scored.posting.companyName}</span>
                   {' · '}
                   {scored.posting.location}
+                  {' · '}
+                  {/* "Posted" and "First seen" are deliberately different words. Half
+                      the boards publish no posting date, and our first sighting of a
+                      role is not a claim about when the employer put it up. */}
+                  <time
+                    dateTime={age.iso}
+                    title={dated ? undefined : t('jobFeed.date.seenHint', 'This job board does not publish posting dates.')}
+                    className={dated ? undefined : 'underline decoration-dotted underline-offset-2'}
+                  >
+                    {dated
+                      ? t('jobFeed.date.posted', {
+                          when: relativeTime.format(-age.days, 'day'),
+                          defaultValue: 'Posted {{when}}',
+                        })
+                      : t('jobFeed.date.seen', {
+                          when: relativeTime.format(-age.days, 'day'),
+                          defaultValue: 'First seen {{when}}',
+                        })}
+                  </time>
                 </p>
                 {scored.matched.length > 0 && (
                   /* Deterministic, non-AI reason. Never a model's opinion dressed as one. */

@@ -7,7 +7,7 @@
       "heading": "Companies you follow",
       "add": "Add a company",
       "placeholder": "Company name or careers page link",
-      "addButton": "Find their job board",
+      "addButton": "Add company",
       "searching": "Checking the job boards…",
       "remove": "Stop following",
       "limitReached": "You can follow up to {{max}} companies. Remove one to add another.",
@@ -47,8 +47,39 @@
       "setIntent": "Set target role",
       "allFiltered": "Nothing matched today.",
       "allFilteredHelp": "{{count}} roles were checked and none cleared your filters.",
+      "allFilteredAge": "Nothing posted in that window.",
+      "allFilteredAgeHelp": "{{total}} matching roles are older than the window you picked.",
+      "showOlder": "Show older roles",
       "starters": "Saudi employers we can read",
-      "startersHelp": "Verified job boards. Tap one to start following it."
+      "startersHelp": "Verified job boards. Tap one to start following it.",
+      "allFilteredCompany": "No open roles from the companies you picked.",
+      "allFilteredCompanyHelp": "Other followed companies may still have something.",
+      "showAllCompanies": "Show all companies"
+    },
+    "lastUpdated": {
+      "action": "Refresh",
+      "refreshing": "Refreshing…",
+      "label": "Updated {{when}}",
+      "justNow": "just now",
+      "explain": "Re-reads what the last board check found. Boards are checked once a day."
+    },
+    "filters": {
+      "ageLegend": "Posted within",
+      "ageDay": "24 hours",
+      "ageWeek": "7 days",
+      "ageMonth": "30 days",
+      "ageAll": "Any time",
+      "companiesLegend": "Companies",
+      "companyAll": "All",
+      "companyAllLabel": "Show roles from every company",
+      "companySelect": "Show only {{name}}",
+      "showMore": "Show all {{total}} companies",
+      "showLess": "Show fewer companies"
+    },
+    "date": {
+      "posted": "Posted {{when}}",
+      "seen": "First seen {{when}}",
+      "seenHint": "This job board does not publish posting dates, so this is when Watheq first saw the role — not when it went live."
     },
     "why": {
       "label": "Why this is here",
@@ -60,7 +91,8 @@
       "location": "Outside your locations",
       "location_conflict": "Title says the job is elsewhere",
       "seniority": "Not your level",
-      "role": "Different role"
+      "role": "Different role",
+      "age": "Older than your window"
     },
     "actions": {
       "match": "Check the match",
