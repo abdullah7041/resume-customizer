@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  partitionStarters,
   SAUDI_STARTER_COMPANIES,
   unfollowedStarters,
 } from '@/lib/jobs/saudiStarterCompanies';
@@ -59,5 +60,24 @@ describe('Saudi starter registry', () => {
 
   it('offers everything when nothing is followed', () => {
     expect(unfollowedStarters([]).length).toBe(SAUDI_STARTER_COMPANIES.length);
+  });
+});
+
+describe('partitionStarters', () => {
+  it('separates boards that held roles from boards that were empty', () => {
+    const { hiring, quiet } = partitionStarters(SAUDI_STARTER_COMPANIES);
+
+    expect(hiring.every((company) => company.rolesAtVerification > 0)).toBe(true);
+    expect(quiet.every((company) => company.rolesAtVerification === 0)).toBe(true);
+    expect(hiring.length + quiet.length).toBe(SAUDI_STARTER_COMPANIES.length);
+  });
+
+  it('keeps the empty boards rather than dropping them', () => {
+    // They are real, readable accounts — verified 2026-08-31, HTTP 200 while two
+    // control tokens 404'd. Following one is how a user hears about its first
+    // role. What they must not do is share a row with the boards that are hiring.
+    const { quiet } = partitionStarters(SAUDI_STARTER_COMPANIES);
+    expect(quiet.length).toBeGreaterThan(0);
+    expect(quiet.map((company) => company.displayName)).toContain('Jahez');
   });
 });

@@ -22,7 +22,7 @@ export interface FeedIntent {
   locations?: string[];
 }
 
-export type FeedDropReason = 'location' | 'location_conflict' | 'seniority' | 'role';
+export type FeedDropReason = 'location' | 'location_conflict' | 'seniority' | 'role' | 'age';
 
 export interface ScoredPosting {
   posting: FeedPosting;

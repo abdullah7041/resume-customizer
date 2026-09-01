@@ -6,7 +6,15 @@
 
 import { matchedRoleTerms } from './normalize';
 import { deriveRoleTerms, dropReason } from './filters';
+import { withinAgeWindow } from './age';
 import type { FeedIntent, FeedPosting, FeedResult, ScoredPosting } from './types';
+
+export interface BuildFeedOptions {
+  /** Hide dated postings older than this. Undated boards are never filtered — see `age.ts`. */
+  maxAgeDays?: number;
+  /** Injectable clock, so the window is testable without faking timers. */
+  now?: number;
+}
 
 /** Clearing the hard filters is worth this much on its own. */
 export const BASE_SCORE = 40;
@@ -27,8 +35,13 @@ export function scorePosting(posting: FeedPosting, roleTerms: readonly string[])
  * their reason rather than silently discarded — an empty feed must be able to say
  * which rule emptied it.
  */
-export function buildFeed(postings: readonly FeedPosting[], intent: FeedIntent): FeedResult {
+export function buildFeed(
+  postings: readonly FeedPosting[],
+  intent: FeedIntent,
+  options: BuildFeedOptions = {},
+): FeedResult {
   const roleTerms = deriveRoleTerms(intent.targetRoles);
+  const { maxAgeDays, now = Date.now() } = options;
   const kept: ScoredPosting[] = [];
   const dropped: FeedResult['dropped'] = [];
 
@@ -36,6 +49,12 @@ export function buildFeed(postings: readonly FeedPosting[], intent: FeedIntent):
     const reason = dropReason(posting, intent);
     if (reason) {
       dropped.push({ posting, reason });
+      continue;
+    }
+    // Age runs last, so a role that was never wanted reports why it was never
+    // wanted. Telling someone their Dubai job is "too old" hides the real rule.
+    if (maxAgeDays !== undefined && !withinAgeWindow(posting, maxAgeDays, now)) {
+      dropped.push({ posting, reason: 'age' });
       continue;
     }
     kept.push(scorePosting(posting, roleTerms));

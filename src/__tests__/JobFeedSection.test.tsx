@@ -59,6 +59,10 @@ const SENIOR_INTENT = {
   meta: { confidence: 'high' as const, completeness: 100, updatedAt: '2026-08-29T00:00:00.000Z' },
 };
 
+// Dates are relative on purpose: the feed now defaults to a seven-day window, so
+// a fixture pinned to a calendar date ages out of its own test suite.
+const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000).toISOString();
+
 function posting(overrides: Record<string, unknown> = {}) {
   return {
     id: 'p1',
@@ -67,8 +71,8 @@ function posting(overrides: Record<string, unknown> = {}) {
     title: 'Senior AI Engineer',
     location: 'Riyadh, Saudi Arabia',
     applyUrl: 'https://apply.workable.com/salla/j/ABC/',
-    postedAt: '2026-08-20',
-    firstSeenAt: '2026-08-20T00:00:00.000Z',
+    postedAt: daysAgo(2),
+    firstSeenAt: daysAgo(2),
     ...overrides,
   };
 }
@@ -78,8 +82,8 @@ const company = {
   displayName: 'Salla',
   source: 'workable',
   token: 'salla',
-  trackedSince: '2026-08-01T00:00:00.000Z',
-  lastFetchedAt: '2026-08-28T00:00:00.000Z',
+  trackedSince: daysAgo(30),
+  lastFetchedAt: daysAgo(1),
   lastStatus: 'ok' as const,
   lastJobCount: 28,
 };
@@ -133,6 +137,33 @@ describe('Saudi starter companies', () => {
 
     expect(await screen.findByRole('button', { name: 'Tabby' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Salla' })).not.toBeInTheDocument();
+  });
+});
+
+describe('starter chips that lead nowhere today', () => {
+  it('does not offer an empty board under the same promise as a hiring one', async () => {
+    // Seven of the thirteen starters are readable accounts with nothing posted.
+    // Offered identically, tapping one means a wait and then an empty feed, which
+    // a user cannot tell apart from a broken feature.
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Saudi employers we can read')).toBeInTheDocument();
+    expect(screen.getByText('Readable boards with nothing posted')).toBeInTheDocument();
+  });
+
+  it('still lets an empty board be followed, so its first role arrives', async () => {
+    render(<JobFeedSection />);
+
+    const jahez = await screen.findByRole('button', { name: 'Jahez' });
+    fireEvent.click(jahez);
+
+    await waitFor(() =>
+      expect(mockTrackCompany).toHaveBeenCalledWith({
+        source: 'workable',
+        token: 'jahez',
+        displayName: 'Jahez',
+      }),
+    );
   });
 });
 
@@ -279,7 +310,7 @@ describe('searching by company name', () => {
     await screen.findByRole('button', { name: 'Tabby' });
 
     fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
-    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add company/ }));
 
     expect(await screen.findByRole('button', { name: /Follow this board/ })).toBeInTheDocument();
     // Matched locally, so nothing fanned out across the providers.
@@ -291,7 +322,7 @@ describe('searching by company name', () => {
     await screen.findByRole('button', { name: 'Tabby' });
 
     fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
-    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add company/ }));
     fireEvent.click(await screen.findByRole('button', { name: /Follow this board/ }));
 
     await waitFor(() =>
@@ -310,7 +341,7 @@ describe('searching by company name', () => {
     await screen.findByRole('button', { name: 'Tabby' });
 
     fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
-    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add company/ }));
     fireEvent.click(await screen.findByRole('button', { name: /Follow this board/ }));
 
     await waitFor(() =>
@@ -324,7 +355,7 @@ describe('searching by company name', () => {
     await screen.findByRole('button', { name: 'Tabby' });
 
     fireEvent.change(screen.getByLabelText('Add a company'), { target: { value: 'تامارا' } });
-    fireEvent.click(screen.getByRole('button', { name: /Find their job board/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Add company/ }));
 
     await screen.findByRole('button', { name: /Follow this board/ });
     // A followable row of chips under a search result read as a contradiction.
@@ -364,6 +395,190 @@ describe('removing a company', () => {
 
     expect(await screen.findByText('nope')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Stop following' })).toBeInTheDocument();
+  });
+});
+
+describe('company filter chips', () => {
+  const tabby = {
+    ...company,
+    companyId: 'c2',
+    displayName: 'Tabby',
+    token: 'tabby',
+    source: 'pinpoint',
+  };
+
+  it('offers no filter until there is more than one company to filter by', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    // A control with a single option is decoration, not a filter.
+    expect(screen.queryByLabelText('jobFeed.filters.companyAllLabel')).not.toBeInTheDocument();
+  });
+
+  it('narrows the feed to the company whose chip is pressed', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company, tabby], error: null });
+    mockListPostings.mockResolvedValue({
+      postings: [
+        posting({ id: 'salla-role', title: 'Senior AI Engineer' }),
+        posting({ id: 'tabby-role', companyId: 'c2', companyName: 'Tabby', title: 'Senior AI Scientist' }),
+      ],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    const chip = screen
+      .getAllByRole('button')
+      .find((button) => button.getAttribute('aria-label') === 'jobFeed.filters.companySelect'
+        && (button.textContent ?? '').includes('Tabby'));
+    fireEvent.click(chip as HTMLElement);
+
+    await waitFor(() => expect(screen.queryByText('Senior AI Engineer')).not.toBeInTheDocument());
+    expect(screen.getByText('Senior AI Scientist')).toBeInTheDocument();
+  });
+
+  it('says the filter emptied the feed rather than claiming nothing was checked', async () => {
+    // Nothing was rejected here — the user narrowed the question. "0 roles were
+    // checked and none cleared your filters" would be false on both counts.
+    mockListTracked.mockResolvedValue({ companies: [company, tabby], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ id: 'salla-role' })], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    const chip = screen
+      .getAllByRole('button')
+      .find((button) => button.getAttribute('aria-label') === 'jobFeed.filters.companySelect'
+        && (button.textContent ?? '').includes('Tabby'));
+    fireEvent.click(chip as HTMLElement);
+
+    expect(await screen.findByText('No open roles from the companies you picked.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show all companies' }));
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+  });
+});
+
+describe('recency', () => {
+  beforeEach(() => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  });
+
+  it('widens the window once rather than opening on an empty feed, and says it did', async () => {
+    /*
+     * Measured on the live starter boards 2026-08-31: Careem had 20 open roles and
+     * none posted inside seven days; HALA 4 of 16, Tamara 3 of 36, Salla 3 of 27.
+     * A hard week shows a first-time follower of one company nothing at all, which
+     * reads as broken rather than narrow.
+     */
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: daysAgo(20), firstSeenAt: daysAgo(20) })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+    // Widening silently would be its own small lie about how current the feed is.
+    expect(
+      screen.getByText('Nothing was posted in the last week, so this is the last 30 days.'),
+    ).toBeInTheDocument();
+  });
+
+  it('never widens behind a window the user chose', async () => {
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: daysAgo(20), firstSeenAt: daysAgo(20) })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    fireEvent.click(screen.getByRole('button', { name: '24 hours' }));
+
+    expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
+    expect(screen.queryByText('Senior AI Engineer')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Nothing was posted in the last week, so this is the last 30 days.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('names the window as the rule when even the widened one is empty, and offers a way past it', async () => {
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: daysAgo(200), firstSeenAt: daysAgo(200) })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    // The rule that emptied the feed is named, never a blank screen.
+    expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
+    expect(screen.queryByText('Senior AI Engineer')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show older roles' }));
+
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+  });
+
+  it('keeps a role from a board that publishes no posting date, and says which date it is showing', async () => {
+    // Pinpoint and Workday emit no date. Filtering them on first-seen would delete
+    // Tabby — the largest verified board — from the feed entirely.
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: null, firstSeenAt: daysAgo(90) })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+    expect(screen.getByText('jobFeed.date.seen')).toBeInTheDocument();
+    expect(screen.queryByText('jobFeed.date.posted')).not.toBeInTheDocument();
+  });
+
+  it('shows no date at all when neither timestamp can be read', async () => {
+    // "First seen today" derived from a value we just failed to parse is the same
+    // class of invention the two-word labelling exists to prevent.
+    mockListPostings.mockResolvedValue({
+      postings: [posting({ postedAt: null, firstSeenAt: 'not-a-date' })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+    expect(screen.queryByText('jobFeed.date.seen')).not.toBeInTheDocument();
+    expect(screen.queryByText('jobFeed.date.posted')).not.toBeInTheDocument();
+  });
+
+  it('labels a dated posting as posted', async () => {
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
+    expect(screen.getByText('jobFeed.date.posted')).toBeInTheDocument();
+  });
+});
+
+describe('refreshing', () => {
+  it('re-reads the feed without blanking it', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+
+    // The row survives the reload. Reusing `loading` here swapped the whole
+    // section for a spinner, so pressing Refresh made the feed vanish and return.
+    expect(screen.getByText('Senior AI Engineer')).toBeInTheDocument();
+    await waitFor(() => expect(mockListTracked).toHaveBeenCalledTimes(2));
+    expect(screen.getByText('Senior AI Engineer')).toBeInTheDocument();
   });
 });
 
