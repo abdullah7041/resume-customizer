@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Building2, ExternalLink, Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
+import { ExternalLink, Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useActiveResume, useSearchIntent } from '@/lib/stores/resumeStore';
@@ -22,9 +22,9 @@ import {
   type ResolutionReport,
   type TrackedCompany,
 } from '@/services/jobFeed';
-import { BASE_SCORE, buildFeed, isNew, TERM_WEIGHT } from '@/lib/jobs/score';
+import { bestRoleCoverage, buildFeed, isNew } from '@/lib/jobs/score';
+import { lastBoardCheck } from '@/lib/jobs/boardFreshness';
 import { DEFAULT_MAX_AGE_DAYS, postingAge } from '@/lib/jobs/age';
-import { deriveRoleTerms } from '@/lib/jobs/filters';
 import { looseArabicKey, normalizeText } from '@/lib/jobs/normalize';
 import {
   partitionStarters,
@@ -117,6 +117,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [autoWidened, setAutoWidened] = useState(false);
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
   const [showAllCompanyChips, setShowAllCompanyChips] = useState(false);
+  /**
+   * Whether the chips are showing their unfollow controls.
+   *
+   * Unfollowing costs a re-crawl to undo — the postings go with the company — so
+   * it does not sit one mis-tap away from the filter it shares a chip with.
+   */
+  const [managingCompanies, setManagingCompanies] = useState(false);
 
   const [query, setQuery] = useState('');
   const [resolving, setResolving] = useState(false);
@@ -129,6 +136,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    */
   const [starterMatch, setStarterMatch] = useState<StarterCompany | null>(null);
   const [busyCompany, setBusyCompany] = useState<string | null>(null);
+  /** Where focus lands when the chip a keyboard user was standing on is removed. */
+  const manageButtonRef = useRef<HTMLButtonElement>(null);
 
   // Local store first — it is the freshest — then whatever the profile holds.
   const intent: FeedIntent | null = useMemo(() => {
@@ -270,34 +279,81 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   );
 
   /**
-   * The best score this user's intent can produce.
+   * The whole feed, before the company filter.
    *
-   * A raw score is meaningless on its own: with one target role the ceiling is 70,
-   * with three it is 85. Showing 70 identically in both cases is what made every
-   * row look the same shade — in the one-role case a 70 really is a full match, and
-   * painting it amber would be as wrong as painting a partial one green. Rows are
-   * scored against this ceiling so the badge answers "how much of what you asked
-   * for does this have", which is the only question the number can honestly answer.
+   * The company selection is applied to the result rather than to the input, so
+   * one build answers both questions the view asks: which rows to show, and how
+   * many rows each chip stands for. Filtering first made the chip counts collapse
+   * to the selected company the moment anything was selected, and put drops from
+   * companies the user had filtered out into `dropped`, which is what the empty
+   * states read to name the rule that emptied the feed.
    */
-  const maxScore = useMemo(() => {
-    if (!intent) return BASE_SCORE;
-    return Math.min(100, BASE_SCORE + deriveRoleTerms(intent.targetRoles).length * TERM_WEIGHT);
-  }, [intent]);
-
   const feed = useMemo(() => {
     if (!intent) return null;
-    const visible = postings.filter(
-      (posting) =>
-        !feedState.has(posting.id) &&
-        (selectedCompanyIds.size === 0 || selectedCompanyIds.has(posting.companyId)),
-    );
+    const visible = postings.filter((posting) => !feedState.has(posting.id));
     return buildFeed(visible, intent, { maxAgeDays: maxAgeDays ?? undefined, now });
-  }, [postings, feedState, intent, selectedCompanyIds, maxAgeDays, now]);
+  }, [postings, feedState, intent, maxAgeDays, now]);
+
+  const visibleKept = useMemo(() => {
+    if (!feed) return [];
+    if (selectedCompanyIds.size === 0) return feed.kept;
+    return feed.kept.filter((scored) => selectedCompanyIds.has(scored.posting.companyId));
+  }, [feed, selectedCompanyIds]);
+
+  /**
+   * How many roles each chip actually stands for.
+   *
+   * The crawl's `lastJobCount` is every row on the board — 27 for Salla — while
+   * the feed shows the handful that clear the location, level, role and age
+   * rules. A chip reading 27 above a list of seven is the feed telling the user
+   * it is hiding something, so the chip counts what it can show.
+   */
+  const matchCountByCompany = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const scored of feed?.kept ?? []) {
+      counts.set(scored.posting.companyId, (counts.get(scored.posting.companyId) ?? 0) + 1);
+    }
+    return counts;
+  }, [feed]);
+
+  /**
+   * Role coverage for the rows on screen, computed once per feed.
+   *
+   * `bestRoleCoverage` re-derives every target role's terms — normalizing, splitting
+   * and scanning the stopword lists — so calling it inside the row map re-did that
+   * work for every row on every render, and the one-minute clock re-renders the
+   * whole feed for input that has not changed.
+   */
+  const coverageByPosting = useMemo(() => {
+    const coverage = new Map<string, ReturnType<typeof bestRoleCoverage>>();
+    if (!intent) return coverage;
+    for (const scored of visibleKept) {
+      coverage.set(scored.posting.id, bestRoleCoverage(scored.posting.title, intent.targetRoles));
+    }
+    return coverage;
+  }, [visibleKept, intent]);
+
+  /** When the boards themselves were last read — not when this page last re-read them. */
+  const boardsCheckedAt = useMemo(() => lastBoardCheck(companies), [companies]);
+
+  /**
+   * What was rejected among the companies the user is actually looking at.
+   *
+   * The empty states name the rule that emptied the feed, so they have to be
+   * scoped the same way the rows are. Reading the whole feed's drops under a
+   * one-company filter blamed the age window for a backlog at a company the user
+   * had just filtered out.
+   */
+  const visibleDropped = useMemo(() => {
+    if (!feed) return [];
+    if (selectedCompanyIds.size === 0) return feed.dropped;
+    return feed.dropped.filter((entry) => selectedCompanyIds.has(entry.posting.companyId));
+  }, [feed, selectedCompanyIds]);
 
   /** How many matching roles the age window alone is holding back. */
   const agedOut = useMemo(
-    () => feed?.dropped.filter((entry) => entry.reason === 'age').length ?? 0,
-    [feed],
+    () => visibleDropped.filter((entry) => entry.reason === 'age').length,
+    [visibleDropped],
   );
 
   /**
@@ -313,10 +369,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    */
   useEffect(() => {
     if (ageChosenByUser || autoWidened) return;
-    if (!feed || feed.kept.length > 0 || agedOut === 0) return;
+    // Widening changes the window for every company. Doing it because a company
+    // filter emptied the view announces "nothing was posted in the last week"
+    // about a feed that was showing this week's roles until the user narrowed it.
+    // An emptied filter has its own way out; only an empty feed earns this one.
+    if (selectedCompanyIds.size > 0) return;
+    if (!feed || visibleKept.length > 0 || agedOut === 0) return;
     setMaxAgeDays(30);
     setAutoWidened(true);
-  }, [feed, agedOut, ageChosenByUser, autoWidened]);
+  }, [feed, visibleKept, agedOut, selectedCompanyIds, ageChosenByUser, autoWidened]);
 
   const chooseAge = useCallback((days: number | null) => {
     setAgeChosenByUser(true);
@@ -491,6 +552,10 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         next.delete(companyId);
         return next;
       });
+
+      // The control the user was standing on has just unmounted. Without this,
+      // focus falls to <body> and the tab order restarts at the top of the page.
+      manageButtonRef.current?.focus();
 
       const { error: untrackError } = await untrackCompany(companyId);
 
@@ -723,36 +788,9 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           </div>
         )}
 
-        {companies.length > 0 && (
-          <ul className="mt-4 divide-y divide-border">
-            {companies.map((company) => (
-              <li key={company.companyId} className="flex items-center gap-3 py-3">
-                <Building2 className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="flex-1 truncate text-sm font-medium text-gray-900 dark:text-white">
-                  {company.displayName}
-                </span>
-                <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                  {/* A board we have not read yet says so. Showing "0 open roles"
-                      would claim the employer is not hiring, which we do not know. */}
-                  {company.lastStatus === 'failed'
-                    ? t('jobFeed.companies.checkFailed', 'Could not read this board last time')
-                    : !company.lastFetchedAt
-                      ? t('jobFeed.companies.neverChecked', 'Not checked yet')
-                      : t('jobFeed.companies.openRoles', { count: company.lastJobCount })}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void handleUntrack(company.companyId)}
-                  disabled={busyCompany === company.companyId}
-                  aria-label={t('jobFeed.companies.remove', 'Stop following')}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-[color,background-color,scale] duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.96] disabled:opacity-60"
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* The followed companies are not listed twice. The chip row below owns
+            them: it is the one that filters, and it now carries the count, the
+            board status and — behind Manage — the unfollow. */}
       </GlassCard>
 
       {companies.length > 0 && (
@@ -771,17 +809,32 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   aria-hidden="true"
                 />
                 {refreshing
-                  ? t('jobFeed.lastUpdated.refreshing', 'Refreshing…')
-                  : t('jobFeed.lastUpdated.action', 'Refresh')}
+                  ? t('jobFeed.lastUpdated.refreshing', 'Reloading…')
+                  : t('jobFeed.lastUpdated.action', 'Reload')}
               </button>
-              {lastLoadedAt !== null && (
-                <span className="text-xs text-muted-foreground">
-                  {t('jobFeed.lastUpdated.label', {
-                    when: formatSince(lastLoadedAt),
-                    defaultValue: 'Updated {{when}}',
-                  })}
-                </span>
-              )}
+              {/* Two clocks, because they answer different questions. This button
+                  re-reads what the last crawl stored; it does not go to the boards
+                  and cannot — the crawl is a secret-gated background function on a
+                  daily schedule. "Updated 2 minutes ago" beside a feed whose boards
+                  were last read yesterday reads as freshness it does not have. */}
+              <div className="flex flex-col text-xs text-muted-foreground">
+                {lastLoadedAt !== null && (
+                  <span>
+                    {t('jobFeed.lastUpdated.label', {
+                      when: formatSince(lastLoadedAt),
+                      defaultValue: 'Updated {{when}}',
+                    })}
+                  </span>
+                )}
+                {boardsCheckedAt !== null && (
+                  <span>
+                    {t('jobFeed.lastUpdated.boards', {
+                      when: formatSince(boardsCheckedAt),
+                      defaultValue: 'Boards last checked {{when}}',
+                    })}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
@@ -818,9 +871,12 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             </p>
           )}
 
-          {/* A filter with one option is not a filter, so the row starts at two. */}
-          {companies.length > 1 && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+          {/* The row exists whenever a company is followed — it is the only place
+              a company is shown, so a single follow still needs it. */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
+              {/* The "All" pill is the part that is only a filter, and a filter
+                  with one option is not a filter, so it starts at two. */}
+              {companies.length > 1 && (
               <button
                 type="button"
                 aria-pressed={selectedCompanyIds.size === 0}
@@ -834,49 +890,114 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               >
                 {t('jobFeed.filters.companyAll', 'All')}
               </button>
+              )}
 
               {visibleCompanyChips.map((company) => {
                 const active = selectedCompanyIds.has(company.companyId);
                 return (
-                  <button
+                  /* Two sibling buttons under one shell, never one inside the
+                     other: a filter that contains a delete is invalid HTML and
+                     gives a screen reader one control where there are two. */
+                  <div
                     key={company.companyId}
-                    type="button"
-                    aria-pressed={active}
-                    aria-label={t('jobFeed.filters.companySelect', {
-                      name: company.displayName,
-                      defaultValue: 'Show only {{name}}',
-                    })}
-                    onClick={() => toggleCompanyFilter(company.companyId)}
-                    className={`group inline-flex min-h-10 items-center gap-2 rounded-full border ps-1.5 pe-3 text-sm font-medium transition-[color,border-color,background-color,scale] duration-200 active:scale-[0.96] ${
+                    role="group"
+                    aria-label={company.displayName}
+                    className={`inline-flex min-h-10 items-center rounded-full border text-sm font-medium transition-[color,border-color,background-color] duration-200 ${
                       active
                         ? 'border-primary bg-primary/10 text-primary'
                         : 'border-border text-gray-900 hover:border-primary hover:bg-primary/5 dark:text-white'
                     }`}
                   >
-                    <span
-                      aria-hidden="true"
-                      className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold uppercase ${
-                        active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
-                      }`}
+                    <button
+                      type="button"
+                      aria-pressed={active}
+                      aria-label={t('jobFeed.filters.companySelect', {
+                        name: company.displayName,
+                        defaultValue: 'Show only {{name}}',
+                      })}
+                      onClick={() => toggleCompanyFilter(company.companyId)}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-full ps-1.5 pe-2 text-inherit transition-[scale] duration-200 active:scale-[0.96]"
                     >
-                      {company.displayName.trim().charAt(0) || '?'}
-                    </span>
-                    <span className="max-w-[10rem] truncate">{company.displayName}</span>
-                    {/* A board we could not read must not read as an employer with no roles. */}
-                    {company.lastStatus === 'failed' ? (
                       <span
                         aria-hidden="true"
+                        className={`inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold uppercase ${
+                          active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {company.displayName.trim().charAt(0) || '?'}
+                      </span>
+                      <span className="max-w-[10rem] truncate">{company.displayName}</span>
+                    </button>
+
+                    {/* Outside the filter button on purpose. An accessible name
+                        computation stops at that button's own aria-label and never
+                        reaches its descendants, so a status nested inside it is
+                        drawn and never announced — and the list this replaced said
+                        these states out loud. Non-interactive, so it belongs in the
+                        group rather than in either control.
+
+                        What is counted is what the feed can show; the board's own
+                        total is the denominator in the label, and the two come from
+                        different windows — the count respects the age filter, the
+                        total is every open role the last crawl saw. */}
+                    {company.lastStatus === 'failed' ? (
+                      <span
+                        role="img"
+                        aria-label={t('jobFeed.companies.checkFailed', 'Could not read this board last time')}
                         title={t('jobFeed.companies.checkFailed', 'Could not read this board last time')}
-                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-destructive"
+                        className="me-3 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive"
                       />
                     ) : company.lastFetchedAt ? (
-                      <span className="text-xs tabular-nums text-muted-foreground">
-                        {company.lastJobCount}
+                      <span
+                        className="me-3 text-xs tabular-nums text-muted-foreground"
+                        aria-label={t('jobFeed.companies.matchingOf', {
+                          matching: matchCountByCompany.get(company.companyId) ?? 0,
+                          total: company.lastJobCount,
+                          defaultValue: '{{matching}} of {{total}} open roles match your search',
+                        })}
+                        title={t('jobFeed.companies.matchingOf', {
+                          matching: matchCountByCompany.get(company.companyId) ?? 0,
+                          total: company.lastJobCount,
+                          defaultValue: '{{matching}} of {{total}} open roles match your search',
+                        })}
+                      >
+                        {matchCountByCompany.get(company.companyId) ?? 0}
                       </span>
-                    ) : null}
-                  </button>
+                    ) : (
+                      <span
+                        role="img"
+                        aria-label={t('jobFeed.companies.neverChecked', 'Not checked yet')}
+                        title={t('jobFeed.companies.neverChecked', 'Not checked yet')}
+                        className="me-3 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50"
+                      />
+                    )}
+
+                    {managingCompanies && (
+                      <button
+                        type="button"
+                        onClick={() => void handleUntrack(company.companyId)}
+                        disabled={busyCompany === company.companyId}
+                        aria-label={t('jobFeed.companies.remove', 'Stop following')}
+                        className="inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-e-full text-muted-foreground transition-[color,background-color,scale] duration-200 hover:bg-destructive/10 hover:text-destructive active:scale-[0.96] disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
                 );
               })}
+
+              <button
+                type="button"
+                ref={manageButtonRef}
+                aria-pressed={managingCompanies}
+                onClick={() => setManagingCompanies((previous) => !previous)}
+                className="inline-flex min-h-10 items-center rounded-full px-3 text-sm font-medium text-muted-foreground transition-[color,background-color,scale] duration-200 hover:bg-primary/10 hover:text-primary active:scale-[0.96]"
+              >
+                {managingCompanies
+                  ? t('jobFeed.filters.manageDone', 'Done')
+                  : t('jobFeed.filters.manage', 'Manage companies')}
+              </button>
 
               {companies.length > COLLAPSED_COMPANY_CHIPS && (
                 <button
@@ -892,8 +1013,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                       })}
                 </button>
               )}
-            </div>
-          )}
+          </div>
         </GlassCard>
       )}
 
@@ -939,8 +1059,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       {/* An empty feed always names the rule that emptied it. The age window gets
           its own wording and its own way out, because it is the one rule the user
           just chose and can undo in a click. */}
-      {feed && feed.kept.length === 0 && postings.length > 0 && (
+      {feed && visibleKept.length === 0 && postings.length > 0 && (
         <GlassCard className="p-6">
+          {/* Asked in order of how much the user can do about it. The age window
+              is theirs to widen in one click, and `agedOut` counts only the
+              companies they are looking at, so it never blames a filtered-out
+              company's backlog. The company filter comes next: it is the other
+              rule they applied themselves, so "nothing matched" would be
+              answering a question they did not ask. */}
           {agedOut > 0 ? (
             <>
               <p className="text-base font-medium text-gray-900 dark:text-white">
@@ -956,9 +1082,9 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 {t('jobFeed.empty.showOlder', 'Show older roles')}
               </GlassButton>
             </>
-          ) : selectedCompanyIds.size > 0 && feed.dropped.length === 0 ? (
-            /* A company filter that hides everything must not report "0 roles were
-               checked" — nothing was rejected, the user narrowed the question. */
+          ) : feed.kept.length > 0 ? (
+            /* Nothing was rejected here — the user narrowed the question. "0 roles
+               were checked and none cleared your filters" would be false twice. */
             <>
               <p className="text-base font-medium text-gray-900 dark:text-white">
                 {t('jobFeed.empty.allFilteredCompany', 'No open roles from the companies you picked.')}
@@ -974,25 +1100,29 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             <>
               <p className="text-base font-medium text-gray-900 dark:text-white">{t('jobFeed.empty.allFiltered', 'Nothing matched today.')}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {t('jobFeed.empty.allFilteredHelp', { count: feed.dropped.length })}
+                {t('jobFeed.empty.allFilteredHelp', { count: visibleDropped.length })}
               </p>
             </>
           )}
         </GlassCard>
       )}
 
-      {feed?.kept.map((scored, index) => {
+      {visibleKept.map((scored, index) => {
         const trackedSince = trackedSinceById.get(scored.posting.companyId) ?? scored.posting.firstSeenAt;
         const fresh = isNew(scored.posting, trackedSince, lastSeenAt);
         const age = postingAge(scored.posting, now);
         const dated = age.kind === 'posted';
-        const matchPercent = Math.round((scored.score / maxScore) * 100);
-        const scoreTone =
-          matchPercent >= 90
-            ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200'
-            : matchPercent >= 70
-              ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200'
-              : 'bg-rose-100 text-rose-900 dark:bg-rose-900/40 dark:text-rose-200';
+        /**
+         * How much of one target role the title covers — never a percentage.
+         *
+         * A 0-100 number beside a job is read as the match score, and this is not
+         * one: it is title keyword overlap, computed in the browser without ever
+         * reading the job description or the CV, so it sat next to the Match tab's
+         * AI score claiming to be the same quantity and disagreeing with it. Two
+         * numbers out of two terms is a claim this can actually support.
+         */
+        const coverage = coverageByPosting.get(scored.posting.id) ?? null;
+        const complete = coverage !== null && coverage.matched.length === coverage.total;
 
         return (
           /* Rows arrive together after an async load, so they are staggered rather
@@ -1005,12 +1135,25 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           >
           <GlassCard className="p-4">
             <div className="flex items-start gap-4">
-              <span
-                className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-semibold tabular-nums ${scoreTone}`}
-                title={t('jobFeed.why.label', 'Why this is here')}
-              >
-                {matchPercent}
-              </span>
+              {coverage && (
+                <span
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold tabular-nums ${
+                    complete ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                  }`}
+                  title={t('jobFeed.why.coverageHint', {
+                    role: coverage.role,
+                    defaultValue: 'Words from your target role "{{role}}" that this title uses',
+                  })}
+                  aria-label={t('jobFeed.why.coverage', {
+                    matched: coverage.matched.length,
+                    total: coverage.total,
+                    role: coverage.role,
+                    defaultValue: '{{matched}} of {{total}} words from your target role {{role}}',
+                  })}
+                >
+                  {`${coverage.matched.length}/${coverage.total}`}
+                </span>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-base font-semibold leading-snug text-gray-900 dark:text-white">

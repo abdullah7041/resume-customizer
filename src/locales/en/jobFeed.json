@@ -14,12 +14,7 @@
       "lastChecked": "Checked {{when}}",
       "neverChecked": "Not checked yet",
       "checkFailed": "Could not read this board last time",
-      "openRoles_zero": "{{count}} open roles",
-      "openRoles_one": "{{count}} open role",
-      "openRoles_two": "{{count}} open roles",
-      "openRoles_few": "{{count}} open roles",
-      "openRoles_many": "{{count}} open roles",
-      "openRoles_other": "{{count}} open roles"
+      "matchingOf": "{{matching}} of {{total}} open roles match your search"
     },
     "resolve": {
       "pick": "Follow this board",
@@ -59,11 +54,12 @@
       "startersQuietHelp": "Their boards read fine and were empty when we last checked. Follow one to hear the moment it posts."
     },
     "lastUpdated": {
-      "action": "Refresh",
-      "refreshing": "Refreshing…",
+      "action": "Reload",
+      "refreshing": "Reloading…",
       "label": "Updated {{when}}",
       "justNow": "just now",
-      "explain": "Re-reads what the last board check found. Boards are checked once a day."
+      "explain": "Re-reads what the last board check found. The boards themselves are checked once a day.",
+      "boards": "Boards last checked {{when}}"
     },
     "filters": {
       "ageLegend": "Posted within",
@@ -77,7 +73,9 @@
       "companySelect": "Show only {{name}}",
       "showMore": "Show all {{total}} companies",
       "showLess": "Show fewer companies",
-      "widened": "Nothing was posted in the last week, so this is the last 30 days."
+      "widened": "Nothing was posted in the last week, so this is the last 30 days.",
+      "manage": "Manage companies",
+      "manageDone": "Done"
     },
     "date": {
       "posted": "Posted {{when}}",
@@ -85,9 +83,10 @@
       "seenHint": "This job board does not publish posting dates, so this is when Watheq first saw the role — not when it went live."
     },
     "why": {
-      "label": "Why this is here",
       "matched": "Matches {{terms}} in your target role",
-      "location": "In {{location}}"
+      "location": "In {{location}}",
+      "coverage": "{{matched}} of {{total}} words from your target role {{role}}",
+      "coverageHint": "Words from your target role \"{{role}}\" that this title uses"
     },
     "dropped": {
       "heading": "Filtered out",

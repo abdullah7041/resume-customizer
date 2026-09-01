@@ -84,3 +84,38 @@ export function isNew(
   if (lastFeedSeenAt && posting.firstSeenAt <= lastFeedSeenAt) return false;
   return true;
 }
+
+/** How much of one target role a title covers, in that role's own terms. */
+export interface RoleCoverage {
+  /** The target role this title covered best, in the user's own wording. */
+  role: string;
+  matched: string[];
+  /** Terms that role derives. Never zero — a role with none is skipped. */
+  total: number;
+}
+
+/**
+ * The target role a title covers best, measured against that role alone.
+ *
+ * Ranking uses the union of every intent term, which is right for ordering: a
+ * title carrying four of the user's words beats one carrying two. It is wrong for
+ * telling the user how well a role fits, because the union of "AI Engineer" and
+ * "Data Scientist" is four terms no single posting can ever hold — so a perfect
+ * AI Engineer match read as half a match, and every row was depressed by however
+ * many roles the user happened to type.
+ */
+export function bestRoleCoverage(title: string, targetRoles: readonly string[]): RoleCoverage | null {
+  let best: RoleCoverage | null = null;
+
+  for (const role of targetRoles) {
+    const terms = deriveRoleTerms([role]);
+    if (terms.length === 0) continue;
+
+    const candidate: RoleCoverage = { role, matched: matchedRoleTerms(title, terms), total: terms.length };
+    if (!best || candidate.matched.length / candidate.total > best.matched.length / best.total) {
+      best = candidate;
+    }
+  }
+
+  return best;
+}

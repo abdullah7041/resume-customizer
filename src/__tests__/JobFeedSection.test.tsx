@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // A fresh `t` per render, which is what react-i18next does in production when the
@@ -214,17 +214,13 @@ describe('JobFeedSection feed rows', () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
   });
 
-  it('shows the score, the company, and a deterministic reason', async () => {
+  it('shows the company and a deterministic reason', async () => {
     mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
 
     render(<JobFeedSection />);
 
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
-    // ai + engineer both matched: 40 + 15 + 15.
-    // The badge reads as a share of what the intent can reach, not a raw score:
-    // this posting matches both derived terms (ai, engineer), so it is a 100.
-    expect(screen.getByText('100')).toBeInTheDocument();
-    // Salla appears both in the followed-companies list and on the posting row.
+    // Salla appears both on its filter chip and on the posting row.
     expect(screen.getAllByText(/Salla/).length).toBeGreaterThan(0);
     expect(screen.getByText('jobFeed.why.matched')).toBeInTheDocument();
   });
@@ -371,6 +367,7 @@ describe('removing a company', () => {
 
     render(<JobFeedSection />);
     await screen.findByText('Salla');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage companies' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Stop following' }));
 
@@ -390,6 +387,7 @@ describe('removing a company', () => {
 
     render(<JobFeedSection />);
     await screen.findByText('Salla');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage companies' }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Stop following' }));
 
@@ -572,7 +570,7 @@ describe('refreshing', () => {
     render(<JobFeedSection />);
     await screen.findByText('Senior AI Engineer');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reload' }));
 
     // The row survives the reload. Reusing `loading` here swapped the whole
     // section for a spinner, so pressing Refresh made the feed vanish and return.
@@ -582,21 +580,382 @@ describe('refreshing', () => {
   });
 });
 
-describe('score colour bands', () => {
-  // The intent is "Senior AI Engineer", so the terms are ai and engineer and the
-  // ceiling is 70. A posting matching both has everything the user asked for and
-  // is green; one matching half is not.
+describe('the badge separates a full role match from a partial one', () => {
+  // The intent is "Senior AI Engineer", so the terms are ai and engineer — senior
+  // is a level, not a function. A title carrying both covers the role; one
+  // carrying half does not, and the badge has to be able to say which.
   it.each([
-    ['Senior AI Engineer', 'emerald'],
-    ['Senior Engineer', 'amber'],
-  ])('tones %s by how much of the intent it covers', async (title, tone) => {
+    ['Senior AI Engineer', '2/2'],
+    ['Senior Engineer', '1/2'],
+  ])('reads %s as %s of the target role', async (title, badge) => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
     mockListPostings.mockResolvedValue({ postings: [posting({ title })], error: null });
 
-    const { container } = render(<JobFeedSection />);
+    render(<JobFeedSection />);
     await screen.findByText(title);
 
-    // A 40 rendered in the same green as a 100 told the user they were equal.
-    expect(container.innerHTML).toContain(tone);
+    expect(screen.getByText(badge)).toBeInTheDocument();
+  });
+
+  it('grades coverage without the red-amber-green a hiring verdict would use', async () => {
+    // Those bands belong to the Match tab, which reads the JD and the CV. Wearing
+    // them here made a count of title keywords look like the same judgement.
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior Engineer' })], error: null });
+
+    const { container } = render(<JobFeedSection />);
+    await screen.findByText('Senior Engineer');
+
+    expect(container.innerHTML).not.toMatch(/emerald|amber|rose/);
+  });
+});
+
+describe('the company chip carries the count, the status and the unfollow', () => {
+  const tabby = {
+    ...company,
+    companyId: 'c2',
+    displayName: 'Tabby',
+    token: 'tabby',
+    source: 'pinpoint',
+  };
+
+  const chipFor = (name: string) =>
+    screen
+      .getAllByRole('button')
+      .find(
+        (button) =>
+          button.getAttribute('aria-label') === 'jobFeed.filters.companySelect' &&
+          (button.textContent ?? '').includes(name),
+      ) as HTMLElement;
+
+  /** The count beside a chip's filter button — exact, not a substring of the name. */
+  const countFor = (name: string) =>
+    within(screen.getByRole('group', { name })).getByLabelText('jobFeed.companies.matchingOf');
+
+  it('counts the roles the feed is showing, not the whole board', async () => {
+    // Salla's board had 28 roles on the last crawl and two of them clear the
+    // user's filters. A chip reading 28 above a list of two is the feed telling
+    // the user it is hiding something.
+    mockListTracked.mockResolvedValue({ companies: [company, tabby], error: null });
+    mockListPostings.mockResolvedValue({
+      postings: [
+        posting({ id: 's1' }),
+        posting({ id: 's2', title: 'Senior AI Platform Engineer' }),
+        posting({ id: 's3', location: 'Dubai, UAE' }),
+        posting({ id: 't1', companyId: 'c2', companyName: 'Tabby' }),
+      ],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Platform Engineer');
+
+    expect(countFor('Salla')).toHaveTextContent(/^2$/);
+    expect(screen.queryByText('28')).not.toBeInTheDocument();
+  });
+
+  it('keeps counting the whole feed when one company is selected', async () => {
+    // Selecting Salla must not tell the user Tabby has nothing — it hides Tabby's
+    // rows, it does not re-answer the question the other chips are asking.
+    mockListTracked.mockResolvedValue({ companies: [company, tabby], error: null });
+    mockListPostings.mockResolvedValue({
+      postings: [
+        posting({ id: 's1' }),
+        posting({ id: 't1', companyId: 'c2', companyName: 'Tabby', title: 'Senior AI Scientist' }),
+      ],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Scientist');
+
+    fireEvent.click(chipFor('Salla'));
+
+    await waitFor(() => expect(screen.queryByText('Senior AI Scientist')).not.toBeInTheDocument());
+    expect(countFor('Tabby')).toHaveTextContent(/^1$/);
+  });
+
+  it('shows the company even when it is the only one followed', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(chipFor('Salla')).toBeInTheDocument();
+  });
+
+  it('no longer states a board total the feed is not showing', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.queryByText('jobFeed.companies.openRoles')).not.toBeInTheDocument();
+  });
+
+  it('keeps unfollow out of the way until the user asks to manage', async () => {
+    // Unfollowing costs a re-crawl to undo, so it does not sit one mis-tap away
+    // from the filter it shares a chip with.
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.queryByRole('button', { name: 'Stop following' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Manage companies' }));
+
+    expect(screen.getByRole('button', { name: 'Stop following' })).toBeInTheDocument();
+  });
+
+  it('never nests the unfollow control inside the filter control', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage companies' }));
+
+    const unfollow = screen.getByRole('button', { name: 'Stop following' });
+    expect(chipFor('Salla').contains(unfollow)).toBe(false);
+  });
+});
+
+describe('the row badge does not pose as a match score', () => {
+  beforeEach(() => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  });
+
+  it('shows how much of a target role the title covers, not a percentage', async () => {
+    // A 0-100 number beside a job is read as the match score, and it is not one:
+    // this is title keyword overlap, computed without ever reading the JD or CV.
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.getByText('2/2')).toBeInTheDocument();
+    expect(screen.queryByText('100')).not.toBeInTheDocument();
+  });
+
+  it('measures the best target role rather than the union of them all', async () => {
+    mockSearchIntent.mockReturnValue({ ...SENIOR_INTENT, targetRoles: ['AI Engineer', 'Data Scientist'] });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.getByText('2/2')).toBeInTheDocument();
+    expect(screen.queryByText('70')).not.toBeInTheDocument();
+  });
+});
+
+describe('refresh says what it refreshed', () => {
+  it('does not call a database re-read a board check', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    // The button re-reads what the last crawl stored. It does not go to the
+    // boards, and cannot: the crawl is a secret-gated background function.
+    expect(screen.getByRole('button', { name: /Reload/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+  });
+
+  it('says when the boards were last checked, not only when the page re-read them', async () => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.getByText('jobFeed.lastUpdated.boards')).toBeInTheDocument();
+  });
+});
+
+describe('an empty feed names the rule for the companies the user is looking at', () => {
+  const tabby = {
+    ...company,
+    companyId: 'c2',
+    displayName: 'Tabby',
+    token: 'tabby',
+    source: 'pinpoint',
+  };
+
+  it('does not blame the age window for a company whose roles were never the right ones', async () => {
+    // Salla's matching role is six weeks old; Tabby's only role is a different job
+    // entirely. Filtered to Tabby, "nothing posted in that window" would be
+    // pointing at Salla's backlog to explain a feed the user narrowed themselves.
+    mockListTracked.mockResolvedValue({ companies: [company, tabby], error: null });
+    mockListPostings.mockResolvedValue({
+      postings: [
+        posting({ id: 's1', postedAt: daysAgo(60), firstSeenAt: daysAgo(60) }),
+        posting({ id: 't1', companyId: 'c2', companyName: 'Tabby', title: 'Warehouse Supervisor' }),
+      ],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Nothing posted in that window.');
+
+    const chip = screen
+      .getAllByRole('button')
+      .find(
+        (button) =>
+          button.getAttribute('aria-label') === 'jobFeed.filters.companySelect' &&
+          (button.textContent ?? '').includes('Tabby'),
+      ) as HTMLElement;
+    fireEvent.click(chip);
+
+    expect(await screen.findByText('Nothing matched today.')).toBeInTheDocument();
+  });
+});
+
+describe('the chip says its state out loud, not only in a tooltip', () => {
+  it('names the count and the board status for a screen reader', async () => {
+    // `title` on a span reaches neither a touch user nor reliably a screen reader,
+    // and these two states used to be rendered as visible text in the list.
+    mockListTracked.mockResolvedValue({
+      companies: [company, { ...company, companyId: 'c2', displayName: 'Nana', token: 'nana', lastFetchedAt: null }],
+      error: null,
+    });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.getByLabelText('jobFeed.companies.matchingOf')).toBeInTheDocument();
+    expect(screen.getByLabelText('Not checked yet')).toBeInTheDocument();
+  });
+});
+
+describe('the freshness line counts boards that were actually read', () => {
+  it('does not treat a failed crawl as a board check', async () => {
+    // crawl-jobs-background stamps last_fetched_at alongside last_status:'failed'
+    // on purpose, so a broken token is not retried every run. Reading that stamp
+    // as freshness says "boards last checked an hour ago" over a feed built
+    // entirely from yesterday — the exact overstatement this line exists to end.
+    mockListTracked.mockResolvedValue({
+      companies: [{ ...company, lastStatus: 'failed' as const, lastFetchedAt: new Date().toISOString() }],
+      error: null,
+    });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.queryByText('jobFeed.lastUpdated.boards')).not.toBeInTheDocument();
+  });
+
+  it('reports the boards that were read when only some of them failed', async () => {
+    mockListTracked.mockResolvedValue({
+      companies: [
+        { ...company, lastStatus: 'failed' as const, lastFetchedAt: new Date().toISOString() },
+        { ...company, companyId: 'c2', displayName: 'Tabby', token: 'tabby' },
+      ],
+      error: null,
+    });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.getByText('jobFeed.lastUpdated.boards')).toBeInTheDocument();
+  });
+});
+
+describe('the chip status is announced, not just drawn', () => {
+  it('keeps the count and the board status out of the filter button', async () => {
+    // An element's accessible name computation stops at aria-label and never
+    // reaches its descendants, so anything inside the labelled filter button is
+    // silent. The status is not interactive — it belongs beside the button, in
+    // the group, where its own name is read.
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    const filter = screen
+      .getAllByRole('button')
+      .find((button) => button.getAttribute('aria-label') === 'jobFeed.filters.companySelect') as HTMLElement;
+    const status = screen.getByLabelText('jobFeed.companies.matchingOf');
+
+    expect(status).toHaveTextContent('1');
+    expect(filter.contains(status)).toBe(false);
+  });
+});
+
+describe('unfollowing does not strand the keyboard', () => {
+  it('moves focus to the manage control when the focused chip is removed', async () => {
+    // The chip row is the only place a company can be unfollowed, so the button
+    // that vanishes under the user is the one they were standing on. Focus falls
+    // to <body> and the tab order restarts at the top of the page.
+    mockListTracked.mockResolvedValue({
+      companies: [company, { ...company, companyId: 'c2', displayName: 'Tabby', token: 'tabby' }],
+      error: null,
+    });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+    fireEvent.click(screen.getByRole('button', { name: 'Manage companies' }));
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Tabby' })).getByRole('button', { name: 'Stop following' }));
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Done' })),
+    );
+  });
+});
+
+describe('the age window is not widened by a filter the user applied', () => {
+  it('leaves the window alone when it is a company filter that emptied the view', async () => {
+    // Salla's only matching role is two months old; Tabby posted this week. Under
+    // the seven-day default the feed is not empty — it is showing Tabby. Narrowing
+    // to Salla must not widen the window for every company and announce "nothing
+    // was posted in the last week", which is false of the feed the user just left.
+    mockListTracked.mockResolvedValue({
+      companies: [company, { ...company, companyId: 'c2', displayName: 'Tabby', token: 'tabby' }],
+      error: null,
+    });
+    mockListPostings.mockResolvedValue({
+      postings: [
+        posting({ id: 's1', postedAt: daysAgo(60), firstSeenAt: daysAgo(60) }),
+        posting({
+          id: 't1',
+          companyId: 'c2',
+          companyName: 'Tabby',
+          title: 'Senior AI Scientist',
+          postedAt: daysAgo(2),
+          firstSeenAt: daysAgo(2),
+        }),
+      ],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Scientist');
+
+    const chip = screen
+      .getAllByRole('button')
+      .find(
+        (button) =>
+          button.getAttribute('aria-label') === 'jobFeed.filters.companySelect' &&
+          (button.textContent ?? '').includes('Salla'),
+      ) as HTMLElement;
+    fireEvent.click(chip);
+
+    expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Nothing was posted in the last week, so this is the last 30 days.'),
+    ).not.toBeInTheDocument();
+    // And the window the user is on is still the one they were given.
+    expect(screen.getByRole('button', { name: '7 days' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
