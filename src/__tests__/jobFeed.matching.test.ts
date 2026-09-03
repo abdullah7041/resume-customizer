@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { normalizeText } from '@/lib/jobs/normalize';
 import { deriveRoleTerms, dropReason, locationConflict, SAUDI_LOCATIONS } from '@/lib/jobs/filters';
-import { buildFeed, isNew, scorePosting } from '@/lib/jobs/score';
+import { bestRoleCoverage, buildFeed, isNew, scorePosting } from '@/lib/jobs/score';
 import type { FeedIntent, FeedPosting } from '@/lib/jobs/types';
 
 function posting(overrides: Partial<FeedPosting> = {}): FeedPosting {
@@ -168,5 +168,40 @@ describe('isNew suppresses the backfill flood', () => {
   it('stops flagging once the feed has been opened', () => {
     const job = posting({ firstSeenAt: '2026-08-20T00:00:00.000Z' });
     expect(isNew(job, trackedSince, '2026-08-21T00:00:00.000Z')).toBe(false);
+  });
+});
+
+describe('role coverage is measured per target role, not against their union', () => {
+  it('scores a title against one target role at a time', () => {
+    // The union of "AI Engineer" and "Data Scientist" is four terms no single
+    // title can carry, so a perfect AI Engineer match read as half a match and
+    // every row in the feed was depressed by however many roles the user typed.
+    const coverage = bestRoleCoverage('Senior AI Engineer', ['AI Engineer', 'Data Scientist']);
+
+    expect(coverage).toEqual({ role: 'AI Engineer', matched: ['ai', 'engineer'], total: 2 });
+  });
+
+  it('picks the target role the title covers best', () => {
+    const coverage = bestRoleCoverage('Senior AI Backend Engineer', [
+      'Data Scientist',
+      'AI Backend Engineer',
+    ]);
+
+    expect(coverage?.role).toBe('AI Backend Engineer');
+    expect(coverage?.matched).toHaveLength(3);
+    expect(coverage?.total).toBe(3);
+  });
+
+  it('reports partial coverage rather than rounding it away', () => {
+    const coverage = bestRoleCoverage('Senior AI Engineer', ['Data Engineer']);
+
+    expect(coverage).toEqual({ role: 'Data Engineer', matched: ['engineer'], total: 2 });
+  });
+
+  it('has nothing to report when the intent carries no usable terms', () => {
+    // "Senior" is a level, not a function — deriveRoleTerms drops it, leaving
+    // nothing to measure. A 0-of-0 badge would be a claim about a question the
+    // user never asked.
+    expect(bestRoleCoverage('Senior AI Engineer', ['Senior'])).toBeNull();
   });
 });
