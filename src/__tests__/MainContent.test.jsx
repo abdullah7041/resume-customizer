@@ -38,6 +38,7 @@ const {
 }));
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
+const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
 const landingMockProps = vi.hoisted(() => ({ current: null }));
 const authMockState = vi.hoisted(() => ({
   user: { id: "user-123", user_metadata: {}, app_metadata: {} },
@@ -76,6 +77,17 @@ vi.mock("../components/sections/UploadSection", () => {
     default: (props) => {
       resumeUploadMockProps.current = props;
       return React.createElement("div", { "data-testid": "resume-upload-mock" });
+    },
+  };
+});
+
+vi.mock("../components/sections/JobFeedSection", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    JobFeedSection: (props) => {
+      jobFeedMockProps.current = props;
+      return React.createElement("div", { "data-testid": "job-feed-mock" });
     },
   };
 });
@@ -245,6 +257,7 @@ vi.mock("../hooks/useUserCredits", () => ({
 describe("MainContent resume parsing", () => {
   beforeEach(() => {
     resumeUploadMockProps.current = null;
+    jobFeedMockProps.current = null;
     landingMockProps.current = null;
     authMockState.user = { id: "user-123", user_metadata: {}, app_metadata: {} };
     authMockState.loading = false;
@@ -1344,5 +1357,70 @@ describe("MainContent resume parsing", () => {
     expect(localStorage.getItem("watheq:intentPrompted")).toBe("true");
     const intent = useResumeStore.getState().searchIntent;
     expect(intent?.targetRoles).toEqual(["Frontend Engineer"]);
+  });
+});
+
+
+describe("job feed hand-off", () => {
+  beforeEach(() => {
+    authMockState.user = { id: "user-123", user_metadata: {}, app_metadata: {} };
+    authMockState.loading = false;
+    parseResumeMock.mockReset();
+    parseResumeMock.mockResolvedValue({ plainText: "Parsed resume", bullets: [], sections: [] });
+    useResumeStore.setState({ originalResume: null, searchIntent: null });
+    const storage = {};
+    global.localStorage = {
+      getItem: vi.fn((key) => (key === "watheq:beta_access" ? "WATHEQ01" : storage[key] ?? null)),
+      setItem: vi.fn((key, value) => { storage[key] = value; }),
+      removeItem: vi.fn((key) => { delete storage[key]; }),
+      clear: vi.fn(() => { Object.keys(storage).forEach((key) => delete storage[key]); }),
+    };
+  });
+
+  it("gives the feed somewhere to send a posting", async () => {
+    // The feed's "Check the match" button is rendered only when this prop exists.
+    // Mounted without it, the button silently never appears — which is how it
+    // shipped: <JobFeedSection /> with no props at all.
+    render(<MainContent />);
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", plainText: "CV text" });
+    });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "job-feed" } }));
+    });
+
+    await waitFor(() => expect(jobFeedMockProps.current).toBeTruthy());
+    expect(typeof jobFeedMockProps.current.onMatchPosting).toBe("function");
+  });
+
+  it("opens the match tab on the posting the user picked", async () => {
+    render(<MainContent />);
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", plainText: "CV text" });
+    });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "job-feed" } }));
+    });
+    await waitFor(() => expect(jobFeedMockProps.current).toBeTruthy());
+
+    await act(async () => {
+      jobFeedMockProps.current.onMatchPosting({
+        jobDescription: "Senior AI Engineer at Salla. Build agents.",
+        companyName: "Salla",
+        jobTitle: "Senior AI Engineer",
+      });
+    });
+
+    // The Match tab reads the stored job description when it mounts, so the
+    // hand-off is: store it, then go there. No analysis is started on the user's
+    // behalf — that spends a credit they did not ask to spend.
+    expect(await screen.findByTestId("job-match-mock")).toBeInTheDocument();
+    expect(global.localStorage.setItem).toHaveBeenCalledWith(
+      "watheq:lastJobDescription",
+      "Senior AI Engineer at Salla. Build agents.",
+    );
+    expect(analyzeResumeMock).not.toHaveBeenCalled();
   });
 });
