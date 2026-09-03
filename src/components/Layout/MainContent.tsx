@@ -803,6 +803,39 @@ export default function MainContent() {
     }
   }, [pushToast, t, tabs]);
 
+  /**
+   * Hand a posting from the Job Feed to the Match tab.
+   *
+   * Storing the description and switching tabs is the whole hand-off: MatchSection
+   * seeds its editor from `watheq:lastJobDescription` when it mounts, and it mounts
+   * on arrival because the tabs render conditionally. Deliberately does NOT start
+   * the analysis — that spends one of the user's credits on a posting they have
+   * only just clicked, and the Match tab already has the button for it.
+   */
+  const handleFeedMatchPosting = useCallback(
+    ({ jobDescription: postingDescription }: { jobDescription: string; companyName: string; jobTitle: string }) => {
+      const trimmed = (postingDescription || "").trim();
+
+      // Some boards publish a title and an apply link with no readable body. Sending
+      // the user to an empty Match tab would look like the button did nothing.
+      if (!trimmed) {
+        pushToast({
+          type: "warning",
+          title: t("jobFeed.errors.noDescription", "That posting has no description to match against."),
+          description: t("jobFeed.errors.noDescriptionHint", "Open the posting and paste its text into the Match tab."),
+        });
+        return;
+      }
+
+      setJobDescription(trimmed);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
+      }
+      handleTabChange("match");
+    },
+    [handleTabChange, pushToast, t]
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const handleNavigateTab = (event: Event) => {
@@ -2403,7 +2436,7 @@ export default function MainContent() {
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
                   ? renderGuestProtectedPanel(t("tabs.jobFeed", "Job Feed"))
-                  : <JobFeedSection />}
+                  : <JobFeedSection onMatchPosting={handleFeedMatchPosting} />}
               </Suspense>
             </LazyErrorBoundary>
           )}

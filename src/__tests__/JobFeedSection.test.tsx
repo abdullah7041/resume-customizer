@@ -23,10 +23,16 @@ vi.mock('../components/ui/GlassButton', () => ({
 
 const mockSearchIntent = vi.fn();
 const mockActiveResume = vi.fn();
+const mockSetSearchIntent = vi.fn();
 
 vi.mock('@/lib/stores/resumeStore', () => ({
   useSearchIntent: () => mockSearchIntent(),
   useActiveResume: () => mockActiveResume(),
+  // getState() is read back after a write, so it answers from the same source the
+  // hook does — an inert setter would let a test pass while the feed never moved.
+  useResumeStore: {
+    getState: () => ({ setSearchIntent: mockSetSearchIntent, searchIntent: mockSearchIntent() }),
+  },
 }));
 
 vi.mock('@/services/pipeline', () => ({ createJobApplication: vi.fn() }));
@@ -36,6 +42,7 @@ const mockListPostings = vi.fn();
 const mockTrackCompany = vi.fn();
 const mockUntrackCompany = vi.fn();
 const mockResolveCompany = vi.fn();
+const mockSaveSearchIntent = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
   listTrackedCompanies: () => mockListTracked(),
@@ -48,6 +55,7 @@ vi.mock('@/services/jobFeed', () => ({
   resolveCompany: (query: string) => mockResolveCompany(query),
   trackCompany: (input: unknown) => mockTrackCompany(input),
   untrackCompany: (id: string) => mockUntrackCompany(id),
+  saveSearchIntent: (intent: unknown) => mockSaveSearchIntent(intent),
   setFeedState: vi.fn(),
 }));
 
@@ -97,6 +105,7 @@ beforeEach(() => {
   mockTrackCompany.mockResolvedValue({ data: null, error: null });
   mockResolveCompany.mockResolvedValue({ data: null, error: null });
   mockUntrackCompany.mockResolvedValue({ data: null, error: null });
+  mockSaveSearchIntent.mockResolvedValue({ error: null });
 });
 
 describe('Saudi starter companies', () => {
@@ -957,5 +966,129 @@ describe('the age window is not widened by a filter the user applied', () => {
     ).not.toBeInTheDocument();
     // And the window the user is on is still the one they were given.
     expect(screen.getByRole('button', { name: '7 days' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+
+const CV = {
+  basics: { name: 'Abdullah', label: 'Senior AI Engineer' },
+  work: [{ name: 'Salla', position: 'Data Analyst' }],
+};
+
+describe('target roles the CV already implies', () => {
+  beforeEach(() => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+    mockActiveResume.mockReturnValue(CV);
+
+    // A stateful stand-in for the store: a write is visible to the next read, and
+    // the store stamps meta on the way in, exactly as the real one does.
+    let current: unknown = null;
+    mockSearchIntent.mockImplementation(() => current);
+    mockSetSearchIntent.mockImplementation((next: { meta?: Record<string, unknown> }) => {
+      current = { ...next, meta: { ...next.meta, completeness: 75, updatedAt: 'stamped' } };
+    });
+  });
+
+  it('shows the feed as soon as a role is picked', async () => {
+    render(<JobFeedSection />);
+    await screen.findByText('Set your target role first.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Senior AI Engineer' }));
+
+    // The row, not the chip: the chip is gone once the role is being filtered on.
+    expect(await screen.findByRole('heading', { name: 'Senior AI Engineer' })).toBeInTheDocument();
+    expect(screen.queryByText('Set your target role first.')).not.toBeInTheDocument();
+  });
+
+  it('sends the server what the store stamped, not the draft it was handed', async () => {
+    // completeness and updatedAt are computed inside the store. Posting the draft
+    // would put a placeholder on the profile row that outlives this session.
+    render(<JobFeedSection />);
+    await screen.findByText('Set your target role first.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Data Analyst' }));
+
+    await waitFor(() =>
+      expect(mockSaveSearchIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ meta: expect.objectContaining({ completeness: 75 }) }),
+      ),
+    );
+  });
+
+  it('offers the roles from the CV instead of a dead end', async () => {
+    // "Set your target role first" with no way to set one is a wall. The CV
+    // already says what this person does, in their own words.
+    mockSearchIntent.mockReturnValue(null);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Set your target role first.');
+
+    expect(screen.getByRole('button', { name: 'Senior AI Engineer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Data Analyst' })).toBeInTheDocument();
+  });
+
+  it('starts the feed on the role the user picked', async () => {
+    mockSearchIntent.mockReturnValue(null);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Set your target role first.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Senior AI Engineer' }));
+
+    expect(mockSetSearchIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ targetRoles: ['Senior AI Engineer'] }),
+    );
+  });
+
+  it('remembers the pick for the next device, not just this browser', async () => {
+    mockSearchIntent.mockReturnValue(null);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Set your target role first.');
+    fireEvent.click(screen.getByRole('button', { name: 'Data Analyst' }));
+
+    await waitFor(() =>
+      expect(mockSaveSearchIntent).toHaveBeenCalledWith(
+        expect.objectContaining({ targetRoles: ['Data Analyst'] }),
+      ),
+    );
+  });
+
+  it('offers only what is not already targeted, and adds to what is', async () => {
+    mockSearchIntent.mockReturnValue(SENIOR_INTENT);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    // The headline derives the same terms as the intent already set, so offering
+    // it again would be offering a chip that changes nothing.
+    expect(screen.queryByRole('button', { name: 'Senior AI Engineer' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Data Analyst' }));
+
+    expect(mockSetSearchIntent).toHaveBeenCalledWith(
+      expect.objectContaining({ targetRoles: ['Senior AI Engineer', 'Data Analyst'] }),
+    );
+  });
+});
+
+describe('changing the CV the feed matches against', () => {
+  it('sends the user to the upload tab rather than duplicating it here', async () => {
+    // The feed cannot be reached without a CV, so this is a swap, not an upload.
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+    mockActiveResume.mockReturnValue(CV);
+    const navigated: string[] = [];
+    const listener = (event: Event) => navigated.push((event as CustomEvent<{ tab?: string }>).detail?.tab ?? '');
+    window.addEventListener('watheq:navigate-tab', listener);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Use a different CV' }));
+    window.removeEventListener('watheq:navigate-tab', listener);
+
+    expect(navigated).toEqual(['resume']);
   });
 });

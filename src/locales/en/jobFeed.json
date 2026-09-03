@@ -14,7 +14,8 @@
       "lastChecked": "Checked {{when}}",
       "neverChecked": "Not checked yet",
       "checkFailed": "Could not read this board last time",
-      "matchingOf": "{{matching}} of {{total}} open roles match your search"
+      "matchingOf": "{{matching}} of {{total}} open roles match your search",
+      "swapCv": "Use a different CV"
     },
     "resolve": {
       "pick": "Follow this board",
@@ -108,7 +109,14 @@
     "errors": {
       "loadFailed": "Could not load your feed. Try again.",
       "trackFailed": "Could not follow that company.",
-      "signInRequired": "Sign in to follow companies."
+      "signInRequired": "Sign in to follow companies.",
+      "noDescription": "That posting has no description to match against.",
+      "noDescriptionHint": "Open the posting and paste its text into the Match tab."
+    },
+    "roles": {
+      "heading": "From your CV",
+      "help": "Tap one to start matching against it.",
+      "add": "Add from your CV"
     }
   }
 }

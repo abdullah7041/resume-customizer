@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
+import { ExternalLink, FileUp, Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
-import { useActiveResume, useSearchIntent } from '@/lib/stores/resumeStore';
+import { useActiveResume, useResumeStore, useSearchIntent } from '@/lib/stores/resumeStore';
 import { createJobApplication } from '@/services/pipeline';
 import {
   getPostingDescription,
@@ -14,6 +14,7 @@ import {
   fetchServerSearchIntent,
   readLastFeedSeenAt,
   resolveCompany,
+  saveSearchIntent,
   setFeedState,
   touchLastFeedSeenAt,
   trackCompany,
@@ -24,6 +25,7 @@ import {
 } from '@/services/jobFeed';
 import { bestRoleCoverage, buildFeed, isNew } from '@/lib/jobs/score';
 import { lastBoardCheck } from '@/lib/jobs/boardFreshness';
+import { suggestRolesFromResume } from '@/lib/jobs/roleSuggestions';
 import { DEFAULT_MAX_AGE_DAYS, postingAge } from '@/lib/jobs/age';
 import { looseArabicKey, normalizeText } from '@/lib/jobs/normalize';
 import {
@@ -33,6 +35,7 @@ import {
   type StarterCompany,
 } from '@/lib/jobs/saudiStarterCompanies';
 import type { FeedIntent, FeedPosting, ScoredPosting } from '@/lib/jobs/types';
+import type { SearchIntent } from '@/types/onboarding';
 
 const MAX_TRACKED_COMPANIES = 25;
 
@@ -173,6 +176,51 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     }
     return names.slice(0, 6);
   }, [resume, companies]);
+
+  /**
+   * Target roles the CV already implies, minus the ones already being filtered on.
+   *
+   * The feed cannot rank anything without a target role, and "set your target role
+   * first" with no way to set one is a wall. The CV states the answer in the user's
+   * own words, so it is offered rather than asked for — offered, never applied on
+   * its own: silently choosing what the feed filters on is drift they cannot see.
+   */
+  const roleSuggestions = useMemo(
+    () => suggestRolesFromResume(resume, { exclude: intent?.targetRoles ?? [] }),
+    [resume, intent],
+  );
+
+  const [applyingRole, setApplyingRole] = useState<string | null>(null);
+
+  const applyRole = useCallback(
+    async (role: string) => {
+      const next: SearchIntent = {
+        targetRoles: [...(intent?.targetRoles ?? []), role],
+        seniority: intent?.seniority,
+        // The user tapped this themselves, off their own CV — there is no inference
+        // to be unsure about. The store restamps completeness and updatedAt.
+        meta: { confidence: 'high', completeness: 0, updatedAt: new Date().toISOString() },
+      };
+
+      setApplyingRole(role);
+      useResumeStore.getState().setSearchIntent(next);
+      // The local store is per-browser. Without this the feed asks for a target
+      // role again on every other device the user signs in from. What goes to the
+      // server is what the store stamped, not the draft above: completeness and
+      // updatedAt are computed in there, and posting the draft would leave a
+      // placeholder on the profile row that outlives the session that wrote it.
+      const stored = useResumeStore.getState().searchIntent ?? next;
+      const { error: saveError } = await saveSearchIntent(stored);
+      setApplyingRole(null);
+      if (saveError) console.warn('[JobFeed] Target role saved locally only:', saveError);
+    },
+    [intent],
+  );
+
+  /** Hands off to the tab that owns the CV rather than duplicating upload here. */
+  const handleSwapCv = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'resume' } }));
+  }, []);
 
   /**
    * Saudi employers whose boards are already verified readable. Tapping one skips
@@ -623,10 +671,45 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   return (
     <div className="space-y-4">
       <GlassCard className="p-6">
-        <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-1 text-gray-900 dark:text-white">{t('jobFeed.title', 'Job feed')}</h2>
+            <p className="text-sm text-muted-foreground">
+              {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
+            </p>
+          </div>
+          {/* The feed cannot be opened without a CV, so this is a swap, not an
+              upload — it hands off to the tab that owns parsing rather than
+              duplicating the upload flow here. */}
+          <button
+            type="button"
+            onClick={handleSwapCv}
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] dark:text-white"
+          >
+            <FileUp className="h-4 w-4" aria-hidden="true" />
+            {t('jobFeed.companies.swapCv', 'Use a different CV')}
+          </button>
+        </div>
+
+        {intent && roleSuggestions.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              {t('jobFeed.roles.add', 'Add from your CV')}
+            </span>
+            {roleSuggestions.map((role) => (
+              <button
+                key={role}
+                type="button"
+                onClick={() => void applyRole(role)}
+                disabled={applyingRole === role}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                {role}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -1053,6 +1136,32 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.noIntentHelp', 'The feed matches roles against what you are looking for.')}
           </p>
+          {/* The CV already says what this person does, in their own words, so the
+              answer is offered rather than asked for. A wall with no way past it is
+              what this state used to be. */}
+          {roleSuggestions.length > 0 && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {t('jobFeed.roles.heading', 'From your CV')}
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                {t('jobFeed.roles.help', 'Tap one to start matching against it.')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {roleSuggestions.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => void applyRole(role)}
+                    disabled={applyingRole === role}
+                    className="inline-flex min-h-10 items-center rounded-xl border border-border px-4 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </GlassCard>
       )}
 

@@ -7,6 +7,7 @@
 
 import { supabase } from './supabase';
 import type { FeedIntent, FeedPosting } from '@/lib/jobs/types';
+import type { SearchIntent } from '@/types/onboarding';
 
 const COMPANIES_TABLE = 'ats_companies';
 const TRACKED_TABLE = 'user_tracked_companies';
@@ -274,6 +275,37 @@ export async function fetchServerSearchIntent(): Promise<FeedIntent | null> {
   } catch (error) {
     console.error('[JobFeed] Failed to read server search intent:', summarizeError(error));
     return null;
+  }
+}
+
+/**
+ * Store the intent on the profile, so a role picked here survives this browser.
+ *
+ * The local store is per-browser; `fetchServerSearchIntent` is what makes an intent
+ * set on one device visible on the next. A role chosen from the CV has to go the
+ * same way, or the feed asks for it again on every other device.
+ */
+export async function saveSearchIntent(searchIntent: SearchIntent): Promise<{ error: string | null }> {
+  const headers = await authHeaders();
+  if (!headers) return { error: 'Not signed in' };
+
+  try {
+    const response = await fetch('/.netlify/functions/user-data-api', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ action: 'save_search_intent', searchIntent }),
+    });
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+      const message = body.message ?? body.error ?? `Request failed (${response.status})`;
+      console.error('[JobFeed] Failed to save search intent:', message);
+      return { error: message };
+    }
+    return { error: null };
+  } catch (error) {
+    console.error('[JobFeed] Failed to save search intent:', summarizeError(error));
+    return { error: summarizeError(error).message };
   }
 }
 
