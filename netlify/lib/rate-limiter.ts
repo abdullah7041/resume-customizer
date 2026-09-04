@@ -126,6 +126,8 @@ export class RateLimiter {
   private requestTimestamps: number[] = [];
   private lastRequestTime = 0;
   private config: Required<RateLimitConfig>;
+  /** The one pending wake-up for the queue. Null when nothing is scheduled. */
+  private drainTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: RateLimitConfig = {}) {
     this.config = { ...DEFAULT_RATE_LIMIT, ...config };
@@ -165,41 +167,105 @@ export class RateLimiter {
   }
 
   /**
-   * Process the next request in queue if possible
+   * How long until a waiting caller could run: 0 now, a delay in ms, or `null`
+   * when only a running request finishing can help.
+   *
+   * The per-minute cap is the case that used to have no answer at all. Concurrency
+   * clears itself — something is running, and its `finally` drains the queue. A
+   * full minute window clears on a clock nobody was watching.
+   */
+  private waitTimeMs(): number | null {
+    this.cleanOldTimestamps();
+
+    if (this.activeRequests >= this.config.maxConcurrent) return null;
+
+    if (this.requestTimestamps.length >= this.config.maxRequestsPerMinute) {
+      const oldest = this.requestTimestamps[0] ?? Date.now();
+      // +1 so the timestamp is strictly outside the window when we look again.
+      return Math.max(0, oldest + 60000 - Date.now()) + 1;
+    }
+
+    const sinceLast = Date.now() - this.lastRequestTime;
+    if (sinceLast < this.config.minDelayBetweenRequestsMs) {
+      return this.config.minDelayBetweenRequestsMs - sinceLast;
+    }
+
+    return 0;
+  }
+
+  /**
+   * Make sure something will come back for the queue.
+   *
+   * This is the fix for the deadlock: the queue used to be drained only from the
+   * `finally` of a request that was already running, so a caller that arrived
+   * while nothing was in flight — held back by the minimum delay or the per-minute
+   * cap — had nobody to wake it and waited forever. One timer at a time; a request
+   * finishing drains synchronously and reschedules from there.
+   */
+  private scheduleDrain(): void {
+    if (this.drainTimer !== null || this.queue.length === 0) return;
+
+    const wait = this.waitTimeMs();
+    if (wait === null) return; // a running request will drain on its way out
+
+    this.drainTimer = setTimeout(() => {
+      this.drainTimer = null;
+      this.processQueue();
+    }, wait);
+  }
+
+  /** Reserve a slot. Called synchronously as a caller is admitted, never after. */
+  private grant(): void {
+    this.activeRequests++;
+    this.lastRequestTime = Date.now();
+    this.requestTimestamps.push(this.lastRequestTime);
+  }
+
+  /**
+   * Admit as many waiting callers as the limits allow, then make sure the rest
+   * are woken later.
+   *
+   * The slot is reserved before the waiter is resumed, because resuming it only
+   * queues a microtask — waiting for the woken caller to increment the counters
+   * itself would let this loop admit past `maxConcurrent`.
    */
   private processQueue(): void {
-    if (this.queue.length === 0) return;
-    if (!this.canMakeRequest()) return;
-
-    const next = this.queue.shift();
-    if (next) {
-      next();
+    while (this.queue.length > 0 && this.canMakeRequest()) {
+      this.grant();
+      const next = this.queue.shift();
+      next?.();
     }
+
+    this.scheduleDrain();
   }
 
   /**
    * Execute a function with rate limiting
    */
   async execute<T>(fn: () => Promise<T>): Promise<T> {
-    // Wait for our turn if queue is not empty or we can't make request
-    if (!this.canMakeRequest() || this.queue.length > 0) {
+    // Wait for our turn if queue is not empty or we can't make request. Queued
+    // callers are admitted in arrival order, so a late caller cannot overtake one
+    // already waiting.
+    if (this.queue.length > 0 || !this.canMakeRequest()) {
       await new Promise<void>((resolve) => {
         this.queue.push(resolve);
+        this.scheduleDrain();
       });
+      // processQueue reserved the slot before resuming us.
+    } else {
+      this.grant();
     }
-
-    // Update tracking
-    this.activeRequests++;
-    this.lastRequestTime = Date.now();
-    this.requestTimestamps.push(this.lastRequestTime);
 
     try {
       const result = await fn();
       return result;
     } finally {
       this.activeRequests--;
-      // Process next in queue after a short delay
-      setTimeout(() => this.processQueue(), this.config.minDelayBetweenRequestsMs);
+      // Drains whatever can run now and schedules the rest. The old code waited
+      // `minDelayBetweenRequestsMs` before even looking, which both delayed a
+      // queue the concurrency limit had been holding and left the timer as the
+      // only chance anyone would look again.
+      this.processQueue();
     }
   }
 
