@@ -34,6 +34,7 @@ const {
     trackJobMetadataExtractionFailed: vi.fn(),
     trackPipelineExportAttached: vi.fn(),
     trackOptimizationCompleted: vi.fn(),
+    track: vi.fn(),
   },
 }));
 
@@ -1368,6 +1369,7 @@ describe("job feed hand-off", () => {
     parseResumeMock.mockReset();
     parseResumeMock.mockResolvedValue({ plainText: "Parsed resume", bullets: [], sections: [] });
     useResumeStore.setState({ originalResume: null, searchIntent: null });
+    Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     const storage = {};
     global.localStorage = {
       getItem: vi.fn((key) => (key === "watheq:beta_access" ? "WATHEQ01" : storage[key] ?? null)),
@@ -1422,5 +1424,56 @@ describe("job feed hand-off", () => {
       "Senior AI Engineer at Salla. Build agents.",
     );
     expect(analyzeResumeMock).not.toHaveBeenCalled();
+  });
+
+  it("records where a matched posting came from", async () => {
+    // Every comparable hand-off in the app is instrumented. Without this one
+    // there is no way to tell a match the feed sent from one the user pasted,
+    // which is the only measure of whether the feed is worth its crawl.
+    render(<MainContent />);
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", plainText: "CV text" });
+    });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "job-feed" } }));
+    });
+    await waitFor(() => expect(jobFeedMockProps.current).toBeTruthy());
+
+    await act(async () => {
+      jobFeedMockProps.current.onMatchPosting({
+        jobDescription: "Senior AI Engineer at Salla. Build agents.",
+        companyName: "Salla",
+        jobTitle: "Senior AI Engineer",
+      });
+    });
+
+    expect(analyticsMock.track).toHaveBeenCalledWith("job_feed_match_handoff", {
+      company: "Salla",
+      title: "Senior AI Engineer",
+    });
+  });
+
+  it("does not record a hand-off that never happened", async () => {
+    render(<MainContent />);
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", plainText: "CV text" });
+    });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "job-feed" } }));
+    });
+    await waitFor(() => expect(jobFeedMockProps.current).toBeTruthy());
+
+    await act(async () => {
+      jobFeedMockProps.current.onMatchPosting({
+        jobDescription: "   ",
+        companyName: "Salla",
+        jobTitle: "Senior AI Engineer",
+      });
+    });
+
+    expect(analyticsMock.track).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("job-match-mock")).not.toBeInTheDocument();
   });
 });

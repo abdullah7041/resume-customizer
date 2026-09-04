@@ -813,7 +813,7 @@ export default function MainContent() {
    * only just clicked, and the Match tab already has the button for it.
    */
   const handleFeedMatchPosting = useCallback(
-    ({ jobDescription: postingDescription }: { jobDescription: string; companyName: string; jobTitle: string }) => {
+    ({ jobDescription: postingDescription, companyName, jobTitle }: { jobDescription: string; companyName: string; jobTitle: string }) => {
       const trimmed = (postingDescription || "").trim();
 
       // Some boards publish a title and an apply link with no readable body. Sending
@@ -831,6 +831,10 @@ export default function MainContent() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
       }
+      // Tracked after the empty-description guard, so the count is hand-offs that
+      // happened. This is the only way to tell a match the feed sent from one the
+      // user pasted, which is the measure of whether the crawl earns its keep.
+      analytics.track("job_feed_match_handoff", { company: companyName, title: jobTitle });
       handleTabChange("match");
     },
     [handleTabChange, pushToast, t]

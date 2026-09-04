@@ -1,5 +1,5 @@
 import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/functions';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type LimiterConfig = {
   limiter: {
@@ -266,5 +266,132 @@ describe('releaseFreeAllowance', () => {
     await releaseFreeAllowance('applied-verify-free', key);
 
     expect(await tryConsumeFreeAllowance('applied-verify-free', key)).toBe(true);
+  });
+});
+
+/**
+ * The outgoing-request limiter, which is a different mechanism from the incoming
+ * endpoint limits above: this one queues our own calls to third parties.
+ */
+describe('RateLimiter queue draining', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('runs a caller that arrives while the per-minute window is full', async () => {
+    // The deadlock: the queue was drained only from the `finally` of a request
+    // that was already running. A caller that arrived when nothing was in flight —
+    // held back by the per-minute cap, not by concurrency — had nobody to wake it
+    // and waited forever. batch-api allows 15 requests a minute, so the sixteenth
+    // task hung its whole function until Netlify killed it.
+    const { RateLimiter } = await loadRateLimiter();
+    const limiter = new RateLimiter({ maxConcurrent: 1, minDelayBetweenRequestsMs: 0, maxRequestsPerMinute: 2 });
+
+    await limiter.execute(async () => 'first');
+    await limiter.execute(async () => 'second');
+
+    let ran = false;
+    const third = limiter.execute(async () => {
+      ran = true;
+      return 'third';
+    });
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(ran).toBe(false); // still inside the window, correctly held
+
+    await vi.advanceTimersByTimeAsync(61_000);
+    await expect(third).resolves.toBe('third');
+  });
+
+  it('runs a caller held back only by the minimum delay', async () => {
+    const { RateLimiter } = await loadRateLimiter();
+    const limiter = new RateLimiter({ maxConcurrent: 1, minDelayBetweenRequestsMs: 200, maxRequestsPerMinute: 100 });
+
+    await limiter.execute(async () => 'first');
+    const second = limiter.execute(async () => 'second');
+
+    await vi.advanceTimersByTimeAsync(500);
+    await expect(second).resolves.toBe('second');
+  });
+
+  it('keeps the minimum spacing it exists to enforce', async () => {
+    const { RateLimiter } = await loadRateLimiter();
+    const limiter = new RateLimiter({ maxConcurrent: 1, minDelayBetweenRequestsMs: 50, maxRequestsPerMinute: 100 });
+    const startedAt: number[] = [];
+
+    const tasks = [0, 1, 2].map(() =>
+      limiter.execute(async () => {
+        startedAt.push(Date.now());
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await Promise.all(tasks);
+
+    expect(startedAt).toHaveLength(3);
+    expect(startedAt[1] - startedAt[0]).toBeGreaterThanOrEqual(50);
+    expect(startedAt[2] - startedAt[1]).toBeGreaterThanOrEqual(50);
+  });
+
+  it('never runs more at once than it was told to', async () => {
+    const { RateLimiter } = await loadRateLimiter();
+    const limiter = new RateLimiter({ maxConcurrent: 2, minDelayBetweenRequestsMs: 0, maxRequestsPerMinute: 100 });
+    let active = 0;
+    let peak = 0;
+
+    const tasks = [0, 1, 2, 3, 4].map(() =>
+      limiter.execute(async () => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        active -= 1;
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await Promise.all(tasks);
+
+    expect(peak).toBe(2);
+  });
+
+  it('serves callers in the order they arrived', async () => {
+    const { RateLimiter } = await loadRateLimiter();
+    const limiter = new RateLimiter({ maxConcurrent: 1, minDelayBetweenRequestsMs: 10, maxRequestsPerMinute: 100 });
+    const order: string[] = [];
+
+    const tasks = ['a', 'b', 'c'].map((label) =>
+      limiter.execute(async () => {
+        order.push(label);
+      }),
+    );
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await Promise.all(tasks);
+
+    expect(order).toEqual(['a', 'b', 'c']);
+  });
+
+  it('does not wedge the queue when a task throws', async () => {
+    // The slot has to be released on the failure path too, or one rejected email
+    // batch stops every batch behind it.
+    const { RateLimiter } = await loadRateLimiter();
+    const limiter = new RateLimiter({ maxConcurrent: 1, minDelayBetweenRequestsMs: 10, maxRequestsPerMinute: 100 });
+
+    // Settled into a value up front: the rejection lands while the timers are
+    // being advanced, before any assertion could attach a handler to it.
+    const failing = limiter
+      .execute(async () => {
+        throw new Error('provider refused');
+      })
+      .catch((error: Error) => error.message);
+    const following = limiter.execute(async () => 'ran anyway');
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    await expect(failing).resolves.toBe('provider refused');
+    await expect(following).resolves.toBe('ran anyway');
   });
 });
