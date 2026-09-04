@@ -41,6 +41,7 @@ const {
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
 const pipelineMockProps = vi.hoisted(() => ({ current: null }));
+const mobileWorkflowMockProps = vi.hoisted(() => ({ current: null }));
 const landingMockProps = vi.hoisted(() => ({ current: null }));
 const authMockState = vi.hoisted(() => ({
   user: { id: "user-123", user_metadata: {}, app_metadata: {} },
@@ -90,6 +91,21 @@ vi.mock("../components/sections/JobFeedSection", () => {
     JobFeedSection: (props) => {
       jobFeedMockProps.current = props;
       return React.createElement("div", { "data-testid": "job-feed-mock" });
+    },
+  };
+});
+
+vi.mock("../components/ui/MobileWorkflowNav", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    default: (props) => {
+      mobileWorkflowMockProps.current = props;
+      return React.createElement("div", { "data-testid": "mobile-workflow-mock" });
+    },
+    MobileWorkflowNav: (props) => {
+      mobileWorkflowMockProps.current = props;
+      return React.createElement("div", { "data-testid": "mobile-workflow-mock" });
     },
   };
 });
@@ -1514,6 +1530,7 @@ describe("reaching tools before a resume exists", () => {
     authMockState.loading = false;
     jobFeedMockProps.current = null;
     pipelineMockProps.current = null;
+    mobileWorkflowMockProps.current = null;
     useResumeStore.setState({ originalResume: null, searchIntent: null });
     Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     const storage = {};
@@ -1588,6 +1605,29 @@ describe("reaching tools before a resume exists", () => {
     expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "warning");
     // And it did not navigate.
     expect(screen.getByTestId("more-tools-job-feed")).toBeInTheDocument();
+  });
+
+  it("does not offer the match hand-off it would only refuse", async () => {
+    // The feed fetches the posting's description before calling this, so a button
+    // that ends in "Resume required" costs a network round trip and an analytics
+    // event first — on the very path this change opens up.
+    await renderWorkspace();
+    await goTo("job-feed");
+    await screen.findByTestId("job-feed-mock");
+
+    expect(jobFeedMockProps.current.onMatchPosting).toBeUndefined();
+  });
+
+  it("keeps the mobile More tools step in step with the desktop one", async () => {
+    // The desktop button opens the panel with no resume; the mobile step had its
+    // own copy of the gate and stayed hard-locked. One predicate, both surfaces.
+    await renderWorkspace();
+
+    const mobileNav = mobileWorkflowMockProps.current;
+    expect(mobileNav).toBeTruthy();
+    const moreTools = mobileNav.primarySteps.find((step) => step.value === "more-tools");
+    expect(moreTools?.disabledReason).toBeUndefined();
+    expect(mobileNav.primarySteps.find((step) => step.value === "match")?.disabledReason).toBeTruthy();
   });
 
   it("restores a stored Job Feed tab with no resume", async () => {

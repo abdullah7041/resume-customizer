@@ -46,6 +46,7 @@
     "emptyState": "No jobs saved yet. Run a match analysis and save jobs to track your applications.",
     "saveFailed": "Failed to save job",
     "updateFailed": "Failed to update job",
-    "deleteFailed": "Failed to delete job"
+    "deleteFailed": "Failed to delete job",
+    "emptyStateFeed": "You can also save roles straight from the Job Feed, before uploading anything."
   }
 }

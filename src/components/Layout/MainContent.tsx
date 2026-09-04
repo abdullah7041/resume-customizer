@@ -486,15 +486,18 @@ export default function MainContent() {
       acc.push({
         ...tab,
         label: mobileLabels[tab.value] ?? tab.label,
-        disabledReason: !hasResume && tab.value !== "resume" ? mobileWorkflowGateReason : undefined,
+        disabledReason: !hasResume && !isReachableWithoutResume(tab.value) ? mobileWorkflowGateReason : undefined,
       });
       return acc;
     }, []);
   }, [hasResume, isFlagEnabled, mobileWorkflowGateReason, t]);
   const mobileSecondarySteps = useMemo<MobileWorkflowItem[]>(
     () =>
-      // Secondary tools (Pipeline, Interview, Bulk, ...) are reachable without a
-      // resume — sections gate themselves, and Pipeline was otherwise invisible.
+      // Listed without a gate of their own: the ones that work without a resume
+      // (RESUME_OPTIONAL_TAB_VALUES) open, and the rest are refused by
+      // handleTabChange with the reason said out loud. That refusal is the part
+      // that used to be missing — the tab was set and then silently bounced back
+      // by the redirect, which is why Pipeline read as invisible.
       getTabsConfig(t).reduce<MobileWorkflowItem[]>((acc, tab) => {
         if (isFlagEnabled(tab) && MOBILE_SECONDARY_TAB_VALUES.includes(tab.value)) {
           acc.push({ ...tab });
@@ -856,6 +859,11 @@ export default function MainContent() {
    */
   const handleFeedMatchPosting = useCallback(
     ({ jobDescription: postingDescription, companyName, jobTitle }: { jobDescription: string; companyName: string; jobTitle: string }) => {
+      if (!hasResume) {
+        handleTabChange("match");
+        return;
+      }
+
       const trimmed = (postingDescription || "").trim();
 
       // Some boards publish a title and an apply link with no readable body. Sending
@@ -879,7 +887,7 @@ export default function MainContent() {
       analytics.track("job_feed_match_handoff", { company: companyName, title: jobTitle });
       handleTabChange("match");
     },
-    [handleTabChange, pushToast, t]
+    [handleTabChange, hasResume, pushToast, t]
   );
 
   useEffect(() => {
@@ -2502,7 +2510,12 @@ export default function MainContent() {
               <Suspense fallback={<SectionSkeleton />}>
                 {isGuestMode
                   ? renderGuestProtectedPanel(t("tabs.jobFeed", "Job Feed"))
-                  : <JobFeedSection onMatchPosting={handleFeedMatchPosting} />}
+                  /* No resume, no hand-off: the feed fetches the posting's
+                     description before calling this, so offering it would spend a
+                     network round trip and an analytics event to arrive at
+                     "Resume required". The feed hides the button when the prop is
+                     absent. */
+                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} />}
               </Suspense>
             </LazyErrorBoundary>
           )}

@@ -131,8 +131,10 @@ describe('email-service failure paths', () => {
     // `new Resend(undefined)` throws, and it used to run at module scope — so an
     // unset key took down cron-monthly-summary, cron-reset-credits,
     // notify-waitlist and waitlist-confirm at import time, before a line of
-    // handler code ran. It also left the RESEND_API_KEY guard in this module
-    // permanently unreachable.
+    // handler code ran. That import-time throw cannot be reproduced here, since
+    // the `resend` mock above replaces the constructor; what this pins is the
+    // behaviour that replaced it — a missing key is a reported failure and no
+    // send is attempted.
     vi.stubEnv('RESEND_API_KEY', '');
     vi.resetModules();
 

@@ -26,10 +26,21 @@ vi.mock('../../lib/sentry.js', () => ({
 const buildEvent = () =>
   ({ headers: { 'x-netlify-internal-functions': 'true' }, httpMethod: 'POST' }) as unknown as HandlerEvent;
 
-/** The usage query the handler runs before building recipients. */
-const usageQuery = () => ({
-  select: () => ({ gte: () => ({ lte: () => Promise.resolve({ data: [], error: null }) }) }),
-});
+/**
+ * The two reads the handler makes before building recipients.
+ *
+ * `user_credits` is awaited straight off `.select()`; `credit_transactions` adds
+ * `.gte()`. Both have to be thenable at the level the handler awaits, or the
+ * destructure yields undefined and the run quietly takes the no-credits fallback
+ * instead of the path being tested.
+ */
+const supabaseTable = (table: string) => {
+  const rows = { data: [], error: null };
+  if (table === 'credit_transactions') {
+    return { select: () => ({ gte: () => Promise.resolve(rows) }) };
+  }
+  return { select: () => Promise.resolve(rows) };
+};
 
 describe('cron-monthly-summary reporting', () => {
   beforeEach(() => {
@@ -37,7 +48,7 @@ describe('cron-monthly-summary reporting', () => {
     mocks.sendBatch.mockReset();
     mocks.listUsers.mockReset();
     mocks.from.mockReset();
-    mocks.from.mockImplementation(usageQuery);
+    mocks.from.mockImplementation(supabaseTable);
     vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co');
     vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'service-role-key');
     vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -70,6 +81,14 @@ describe('cron-monthly-summary reporting', () => {
 
     const { handler } = await import('../cron-monthly-summary.js');
     const response = await handler(buildEvent(), {} as HandlerContext, () => {});
+
+    // All three are still sent — users with no credits row fall back to empty
+    // stats rather than being dropped — so the gap between 3 and 1 is delivery.
+    expect(mocks.sendBatch).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ email: 'one@example.com' }),
+      expect.objectContaining({ email: 'two@example.com' }),
+      expect.objectContaining({ email: 'three@example.com' }),
+    ]));
 
     const body = JSON.parse((response as { body: string }).body);
     expect(body.usersProcessed).toBe(1);
