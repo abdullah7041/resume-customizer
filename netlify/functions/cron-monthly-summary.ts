@@ -189,7 +189,10 @@ const handler: Handler = async (event) => {
     }
 
     const emailResult = await sendMonthlyUsageSummaryBatch(emailRecipients);
-    const successCount = emailRecipients.length;
+    // What was delivered, not what was attempted. Counting recipients made a run
+    // where the provider rejected most of the batch read identically to a clean
+    // one — on a scheduled function whose output nobody is watching live.
+    const successCount = emailResult.successCount;
     const emailFailCount = emailResult.failureCount;
     errors.push(...emailResult.errors.map(({ email, error }) => ({ userId: email, error })));
 
