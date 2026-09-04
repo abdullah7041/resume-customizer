@@ -1092,3 +1092,45 @@ describe('changing the CV the feed matches against', () => {
     expect(navigated).toEqual(['resume']);
   });
 });
+
+describe('the feed opened before any CV exists', () => {
+  beforeEach(() => {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+    mockActiveResume.mockReturnValue(null);
+  });
+
+  it('asks for an upload rather than offering to swap a CV that is not there', async () => {
+    // The feed is reachable with no resume, so the same button is an upload here
+    // and a swap once one exists. "Use a different CV" is a lie in the first case.
+    mockSearchIntent.mockReturnValue(SENIOR_INTENT);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(screen.getByRole('button', { name: 'Upload your CV' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Use a different CV' })).not.toBeInTheDocument();
+  });
+
+  it('still ranks the feed from a target role with no CV at all', async () => {
+    // The CV feeds two suggestion lists and nothing else. Nothing about ranking
+    // depends on it, and a user who onboarded on another device has an intent
+    // stored server-side with no resume in this browser.
+    mockSearchIntent.mockReturnValue(SENIOR_INTENT);
+
+    render(<JobFeedSection />);
+
+    expect(await screen.findByRole('heading', { name: 'Senior AI Engineer' })).toBeInTheDocument();
+  });
+
+  it('points at the one thing that works when there is neither a CV nor a role', async () => {
+    // No CV means no role chips to offer, so the empty state cannot just repeat
+    // "set a target role" — following a company works with no intent at all.
+    mockSearchIntent.mockReturnValue(null);
+
+    render(<JobFeedSection />);
+    await screen.findByText('Set your target role first.');
+
+    expect(screen.getByText('Or follow a company above — new roles appear here as they are posted.')).toBeInTheDocument();
+  });
+});

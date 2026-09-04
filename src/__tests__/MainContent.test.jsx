@@ -40,6 +40,7 @@ const {
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
+const pipelineMockProps = vi.hoisted(() => ({ current: null }));
 const landingMockProps = vi.hoisted(() => ({ current: null }));
 const authMockState = vi.hoisted(() => ({
   user: { id: "user-123", user_metadata: {}, app_metadata: {} },
@@ -89,6 +90,21 @@ vi.mock("../components/sections/JobFeedSection", () => {
     JobFeedSection: (props) => {
       jobFeedMockProps.current = props;
       return React.createElement("div", { "data-testid": "job-feed-mock" });
+    },
+  };
+});
+
+vi.mock("../components/sections/PipelineSection", () => {
+  const React = require("react");
+  return {
+    __esModule: true,
+    default: (props) => {
+      pipelineMockProps.current = props;
+      return React.createElement("div", { "data-testid": "pipeline-mock" });
+    },
+    PipelineSection: (props) => {
+      pipelineMockProps.current = props;
+      return React.createElement("div", { "data-testid": "pipeline-mock" });
     },
   };
 });
@@ -1475,5 +1491,116 @@ describe("job feed hand-off", () => {
 
     expect(analyticsMock.track).not.toHaveBeenCalled();
     expect(screen.queryByTestId("job-match-mock")).not.toBeInTheDocument();
+  });
+});
+
+
+describe("reaching tools before a resume exists", () => {
+  const renderWorkspace = async () => {
+    render(<MainContent />);
+    // The workspace only settles after the first effects flush; asserting before
+    // that would pass against the redirect this suite exists to pin down.
+    await waitFor(() => expect(resumeUploadMockProps.current).toBeTruthy());
+  };
+
+  const goTo = async (tab) => {
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab } }));
+    });
+  };
+
+  beforeEach(() => {
+    authMockState.user = { id: "user-123", user_metadata: {}, app_metadata: {} };
+    authMockState.loading = false;
+    jobFeedMockProps.current = null;
+    pipelineMockProps.current = null;
+    useResumeStore.setState({ originalResume: null, searchIntent: null });
+    Object.values(analyticsMock).forEach((mock) => mock.mockClear());
+    const storage = {};
+    global.localStorage = {
+      getItem: vi.fn((key) => (key === "watheq:beta_access" ? "WATHEQ01" : storage[key] ?? null)),
+      setItem: vi.fn((key, value) => { storage[key] = value; }),
+      removeItem: vi.fn((key) => { delete storage[key]; }),
+      clear: vi.fn(() => { Object.keys(storage).forEach((key) => delete storage[key]); }),
+    };
+  });
+
+  it("opens the Job Feed with no resume, and keeps it open", async () => {
+    // The feed reads no CV — it ranks from a target role. It was unreachable only
+    // because a blanket effect sent every non-resume tab back to Upload, and that
+    // effect runs on a LATER commit, so this has to survive a flush to mean anything.
+    await renderWorkspace();
+    await goTo("job-feed");
+
+    expect(await screen.findByTestId("job-feed-mock")).toBeInTheDocument();
+
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByTestId("job-feed-mock")).toBeInTheDocument();
+  });
+
+  it("opens the Pipeline with no resume", async () => {
+    // Saved jobs exist before a CV does. The comment on the mobile nav already
+    // said Pipeline should be reachable; the redirect silently disagreed.
+    await renderWorkspace();
+    await goTo("pipeline");
+
+    expect(await screen.findByTestId("pipeline-mock")).toBeInTheDocument();
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByTestId("pipeline-mock")).toBeInTheDocument();
+  });
+
+  it("still sends a resume-dependent tab back to Upload", async () => {
+    // The guard rail. Match cannot do anything without a CV, so the gate stays.
+    await renderWorkspace();
+    await goTo("match");
+
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByTestId("job-match-mock")).not.toBeInTheDocument();
+    expect(screen.getByTestId("resume-upload-mock")).toBeInTheDocument();
+    expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "warning");
+  });
+
+  it("opens the More tools panel with no resume", async () => {
+    // The button used to look live and do nothing but shout.
+    await renderWorkspace();
+    await goTo("more-tools");
+
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByTestId("more-tools-job-feed")).toBeInTheDocument();
+  });
+
+  it("marks the tools inside the panel that a resume does unlock", async () => {
+    await renderWorkspace();
+    await goTo("more-tools");
+
+    expect(screen.getByTestId("more-tools-job-feed")).toHaveAttribute("aria-disabled", "false");
+    expect(screen.getByTestId("more-tools-interview")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("explains a locked tool rather than ignoring the click", async () => {
+    await renderWorkspace();
+    await goTo("more-tools");
+
+    await act(async () => {
+      screen.getByTestId("more-tools-interview").click();
+    });
+
+    expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "warning");
+    // And it did not navigate.
+    expect(screen.getByTestId("more-tools-job-feed")).toBeInTheDocument();
+  });
+
+  it("restores a stored Job Feed tab with no resume", async () => {
+    const storage = { "watheq:lastActiveTab": "job-feed", "watheq:beta_access": "WATHEQ01" };
+    global.localStorage = {
+      getItem: vi.fn((key) => storage[key] ?? null),
+      setItem: vi.fn((key, value) => { storage[key] = value; }),
+      removeItem: vi.fn((key) => { delete storage[key]; }),
+      clear: vi.fn(),
+    };
+
+    await renderWorkspace();
+
+    expect(await screen.findByTestId("job-feed-mock")).toBeInTheDocument();
   });
 });

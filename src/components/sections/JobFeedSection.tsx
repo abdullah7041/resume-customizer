@@ -678,16 +678,20 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
             </p>
           </div>
-          {/* The feed cannot be opened without a CV, so this is a swap, not an
-              upload — it hands off to the tab that owns parsing rather than
-              duplicating the upload flow here. */}
+          {/* Either an upload or a swap, depending on whether there is a CV to
+              swap. The feed is reachable with none — it ranks from a target role
+              and reads a CV only for two suggestion lists — so "use a different
+              one" would be addressing a file that does not exist. Both cases hand
+              off to the tab that owns parsing rather than duplicating upload here. */}
           <button
             type="button"
             onClick={handleSwapCv}
             className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] dark:text-white"
           >
             <FileUp className="h-4 w-4" aria-hidden="true" />
-            {t('jobFeed.companies.swapCv', 'Use a different CV')}
+            {resume
+              ? t('jobFeed.companies.swapCv', 'Use a different CV')
+              : t('jobFeed.companies.uploadCv', 'Upload your CV')}
           </button>
         </div>
 
@@ -1136,9 +1140,18 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           <p className="text-sm text-muted-foreground mt-1">
             {t('jobFeed.empty.noIntentHelp', 'The feed matches roles against what you are looking for.')}
           </p>
+          {roleSuggestions.length === 0 && (
+            <p className="text-sm text-muted-foreground mt-2">
+              {t(
+                'jobFeed.empty.noIntentFollow',
+                'Or follow a company above — new roles appear here as they are posted.',
+              )}
+            </p>
+          )}
           {/* The CV already says what this person does, in their own words, so the
               answer is offered rather than asked for. A wall with no way past it is
-              what this state used to be. */}
+              what this state used to be. With no CV there are no chips to offer,
+              so the state has to name the thing that still works. */}
           {roleSuggestions.length > 0 && (
             <div className="mt-4">
               <p className="text-sm font-medium text-gray-900 dark:text-white">

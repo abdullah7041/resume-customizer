@@ -57,7 +57,8 @@
     },
     "moreTools": {
       "description": "Use these after the core resume workflow when you need deeper preparation or tracking.",
-      "openTool": "Open tool"
+      "openTool": "Open tool",
+      "needsResume": "Upload a resume first"
     }
   }
 }

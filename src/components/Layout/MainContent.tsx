@@ -1,6 +1,6 @@
 import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, Lock, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
 import {
   parseResume,
   analyzeResumeWithAI,
@@ -134,6 +134,36 @@ const PRE_UPLOAD_TAB_VALUES = new Set(PRIMARY_TAB_VALUES);
 const MOBILE_PRIMARY_TAB_VALUES = PRIMARY_TAB_VALUES;
 const MOBILE_SECONDARY_TAB_VALUES = ["interview", "bulk", "cover-letter", "vision2030", "job-feed", "pipeline"];
 const SECONDARY_TAB_VALUES = new Set(MOBILE_SECONDARY_TAB_VALUES);
+
+/**
+ * Tools that work before a resume exists, and are therefore exempt from the
+ * redirect below.
+ *
+ * The Job Feed ranks postings against a target role and never reads a CV except
+ * for two optional suggestion chips; Pipeline tracks jobs saved before anything
+ * was uploaded. Both were unreachable pre-upload for no reason of their own —
+ * a blanket redirect sent every non-resume tab back to Upload, which silently
+ * overrode the deliberate decision recorded on `mobileSecondarySteps` below.
+ *
+ * An allow-list rather than a `requiresResume` flag on each tab: forgetting to
+ * add a tab here leaves it gated and visibly locked, which is loud. Forgetting
+ * to set a per-tab flag would leave it looking reachable and snapping back,
+ * which is the exact silent failure this replaces.
+ *
+ * Anything added here MUST render something useful with no `originalResume`.
+ */
+const RESUME_OPTIONAL_TAB_VALUES = new Set(["job-feed", "pipeline"]);
+
+/** Those tools live behind this button, so it has to open without a resume too. */
+const MORE_TOOLS_TAB_VALUE = "more-tools";
+
+function isReachableWithoutResume(tabValue: string): boolean {
+  return (
+    tabValue === "resume" ||
+    tabValue === MORE_TOOLS_TAB_VALUE ||
+    RESUME_OPTIONAL_TAB_VALUES.has(tabValue)
+  );
+}
 
 const containerClass = "app-shell w-full";
 
@@ -426,10 +456,15 @@ export default function MainContent() {
       const baseTabs = getTabsConfig(t).filter(isFlagEnabled);
       const visibleTabs = hasResume
         ? baseTabs.filter((tab) => PRIMARY_TAB_VALUES.includes(tab.value))
-        : baseTabs.filter((tab) => PRE_UPLOAD_TAB_VALUES.has(tab.value));
+        : baseTabs.filter(
+            (tab) => PRE_UPLOAD_TAB_VALUES.has(tab.value) || RESUME_OPTIONAL_TAB_VALUES.has(tab.value),
+          );
 
+      // A tab carrying `disabledReason` is refused by handleTabChange, so the
+      // resume-optional tools must not carry one — otherwise they are listed and
+      // still unreachable, which is worse than being hidden.
       return visibleTabs.map((tab) =>
-        !hasResume && tab.value !== "resume"
+        !hasResume && !isReachableWithoutResume(tab.value)
           ? { ...tab, disabledReason: resumeGateReason }
           : tab
       );
@@ -788,11 +823,18 @@ export default function MainContent() {
 
   const handleTabChange = useCallback((value) => {
     const targetTab = tabs.find((tab) => tab.value === value);
-    if (targetTab?.disabledReason) {
+    // The requirement decides this, not membership of `tabs`. `tabs` never holds
+    // the secondary tools, so a gated one used to fall through to setActiveTab and
+    // get bounced back by the redirect with nothing said — the same silent no-op
+    // the mobile nav produced, and the reason a locked entry in the More tools
+    // panel appeared to do nothing at all.
+    const refused = targetTab?.disabledReason ?? (!hasResume && !isReachableWithoutResume(value) ? resumeGateReason : null);
+
+    if (refused) {
       pushToast({
         type: "warning",
         title: t("workspace.resumeRequiredTitle", "Resume required"),
-        description: targetTab.disabledReason,
+        description: refused,
       });
       return;
     }
@@ -801,7 +843,7 @@ export default function MainContent() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(TAB_STORAGE_KEY, value);
     }
-  }, [pushToast, t, tabs]);
+  }, [hasResume, pushToast, resumeGateReason, t, tabs]);
 
   /**
    * Hand a posting from the Job Feed to the Match tab.
@@ -852,8 +894,12 @@ export default function MainContent() {
     return () => window.removeEventListener("watheq:navigate-tab", handleNavigateTab);
   }, [handleTabChange]);
 
+  // The tools that work without a CV stay put; everything else goes back to
+  // Upload, because it has nothing to show. Keep this in step with
+  // RESUME_OPTIONAL_TAB_VALUES — a tab exempted here but not listed there (or the
+  // reverse) is reachable and then thrown back, with nothing said to the user.
   useEffect(() => {
-    if (!hasResume && activeTab !== "resume") {
+    if (!hasResume && !isReachableWithoutResume(activeTab)) {
       setActiveTab("resume");
       if (typeof window !== "undefined") {
         window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
@@ -2180,22 +2226,38 @@ export default function MainContent() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {secondaryToolTabs.map((tool) => {
           const Icon = tool.icon;
+          // Locked entries stay clickable on purpose: handleTabChange answers with
+          // the reason, which is more use than a button that ignores the press.
+          const locked = !hasResume && !RESUME_OPTIONAL_TAB_VALUES.has(tool.value);
           return (
             <button
               key={tool.value}
               type="button"
+              data-testid={`more-tools-${tool.value}`}
+              aria-disabled={locked}
+              title={locked ? resumeGateReason : undefined}
               onClick={() => handleTabChange(tool.value)}
-              className="group flex items-center gap-3 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-4 text-start transition-colors hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+              className={`group flex items-center gap-3 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] p-4 text-start transition-colors hover:border-[color:var(--glass-border-strong)] hover:bg-[color:var(--surface-control-hover)] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 ${
+                locked ? "opacity-75" : ""
+              }`}
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
-                <Icon className="h-5 w-5" />
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                  locked
+                    ? "bg-gray-500/10 text-gray-500 dark:text-white/50"
+                    : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                }`}
+              >
+                {locked ? <Lock className="h-4 w-4" /> : <Icon className="h-5 w-5" />}
               </span>
               <span className="min-w-0">
                 <span className="block text-sm font-bold text-gray-900 dark:text-white">
                   {tool.label}
                 </span>
                 <span className="mt-0.5 block text-xs text-gray-500 dark:text-emerald-100/70">
-                  {t("workspace.moreTools.openTool", "Open tool")}
+                  {locked
+                    ? t("workspace.moreTools.needsResume", "Upload a resume first")
+                    : t("workspace.moreTools.openTool", "Open tool")}
                 </span>
               </span>
             </button>
