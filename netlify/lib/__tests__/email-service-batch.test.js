@@ -166,6 +166,39 @@ describe('email-service failure paths', () => {
     expect(result.errors[0].error).toMatch(/timed out/i);
   });
 
+  it('stops starting batches once the run has spent its budget', async () => {
+    // The per-call deadline bounds one request. Nothing bounded the run: a queue
+    // of batches each got a fresh 15s, so a large recipient list could still walk
+    // past the 30s a scheduled function gets and be killed with nothing reported.
+    vi.stubEnv('RESEND_API_KEY', 're_test_key');
+    vi.resetModules();
+    vi.useFakeTimers();
+    mocks.batchSend.mockImplementation(
+      (payload) =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(successfulBatchResponse(payload)), 14_000);
+        }),
+    );
+
+    const emailService = await import('../email-service.js');
+    const recipients = Array.from({ length: 205 }, (_, index) => ({
+      email: `user-${index}@example.com`,
+      userName: `User ${index}`,
+      credits: 20,
+      language: 'en',
+    }));
+    const pending = emailService.sendCreditsRefreshedEmailBatch(recipients);
+
+    await vi.advanceTimersByTimeAsync(120_000);
+    const result = await pending;
+
+    // Two batches went out; the third was never started, and its recipients are
+    // reported rather than silently dropped.
+    expect(mocks.batchSend).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ successCount: 200, failureCount: 5 });
+    expect(result.errors[0].error).toMatch(/budget/i);
+  });
+
   it('blames the recipient the provider actually rejected', async () => {
     // `errors[].index` is batch-relative. Mapping it to the wrong recipient would
     // tell one user their summary failed while another silently never arrived.

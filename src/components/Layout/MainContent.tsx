@@ -1061,6 +1061,13 @@ export default function MainContent() {
 
   const handleClearResume = useCallback(() => {
     if (typeof window === "undefined") return;
+    // The store holds the parsed CV; this component holds the text that gates the
+    // tabs. Clearing one and not the other left the app disagreeing with itself —
+    // the Job Feed still offering role chips derived from a CV the user had just
+    // cleared, beside a button offering to swap a file that was gone.
+    // `resetForNewUpload` rather than `clearAll`: the target role is job-search
+    // intent, not resume data, and the feed now runs on it with no CV at all.
+    useResumeStore.getState().resetForNewUpload();
     window.localStorage.removeItem(RESUME_STORAGE_KEY);
     window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     clearStoredMatchAnalysis();

@@ -23,6 +23,18 @@ import { redactForLog } from './sentry.js';
 const EMAIL_REQUEST_TIMEOUT_MS = 15_000;
 
 /**
+ * How long a whole batched send may run, across every chunk and the queue waits
+ * between them.
+ *
+ * The per-request deadline bounds one call; it does not bound a run. Batches are
+ * sent one at a time behind a rate limiter, so a long recipient list could spend
+ * fifteen seconds per chunk plus queue time and walk straight past the thirty
+ * seconds a scheduled function gets — killed mid-run, with nothing recorded about
+ * who had been sent to. Under this budget the remainder is reported instead.
+ */
+const EMAIL_BATCH_BUDGET_MS = 20_000;
+
+/**
  * The client, built on first use rather than at import.
  *
  * `new Resend(undefined)` throws, and at module scope that throw happened while
@@ -201,8 +213,28 @@ async function sendPreparedEmailBatches(preparedEmails) {
     errors: [],
   };
 
+  const startedAt = Date.now();
+
   for (let start = 0; start < preparedEmails.length; start += RESEND_BATCH_SIZE) {
     const batch = preparedEmails.slice(start, start + RESEND_BATCH_SIZE);
+
+    // Checked before starting a chunk, never mid-flight: a batch already with the
+    // provider is left to finish under its own deadline. The first chunk always
+    // goes, so a budget set too low still sends something rather than nothing.
+    if (start > 0 && Date.now() - startedAt >= EMAIL_BATCH_BUDGET_MS) {
+      const remaining = preparedEmails.slice(start);
+      for (const item of remaining) {
+        result.errors.push({
+          email: item.email,
+          error: `Send budget of ${EMAIL_BATCH_BUDGET_MS}ms exhausted before this batch started`,
+        });
+      }
+      result.failureCount += remaining.length;
+      console.warn(
+        `[email-service] Budget exhausted after ${start} of ${preparedEmails.length} recipients; ${remaining.length} not attempted`,
+      );
+      break;
+    }
 
     try {
       const response = await resendBatchRateLimiter.execute(() =>

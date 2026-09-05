@@ -1630,6 +1630,29 @@ describe("reaching tools before a resume exists", () => {
     expect(mobileNav.primarySteps.find((step) => step.value === "match")?.disabledReason).toBeTruthy();
   });
 
+  it("clears the resume out of the store, not just out of this component", async () => {
+    // Two records of the same fact: MainContent's `resumeData.plainText` gates the
+    // tabs, the store's `originalResume` feeds everything that reads the CV.
+    // Clearing one left the other, so a cleared CV still produced CV-derived role
+    // chips in the Job Feed and a button offering to swap a file that was gone.
+    useResumeStore.setState({
+      originalResume: { basics: { name: 'Abdullah', label: 'Senior AI Engineer' }, work: [] },
+      parsedResumeText: 'CV text',
+      searchIntent: { targetRoles: ['Senior AI Engineer'], meta: { confidence: 'high', completeness: 50, updatedAt: '' } },
+    });
+
+    await renderWorkspace();
+    await act(async () => {
+      resumeUploadMockProps.current.onClear();
+    });
+
+    expect(useResumeStore.getState().originalResume).toBeNull();
+    expect(useResumeStore.getState().parsedResumeText).toBeNull();
+    // The target role is job-search intent, not resume data — and the feed runs on
+    // it alone, so clearing a CV must not empty the feed too.
+    expect(useResumeStore.getState().searchIntent?.targetRoles).toEqual(['Senior AI Engineer']);
+  });
+
   it("restores a stored Job Feed tab with no resume", async () => {
     const storage = { "watheq:lastActiveTab": "job-feed", "watheq:beta_access": "WATHEQ01" };
     global.localStorage = {
