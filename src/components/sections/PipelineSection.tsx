@@ -185,6 +185,12 @@ export function PipelineSection() {
           <p className="text-sm text-gray-500 text-center max-w-xs">
             {t('pipeline.emptyState', 'No jobs saved yet. Run a match analysis and save jobs to track your applications.')}
           </p>
+          {/* This tab opens before a CV exists, and running a match does not — so
+              the only route named above is one such a user cannot take. Saving
+              from the Job Feed needs no resume at all. */}
+          <p className="mt-2 text-sm text-gray-500 text-center max-w-xs">
+            {t('pipeline.emptyStateFeed', 'You can also save roles straight from the Job Feed, before uploading anything.')}
+          </p>
         </GlassCard>
       ) : (
         <div className="space-y-3">

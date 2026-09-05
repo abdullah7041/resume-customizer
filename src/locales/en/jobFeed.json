@@ -15,7 +15,8 @@
       "neverChecked": "Not checked yet",
       "checkFailed": "Could not read this board last time",
       "matchingOf": "{{matching}} of {{total}} open roles match your search",
-      "swapCv": "Use a different CV"
+      "swapCv": "Use a different CV",
+      "uploadCv": "Upload your CV"
     },
     "resolve": {
       "pick": "Follow this board",
@@ -52,7 +53,8 @@
       "allFilteredCompanyHelp": "Other followed companies may still have something.",
       "showAllCompanies": "Show all companies",
       "startersQuiet": "Readable boards with nothing posted",
-      "startersQuietHelp": "Their boards read fine and were empty when we last checked. Follow one to hear the moment it posts."
+      "startersQuietHelp": "Their boards read fine and were empty when we last checked. Follow one to hear the moment it posts.",
+      "noIntentFollow": "Or follow a company above — new roles appear here as they are posted."
     },
     "lastUpdated": {
       "action": "Reload",

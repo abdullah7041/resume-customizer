@@ -12,7 +12,75 @@ import { emailTemplates } from './email-templates.js';
 import { RateLimiter } from './rate-limiter.js';
 import { redactForLog } from './sentry.js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+/**
+ * How long any single Resend call may keep a caller waiting.
+ *
+ * The SDK exposes no AbortSignal and its transport is a bare fetch, so this
+ * bounds the WAIT, not the request — the socket is left to the runtime. That is
+ * still the difference between a function that reports a failure and one Netlify
+ * kills at the wall clock with nothing written down.
+ */
+const EMAIL_REQUEST_TIMEOUT_MS = 15_000;
+
+/**
+ * How long a whole batched send may run, across every chunk and the queue waits
+ * between them.
+ *
+ * The per-request deadline bounds one call; it does not bound a run. Batches are
+ * sent one at a time behind a rate limiter, so a long recipient list could spend
+ * fifteen seconds per chunk plus queue time and walk straight past the thirty
+ * seconds a scheduled function gets — killed mid-run, with nothing recorded about
+ * who had been sent to. Under this budget the remainder is reported instead.
+ */
+const EMAIL_BATCH_BUDGET_MS = 20_000;
+
+/**
+ * The client, built on first use rather than at import.
+ *
+ * `new Resend(undefined)` throws, and at module scope that throw happened while
+ * the module was being evaluated — taking down every function that imports this
+ * file before a line of handler code ran, and making the RESEND_API_KEY guards
+ * below unreachable. Built lazily, a missing key is a failed send with a reason
+ * instead of a dead function.
+ */
+let resendClient = null;
+
+function getResend() {
+  if (resendClient) return resendClient;
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+
+  resendClient = new Resend(apiKey);
+  return resendClient;
+}
+
+/** Runs one Resend call under the deadline, or explains why it could not run. */
+async function callResend(operation) {
+  const resend = getResend();
+  if (!resend) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+
+  let timer;
+  try {
+    return await Promise.race([
+      operation(resend),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`Resend request timed out after ${EMAIL_REQUEST_TIMEOUT_MS}ms`)),
+          EMAIL_REQUEST_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    // Otherwise a 15s handle keeps the event loop alive after a fast success.
+    clearTimeout(timer);
+  }
+}
+
+const sendEmailViaResend = (payload) => callResend((resend) => resend.emails.send(payload));
+const sendBatchViaResend = (payloads, options) => callResend((resend) => resend.batch.send(payloads, options));
 
 // Configuration
 // IMPORTANT: To send emails to real users, you must verify your domain at https://resend.com/domains
@@ -145,12 +213,32 @@ async function sendPreparedEmailBatches(preparedEmails) {
     errors: [],
   };
 
+  const startedAt = Date.now();
+
   for (let start = 0; start < preparedEmails.length; start += RESEND_BATCH_SIZE) {
     const batch = preparedEmails.slice(start, start + RESEND_BATCH_SIZE);
 
+    // Checked before starting a chunk, never mid-flight: a batch already with the
+    // provider is left to finish under its own deadline. The first chunk always
+    // goes, so a budget set too low still sends something rather than nothing.
+    if (start > 0 && Date.now() - startedAt >= EMAIL_BATCH_BUDGET_MS) {
+      const remaining = preparedEmails.slice(start);
+      for (const item of remaining) {
+        result.errors.push({
+          email: item.email,
+          error: `Send budget of ${EMAIL_BATCH_BUDGET_MS}ms exhausted before this batch started`,
+        });
+      }
+      result.failureCount += remaining.length;
+      console.warn(
+        `[email-service] Budget exhausted after ${start} of ${preparedEmails.length} recipients; ${remaining.length} not attempted`,
+      );
+      break;
+    }
+
     try {
       const response = await resendBatchRateLimiter.execute(() =>
-        resend.batch.send(
+        sendBatchViaResend(
           batch.map(({ payload }) => payload),
           { batchValidation: 'permissive' },
         )
@@ -219,7 +307,7 @@ export async function sendCreditsRefreshedEmail(userEmail, userName, credits, la
     });
 
     // Send email via Resend
-    const response = await resend.emails.send(prepared.payload);
+    const response = await sendEmailViaResend(prepared.payload);
 
     if (response.error) {
       console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
@@ -300,7 +388,7 @@ export async function sendMonthlyUsageSummary(userEmail, userName, stats, langua
     });
 
     // Send email via Resend
-    const response = await resend.emails.send(prepared.payload);
+    const response = await sendEmailViaResend(prepared.payload);
 
     if (response.error) {
       console.error('[email-service] Resend API error:', summarizeEmailError(response.error));
@@ -364,7 +452,7 @@ export async function sendTestEmail(testEmail) {
   }
 
   try {
-    const response = await resend.emails.send({
+    const response = await sendEmailViaResend({
       from: `${SENDER_NAME_EN} <${SENDER_EMAIL}>`,
       to: testEmail,
       subject: 'Test Email - Watheq',
@@ -415,7 +503,7 @@ export async function sendWaitlistNotification(userEmail, language = 'en', planT
     });
 
     // Send email via Resend
-    const response = await resend.emails.send({
+    const response = await sendEmailViaResend({
       from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
@@ -467,7 +555,7 @@ export async function sendWaitlistConfirmation(userEmail, language = 'en') {
     });
 
     // Send email via Resend with enhanced deliverability settings
-    const response = await resend.emails.send({
+    const response = await sendEmailViaResend({
       from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
@@ -532,7 +620,7 @@ export async function sendReferralRewardReferrer(userEmail, userName, refereeNam
     });
 
     // Send email via Resend
-    const response = await resend.emails.send({
+    const response = await sendEmailViaResend({
       from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,
@@ -597,7 +685,7 @@ export async function sendReferralRewardReferee(userEmail, userName, referrerNam
     });
 
     // Send email via Resend
-    const response = await resend.emails.send({
+    const response = await sendEmailViaResend({
       from: `${getSenderName(lang)} <${SENDER_EMAIL}>`,
       to: userEmail,
       subject: template.subject,

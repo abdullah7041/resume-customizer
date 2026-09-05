@@ -23,6 +23,12 @@ function stringArray(name: string): string[] {
   return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
 }
 
+function setLiteral(name: string): string[] {
+  const match = new RegExp(`const ${name} = new Set\\(\\[([^\\]]*)\\]`, 's').exec(SOURCE);
+  if (!match) throw new Error(`${name} not found in MainContent.tsx`);
+  return [...match[1].matchAll(/"([^"]+)"/g)].map((entry) => entry[1]);
+}
+
 function configuredTabValues(): string[] {
   const match = /const getTabsConfig[\s\S]*?\n\];/.exec(SOURCE);
   if (!match) throw new Error('getTabsConfig not found in MainContent.tsx');
@@ -46,6 +52,18 @@ describe('tab reachability', () => {
 
     const dangling = listed.filter((value) => !configured.has(value));
     expect(dangling, `these values are linked but have no tab: ${dangling.join(', ')}`).toEqual([]);
+  });
+
+  it('exempts only tabs that something actually links to', () => {
+    // RESUME_OPTIONAL_TAB_VALUES exempts a tab from the redirect back to Upload.
+    // A typo there is silent in the worst way: the name matches nothing, so the
+    // tab stays gated and the exemption reads as done.
+    const optional = setLiteral('RESUME_OPTIONAL_TAB_VALUES');
+    const secondary = new Set(stringArray('MOBILE_SECONDARY_TAB_VALUES'));
+
+    expect(optional.length).toBeGreaterThan(0);
+    const unlinked = optional.filter((value) => !secondary.has(value));
+    expect(unlinked, `exempted from the resume gate but linked from nowhere: ${unlinked.join(', ')}`).toEqual([]);
   });
 
   it('renders a body for every secondary tab', () => {
