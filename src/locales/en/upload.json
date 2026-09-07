@@ -81,6 +81,7 @@
       "short_summary": "Professional summary is missing or very short. A strong summary helps ATS matching.",
       "no_experience": "No work experience found. If you have experience, please ensure it is clearly listed.",
       "missing_work_location": "Some job entries are missing location (City, Country). This is often required for local jobs.",
+      "missing_location": "Your city was not picked up from the top of the resume. Add it (City, Country) so local roles match correctly.",
       "no_education": "No education details found.",
       "incomplete_education": "We may have missed your education — please review or add it.",
       "no_certs": "No certifications found. Adding relevant certs can boost your match score.",

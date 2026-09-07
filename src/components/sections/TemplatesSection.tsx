@@ -146,6 +146,16 @@ const forceLightThemeForPdf = (root: HTMLElement) => {
 // html-to-image's createImage() awaits a requestAnimationFrame callback that
 // browsers suspend indefinitely once the tab is backgrounded/hidden — with
 // no rejection of its own, that would otherwise hang "Generating..." forever.
+/**
+ * How long to wait on the server renderer before falling back.
+ *
+ * The fetch had no timeout at all, so a request the Netlify gateway was quietly
+ * killing left the user staring at a spinner for the full gateway window, and only
+ * THEN started a raster fallback that could take another 20s. Bounded slightly above
+ * the server's own ~26s budget so a server that is going to answer still wins.
+ */
+const SERVER_PDF_TIMEOUT_MS = 30_000;
+
 const CLIENT_FALLBACK_TIMEOUT_MS = 20_000;
 
 const waitForPdfCaptureLayout = async (root: HTMLElement): Promise<void> => {
@@ -286,6 +296,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const exportTimeoutMessage = t(
     'sections.templates.export.timeout',
     'Export is taking unusually long — bring this browser tab into focus (some browsers pause rendering work in background tabs) and try again.'
+  );
+  // A rate limit and a renderer still warming up are both retryable and neither is
+  // about background tabs — telling the user to focus the tab was actively wrong.
+  const exportBusyMessage = t(
+    'sections.templates.export.busy',
+    'The PDF renderer was busy. Wait a few seconds and press Download again.'
   );
 
   // Filter to only active templates (Modern, Classic, Technical)
@@ -523,9 +539,23 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ html, styles, templateId: selectedTemplate.id, filename: filename.replace('.pdf', ''), direction: contentDirection }),
+        // Without this the client waits out the gateway's own kill, then starts a
+        // second slow path on top of it.
+        signal: AbortSignal.timeout(SERVER_PDF_TIMEOUT_MS),
       });
 
-      if (!response.ok) throw new Error(`[PDFDownload] Server error: ${response.status}`);
+      if (!response.ok) {
+        // 429 (rate limited) and 503 (renderer still starting) are both 'try again
+        // shortly', not 'your export is broken'. Rasterising the page instead would
+        // spend 20 more seconds to produce a worse PDF for a problem that fixes
+        // itself, so these say so and stop.
+        if (response.status === 429 || response.status === 503) {
+          analytics.trackExportFailed(selectedTemplate.id, 'pdf', `server_${response.status}`);
+          setExportError(exportBusyMessage);
+          return;
+        }
+        throw new Error(`[PDFDownload] Server error: ${response.status}`);
+      }
 
       const blob = await response.blob();
       if (!blob || blob.size === 0) throw new Error('[PDFDownload] Server returned an empty PDF');

@@ -51,14 +51,14 @@ const baseHandler: Handler = async (event) => {
       body: JSON.stringify({ error: "Invalid JSON body" }),
     };
   }
-  const freePreview = rawBody.freePreview === true;
+  const freePreviewRequested = rawBody.freePreview === true;
 
   // Extract auth token from header
   const authHeader = event.headers.authorization || event.headers.Authorization;
   let user: any = null;
   let userEmail: string | undefined;
 
-  if (!freePreview && !authHeader) {
+  if (!freePreviewRequested && !authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
@@ -96,6 +96,30 @@ const baseHandler: Handler = async (event) => {
     }
     user = authUser;
     userEmail = authUser.email;
+  }
+
+  // `freePreview` is a claim made by the client, not an authorization.
+  //
+  // The client sent it for SIGNED-IN users whenever a localStorage counter was
+  // under three, so the guest limiter answered paying customers with 429
+  // `guest/free-preview-used` ("You've used your free preview... Please sign in")
+  // and no credit was ever consumed — Sentry JAVASCRIPT-REACT-1H, preview_mode
+  // true on a signed-in session. The claim is honoured ONLY for a caller we could
+  // not authenticate at all; an authenticated request always goes through billing.
+  const freePreview = freePreviewRequested && !user;
+
+  // An authenticated account with no email cannot be billed, so serving it for
+  // free was a bypass rather than a kindness. Google OAuth is the only sign-in
+  // path and always yields an email, so this branch means something is wrong.
+  if (user && !userEmail) {
+    return {
+      statusCode: 403,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Your account has no email address on file, so credits cannot be applied. Please contact support.",
+        code: "auth/no-email",
+      }),
+    };
   }
 
   // Extract IP and email verification for anti-abuse checks

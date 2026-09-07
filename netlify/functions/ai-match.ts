@@ -27,7 +27,7 @@ const baseHandler: Handler = async (event) => {
   } catch {
     rawBody = {};
   }
-  const freePreview = rawBody.freePreview === true;
+  const freePreviewRequested = rawBody.freePreview === true;
   const isVerifyMode = rawBody.mode === 'verify';
   // Only the user-initiated applied-subset re-check is eligible for the free
   // allowance below — the automatic post-optimize verify also sends
@@ -41,7 +41,7 @@ const baseHandler: Handler = async (event) => {
   let user: any = null;
   let userEmail: string | undefined;
 
-  if (!freePreview && !authHeader) {
+  if (!freePreviewRequested && !authHeader) {
     return {
       statusCode: 401,
       headers: { "Content-Type": "application/json" },
@@ -71,6 +71,27 @@ const baseHandler: Handler = async (event) => {
     }
     user = authUser;
     userEmail = authUser.email;
+  }
+
+  // Same rule as optimize/optimize-stream: `freePreview` is a claim by the client,
+  // not an authorization. The client sent it for SIGNED-IN users whenever a
+  // localStorage counter was under three, so the guest limiter answered paying
+  // customers with 429 `guest/free-preview-used` and no credit was consumed
+  // (Sentry JAVASCRIPT-REACT-1H). Honoured only for a caller we could not
+  // authenticate at all.
+  const freePreview = freePreviewRequested && !user;
+
+  // An authenticated account with no email cannot be billed, so serving it free was
+  // a bypass. Google OAuth is the only sign-in path and always yields an email.
+  if (user && !userEmail) {
+    return {
+      statusCode: 403,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        error: "Your account has no email address on file, so credits cannot be applied. Please contact support.",
+        code: "auth/no-email",
+      }),
+    };
   }
 
   // Extract IP and email verification for anti-abuse checks

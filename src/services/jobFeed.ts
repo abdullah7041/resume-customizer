@@ -103,6 +103,22 @@ export function untrackCompany(companyId: string) {
   return callSourcesApi<{ status: string }>({ action: 'untrack', companyId });
 }
 
+/**
+ * Ask the server to re-read the boards this user follows.
+ *
+ * Distinct from `load()` in the feed, which re-reads the DATABASE. Only the daily
+ * cron ever went out to the employer boards, so a user watching for a new posting
+ * had no way to ask for one. The server scopes this to the caller's own companies
+ * and skips any board read within the last hour, so pressing it repeatedly costs
+ * nothing. The crawl itself is a background function: a successful call means the
+ * work was accepted, not that new postings have landed yet.
+ */
+export function recrawlTrackedCompanies() {
+  return callSourcesApi<{ dispatched: number; skipped: number; crawlDispatched: boolean }>({
+    action: 'recrawl',
+  });
+}
+
 export async function listTrackedCompanies(): Promise<{ companies: TrackedCompany[]; error: string | null }> {
   const { data, error } = await supabase
     .from(TRACKED_TABLE)
@@ -194,8 +210,17 @@ export async function listOpenPostings(
   return { postings, error: null };
 }
 
-/** The JD for one posting, fetched only when it is opened or matched against a CV. */
-export async function getPostingDescription(postingId: string): Promise<string> {
+/**
+ * The JD for one posting, fetched only when it is opened or matched against a CV.
+ *
+ * Returns `null` when the READ failed, and a string — possibly empty — when it
+ * succeeded. The two are genuinely different: Workday publishes no body at all
+ * (`ats/workday.ts` sets `description: ''` for every posting) and Workable falls
+ * back to `''`, so an empty description is a normal, permanent property of some
+ * boards rather than a transient error. Collapsing both into `''` is what let a
+ * caller tell those users to "try again in a moment" forever.
+ */
+export async function getPostingDescription(postingId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from(POSTINGS_TABLE)
     .select('description')
@@ -204,7 +229,7 @@ export async function getPostingDescription(postingId: string): Promise<string> 
 
   if (error) {
     console.error('[JobFeed] Failed to load description:', summarizeError(error));
-    return '';
+    return null;
   }
   return (data as { description?: string } | null)?.description ?? '';
 }

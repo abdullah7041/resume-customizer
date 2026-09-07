@@ -232,6 +232,7 @@ export const useResumeStore = create<ResumeState>()(
       hasDownloaded: false,
       contentLanguage: null, // Detected from resume text
       optimizationOrigin: null, // Set by handleOptimizeActual: 'guest_preview' | 'paid'
+      optimizeRun: null,
 
       // Actions
       setOriginalResume: (resume: ResumeSchema) => {
@@ -540,6 +541,30 @@ export const useResumeStore = create<ResumeState>()(
         set({ analysisCache: {} });
       },
 
+      /**
+       * Record the state of the last optimize run.
+       *
+       * Merges so a phase update does not wipe the cards, and `null` clears the
+       * record outright (a new upload has nothing to report about the old run).
+       */
+      setOptimizeRun: (run) =>
+        set((state) => ({
+          optimizeRun: run === null
+            ? null
+            : {
+                status: 'running',
+                startedAt: new Date().toISOString(),
+                finishedAt: null,
+                phase: null,
+                error: null,
+                cards: [],
+                data: null,
+                keywords: { add: [], remove: [], neutral: [] },
+                ...(state.optimizeRun ?? {}),
+                ...run,
+              },
+        })),
+
       // Optimization metrics actions
       setOptimizationMetrics: (metrics) =>
         set((state) => ({
@@ -820,6 +845,7 @@ export const useResumeStore = create<ResumeState>()(
         showOptimized: state.showOptimized,
         keywordSuggestions: state.keywordSuggestions,
         optimizationMetrics: state.optimizationMetrics,
+        optimizeRun: state.optimizeRun,
         displayOptions: state.displayOptions,
         hasDownloaded: state.hasDownloaded,
         // Persist analysisCache so match analysis score survives refresh
@@ -883,6 +909,13 @@ export const useActiveResume = () => {
 
   return useMemo(
     () => useResumeStore.getState().getActiveResume(),
+    // These four are the CHANGE SIGNAL, not values the body closes over: the body
+    // reads fresh state via getState(), so the linter sees them as unnecessary.
+    // They are exactly what makes the derived object recompute when the resume
+    // really changes and hold a stable reference when it does not — dropping them
+    // would freeze the result forever, and inlining getActiveResume() into a
+    // selector is what made this hook re-render endlessly (fixed in dcea04b).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [originalResume, optimizations, showOptimized, isSaudiNational],
   );
 };

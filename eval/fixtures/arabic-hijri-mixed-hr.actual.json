@@ -15,8 +15,8 @@
   },
   "work": [
     {
-      "name": "شركة أرامكو السعودية",
       "position": "أخصائي موارد بشرية أول",
+      "name": "شركة أرامكو السعودية",
       "location": "الظهران",
       "startDate": "2021",
       "endDate": "Present",
@@ -27,8 +27,8 @@
       ]
     },
     {
-      "name": "مجموعة صافولا",
       "position": "منسق موارد بشرية",
+      "name": "مجموعة صافولا",
       "location": "جدة",
       "startDate": "2018",
       "endDate": "2021",
@@ -78,6 +78,7 @@
   ],
   "meta": {
     "version": "3.0.0",
-    "canonical": null
+    "canonical": null,
+    "language": "ar"
   }
 }

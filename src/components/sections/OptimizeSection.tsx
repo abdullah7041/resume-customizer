@@ -830,7 +830,16 @@ export function OptimizeSection({
 
   // Wrapper function that shows confirmation modal first
   const handleGenerate = () => {
-    if (hasFreePreviewRun()) {
+    // The free preview belongs to guests, and ONLY to guests.
+    //
+    // hasFreePreviewRun() reads a localStorage counter and nothing else, so a
+    // signed-in user with fewer than three runs recorded in this browser was sent
+    // down the guest path. The server's free-preview limiter then answered a paying
+    // customer with 429 `guest/free-preview-used` — "You've used your free preview
+    // for this feature. Please sign in to continue." — and because no optimization
+    // ran, no credit was consumed either. Both halves of Sentry JAVASCRIPT-REACT-1H
+    // (preview_mode: true on a signed-in session) come from this one missing check.
+    if (isGuestMode && hasFreePreviewRun()) {
       void handleGenerateActual({ freePreview: true });
       return;
     }
@@ -1207,7 +1216,10 @@ export function OptimizeSection({
                       ? (
                         <>
                           {t('sections.optimize.optimizeBtn', 'Optimize Resume with AI')}
-                          {!hasFreePreviewRun() && (
+                          {/* A signed-in user always pays now, so the price is always
+                              shown to them. Hiding it whenever a localStorage counter
+                              was under three told paying users the run was free. */}
+                          {(!isGuestMode || !hasFreePreviewRun()) && (
                             <span className="ml-2 text-xs opacity-75">(5 {t('common.credits', 'credits')})</span>
                           )}
                         </>

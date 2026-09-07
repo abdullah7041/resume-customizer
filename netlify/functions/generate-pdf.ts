@@ -53,6 +53,25 @@ const isNetlify = !!process.env.NETLIFY;
 let browserInstance: Browser | null = null;
 let lastUsedTime = 0;
 const BROWSER_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+// Netlify's HTTP gateway cuts a synchronous function response at ~30s in production
+// REGARDLESS of the 90s Lambda timeout in netlify.toml (the same trap already
+// documented in extract-resume-json.ts). This function budgeted 30s of setContent
+// PLUS 60s of page.pdf against that fictional 90s, and its own comment admits a cold
+// browser launch takes 30-60s — so a request landing on a cold container blew the
+// gateway window and the browser was killed mid-render. The client saw a dead
+// response, fell back to the raster path, and reported a 20s fallback timeout whose
+// message blames background-tab throttling. Every budget below is now measured
+// against the window that actually exists.
+export const GATEWAY_WALL_CLOCK_MS = 26_000;
+
+/** Milliseconds left in the gateway window, floored at 1 so timeouts stay valid. */
+export const remainingBudgetMs = (startedAt: number, reserve = 0): number =>
+  Math.max(1, GATEWAY_WALL_CLOCK_MS - (Date.now() - startedAt) - reserve);
+
+// Reserve for serialising the PDF and returning it once rendering is done.
+const RESPONSE_RESERVE_MS = 2_000;
+
 const RENDER_TIMEOUT_MS = 30_000;
 
 async function getBrowser() {
@@ -190,6 +209,10 @@ function sanitizeFilename(value: unknown): string {
 }
 
 const baseHandler: Handler = async (event) => {
+  // First line on purpose: the gateway's clock is already running, and the auth
+  // round trip below spends real time against it. Starting the budget after auth
+  // over-estimated what was left.
+  const requestStartedAt = Date.now();
   if (event.httpMethod === "HEAD") {
     return { statusCode: 200, body: "" };
   }
@@ -243,6 +266,22 @@ const baseHandler: Handler = async (event) => {
 
     // Get browser from pool (eliminates cold start on subsequent requests)
     const browser = await getBrowser();
+
+    // A cold launch can consume the entire gateway window on its own. Saying so is
+    // far better than rendering into a response nobody will ever receive.
+    if (remainingBudgetMs(requestStartedAt, RESPONSE_RESERVE_MS) < 5_000) {
+      console.warn('[PDF] Browser launch consumed the gateway budget; refusing to render.');
+      return {
+        statusCode: 503,
+        headers: { "Content-Type": "application/json", "Retry-After": "5" },
+        body: JSON.stringify({
+          error: "The PDF renderer was still starting up. Please try the download again.",
+          code: "pdf/renderer-cold",
+          retryable: true,
+        }),
+      };
+    }
+
     page = await browser.newPage();
 
     // Set fixed viewport matching A4 (210mm x 297mm @ 96dpi)
@@ -259,7 +298,10 @@ const baseHandler: Handler = async (event) => {
     // Render the final HTML string with embedded styles. setContent and the
     // explicit network-idle wait share one deadline so this migration from
     // waitUntil: "networkidle2" does not double the render budget.
-    const renderDeadline = Date.now() + RENDER_TIMEOUT_MS;
+    const renderDeadline = Date.now() + Math.min(
+      RENDER_TIMEOUT_MS,
+      remainingBudgetMs(requestStartedAt, RESPONSE_RESERVE_MS),
+    );
     await page.setContent(`
       <!DOCTYPE html>
       <html dir="${pageDirection}" class="light" data-theme="light">
@@ -309,7 +351,7 @@ const baseHandler: Handler = async (event) => {
         </head>
         <body>${html}</body>
       </html>
-    `, { waitUntil: 'load', timeout: RENDER_TIMEOUT_MS });
+    `, { waitUntil: 'load', timeout: Math.max(1, renderDeadline - Date.now()) });
     await page.waitForNetworkIdle({
       concurrency: 2,
       idleTime: 500,
@@ -346,8 +388,10 @@ const baseHandler: Handler = async (event) => {
       console.warn('Asset loading failed (fonts/images), attempting PDF anyway:', summarizeErrorForLog(e));
     }
 
-    // Generate PDF with 60s safety timeout (Netlify fn has 90s limit)
-    const PDF_TIMEOUT_MS = 60_000;
+    // Whatever is left of the gateway window, never the old fixed 60s — a 60s race
+    // inside a ~30s window is not a safety timeout, it is a guarantee that the
+    // gateway kills the request first and the client gets no usable error.
+    const PDF_TIMEOUT_MS = remainingBudgetMs(requestStartedAt, RESPONSE_RESERVE_MS);
     const pdfBuffer = await Promise.race([
       page.pdf({
         format: "A4",
@@ -360,7 +404,7 @@ const baseHandler: Handler = async (event) => {
         // Puppeteer's own margin resolution.
       }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`PDF generation timed out after ${PDF_TIMEOUT_MS / 1000}s`)), PDF_TIMEOUT_MS)
+        setTimeout(() => reject(new Error(`PDF generation exceeded the ${Math.round(PDF_TIMEOUT_MS / 1000)}s gateway budget`)), PDF_TIMEOUT_MS)
       ),
     ]);
 

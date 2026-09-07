@@ -964,7 +964,7 @@ For basics you MUST extract:
 For EACH work entry you MUST extract:
 - position: the job title exactly as written
 - name: the employer/company name exactly as written — never omit this field; the employer often appears on the line immediately after the job title
-- location: if present in the text for that entry
+- location: extract the entry's city/country whenever the text shows one, in ANY layout. It is usually on the SAME line as the title or the employer rather than on a line of its own. Two common shapes, both of which you MUST handle: parenthesised after the employer — "CB&I (Dammam, KSA)" → employer "CB&I", location "Dammam, KSA"; and separated by whitespace or a bullet — "Founder & AI Product Engineer — Watheq   Riyadh, Saudi Arabia  |  Aug 2025 – Present" → employer "Watheq", location "Riyadh, Saudi Arabia". Never leave the city attached to the employer name, and never drop it
 - startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry; a date range on a nearby line belongs to the adjacent entry
 - highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
 
@@ -974,6 +974,8 @@ Additional extraction rules:
 - For education entries, the institution may appear on the line before or after the degree. Always capture it as institution whenever it is visibly present.
 - Dates: normalize Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) to Western digits (0-9) in every startDate/endDate. When a date is written in Hijri with a Gregorian equivalent in parentheses (e.g. "محرم ١٤٤٣هـ (أغسطس ٢٠٢١)"), output the Gregorian value ("2021"), not the Hijri one. Map any open-ended end marker — "Present", "Current", "حتى الآن", "الآن" — to endDate "Present".
 - Languages may appear interleaved with skills, contact, or sidebar lines rather than in a clean block. Extract EVERY language and its fluency into languages[] (e.g. "Arabic (Native)", "English (Fluent)") even when the entries are scattered across the layout.
+- A heading that names TWO OR MORE DIFFERENT sections introduces all of them at once, e.g. "EDUCATION, CERTIFICATIONS & LANGUAGES". Split the lines beneath such a heading by what each line actually is: a degree or university line to education[], a credential or course line to certificates[], a language-and-fluency line to languages[]. This applies ONLY when the heading names genuinely different sections. A heading repeating ONE section in two languages — "EDUCATION / التعليم", "LANGUAGES / اللغات", "الخبرة / EXPERIENCE" — is a SINGLE section, and every line beneath it belongs to that one section.
+- Several certificates are often listed on ONE line separated by middle dots, bullets or semicolons (e.g. "Claude 101 — Anthropic Academy · Google Data Analytics Professional Certificate — Coursera · ..."). Emit one certificates[] entry per credential, never a single entry containing the whole line; put the issuer named after the dash into certificates[].issuer.
 - Return every top-level section container even when no evidence is present; use an empty array rather than omitting a section.
 
 Do not invent any values not present in the text.${focusInstruction}${withRagBlock(context.retrievedContext)}

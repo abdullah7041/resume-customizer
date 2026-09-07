@@ -47,6 +47,9 @@
     "saveFailed": "Failed to save job",
     "updateFailed": "Failed to update job",
     "deleteFailed": "Failed to delete job",
-    "emptyStateFeed": "You can also save roles straight from the Job Feed, before uploading anything."
+    "emptyStateFeed": "You can also save roles straight from the Job Feed, before uploading anything.",
+    "viewPosting": "View posting",
+    "showDescription": "Show job description",
+    "hideDescription": "Hide job description"
   }
 }

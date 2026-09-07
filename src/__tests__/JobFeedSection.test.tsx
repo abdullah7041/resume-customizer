@@ -55,6 +55,7 @@ vi.mock('@/services/jobFeed', () => ({
   resolveCompany: (query: string) => mockResolveCompany(query),
   trackCompany: (input: unknown) => mockTrackCompany(input),
   untrackCompany: (id: string) => mockUntrackCompany(id),
+  recrawlTrackedCompanies: () => Promise.resolve({ data: { dispatched: 0, skipped: 0, crawlDispatched: false }, error: null }),
   saveSearchIntent: (intent: unknown) => mockSaveSearchIntent(intent),
   setFeedState: vi.fn(),
 }));

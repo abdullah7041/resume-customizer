@@ -11,18 +11,18 @@
     "profiles": [
       {
         "network": "linkedin",
-        "username": "faisaldossari",
         "url": "linkedin.com/in/faisaldossari"
       }
     ],
-    "url": "",
-    "summary": ""
+    "url": null,
+    "summary": null
   },
   "work": [
     {
       "name": "Alinma Bank",
       "position": "Senior Accountant",
-      "startDate": "2021",
+      "location": null,
+      "startDate": "Jan 2021",
       "endDate": "Present",
       "highlights": [
         "Prepared monthly IFRS financial statements for a SAR 2.1B loan portfolio.",
@@ -33,8 +33,9 @@
     {
       "name": "PwC Middle East",
       "position": "Accountant",
-      "startDate": "2018",
-      "endDate": "2020",
+      "location": null,
+      "startDate": "Sep 2018",
+      "endDate": "Dec 2020",
       "highlights": [
         "Performed external audits for 9 clients in retail and construction.",
         "Prepared VAT returns and zakat filings under KSA regulations."
@@ -47,45 +48,42 @@
       "area": "Accounting",
       "studyType": "B.Sc.",
       "startDate": "2014",
-      "endDate": "2018"
-    },
-    {
-      "institution": "King Fahd University of Petroleum and Minerals",
-      "studyType": "SOCPA Associate",
-      "startDate": null,
-      "endDate": null
+      "endDate": "2018",
+      "gpa": null
     }
   ],
   "skills": [
     {
-      "name": "Accounting Standards",
+      "name": null,
       "keywords": [
         "IFRS",
-        "Zakat & VAT"
-      ]
-    },
-    {
-      "name": "Software",
-      "keywords": [
+        "Zakat & VAT",
         "SAP FICO",
         "Excel / Power Query"
       ]
     }
   ],
+  "projects": [],
+  "certificates": [],
   "languages": [
     {
       "language": "English",
-      "fluency": "Fluent"
+      "fluency": "Fluent",
+      "tag": null
     },
     {
       "language": "Arabic",
-      "fluency": "Native"
+      "fluency": "Native",
+      "tag": null
     }
   ],
-  "projects": [],
-  "certificates": [],
   "meta": {
-    "version": "v1.0.0",
-    "canonical": ""
-  }
+    "version": "3.0.0",
+    "canonical": null,
+    "language": null
+  },
+  "awards": [],
+  "publications": [],
+  "interests": [],
+  "references": []
 }

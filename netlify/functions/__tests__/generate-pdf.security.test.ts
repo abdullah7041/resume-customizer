@@ -35,7 +35,15 @@ describe('generate-pdf SSRF guard', () => {
     expect(source).toContain("waitUntil: 'load'");
     expect(source).toContain('waitForNetworkIdle({');
     expect(source).toContain('concurrency: 2');
-    expect(source).toContain('const renderDeadline = Date.now() + RENDER_TIMEOUT_MS;');
+    // One shared deadline for setContent + the network-idle wait, so migrating off
+    // waitUntil: 'networkidle2' cannot double the render budget. It is now clamped to
+    // whatever is left of the gateway window rather than the flat RENDER_TIMEOUT_MS,
+    // because the 90s Lambda timeout this function was written against is not the
+    // budget it actually gets (~30s at the gateway).
+    expect(source).toContain('const renderDeadline = Date.now() + Math.min(');
+    expect(source).toContain('remainingBudgetMs(requestStartedAt, RESPONSE_RESERVE_MS),');
+    // The flat 60s page.pdf race inside a ~30s window guaranteed a gateway kill.
+    expect(source).not.toContain('const PDF_TIMEOUT_MS = 60_000;');
     expect(source).toContain('timeout: Math.max(1, renderDeadline - Date.now())');
     expect(source).not.toContain("waitUntil: 'networkidle2'");
   });

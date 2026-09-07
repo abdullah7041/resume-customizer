@@ -545,8 +545,86 @@ const extractPdfTextFallback = (arrayBuffer) => {
   return lines.join("\n");
 };
 
+/**
+ * Read one page's text items without going through `page.getTextContent()`.
+ *
+ * pdfjs 5.x implements getTextContent() as `for await (const chunk of
+ * this.streamTextContent(...))`, which needs
+ * `ReadableStream.prototype[Symbol.asyncIterator]`. Safari does not implement that,
+ * so on Safari the call throws `TypeError: undefined is not a function` from inside
+ * pdfjs and every upload silently degraded to the raw-byte fallback
+ * (Sentry JAVASCRIPT-REACT-1G, Safari 26.6.1). Draining the same stream with an
+ * explicit reader is supported in every browser we target.
+ *
+ * getTextContent() is still used as a fallback for any pdfjs build that does not
+ * expose streamTextContent.
+ */
+const readPdfPageTextItems = async (page) => {
+  if (typeof page?.streamTextContent === "function") {
+    try {
+      const stream = page.streamTextContent();
+      const reader = typeof stream?.getReader === "function" ? stream.getReader() : null;
+      if (reader) {
+        const items = [];
+        try {
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value?.items?.length) items.push(...value.items);
+          }
+        } finally {
+          if (typeof reader.releaseLock === "function") reader.releaseLock();
+        }
+        return items;
+      }
+    } catch (error) {
+      // Fall through to getTextContent below; the page-level catch reports it.
+      console.warn("[ResumeText] streamTextContent failed; trying getTextContent:", error);
+    }
+  }
+
+  const content = await page.getTextContent();
+  return content?.items ?? [];
+};
+
+/**
+ * Does this look like resume prose, or like bytes we scraped out of a compressed
+ * content stream?
+ *
+ * `extractPdfTextFallback` regexes `BT...ET` operators out of Latin-1 bytes. On a
+ * modern PDF the content streams are Flate-compressed, so it recovers a little
+ * unordered binary noise — which still cleared the caller's 100-character threshold
+ * and was sent to the AI parser AS IF it were the resume. That is what produced
+ * resumes missing their certificates, home city and work cities. When the text fails
+ * this check the caller must send the file itself and let the server parse it.
+ */
+const looksLikeReadableText = (text) => {
+  if (typeof text !== "string") return false;
+  const trimmed = text.trim();
+  if (trimmed.length < 100) return false;
+
+  let readable = 0;
+  for (const char of trimmed) {
+    const code = char.codePointAt(0);
+    // Latin letters/digits/punctuation/whitespace, plus anything outside the C0/C1
+    // control ranges (Arabic, accented Latin, CJK all count as readable).
+    if (code === 9 || code === 10 || code === 13 || (code >= 32 && code < 127) || code > 159) {
+      readable += 1;
+    }
+  }
+  if (readable / trimmed.length < 0.9) return false;
+
+  const words = trimmed.split(/\s+/).filter((word) => /[\p{L}]/u.test(word));
+  if (words.length < 20) return false;
+
+  const alphaWords = words.filter((word) => /^[\p{L}][\p{L}'’.-]*$/u.test(word));
+  return alphaWords.length / words.length >= 0.5;
+};
+
 const extractPdfPlainText = async (arrayBuffer) => {
   const pdfjs = await loadPdfjs();
+  const failedPages: number[] = [];
+  let firstPageError: unknown = null;
   if (pdfjs) {
     // pdfjs `getDocument({ data })` transfers ownership of the buffer and DETACHES it.
     // Hand it a private copy so the raw-text fallback below can still read the original
@@ -573,13 +651,16 @@ const extractPdfPlainText = async (arrayBuffer) => {
         const pageConcurrency = 4;
         for (let start = 0; start < document.numPages; start += pageConcurrency) {
           const batchSize = Math.min(pageConcurrency, document.numPages - start);
-          const batch = await Promise.all(
+          // Promise.allSettled, not Promise.all: one rejected page used to reject the
+          // whole batch, and the outer catch then discarded EVERY page already
+          // extracted in favour of the raw-byte fallback. A single unreadable page
+          // now costs that page and nothing else.
+          const batch = await Promise.allSettled(
             Array.from({ length: batchSize }, async (_, batchIndex) => {
               const pageIndex = start + batchIndex;
               const page = await document.getPage(pageIndex + 1);
               try {
-                const content = await page.getTextContent();
-                return collectPdfPageText(content.items ?? []);
+                return collectPdfPageText(await readPdfPageTextItems(page));
               } finally {
                 if (typeof page.cleanup === "function") {
                   page.cleanup();
@@ -587,7 +668,14 @@ const extractPdfPlainText = async (arrayBuffer) => {
               }
             }),
           );
-          pageTexts.push(...batch);
+          for (const [batchIndex, outcome] of batch.entries()) {
+            if (outcome.status === "fulfilled") {
+              pageTexts.push(outcome.value);
+              continue;
+            }
+            failedPages.push(start + batchIndex + 1);
+            if (!firstPageError) firstPageError = outcome.reason;
+          }
         }
         lines = pageTexts.filter((text) => Boolean(text));
       } finally {
@@ -597,6 +685,24 @@ const extractPdfPlainText = async (arrayBuffer) => {
         if (typeof document.destroy === "function") {
           document.destroy();
         }
+      }
+
+      // Partial success is still success — but a dropped page is how a whole
+      // section (certificates live at the end of most CVs) goes missing without
+      // anything looking broken, so it is reported rather than swallowed.
+      if (lines.length > 0 && failedPages.length > 0) {
+        console.warn(
+          `[ResumeText] pdfjs failed on ${failedPages.length} page(s): ${failedPages.join(", ")}`,
+          firstPageError,
+        );
+        void import("@sentry/react")
+          .then((Sentry) =>
+            Sentry.captureException(firstPageError ?? new Error("pdfjs page extraction failed"), {
+              tags: { area: "pdf-extract", outcome: "partial" },
+              extra: { failedPages, totalPages: document.numPages },
+            }),
+          )
+          .catch(() => {});
       }
 
       if (lines.length > 0) {
@@ -614,7 +720,20 @@ const extractPdfPlainText = async (arrayBuffer) => {
     }
   }
 
-  return extractPdfTextFallback(arrayBuffer);
+  // The raw-byte scraper is a last resort, and its output is only worth sending
+  // when it actually reads as text. Returning an empty string when it does not is
+  // deliberate: it drops the caller below its 100-character threshold, which routes
+  // the original file to the server parser (and its OCR path) instead of feeding
+  // the AI parser noise that looks superficially like a resume.
+  const scraped = extractPdfTextFallback(arrayBuffer);
+  if (looksLikeReadableText(scraped)) {
+    return scraped;
+  }
+
+  if (scraped.trim().length > 0) {
+    console.warn("[ResumeText] raw-text fallback produced unreadable output; deferring to server parse.");
+  }
+  return "";
 };
 
 const ZIP_END_SIGNATURE = new Uint8Array([0x50, 0x4b, 0x05, 0x06]);
@@ -853,6 +972,8 @@ export const __internal = {
   collectPdfPageText,
   normalizeResumeText,
   classifyExtraction,
+  readPdfPageTextItems,
+  looksLikeReadableText,
 };
 
 

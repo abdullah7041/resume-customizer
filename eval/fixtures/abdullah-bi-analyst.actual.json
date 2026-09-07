@@ -33,9 +33,10 @@
   },
   "work": [
     {
-      "name": "Al Ghalia (Saudi Arabia)",
+      "name": "Al Ghalia",
+      "location": "Saudi Arabia",
+      "description": null,
       "position": "Senior Data Analyst & BI Specialist",
-      "location": null,
       "startDate": "Mar 2020",
       "endDate": "Present",
       "highlights": [
@@ -43,12 +44,15 @@
         "Enabled data-driven decision-making across the organization by designing and delivering 15+ interactive Power BI dashboards, establishing a definitive single source of truth for executive stakeholders.",
         "Ensured operational data was highly accurate and accessible by architecting automated ETL and data cleaning workflows via Power Query (M Language), eliminating manual entry bottlenecks.",
         "Set priorities aligned with company objectives by analyzing product expiration trends via structured SQL-ready data formats, directly reducing inventory waste by 60% year-over-year."
-      ]
+      ],
+      "url": null,
+      "keywords": []
     },
     {
-      "name": "Watheq (Remote)",
+      "name": "Watheq",
+      "location": "Remote",
+      "description": null,
       "position": "Lead Product Engineer & Data Architect",
-      "location": null,
       "startDate": "Jan 2026",
       "endDate": "Present",
       "highlights": [
@@ -56,19 +60,24 @@
         "Oversaw the design and delivery of robust backend data architectures by managing PostgreSQL (Supabase) databases, functioning as a lightweight data warehouse to ensure 100% data visibility for critical profiles.",
         "Managed stakeholder priorities and system uptime by orchestrating centralized incident reporting via GitHub Issues and Sentry/Telegram webhooks, reducing critical bug resolution time (MTTR) by 90%.",
         "Secured the accuracy of application analytics by executing strict Root Cause Analysis (RCA) and advanced SQL queries to patch dysfunctional database relations."
-      ]
+      ],
+      "url": null,
+      "keywords": []
     },
     {
-      "name": "CB&I (Dammam, KSA)",
-      "position": "Construction Data Specialist",
+      "name": "CB&I",
       "location": "Dammam, KSA",
+      "description": null,
+      "position": "Construction Data Specialist",
       "startDate": "Jun 2018",
       "endDate": "Jun 2019",
       "highlights": [
         "Data compliance and workflow management in a high-stakes industrial environment.",
         "Ensured critical operational data was accurate and accessible for high-stakes compliance requirements by managing structured data integrity and achieving 100% audit readiness.",
         "Investigated field reporting workflows to identify bottlenecks, delivering reporting optimizations that reduced systemic downtime by 10%."
-      ]
+      ],
+      "url": null,
+      "keywords": []
     }
   ],
   "education": [
@@ -78,8 +87,7 @@
       "studyType": "Diploma",
       "startDate": null,
       "endDate": "2018",
-      "gpa": "4.6/5",
-      "courses": []
+      "gpa": "4.6/5"
     }
   ],
   "skills": [
@@ -132,51 +140,53 @@
       "highlights": [],
       "startDate": null,
       "endDate": null,
-      "url": null
+      "url": null,
+      "keywords": []
     }
   ],
   "certificates": [
     {
       "name": "Intro to Management Consulting",
-      "date": null,
       "issuer": "Emory University & PwC",
+      "date": null,
       "url": null
     },
     {
       "name": "Leadership & Business Management",
-      "date": null,
       "issuer": "McKinsey & Company Forward Program",
+      "date": null,
       "url": null
     },
     {
       "name": "Google Data Analytics Professional Certificate",
-      "date": null,
       "issuer": null,
+      "date": null,
       "url": null
     },
     {
       "name": "AI Fluency & Prompt Engineering Frameworks",
-      "date": null,
       "issuer": "Anthropic/Claude",
+      "date": null,
       "url": null
     }
   ],
   "languages": [
     {
       "language": "Arabic",
-      "fluency": "Native"
+      "fluency": "Native",
+      "tag": null
     },
     {
       "language": "English",
-      "fluency": "Professional"
+      "fluency": "Professional",
+      "tag": null
     }
   ],
   "meta": {
-    "version": "3.0.0",
+    "version": "1.0.0",
     "canonical": null,
-    "language": null,
-    "locale": null,
-    "contentLocale": null,
-    " 0": null
-  }
+    "allowUnknownFields": true
+  },
+  "interests": [],
+  "references": []
 }

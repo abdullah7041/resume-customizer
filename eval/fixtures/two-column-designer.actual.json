@@ -7,15 +7,15 @@
     "location": {
       "city": "Riyadh",
       "countryCode": "SA",
-      "region": null
+      "region": "Saudi Arabia"
     },
     "profiles": [
       {
-        "network": "LinkedIn",
+        "network": "linkedin",
         "url": "https://linkedin.com/in/sarahalmutairi"
       },
       {
-        "network": "Behance",
+        "network": "behance",
         "url": "https://behance.net/sarahm"
       }
     ],
@@ -25,8 +25,8 @@
   "work": [
     {
       "name": "Jahez",
-      "location": "Riyadh",
       "position": "Senior Product Designer",
+      "location": "Riyadh",
       "startDate": "Feb 2021",
       "endDate": "Present",
       "highlights": [
@@ -37,8 +37,8 @@
     },
     {
       "name": "Noon",
-      "location": "Remote",
       "position": "Product Designer",
+      "location": "Remote",
       "startDate": "Jun 2018",
       "endDate": "Jan 2021",
       "highlights": [
@@ -50,11 +50,10 @@
   "education": [
     {
       "institution": "King Saud University",
-      "area": "Design",
+      "area": "Bachelor of Design",
       "studyType": "Bachelor of Design",
       "startDate": null,
-      "endDate": "2018",
-      "gpa": null
+      "endDate": "2018"
     }
   ],
   "skills": [
@@ -77,18 +76,15 @@
   "languages": [
     {
       "language": "Arabic",
-      "fluency": "Native",
-      "tag": null
+      "fluency": "Native"
     },
     {
       "language": "English",
-      "fluency": "Fluent",
-      "tag": null
+      "fluency": "Fluent"
     }
   ],
   "meta": {
     "version": "3.0.0",
-    "canonical": null,
-    "lastModified": null
+    "canonical": null
   }
 }

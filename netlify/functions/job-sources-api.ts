@@ -57,7 +57,27 @@ const UntrackSchema = z.object({
   companyId: z.string().uuid(),
 });
 
-const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema]);
+const RecrawlSchema = z.object({
+  action: z.literal('recrawl'),
+});
+
+const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema]);
+
+/**
+ * How stale a company must be before a user-pressed check will re-read its board.
+ *
+ * Reload in the UI re-reads the DATABASE; only the daily cron ever re-read the
+ * boards, so a user watching for a new posting had no way to ask for one. This adds
+ * that ask without handing anyone a button that hammers employer job boards.
+ *
+ * The ONLY guard on this path is last_fetched_at: a company read within the last
+ * hour is skipped. `claim_job_crawl_batch` does NOT apply here — it is called solely
+ * by cron-job-crawl.ts, and the explicit-companyIds branch of crawl-jobs-background
+ * takes no lease. Since last_fetched_at is stamped only after a crawl COMPLETES,
+ * requests inside one rate-limit window can still overlap on the same board. Do not
+ * drop the last_fetched_at check believing a lease backs it up.
+ */
+const MIN_MINUTES_BETWEEN_MANUAL_CRAWLS = 60;
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 
@@ -98,6 +118,8 @@ const baseHandler: Handler = async (event) => {
         return await handleTrack(supabase, user.id, parsed.data);
       case 'untrack':
         return await handleUntrack(supabase, user.id, parsed.data.companyId);
+      case 'recrawl':
+        return await handleRecrawl(supabase, user.id);
     }
   } catch (error) {
     captureError(error, { function: 'job-sources-api' });
@@ -213,9 +235,79 @@ async function handleUntrack(supabase: Supabase, userId: string, companyId: stri
   return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ status: 'ok' }) };
 }
 
+/**
+ * Re-read the boards this user follows, on demand.
+ *
+ * Scoped to the caller's own tracked companies and throttled by each company's
+ * last_fetched_at, so pressing it repeatedly costs nothing after the first run.
+ */
+async function handleRecrawl(supabase: Supabase, userId: string) {
+  const { data, error } = await supabase
+    .from('user_tracked_companies')
+    .select('company_id, ats_companies!inner(id, last_fetched_at)')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('[JobSources] Recrawl lookup failed:', summarizeErrorForLog(error));
+    return { statusCode: 500, headers: jsonHeaders, body: errorBody(500, 'server/error', 'Could not read your tracked companies') };
+  }
+
+  // PostgREST returns an object for a many-to-one embed, but an array shape here
+  // would make every row look stale and drop the throttle entirely, with no error.
+  // Normalise rather than trust the cast.
+  type EmbeddedCompany = { id: string; last_fetched_at: string | null };
+  const rows = (data ?? []) as unknown as Array<{
+    company_id: string;
+    ats_companies: EmbeddedCompany | EmbeddedCompany[];
+  }>;
+  const companyOf = (row: (typeof rows)[number]): EmbeddedCompany | undefined =>
+    Array.isArray(row.ats_companies) ? row.ats_companies[0] : row.ats_companies;
+
+  if (rows.length === 0) {
+    return {
+      statusCode: 200,
+      headers: jsonHeaders,
+      body: JSON.stringify({ status: 'ok', dispatched: 0, skipped: 0, crawlDispatched: false }),
+    };
+  }
+
+  const cutoff = Date.now() - MIN_MINUTES_BETWEEN_MANUAL_CRAWLS * 60 * 1000;
+  const stale = rows.filter((row) => {
+    const last = companyOf(row)?.last_fetched_at;
+    return !last || new Date(last).getTime() < cutoff;
+  });
+
+  if (stale.length === 0) {
+    // Not an error: every board was read recently, so there is nothing to fetch.
+    return {
+      statusCode: 200,
+      headers: jsonHeaders,
+      body: JSON.stringify({ status: 'ok', dispatched: 0, skipped: rows.length, crawlDispatched: false }),
+    };
+  }
+
+  const crawlDispatched = await dispatchCrawl(stale.map((row) => row.company_id));
+
+  return {
+    statusCode: 200,
+    headers: jsonHeaders,
+    body: JSON.stringify({
+      status: 'ok',
+      dispatched: stale.length,
+      skipped: rows.length - stale.length,
+      crawlDispatched,
+    }),
+  };
+}
+
 /** Fire-and-forget handoff. A failure here costs freshness, never the tracking itself. */
 async function dispatchImmediateCrawl(companyId: string, alreadyCrawled: boolean): Promise<boolean> {
   if (alreadyCrawled) return false;
+  return dispatchCrawl([companyId]);
+}
+
+async function dispatchCrawl(companyIds: string[]): Promise<boolean> {
+  if (companyIds.length === 0) return false;
 
   const secret = process.env.JOB_CRAWL_SECRET;
   const siteUrl = process.env.URL || process.env.DEPLOY_PRIME_URL;
@@ -225,7 +317,7 @@ async function dispatchImmediateCrawl(companyId: string, alreadyCrawled: boolean
     const response = await fetch(`${siteUrl}/.netlify/functions/crawl-jobs-background`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-watheq-crawl-secret': secret },
-      body: JSON.stringify({ companyIds: [companyId] }),
+      body: JSON.stringify({ companyIds }),
       signal: AbortSignal.timeout(8000),
     });
     return response.ok || response.status === 202;

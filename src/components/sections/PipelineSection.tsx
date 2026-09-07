@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Briefcase, Trash2, Loader2, MessageSquare, ChevronDown, Clock } from 'lucide-react';
+import { Briefcase, Trash2, Loader2, MessageSquare, ChevronDown, Clock, ExternalLink, MapPin } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useAuth } from '../../hooks/useAuth';
@@ -48,6 +48,16 @@ export function PipelineSection() {
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState('');
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  /**
+   * Which saved job currently has its description expanded.
+   *
+   * The pipeline stored the full posting all along — job_description, job_url and
+   * location are all written by the Job Feed's save and by SaveJobToPipelineCard —
+   * and then rendered none of them. A tracker showing only a company and a title
+   * reads as though the posting was never saved, which is exactly how it was
+   * reported. The data was there; the card was not showing it.
+   */
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
 
   const locale = i18n.language;
 
@@ -204,10 +214,27 @@ export function PipelineSection() {
                   <p className="text-xs text-gray-500 truncate">
                     {job.job_title || t('pipeline.untitledRole', 'Untitled role')}
                   </p>
+                  {job.location && (
+                    <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                      <MapPin className="w-3 h-3 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{job.location}</span>
+                    </p>
+                  )}
                   {job.match_score != null && (
                     <p className="text-xs text-emerald-500 mt-1">
                       {t('pipeline.matchScore', 'Match Score')}: {job.match_score}%
                     </p>
+                  )}
+                  {job.job_url && (
+                    <a
+                      href={job.job_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex min-h-10 items-center gap-1.5 text-xs font-medium text-emerald-600 transition-colors hover:underline dark:text-emerald-400"
+                    >
+                      {t('pipeline.viewPosting', 'View posting')}
+                      <ExternalLink className="w-3 h-3" aria-hidden="true" />
+                    </a>
                   )}
                 </div>
 
@@ -274,6 +301,30 @@ export function PipelineSection() {
                       {t('common.cancel', 'Cancel')}
                     </GlassButton>
                   </div>
+                </div>
+              )}
+
+              {job.job_description?.trim() && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedJobId((previous) => (previous === job.id ? null : job.id))}
+                    aria-expanded={expandedJobId === job.id}
+                    className="inline-flex min-h-10 items-center gap-1 text-xs font-medium text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                  >
+                    {expandedJobId === job.id
+                      ? t('pipeline.hideDescription', 'Hide job description')
+                      : t('pipeline.showDescription', 'Show job description')}
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform ${expandedJobId === job.id ? 'rotate-180' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {expandedJobId === job.id && (
+                    <p className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-700 dark:bg-white/5 dark:text-gray-300">
+                      {job.job_description}
+                    </p>
+                  )}
                 </div>
               )}
 

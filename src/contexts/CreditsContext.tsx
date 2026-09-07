@@ -15,6 +15,15 @@ interface CreditsContextValue {
     isLoading: boolean;
     error: Error | null;
     refetch: () => Promise<void>;
+    /**
+     * Apply a balance the server just reported, without a round trip.
+     *
+     * The optimize response already carries the exact post-run number
+     * (attachLiveCredits). Relying on a delayed refetch instead races the
+     * server's own deduction — land early and the header shows the pre-run
+     * balance again, which is the symptom this was meant to fix.
+     */
+    applyCreditsRemaining: (remaining: number) => void;
     showUpgrade: boolean;
     setShowUpgrade: (show: boolean) => void;
     upgradeDismissedKey: string | null;
@@ -320,11 +329,17 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
         }
     }, [credits]);
 
+    const applyCreditsRemaining = useCallback((remaining: number) => {
+        if (!Number.isFinite(remaining) || remaining < 0) return;
+        setCredits((current) => (current ? { ...current, remaining } : current));
+    }, []);
+
     const value: CreditsContextValue = {
         credits,
         isLoading,
         error,
         refetch: () => fetchCredits(true), // Always immediate when manually triggered
+        applyCreditsRemaining,
         showUpgrade,
         setShowUpgrade,
         upgradeDismissedKey,
