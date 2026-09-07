@@ -18,8 +18,16 @@ import type { ReactNode } from 'react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) =>
-      typeof fallbackOrOptions === 'string' ? fallbackOrOptions : key,
+    // Interpolates like i18next does, so assertions can read the real sentence
+    // instead of a bare key — the whole point of this round was the copy.
+    t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) => {
+      if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
+      const options = fallbackOrOptions ?? {};
+      const template = typeof options.defaultValue === 'string' ? options.defaultValue : key;
+      return template.replace(/\{\{(\w+)\}\}/g, (_m: string, name: string) =>
+        options[name] === undefined ? `{{${name}}}` : String(options[name]),
+      );
+    },
     i18n: { language: 'en' },
   }),
 }));
@@ -29,7 +37,12 @@ vi.mock('../components/ui/GlassCard', () => ({
 }));
 
 vi.mock('../components/ui/GlassButton', () => ({
-  GlassButton: ({ children, ...props }: { children: ReactNode }) => <button {...props}>{children}</button>,
+  // Mirrors the real GlassButton's contract: isLoading ORs into disabled and is
+  // consumed rather than spread onto the DOM node. Without this a test asserting
+  // a pending button is disabled would be asserting against the mock, not the app.
+  GlassButton: ({ children, isLoading, disabled, ...props }: { children: ReactNode; isLoading?: boolean; disabled?: boolean }) => (
+    <button {...props} disabled={disabled || isLoading}>{children}</button>
+  ),
 }));
 
 const SENIOR_INTENT = {
@@ -52,12 +65,13 @@ vi.mock('@/services/pipeline', () => ({
 }));
 
 const mockGetPostingDescription = vi.fn();
+const mockListOpenPostings = vi.fn();
 const mockSetFeedState = vi.fn();
 const mockListFeedState = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
   listTrackedCompanies: () => Promise.resolve({ companies: [company], error: null }),
-  listOpenPostings: () => Promise.resolve({ postings: [posting()], error: null }),
+  listOpenPostings: () => mockListOpenPostings(),
   listFeedState: () => mockListFeedState(),
   readLastFeedSeenAt: () => Promise.resolve(null),
   fetchServerSearchIntent: () => Promise.resolve(null),
@@ -103,6 +117,7 @@ const company = {
 beforeEach(() => {
   vi.clearAllMocks();
   mockListFeedState.mockResolvedValue(new Map());
+  mockListOpenPostings.mockResolvedValue({ postings: [posting()], error: null });
   mockGetPostingDescription.mockResolvedValue('We are hiring a senior AI engineer in Riyadh.');
   mockCreateJobApplication.mockResolvedValue({ data: { id: 'job-1' }, error: null });
 });
@@ -193,23 +208,128 @@ describe('saving a feed row to the pipeline', () => {
   });
 });
 
-describe('the role-coverage badge explains itself on touch', () => {
-  it('reveals the explanation when the badge is tapped', async () => {
+describe('the row explains its own match, in words', () => {
+  it('states what matched without a control to decode', async () => {
+    // This replaced a 40px "1/3" circle whose meaning lived in a tooltip and an
+    // aria-label — neither reachable by a sighted touch user, and the bare fraction
+    // sat exactly where a match score would go.
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Engineer');
+
+    expect(
+      screen.getByText(/Title uses 2 of 2 words from your target role "Senior AI Engineer": ai, engineer/),
+    ).toBeInTheDocument();
+
+    // Nothing left to tap, and no naked fraction anywhere on the row.
+    expect(screen.queryByText('2/2')).toBeNull();
+    expect(screen.queryByRole('button', { name: /words from your target role/i })).toBeNull();
+  });
+
+  it('separates a full role match from a partial one, in the numbers', async () => {
+    // "Senior AI Engineer" derives the terms ai + engineer — senior is a level word,
+    // not a function. A title carrying only one of them must say 1 of 2, and must
+    // list only the term it actually matched.
+    mockListOpenPostings.mockResolvedValue({
+      postings: [posting({ title: 'Senior Engineer' })],
+      error: null,
+    });
+
+    render(<JobFeedSection />);
+    await screen.findByText('Senior Engineer');
+
+    expect(
+      screen.getByText(/Title uses 1 of 2 words from your target role "Senior AI Engineer": engineer/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('the row buttons say when they are working', () => {
+  /**
+   * Both handlers await a description fetch and then a second round trip. Without a
+   * pending state the button sat inert for seconds and the press read as ignored —
+   * the reported "it lags then saves".
+   */
+  const deferred = () => {
+    let release: (value: string) => void = () => {};
+    const promise = new Promise<string>((resolve) => { release = resolve; });
+    return { promise, release };
+  };
+
+  it('shows Save as pending for the whole round trip, then settles', async () => {
+    const gate = deferred();
+    mockGetPostingDescription.mockReturnValue(gate.promise);
     render(<JobFeedSection />);
 
-    // The `t` mock returns the key when given interpolation options, so the badge's
-    // accessible name and its explanation are matched by key here.
-    const badge = await screen.findByRole('button', { name: 'jobFeed.why.coverage' });
-    expect(badge).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('jobFeed.why.coverageHint')).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Save to pipeline' }));
 
-    fireEvent.click(badge);
+    const pending = await screen.findByRole('button', { name: 'Saving…' });
+    expect(pending).toBeDisabled();
 
-    expect(badge).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('jobFeed.why.coverageHint')).toBeInTheDocument();
+    gate.release('We are hiring a senior AI engineer in Riyadh.');
 
-    // Tapping again closes it, so one row's explanation cannot get stuck open.
-    fireEvent.click(badge);
-    expect(screen.queryByText('jobFeed.why.coverageHint')).toBeNull();
+    await waitFor(() => expect(screen.getByText('Saved to pipeline')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: 'Saving…' })).toBeNull();
+  });
+
+  it('clears the Save pending state when the read fails', async () => {
+    // try/finally, not the bare set-then-clear used elsewhere in this file: a failure
+    // must not strand the button in a spinner forever.
+    mockGetPostingDescription.mockResolvedValue(null);
+    render(<JobFeedSection />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Save to pipeline' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Could not read that job description/i)).toBeInTheDocument(),
+    );
+    expect(await screen.findByRole('button', { name: 'Save to pipeline' })).toBeEnabled();
+  });
+
+  it('shows Check the match as pending while it fetches', async () => {
+    const gate = deferred();
+    mockGetPostingDescription.mockReturnValue(gate.promise);
+    const onMatchPosting = vi.fn();
+    render(<JobFeedSection onMatchPosting={onMatchPosting} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Check the match' }));
+
+    expect(await screen.findByRole('button', { name: 'Opening…' })).toBeDisabled();
+
+    gate.release('We are hiring a senior AI engineer in Riyadh.');
+
+    await waitFor(() => expect(onMatchPosting).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole('button', { name: 'Check the match' })).toBeEnabled();
+  });
+
+  it('reports a failed READ on the match path, not "no description"', async () => {
+    // handleMatch used to do `description ?? ''`, so a Supabase error was reported as
+    // "that posting has no description" and sent the user off to paste text that does
+    // in fact exist.
+    mockGetPostingDescription.mockResolvedValue(null);
+    const onMatchPosting = vi.fn();
+    render(<JobFeedSection onMatchPosting={onMatchPosting} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Check the match' }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Could not read that job description/i)).toBeInTheDocument(),
+    );
+    expect(onMatchPosting).not.toHaveBeenCalled();
+  });
+
+  it('hands an empty description through, letting the parent decide', async () => {
+    // '' is a board that publishes no body (Workday always). That is the parent's
+    // call to explain, not a read failure.
+    mockGetPostingDescription.mockResolvedValue('');
+    const onMatchPosting = vi.fn();
+    render(<JobFeedSection onMatchPosting={onMatchPosting} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Check the match' }));
+
+    await waitFor(() => expect(onMatchPosting).toHaveBeenCalledTimes(1));
+    expect(onMatchPosting).toHaveBeenCalledWith(
+      expect.objectContaining({ jobDescription: '', jobTitle: 'Senior AI Engineer' }),
+    );
+    expect(screen.queryByText(/Could not read that job description/i)).toBeNull();
   });
 });

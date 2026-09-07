@@ -1004,13 +1004,29 @@ export default function MainContent() {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
       }
+
+      // Drop the PREVIOUS job's analysis before switching tab.
+      //
+      // MatchSection hides its job-description editor entirely whenever results
+      // exist (the `hasResults` gate), so arriving with a stale analysis showed the
+      // old posting's score and no visible JD box — the hand-off looked like it had
+      // only navigated, when in fact it had pasted the description behind a results
+      // view for a different job.
+      setMatchAnalysis(null);
+      clearStoredMatchAnalysis();
+      // Every other "this is a different job now" path pairs those two with this
+      // (confirmDeleteAllData, handleClearResume, handleClearMatch, new upload).
+      // Without it activeJobApplicationId still points at the PREVIOUS posting, and
+      // the Optimize tab — reachable straight away, gated only on hasResume — would
+      // attach an export or mark applied against the wrong pipeline row.
+      resetPipelineContext();
       // Tracked after the empty-description guard, so the count is hand-offs that
       // happened. This is the only way to tell a match the feed sent from one the
       // user pasted, which is the measure of whether the crawl earns its keep.
       analytics.track("job_feed_match_handoff", { company: companyName, title: jobTitle });
       handleTabChange("match");
     },
-    [handleTabChange, hasResume, pushToast, t]
+    [handleTabChange, hasResume, pushToast, resetPipelineContext, setMatchAnalysis, t]
   );
 
   useEffect(() => {

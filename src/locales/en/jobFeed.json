@@ -86,10 +86,11 @@
       "seenHint": "This job board does not publish posting dates, so this is when Watheq first saw the role — not when it went live."
     },
     "why": {
-      "matched": "Matches {{terms}} in your target role",
       "location": "In {{location}}",
-      "coverage": "{{matched}} of {{total}} words from your target role {{role}}",
-      "coverageHint": "Words from your target role \"{{role}}\" that this title uses"
+      "titleMatch_one": "Title uses {{matched}} of {{count}} word from your target role \"{{role}}\": {{terms}}",
+      "titleMatch_other": "Title uses {{matched}} of {{count}} words from your target role \"{{role}}\": {{terms}}",
+      "titleMatchNone_one": "Title uses none of the {{count}} word from your target role \"{{role}}\"",
+      "titleMatchNone_other": "Title uses none of the {{count}} words from your target role \"{{role}}\""
     },
     "dropped": {
       "heading": "Filtered out",
@@ -106,7 +107,9 @@
       "save": "Save to pipeline",
       "saved": "Saved to pipeline",
       "dismiss": "Not interested",
-      "apply": "View posting"
+      "apply": "View posting",
+      "matching": "Opening…",
+      "saving": "Saving…"
     },
     "errors": {
       "loadFailed": "Could not load your feed. Try again.",
@@ -114,7 +117,8 @@
       "signInRequired": "Sign in to follow companies.",
       "noDescription": "That posting has no description to match against.",
       "noDescriptionHint": "Open the posting and paste its text into the Match tab.",
-      "descriptionUnavailable": "Could not read that job description. The posting was not saved — try again in a moment."
+      "descriptionUnavailableSave": "Could not read that job description. The posting was not saved — try again in a moment.",
+      "descriptionUnavailableMatch": "Could not read that job description. Try again in a moment."
     },
     "roles": {
       "heading": "From your CV",

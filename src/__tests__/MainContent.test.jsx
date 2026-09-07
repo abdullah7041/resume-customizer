@@ -40,6 +40,7 @@ const {
 
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
+const matchSectionMockProps = vi.hoisted(() => ({ current: null }));
 const pipelineMockProps = vi.hoisted(() => ({ current: null }));
 const mobileWorkflowMockProps = vi.hoisted(() => ({ current: null }));
 const landingMockProps = vi.hoisted(() => ({ current: null }));
@@ -129,8 +130,9 @@ vi.mock("../components/sections/MatchSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    MatchSection: (props) =>
-      React.createElement(
+    MatchSection: (props) => {
+      matchSectionMockProps.current = props;
+      return React.createElement(
         "div",
         { "data-testid": "job-match-mock" },
         props.matchAnalysis?.strategicRealityCheck
@@ -141,7 +143,8 @@ vi.mock("../components/sections/MatchSection", () => {
             Promise.resolve(props.onAnalyzeMatchAI?.("Target job description", { freePreview: true })).catch(() => {});
           },
         }, "Run match")
-      ),
+      );
+    },
   };
 });
 
@@ -1470,6 +1473,65 @@ describe("job feed hand-off", () => {
       "Senior AI Engineer at Salla. Build agents.",
     );
     expect(analyzeResumeMock).not.toHaveBeenCalled();
+  });
+
+  it("drops the previous job's analysis so the new description is visible", async () => {
+    // MatchSection hides its job-description editor entirely whenever results exist
+    // (its `hasResults` gate). Arriving with a stale analysis therefore showed the
+    // OLD posting's score and no visible JD box, so the hand-off looked like it had
+    // only navigated — the reported "Check match only moves me to the match section".
+    render(<MainContent />);
+
+    await act(async () => {
+      await resumeUploadMockProps.current.onParseResume({ kind: "text", plainText: "CV text" });
+    });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "job-feed" } }));
+    });
+    await waitFor(() => expect(jobFeedMockProps.current).toBeTruthy());
+
+    // Establish a PRIOR analysis. Without this the test proves nothing: matchAnalysis
+    // is null on a fresh render anyway, so the assertion below would pass even with
+    // the fix deleted. Verified by removing setMatchAnalysis(null) and watching this
+    // test go red.
+    analyzeResumeMock.mockResolvedValueOnce({
+      score: 61,
+      missingKeywords: [],
+      topHits: [],
+      suggestions: [],
+    });
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "match" } }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByText("Run match"));
+    });
+    await waitFor(() => expect(matchSectionMockProps.current.matchAnalysis).not.toBeNull());
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("watheq:navigate-tab", { detail: { tab: "job-feed" } }));
+    });
+    await waitFor(() => expect(jobFeedMockProps.current).toBeTruthy());
+
+    await act(async () => {
+      jobFeedMockProps.current.onMatchPosting({
+        jobDescription: "Senior AI Engineer at Salla. Build agents.",
+        companyName: "Salla",
+        jobTitle: "Senior AI Engineer",
+      });
+    });
+
+    expect(await screen.findByTestId("job-match-mock")).toBeInTheDocument();
+
+    // The assertion that guards the fix: MatchSection must receive a null analysis,
+    // because its `hasResults` gate is what hides the job-description editor.
+    // Asserting only the localStorage removal stays green without the fix, and
+    // loadCachedMatchAnalysis already refuses to restore an analysis keyed to a
+    // different jobText — so that half is nearly inert on its own.
+    expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+    expect(matchSectionMockProps.current.jobDescription).toBe(
+      "Senior AI Engineer at Salla. Build agents.",
+    );
   });
 
   it("records where a matched posting came from", async () => {

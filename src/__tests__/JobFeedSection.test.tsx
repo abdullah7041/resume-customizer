@@ -18,7 +18,12 @@ vi.mock('../components/ui/GlassCard', () => ({
 }));
 
 vi.mock('../components/ui/GlassButton', () => ({
-  GlassButton: ({ children, ...props }: { children: ReactNode }) => <button {...props}>{children}</button>,
+  // Mirrors the real GlassButton's contract: isLoading ORs into disabled and is
+  // consumed rather than spread onto the DOM node. Without this a test asserting
+  // a pending button is disabled would be asserting against the mock, not the app.
+  GlassButton: ({ children, isLoading, disabled, ...props }: { children: ReactNode; isLoading?: boolean; disabled?: boolean }) => (
+    <button {...props} disabled={disabled || isLoading}>{children}</button>
+  ),
 }));
 
 const mockSearchIntent = vi.fn();
@@ -232,7 +237,10 @@ describe('JobFeedSection feed rows', () => {
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
     // Salla appears both on its filter chip and on the posting row.
     expect(screen.getAllByText(/Salla/).length).toBeGreaterThan(0);
-    expect(screen.getByText('jobFeed.why.matched')).toBeInTheDocument();
+    // One sentence that names what it counted, in place of the old bare "2/2"
+    // circle plus a second overlapping line. The wording itself is asserted in
+    // JobFeedSection.savedRow.test.tsx, which interpolates.
+    expect(screen.getByText('jobFeed.why.titleMatch')).toBeInTheDocument();
   });
 
   it('links straight to the employer posting', async () => {
@@ -590,21 +598,19 @@ describe('refreshing', () => {
   });
 });
 
-describe('the badge separates a full role match from a partial one', () => {
-  // The intent is "Senior AI Engineer", so the terms are ai and engineer — senior
-  // is a level, not a function. A title carrying both covers the role; one
-  // carrying half does not, and the badge has to be able to say which.
-  it.each([
-    ['Senior AI Engineer', '2/2'],
-    ['Senior Engineer', '1/2'],
-  ])('reads %s as %s of the target role', async (title, badge) => {
+describe('every kept row explains why it is there', () => {
+  // This file's `t` mock returns the key, so it can only prove WHICH branch rendered.
+  // The full/partial distinction is asserted with real numbers in
+  // JobFeedSection.savedRow.test.tsx, whose mock interpolates.
+  it('renders the title-match sentence rather than a bare fraction', async () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
-    mockListPostings.mockResolvedValue({ postings: [posting({ title })], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior Engineer' })], error: null });
 
     render(<JobFeedSection />);
-    await screen.findByText(title);
+    await screen.findByText('Senior Engineer');
 
-    expect(screen.getByText(badge)).toBeInTheDocument();
+    expect(screen.getByText('jobFeed.why.titleMatch')).toBeInTheDocument();
+    expect(screen.queryByText('1/2')).not.toBeInTheDocument();
   });
 
   it('grades coverage without the red-amber-green a hiring verdict would use', async () => {
@@ -734,20 +740,22 @@ describe('the company chip carries the count, the status and the unfollow', () =
   });
 });
 
-describe('the row badge does not pose as a match score', () => {
+describe('the row does not pose as a match score', () => {
   beforeEach(() => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
   });
 
-  it('shows how much of a target role the title covers, not a percentage', async () => {
-    // A 0-100 number beside a job is read as the match score, and it is not one:
-    // this is title keyword overlap, computed without ever reading the JD or CV.
+  it('says the number came from the TITLE, and shows no percentage', async () => {
+    // A bare number beside a job is read as the match score, and it is not one: this
+    // is title keyword overlap, computed without ever reading the JD or the CV. The
+    // old "2/2" circle said none of that, which is why it became a sentence.
     mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
 
     render(<JobFeedSection />);
     await screen.findByText('Senior AI Engineer');
 
-    expect(screen.getByText('2/2')).toBeInTheDocument();
+    expect(screen.getByText('jobFeed.why.titleMatch')).toBeInTheDocument();
+    expect(screen.queryByText('2/2')).not.toBeInTheDocument();
     expect(screen.queryByText('100')).not.toBeInTheDocument();
   });
 
@@ -758,7 +766,8 @@ describe('the row badge does not pose as a match score', () => {
     render(<JobFeedSection />);
     await screen.findByText('Senior AI Engineer');
 
-    expect(screen.getByText('2/2')).toBeInTheDocument();
+    expect(screen.getByText('jobFeed.why.titleMatch')).toBeInTheDocument();
+    expect(screen.queryByText('2/2')).not.toBeInTheDocument();
     expect(screen.queryByText('70')).not.toBeInTheDocument();
   });
 });

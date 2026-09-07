@@ -75,14 +75,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [postings, setPostings] = useState<FeedPosting[]>([]);
   const [feedState, setFeedStateMap] = useState<Map<string, 'dismissed' | 'saved'>>(new Map());
   /**
-   * Which row currently has its coverage explanation open.
+   * Which row is mid-save and which is mid-match, keyed by posting id.
    *
-   * The "1/3" badge carried its meaning in a `title` attribute and an `aria-label`
-   * only. `title` never fires on touch, so on a phone the badge was an unexplained
-   * number sitting where a match score would go. It is a button now, and this is
-   * what it toggles.
+   * Both handlers await a description fetch and then a second round trip, so without
+   * these the button sat inert for seconds and the press read as ignored. Keyed by id
+   * rather than a single boolean so one row's spinner never appears on another's.
    */
-  const [explainedPostingId, setExplainedPostingId] = useState<string | null>(null);
+  const [savingPostingId, setSavingPostingId] = useState<string | null>(null);
+  const [matchingPostingId, setMatchingPostingId] = useState<string | null>(null);
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
   const [serverIntent, setServerIntent] = useState<FeedIntent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -691,41 +691,50 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
   const handleSave = useCallback(
     async (scored: ScoredPosting) => {
-      // Refuse the save only when the READ failed. An empty description is normal on
-      // boards that publish none (Workday always, Workable sometimes) — refusing
-      // those made every such posting permanently unsaveable behind a "try again"
-      // that could never succeed. They save fine; the pipeline card simply omits the
-      // description section it has no text for.
-      const description = await getPostingDescription(scored.posting.id);
-      if (description === null) {
-        setError(
-          t(
-            'jobFeed.errors.descriptionUnavailable',
-            'Could not read that job description. The posting was not saved — try again in a moment.',
-          ),
-        );
-        return;
+      // try/finally, not the bare set-then-clear used by handleTrack above. Those
+      // helpers return { error } rather than throwing, so the risk there is latent
+      // rather than live — but an unexpected rejection would strand the flag and the
+      // button would never come back, and `finally` costs nothing.
+      setSavingPostingId(scored.posting.id);
+      try {
+        // Refuse the save only when the READ failed. An empty description is normal on
+        // boards that publish none (Workday always, Workable sometimes) — refusing
+        // those made every such posting permanently unsaveable behind a "try again"
+        // that could never succeed. They save fine; the pipeline card simply omits the
+        // description section it has no text for.
+        const description = await getPostingDescription(scored.posting.id);
+        if (description === null) {
+          setError(
+            t(
+              'jobFeed.errors.descriptionUnavailableSave',
+              'Could not read that job description. The posting was not saved — try again in a moment.',
+            ),
+          );
+          return;
+        }
+
+        const { error: saveError } = await createJobApplication({
+          company_name: scored.posting.companyName,
+          job_title: scored.posting.title,
+          job_description: description,
+          job_url: scored.posting.applyUrl,
+          location: scored.posting.location,
+          status: 'saved',
+        });
+
+        // createJobApplication returns an error rather than throwing. Hiding the row
+        // regardless would lose the posting from both views at once: gone from the
+        // feed, never in the pipeline.
+        if (saveError) {
+          setError(saveError);
+          return;
+        }
+
+        setFeedStateMap((previous) => new Map(previous).set(scored.posting.id, 'saved'));
+        await setFeedState(scored.posting.id, 'saved');
+      } finally {
+        setSavingPostingId(null);
       }
-
-      const { error: saveError } = await createJobApplication({
-        company_name: scored.posting.companyName,
-        job_title: scored.posting.title,
-        job_description: description,
-        job_url: scored.posting.applyUrl,
-        location: scored.posting.location,
-        status: 'saved',
-      });
-
-      // createJobApplication returns an error rather than throwing. Hiding the row
-      // regardless would lose the posting from both views at once: gone from the
-      // feed, never in the pipeline.
-      if (saveError) {
-        setError(saveError);
-        return;
-      }
-
-      setFeedStateMap((previous) => new Map(previous).set(scored.posting.id, 'saved'));
-      await setFeedState(scored.posting.id, 'saved');
     },
     [t],
   );
@@ -733,14 +742,36 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const handleMatch = useCallback(
     async (scored: ScoredPosting) => {
       if (!onMatchPosting) return;
-      const description = await getPostingDescription(scored.posting.id);
-      onMatchPosting({
-        jobDescription: description ?? '',
-        companyName: scored.posting.companyName,
-        jobTitle: scored.posting.title,
-      });
+      setMatchingPostingId(scored.posting.id);
+      try {
+        const description = await getPostingDescription(scored.posting.id);
+
+        // null is a failed READ; '' is a board that publishes no body. Collapsing
+        // them with `?? ''` reported a Supabase error as "this posting has no
+        // description", sending the user off to paste text that does exist.
+        if (description === null) {
+          // Its own string: the save wording ("the posting was not saved") is a
+          // non-sequitur here — the user pressed Check the match, and nothing was
+          // being saved.
+          setError(
+            t(
+              'jobFeed.errors.descriptionUnavailableMatch',
+              'Could not read that job description. Try again in a moment.',
+            ),
+          );
+          return;
+        }
+
+        onMatchPosting({
+          jobDescription: description,
+          companyName: scored.posting.companyName,
+          jobTitle: scored.posting.title,
+        });
+      } finally {
+        setMatchingPostingId(null);
+      }
     },
-    [onMatchPosting],
+    [onMatchPosting, t],
   );
 
   if (loading) {
@@ -1358,7 +1389,6 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
          * numbers out of two terms is a claim this can actually support.
          */
         const coverage = coverageByPosting.get(scored.posting.id) ?? null;
-        const complete = coverage !== null && coverage.matched.length === coverage.total;
 
         return (
           /* Rows arrive together after an async load, so they are staggered rather
@@ -1370,29 +1400,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             transition={{ type: 'spring', duration: 0.3, bounce: 0, delay: Math.min(index, 6) * 0.04 }}
           >
           <GlassCard className="p-4">
-            <div className="flex items-start gap-4">
-              {coverage && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setExplainedPostingId((previous) =>
-                      previous === scored.posting.id ? null : scored.posting.id,
-                    )
-                  }
-                  aria-expanded={explainedPostingId === scored.posting.id}
-                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold tabular-nums transition-[background-color,scale] duration-200 active:scale-[0.96] ${
-                    complete ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
-                  }`}
-                  aria-label={t('jobFeed.why.coverage', {
-                    matched: coverage.matched.length,
-                    total: coverage.total,
-                    role: coverage.role,
-                    defaultValue: '{{matched}} of {{total}} words from your target role {{role}}',
-                  })}
-                >
-                  {`${coverage.matched.length}/${coverage.total}`}
-                </button>
-              )}
+            <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-base font-semibold leading-snug text-gray-900 dark:text-white">
@@ -1433,22 +1441,44 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   </>
                   )}
                 </p>
-                {scored.matched.length > 0 && (
-                  /* Deterministic, non-AI reason. Never a model's opinion dressed as one. */
+                {coverage && (
+                  /*
+                   * One sentence, and it names what it counted.
+                   *
+                   * This replaced a bare "1/3" circle plus a second, overlapping line.
+                   * The number is stem overlap between the job TITLE and one target
+                   * role — it never reads the job description or the CV — so sitting
+                   * wordless where a score goes, it was read as the Match tab's AI
+                   * score. Saying "title" and naming the role is the whole fix.
+                   * Deterministic: never a model's opinion dressed as one.
+                   *
+                   * The zero-match branch is a guard, not an expected state:
+                   * dropReason() already removes any posting whose title matches none
+                   * of the target-role terms, so a kept row always covers at least
+                   * one. It exists so a future change to that rule cannot render
+                   * "uses 0 of 3 words:" trailed by an empty list.
+                   */
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    {t('jobFeed.why.matched', { terms: scored.matched.join(', ') })}
-                  </p>
-                )}
-                {coverage && explainedPostingId === scored.posting.id && (
-                  /* The badge's meaning, in the page rather than in a tooltip. It says
-                     "target role words", never "match score" — the number is title
-                     keyword overlap computed in the browser, and it has been mistaken
-                     for the Match tab's AI score before. */
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {t('jobFeed.why.coverageHint', {
-                      role: coverage.role,
-                      defaultValue: 'Words from your target role "{{role}}" that this title uses',
-                    })}
+                    {coverage.matched.length > 0
+                      ? t('jobFeed.why.titleMatch', {
+                          // `count` is i18next's plural selector, so it carries the
+                          // quantity the NOUN agrees with — how many words the role
+                          // has, not how many matched. That is what makes a
+                          // single-word role read "1 of 1 word" rather than "1 words",
+                          // and it lets Arabic select its dual and its 3-10 form.
+                          count: coverage.total,
+                          matched: coverage.matched.length,
+                          role: coverage.role,
+                          terms: coverage.matched.join(', '),
+                          defaultValue:
+                            'Title uses {{matched}} of {{count}} words from your target role "{{role}}": {{terms}}',
+                        })
+                      : t('jobFeed.why.titleMatchNone', {
+                          count: coverage.total,
+                          role: coverage.role,
+                          defaultValue:
+                            'Title uses none of the {{count}} words from your target role "{{role}}"',
+                        })}
                   </p>
                 )}
               </div>
@@ -1466,8 +1496,16 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 changes the CV on its own. */}
             <div className="mt-4 flex flex-wrap items-center gap-2">
               {onMatchPosting && (
-                <GlassButton variant="secondary" onClick={() => void handleMatch(scored)}>
-                  {t('jobFeed.actions.match', 'Check the match')}
+                /* GlassButton owns the spinner and the disable: isLoading already
+                   swaps leftIcon for a Loader2 and ORs into `disabled`. */
+                <GlassButton
+                  variant="secondary"
+                  isLoading={matchingPostingId === scored.posting.id}
+                  onClick={() => void handleMatch(scored)}
+                >
+                  {matchingPostingId === scored.posting.id
+                    ? t('jobFeed.actions.matching', 'Opening…')
+                    : t('jobFeed.actions.match', 'Check the match')}
                 </GlassButton>
               )}
               {feedState.get(scored.posting.id) === 'saved' ? (
@@ -1479,8 +1517,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   {t('jobFeed.actions.saved', 'Saved to pipeline')}
                 </span>
               ) : (
-                <GlassButton variant="secondary" onClick={() => void handleSave(scored)}>
-                  {t('jobFeed.actions.save', 'Save to pipeline')}
+                <GlassButton
+                  variant="secondary"
+                  isLoading={savingPostingId === scored.posting.id}
+                  onClick={() => void handleSave(scored)}
+                >
+                  {savingPostingId === scored.posting.id
+                    ? t('jobFeed.actions.saving', 'Saving…')
+                    : t('jobFeed.actions.save', 'Save to pipeline')}
                 </GlassButton>
               )}
               <a
