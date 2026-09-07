@@ -36,7 +36,8 @@
         "ats": "ATS-Friendly",
         "styled": "Styled",
         "failed": "Export failed. Please try again, or switch to the ATS-friendly template and retry.",
-        "timeout": "Export is taking unusually long — bring this browser tab into focus (some browsers pause rendering work in background tabs) and try again."
+        "timeout": "Export is taking unusually long — bring this browser tab into focus (some browsers pause rendering work in background tabs) and try again.",
+        "busy": "The PDF renderer was busy. Wait a few seconds and press Download again."
       },
       "pageBreak": "Page Break",
       "showPageBreaks": "Show Page Breaks",

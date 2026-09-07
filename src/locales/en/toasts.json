@@ -48,6 +48,15 @@
     "optimizeValidating": "Validating your resume...",
     "optimizeVulnerabilities": "Scanning career timeline...",
     "optimizeAI": "AI is analyzing and rewriting bullets...",
-    "optimizeBuildingResponse": "Building optimization cards..."
+    "optimizeBuildingResponse": "Building optimization cards...",
+    "optimizeInterrupted": "That optimization did not finish",
+    "optimizeInterruptedDesc": "It stopped while {{phase}} because the page was closed. Check your credit balance, then run it again.",
+    "optimizePhase": {
+      "generic": "processing",
+      "validating": "checking your resume",
+      "detecting_vulnerabilities": "scanning your career timeline",
+      "ai_processing": "rewriting your bullets",
+      "building_response": "building the cards"
+    }
   }
 }

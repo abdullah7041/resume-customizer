@@ -13,16 +13,21 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../services/analytics', () => ({
-  analytics: {
-    track: vi.fn(),
-    trackJobDescriptionSubmitted: vi.fn(),
-    trackMatchAnalysisStarted: vi.fn(),
-    trackMatchAnalysisSuccess: vi.fn(),
-    trackMatchAnalysisFailed: vi.fn(),
-    trackStrategicRealityCheck: vi.fn(),
-  },
-}));
+// Every analytics method resolves to a stable spy. The hand-listed mock broke as soon
+// as these tests rendered in guest mode and the component reached the guest-run
+// telemetry — a missing stub should never fail a behaviour test.
+vi.mock('../services/analytics', () => {
+  const spies = new Map();
+  return {
+    analytics: new Proxy({}, {
+      get: (_target, prop) => {
+        if (typeof prop !== 'string') return undefined;
+        if (!spies.has(prop)) spies.set(prop, vi.fn());
+        return spies.get(prop);
+      },
+    }),
+  };
+});
 
 vi.mock('../hooks/useUserCredits', () => ({
   useUserCredits: () => ({
@@ -62,7 +67,7 @@ const typeJob = () => {
 describe('MatchSection guest free-run counter', () => {
   it('allows three free successful runs, then shows the paid confirmation path', async () => {
     const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 70 });
-    renderWithProviders(<MatchSection onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()} />);
+    renderWithProviders(<MatchSection isGuestMode onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()} />);
     typeJob();
 
     for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -80,7 +85,7 @@ describe('MatchSection guest free-run counter', () => {
   it('counts the legacy boolean as one completed free run', async () => {
     window.localStorage.setItem(FREE_MATCH_LEGACY_KEY, 'true');
     const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 70 });
-    renderWithProviders(<MatchSection onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()} />);
+    renderWithProviders(<MatchSection isGuestMode onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()} />);
     typeJob();
 
     fireEvent.click(screen.getByRole('button', { name: analyzeButtonName }));
@@ -90,5 +95,36 @@ describe('MatchSection guest free-run counter', () => {
 
     fireEvent.click(screen.getByRole('button', { name: analyzeButtonName }));
     expect(onAnalyzeMatchAI).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('MatchSection signed-in users never take the guest free-run path', () => {
+  /**
+   * Regression cover for Sentry JAVASCRIPT-REACT-1H.
+   *
+   * The free-run counter is per-browser localStorage and knows nothing about auth, so
+   * a signed-in user with an empty counter was sent down the guest path with
+   * `freePreview: true`. The server's guest limiter then answered a paying customer
+   * with 429 `guest/free-preview-used` — "You've used your free preview for this
+   * feature. Please sign in to continue." — and because no analysis ran, no credit was
+   * consumed. Both reported symptoms, one missing check.
+   */
+  it('shows the credit price and asks for confirmation even with zero free runs used', async () => {
+    const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 70 });
+    renderWithProviders(<MatchSection onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()} />);
+    typeJob();
+
+    // The counter is empty — under the old gate this alone bought a free run.
+    expect(window.localStorage.getItem(FREE_MATCH_KEY)).toBeNull();
+    expect(screen.getByText(/2 credits/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: analyzeButtonName }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: analyzeButtonName })).toBeInTheDocument());
+    expect(onAnalyzeMatchAI).not.toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ freePreview: true }),
+    );
+    expect(window.localStorage.getItem(FREE_MATCH_KEY)).toBeNull();
   });
 });

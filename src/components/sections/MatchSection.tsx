@@ -446,7 +446,10 @@ export function MatchSection({
       return;
     }
 
-    if (hasFreePreviewRun()) {
+    // Guests only — see the note in OptimizeSection.handleGenerate. A signed-in
+    // user taking the guest path is refused by the server's free-preview limiter
+    // and never spends the credits they actually have.
+    if (isGuestMode && hasFreePreviewRun()) {
       void handleAnalyzeActual({ freePreview: true });
       return;
     }
@@ -718,7 +721,8 @@ export function MatchSection({
               {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
                 <>
                   {t('sections.match.analyze', 'Analyze Match with AI')}
-                  {!hasFreePreviewRun() && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
+                  {/* Signed-in users always pay — show the price. */}
+                  {(!isGuestMode || !hasFreePreviewRun()) && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
                 </>
               )}
             </GlassButton>

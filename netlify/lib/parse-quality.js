@@ -95,6 +95,10 @@ export function detectSectionSignals(rawText) {
     projects: HEADING_PATTERNS.projects.test(text),
     skills: HEADING_PATTERNS.skills.test(text),
     languages: HEADING_PATTERNS.languages.test(text),
+    // Whether the raw text names a place at all. Without this there was no way to
+    // tell "this resume states no city" from "the parser dropped the city", so a
+    // lost location could never be reported.
+    location: LOCATION_HINT_RE.test(text),
     emails,
     phones,
   };
@@ -131,6 +135,26 @@ export function findMissingSections(signals, analysis = {}) {
   const basics = analysis.basics || {};
   if (signals.emails.length > 0 && !basics.email) missing.push("email");
   if (signals.phones.length > 0 && !basics.phone) missing.push("phone");
+
+  // Location loss, in both places it happens.
+  //
+  // parsingWarnings.ts already tests for the strings "location" and "work_location"
+  // — nothing ever emitted them, so a resume could lose the candidate's city, or
+  // every work entry's city, and the UI stayed silent about it. Reported only when
+  // the raw text actually names a place, so a resume that simply states no location
+  // is never accused of a parse failure.
+  if (signals.location && !basics.location?.city && !basics.location?.region) {
+    missing.push("location");
+  }
+  if (
+    signals.location
+    && Array.isArray(analysis.work)
+    && analysis.work.length > 0
+    && analysis.work.every((entry) => !entry?.location)
+  ) {
+    missing.push("work_location");
+  }
+
   return missing;
 }
 
@@ -370,11 +394,109 @@ const LOCATION_HINT_RE = /\b(saudi|arabia|ksa|riyadh|jeddah|dammam|khobar|makkah
 const COMPANY_SEP_RE = /\s+at\s+|\s[–—|]\s/i;
 
 /**
+ * Peel a trailing city off a company name.
+ *
+ * Real layout, from a resume this parser lost data on:
+ *
+ *   Founder & AI Product Engineer — Watheq   Riyadh, Saudi Arabia  |  Aug 2025 – Present
+ *
+ * After the date range is stripped, the company separator splits on the em dash and
+ * everything to its right becomes the company — so `name` came out as
+ * "Watheq   Riyadh, Saudi Arabia" and `location` stayed null. The city was not
+ * missing, it was glued to the employer, which is worse: the company name is wrong
+ * too. Only a tail that actually reads as a place is peeled off, so
+ * "Procter & Gamble" and "Al-Ahsa Trading Co" survive intact.
+ */
+const splitTrailingLocation = (value) => {
+  const text = String(value || "").trim();
+  if (!text) return { name: "", location: null };
+
+  // Two-or-more spaces, a comma, a pipe or a middle dot — the separators layouts
+  // actually use between an employer and its city on one line.
+  const match = text.match(/^(.*?)(?:\s{2,}|\s*[|·•]\s*|,\s+)([^|·•]+)$/);
+  if (!match) return { name: text, location: null };
+
+  const head = match[1].replace(/[\s,–—|-]+$/, "").trim();
+  const tail = match[2].trim();
+  if (!head || !tail) return { name: text, location: null };
+  if (!LOCATION_HINT_RE.test(tail)) return { name: text, location: null };
+
+  return { name: head, location: tail };
+};
+
+/**
  * Group the lines of an EXPERIENCE section into evidence-only work entries.
  * Header lines start a new entry; following non-header lines become highlights.
  * Never fabricates — position/name/dates are sliced from literal header text,
  * and a bullet's leading marker is the only thing stripped.
  */
+/**
+ * The candidate's own city, taken from the contact block at the top of the resume.
+ *
+ * `basics.location` had NO deterministic path at all: no signal, nothing in the
+ * baseline, nothing in recovery, and no entry in the missing-section list — so when
+ * the AI parse failed the home city vanished and nothing anywhere said it had. Real
+ * layout this is written for:
+ *
+ *   Riyadh, Saudi Arabia · (+966) 54-839-2374 · abdullah@example.com
+ *
+ * Only the header is searched (a city named in a job bullet is not where the
+ * candidate lives), and only a segment that reads as a place is accepted — this
+ * invents nothing.
+ */
+const COUNTRY_CODES = {
+  "saudi arabia": "SA", "ksa": "SA", "saudi": "SA",
+  "united arab emirates": "AE", "uae": "AE",
+  "qatar": "QA", "bahrain": "BH", "kuwait": "KW", "oman": "OM",
+  "egypt": "EG", "jordan": "JO",
+};
+
+export function extractLocationFromHeader(rawText) {
+  const text = typeof rawText === "string" ? rawText : "";
+  const headerLines = text.split(/\r?\n/).slice(0, 12);
+
+  for (const line of headerLines) {
+    if (!LOCATION_HINT_RE.test(line)) continue;
+    // Contact lines are separator-delimited; test each segment on its own so a
+    // phone number or an email sharing the line is never mistaken for a place.
+    for (const segment of line.split(/\s*[|·•]\s*/)) {
+      const candidate = segment.trim().replace(/^[\s,–—-]+|[\s,–—-]+$/g, "");
+      if (!candidate || candidate.length > 60) continue;
+      if (!LOCATION_HINT_RE.test(candidate)) continue;
+      if (EMAIL_RE.test(candidate)) { EMAIL_RE.lastIndex = 0; continue; }
+      EMAIL_RE.lastIndex = 0;
+      if (digitsOnly(candidate).length >= 7) continue;
+
+      const parts = candidate.split(",").map((part) => part.trim()).filter(Boolean);
+      if (parts.length === 0) continue;
+
+      const country = parts.length > 1 ? parts[parts.length - 1] : "";
+      const countryCode = COUNTRY_CODES[country.toLowerCase()] || "";
+      // With one part only, we cannot tell a city from a country. "Saudi Arabia"
+      // alone is a country, so it becomes the region rather than a fake city.
+      if (parts.length === 1) {
+        const code = COUNTRY_CODES[parts[0].toLowerCase()];
+        if (code) return { city: "", countryCode: code, region: parts[0] };
+        // A bare segment is only a place if it READS like one. "remote" is in
+        // LOCATION_HINT_RE because it is genuinely useful for work[].location, but on
+        // a free-text header line it also matches headlines like "Remote-first Senior
+        // Data Engineer" or "Open to Remote" — which would become the candidate's
+        // city. A real city name is one or two words, so anything longer is prose.
+        const words = parts[0].split(/\s+/).filter(Boolean);
+        if (words.length > 2) continue;
+        return { city: parts[0], countryCode: "", region: "" };
+      }
+      return {
+        city: parts[0],
+        countryCode,
+        region: countryCode ? "" : country,
+      };
+    }
+  }
+
+  return null;
+}
+
 export function parseWorkBlocks(lines) {
   const rows = (Array.isArray(lines) ? lines : [])
     .flatMap((line) => {
@@ -493,7 +615,10 @@ export function parseWorkBlocks(lines) {
       const sep = rest.match(COMPANY_SEP_RE);
       if (sep) {
         entry.position = rest.slice(0, sep.index).trim();
-        entry.name = rest.slice(sep.index + sep[0].length).replace(/[\s,–—|-]+$/, "").trim();
+        const employer = rest.slice(sep.index + sep[0].length).replace(/[\s,–—|-]+$/, "").trim();
+        const split = splitTrailingLocation(employer);
+        entry.name = split.name;
+        if (split.location) entry.location = split.location;
       } else if (rest) {
         entry.position = rest.replace(/[\s,–—|-]+$/, "").trim();
       }
@@ -571,6 +696,53 @@ function headingSectionsOf(line) {
  * Plain body lines are assigned to the currently-open section (the primary of a
  * combined heading). Never invents text — only groups lines literally present.
  */
+/**
+ * Which sub-section a body line belongs to, under a COMBINED heading.
+ *
+ * Real heading, from a resume this parser lost data on:
+ *
+ *   EDUCATION, CERTIFICATIONS & LANGUAGES
+ *     - Diploma, Pipefitting Technology — SPSP, GPA 4.6/5, 2018
+ *     - Claude 101 — Anthropic Academy · Google Data Analytics Certificate — Coursera
+ *     - Arabic (native) · English (professional)
+ *
+ * Every body line used to be filed under the FIRST keyword in the heading, so all
+ * three landed in `education` and `certificates` came back empty — even though
+ * `signals.certificates` was true, because the heading itself says CERTIFICATIONS.
+ * A section the resume plainly has, reported as absent.
+ *
+ * Each line is scored against the keys the heading actually introduced, and ties
+ * fall back to the primary key. Nothing is invented and nothing is reassigned
+ * across headings — this only decides where a line already in this block goes.
+ */
+const COMBINED_LINE_SIGNALS = {
+  education: /\b(diplomas?|bachelors?|masters?|ph\.?d|b\.?sc|m\.?sc|b\.?a|mba|degrees?|universit(?:y|ies)|colleges?|polytechnics?|institutes?|facult(?:y|ies)|gpa|academy of|secondary school|high school)\b/gi,
+  certificates: /\b(certificates?|certifications?|certified|courses?|academy|coursera|udacity|udemy|edx|nanodegree|bootcamp|licen[sc]es?|professional certificate|forward program)\b/gi,
+  languages: /\b(native|mother tongue|fluent|fluency|bilingual|professional working|elementary proficiency|conversational|arabic|english)\b/gi,
+};
+
+function pickCombinedSection(line, keys) {
+  const primary = keys[0];
+  if (keys.length < 2) return primary;
+
+  const text = String(line || "");
+  let best = primary;
+  let bestScore = 0;
+
+  for (const key of keys) {
+    const re = COMBINED_LINE_SIGNALS[key];
+    if (!re) continue;
+    re.lastIndex = 0;
+    const score = (text.match(re) || []).length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = key;
+    }
+  }
+
+  return bestScore > 0 ? best : primary;
+}
+
 export function segmentSections(rawText) {
   const text = typeof rawText === "string" ? rawText : "";
   const result = {};
@@ -580,6 +752,7 @@ export function segmentSections(rawText) {
   };
 
   let current = null;
+  let currentGroup = null;
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line) continue;
@@ -597,6 +770,7 @@ export function segmentSections(rawText) {
       const m = deBulleted.match(re);
       if (m) {
         current = key;
+        currentGroup = null;
         ensure(key);
         const rest = (m[1] || "").trim();
         if (rest) result[key].push(rest);
@@ -611,14 +785,23 @@ export function segmentSections(rawText) {
     if (hs.length > 0) {
       for (const k of hs) ensure(k);
       current = hs[0];
+      // A combined heading introduces several sections at once; remember all of
+      // them so each body line can be filed where it belongs rather than all of
+      // them landing on the primary.
+      currentGroup = hs.length > 1 ? hs : null;
       continue;
     }
 
     if (NON_RECOVERY_HEADING_PATTERNS.some((pattern) => pattern.test(deBulleted))) {
       current = null;
+      currentGroup = null;
       continue;
     }
 
+    if (currentGroup) {
+      ensure(pickCombinedSection(line, currentGroup)).push(line);
+      continue;
+    }
     if (current) ensure(current).push(line);
   }
 
@@ -664,7 +847,37 @@ export function parseLanguageLines(lines) {
  * Evidence-only — returns trimmed substrings of the input, inventing nothing.
  */
 function splitCertLine(line) {
-  const text = String(line || "");
+  const text = String(line || "").replace(/^[\s•·*\-–—]+/, "");
+
+  // A middle dot or bullet is the stronger separator, and when a line uses one it
+  // is THE separator — so split on it alone and leave commas inside a credential
+  // name intact. Resumes that list every certification on one line
+  // ("Claude 101 — Anthropic Academy (2026) · Google Data Analytics Certificate —
+  // Coursera · ...") previously came back as a single certificate containing all
+  // five, because only depth-0 commas were considered.
+  if (/[·•]/.test(text)) {
+    // Split on the separator only at depth 0 — "Google Data Analytics
+    // (Coursera · 2024)" is ONE credential, and a naive split made it two.
+    const parts = [];
+    let buf = "";
+    let nesting = 0;
+    for (const ch of text) {
+      if (ch === "(" || ch === "[") nesting++;
+      else if (ch === ")" || ch === "]") nesting = Math.max(0, nesting - 1);
+      if ((ch === "·" || ch === "•") && nesting === 0) {
+        parts.push(buf);
+        buf = "";
+      } else {
+        buf += ch;
+      }
+    }
+    parts.push(buf);
+    const cleaned = parts
+      .map((part) => part.replace(/^[\s*\-–—]+/, "").replace(/[.;,]+$/, "").trim())
+      .filter(Boolean);
+    if (cleaned.length > 0) return cleaned;
+  }
+
   const out = [];
   let depth = 0;
   let buf = "";
@@ -758,6 +971,8 @@ export function buildDeterministicBaseline(rawText, signals) {
     const label = extractCandidateLabel(text, name);
     if (label) basics.label = label;
   }
+  const headerLocation = extractLocationFromHeader(text);
+  if (headerLocation) basics.location = headerLocation;
   if (sig.emails?.length > 0) basics.email = sig.emails[0];
   if (sig.phones?.length > 0) basics.phone = sig.phones[0];
   const linkedinMatch = text.match(LINKEDIN_RE);
@@ -854,6 +1069,14 @@ export function recoverSectionsFromRawText(analysis = {}, signals, rawText) {
     basics.summary = baseline.basics.summary;
     basicsChanged = true;
     fallbackSections.push("summary");
+  }
+  // basics.location was recovered nowhere before this — a failed AI parse simply
+  // lost the candidate's city, silently.
+  const hasCity = Boolean(basics.location?.city || basics.location?.region);
+  if (!hasCity && baseline.basics?.location) {
+    basics.location = { ...(basics.location || {}), ...baseline.basics.location };
+    basicsChanged = true;
+    fallbackSections.push("location");
   }
   if (!basics.email && baseline.basics?.email) {
     basics.email = baseline.basics.email;

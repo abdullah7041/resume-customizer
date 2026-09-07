@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ExternalLink, FileUp, Loader2, Plus, RotateCw, Trash2, X } from 'lucide-react';
+import { Check, ExternalLink, FileUp, Loader2, Plus, Radar, RotateCw, Trash2, X } from 'lucide-react';
 import { GlassCard } from '../ui/GlassCard';
 import { GlassButton } from '../ui/GlassButton';
 import { useActiveResume, useResumeStore, useSearchIntent } from '@/lib/stores/resumeStore';
@@ -14,6 +14,7 @@ import {
   fetchServerSearchIntent,
   readLastFeedSeenAt,
   resolveCompany,
+  recrawlTrackedCompanies,
   saveSearchIntent,
   setFeedState,
   touchLastFeedSeenAt,
@@ -73,6 +74,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [companies, setCompanies] = useState<TrackedCompany[]>([]);
   const [postings, setPostings] = useState<FeedPosting[]>([]);
   const [feedState, setFeedStateMap] = useState<Map<string, 'dismissed' | 'saved'>>(new Map());
+  /**
+   * Which row currently has its coverage explanation open.
+   *
+   * The "1/3" badge carried its meaning in a `title` attribute and an `aria-label`
+   * only. `title` never fires on touch, so on a phone the badge was an unexplained
+   * number sitting where a match score would go. It is a button now, and this is
+   * what it toggles.
+   */
+  const [explainedPostingId, setExplainedPostingId] = useState<string | null>(null);
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
   const [serverIntent, setServerIntent] = useState<FeedIntent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -298,6 +308,54 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     void load({ silent: true });
   }, [load]);
 
+  /** null = idle, 'checking', 'queued' (crawl accepted), 'fresh' (nothing was stale). */
+  const [boardCheck, setBoardCheck] = useState<null | 'checking' | 'queued' | 'fresh'>(null);
+  const boardCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (boardCheckTimer.current) clearTimeout(boardCheckTimer.current);
+    },
+    [],
+  );
+
+  /**
+   * Go out to the employer boards, rather than re-reading what the last crawl stored.
+   *
+   * Reload answers "what does the database have"; this answers "is there anything
+   * new on the boards", which is the question a user pressing a refresh icon is
+   * actually asking. The crawl is a background function returning 202, so this
+   * reports that the check was queued and re-reads shortly after — it cannot show
+   * results that have not been fetched yet.
+   */
+  const handleCheckBoards = useCallback(async () => {
+    setBoardCheck('checking');
+    setError(null);
+    const { data, error: recrawlError } = await recrawlTrackedCompanies();
+
+    if (recrawlError) {
+      setBoardCheck(null);
+      setError(recrawlError);
+      return;
+    }
+
+    if (!data || data.dispatched === 0) {
+      // Every board was read recently. That is a fact, not a failure.
+      setBoardCheck('fresh');
+      boardCheckTimer.current = setTimeout(() => setBoardCheck(null), 6000);
+      return;
+    }
+
+    setBoardCheck('queued');
+    // The crawl runs on its own clock; this pulls in whatever has landed so far and
+    // the "boards last checked" line keeps telling the truth either way.
+    boardCheckTimer.current = setTimeout(() => {
+      // Clear the status with the reload it describes, so the line does not sit
+      // there claiming a check is in progress long after it finished.
+      setBoardCheck(null);
+      void load({ silent: true });
+    }, 6000);
+  }, [load]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -338,7 +396,17 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    */
   const feed = useMemo(() => {
     if (!intent) return null;
-    const visible = postings.filter((posting) => !feedState.has(posting.id));
+    /*
+     * Only a DISMISS hides a row.
+     *
+     * This used to drop a posting for any feed state at all, and saving writes
+     * `saved` — so "Save to pipeline" deleted the job from the feed exactly the way
+     * "Not interested" did. Saving a role is the opposite of losing interest in it,
+     * and the row is what carries the apply link. The saved row now stays, marked as
+     * saved; createJobApplication de-duplicates on company + title within seven days,
+     * so a second press cannot create a second pipeline entry.
+     */
+    const visible = postings.filter((posting) => feedState.get(posting.id) !== 'dismissed');
     return buildFeed(visible, intent, { maxAgeDays: maxAgeDays ?? undefined, now });
   }, [postings, feedState, intent, maxAgeDays, now]);
 
@@ -623,7 +691,22 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
   const handleSave = useCallback(
     async (scored: ScoredPosting) => {
+      // Refuse the save only when the READ failed. An empty description is normal on
+      // boards that publish none (Workday always, Workable sometimes) — refusing
+      // those made every such posting permanently unsaveable behind a "try again"
+      // that could never succeed. They save fine; the pipeline card simply omits the
+      // description section it has no text for.
       const description = await getPostingDescription(scored.posting.id);
+      if (description === null) {
+        setError(
+          t(
+            'jobFeed.errors.descriptionUnavailable',
+            'Could not read that job description. The posting was not saved — try again in a moment.',
+          ),
+        );
+        return;
+      }
+
       const { error: saveError } = await createJobApplication({
         company_name: scored.posting.companyName,
         job_title: scored.posting.title,
@@ -644,7 +727,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       setFeedStateMap((previous) => new Map(previous).set(scored.posting.id, 'saved'));
       await setFeedState(scored.posting.id, 'saved');
     },
-    [],
+    [t],
   );
 
   const handleMatch = useCallback(
@@ -652,7 +735,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       if (!onMatchPosting) return;
       const description = await getPostingDescription(scored.posting.id);
       onMatchPosting({
-        jobDescription: description,
+        jobDescription: description ?? '',
         companyName: scored.posting.companyName,
         jobTitle: scored.posting.title,
       });
@@ -888,7 +971,6 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                 type="button"
                 onClick={handleRefresh}
                 disabled={refreshing}
-                title={t('jobFeed.lastUpdated.explain', 'Re-reads what the last board check found.')}
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
               >
                 <RotateCw
@@ -899,12 +981,44 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   ? t('jobFeed.lastUpdated.refreshing', 'Reloading…')
                   : t('jobFeed.lastUpdated.action', 'Reload')}
               </button>
+              {/* The board check, which Reload is not and never was. Reload re-reads
+                  the database; this goes out to the employer boards. Both are offered
+                  because they answer different questions, and the two clocks below
+                  say which one each button moved. */}
+              <button
+                type="button"
+                onClick={() => void handleCheckBoards()}
+                disabled={boardCheck === 'checking'}
+                className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
+              >
+                <Radar
+                  className={`h-4 w-4 ${boardCheck === 'checking' ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                {boardCheck === 'checking'
+                  ? t('jobFeed.boardCheck.checking', 'Checking boards…')
+                  : t('jobFeed.boardCheck.action', 'Check boards for new roles')}
+              </button>
               {/* Two clocks, because they answer different questions. This button
                   re-reads what the last crawl stored; it does not go to the boards
                   and cannot — the crawl is a secret-gated background function on a
                   daily schedule. "Updated 2 minutes ago" beside a feed whose boards
                   were last read yesterday reads as freshness it does not have. */}
               <div className="flex flex-col text-xs text-muted-foreground">
+                {/* What Reload actually does, in the page rather than a `title` no
+                    touch device can reach. The board-check button beside it is the
+                    one that goes out to the employer boards. */}
+                <span>{t('jobFeed.lastUpdated.explain', 'Reload re-reads what the last board check found.')}</span>
+                {boardCheck === 'queued' && (
+                  <span className="text-primary">
+                    {t('jobFeed.boardCheck.queued', 'Checking the boards now — new roles appear here once the check finishes.')}
+                  </span>
+                )}
+                {boardCheck === 'fresh' && (
+                  <span>
+                    {t('jobFeed.boardCheck.fresh', 'Every board you follow was checked within the last hour.')}
+                  </span>
+                )}
                 {lastLoadedAt !== null && (
                   <span>
                     {t('jobFeed.lastUpdated.label', {
@@ -1258,14 +1372,17 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           <GlassCard className="p-4">
             <div className="flex items-start gap-4">
               {coverage && (
-                <span
-                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold tabular-nums ${
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExplainedPostingId((previous) =>
+                      previous === scored.posting.id ? null : scored.posting.id,
+                    )
+                  }
+                  aria-expanded={explainedPostingId === scored.posting.id}
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-semibold tabular-nums transition-[background-color,scale] duration-200 active:scale-[0.96] ${
                     complete ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
                   }`}
-                  title={t('jobFeed.why.coverageHint', {
-                    role: coverage.role,
-                    defaultValue: 'Words from your target role "{{role}}" that this title uses',
-                  })}
                   aria-label={t('jobFeed.why.coverage', {
                     matched: coverage.matched.length,
                     total: coverage.total,
@@ -1274,7 +1391,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   })}
                 >
                   {`${coverage.matched.length}/${coverage.total}`}
-                </span>
+                </button>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1322,6 +1439,18 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                     {t('jobFeed.why.matched', { terms: scored.matched.join(', ') })}
                   </p>
                 )}
+                {coverage && explainedPostingId === scored.posting.id && (
+                  /* The badge's meaning, in the page rather than in a tooltip. It says
+                     "target role words", never "match score" — the number is title
+                     keyword overlap computed in the browser, and it has been mistaken
+                     for the Match tab's AI score before. */
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {t('jobFeed.why.coverageHint', {
+                      role: coverage.role,
+                      defaultValue: 'Words from your target role "{{role}}" that this title uses',
+                    })}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -1341,9 +1470,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   {t('jobFeed.actions.match', 'Check the match')}
                 </GlassButton>
               )}
-              <GlassButton variant="secondary" onClick={() => void handleSave(scored)}>
-                {t('jobFeed.actions.save', 'Save to pipeline')}
-              </GlassButton>
+              {feedState.get(scored.posting.id) === 'saved' ? (
+                /* The row survives a save now, so it must say what happened to it —
+                   otherwise the only feedback for saving is a button that still
+                   reads "Save to pipeline". */
+                <span className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-primary/10 px-3 text-sm font-medium text-primary">
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                  {t('jobFeed.actions.saved', 'Saved to pipeline')}
+                </span>
+              ) : (
+                <GlassButton variant="secondary" onClick={() => void handleSave(scored)}>
+                  {t('jobFeed.actions.save', 'Save to pipeline')}
+                </GlassButton>
+              )}
               <a
                 href={scored.posting.applyUrl}
                 target="_blank"

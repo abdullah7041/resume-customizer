@@ -87,15 +87,21 @@ vi.mock('../lib/stores/resumeStore', () => {
     return { useResumeStore: mockFn };
 });
 
-vi.mock('../services/analytics', () => ({
-    analytics: {
-        track: vi.fn(),
-        trackOptimization: vi.fn(),
-        trackOptimizationFailed: vi.fn(),
-        trackScoreDiffExpanded: vi.fn(),
-        trackExplainabilityPanelOpened: vi.fn(),
-    },
-}));
+// Every analytics method resolves to a stable spy. The hand-listed mock broke the
+// moment a test rendered in guest mode and the component reached
+// trackGuestRunCompleted — a missing telemetry stub should never fail a behaviour test.
+vi.mock('../services/analytics', () => {
+    const spies = new Map();
+    return {
+        analytics: new Proxy({}, {
+            get: (_target, prop) => {
+                if (typeof prop !== 'string') return undefined;
+                if (!spies.has(prop)) spies.set(prop, vi.fn());
+                return spies.get(prop);
+            },
+        }),
+    };
+});
 
 vi.mock('../services/api', () => ({
     refineBullet: vi.fn(),
@@ -260,7 +266,9 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
     };
 
     const runOptimizeAndWaitForVerify = async () => {
-        renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
+        // isGuestMode: this helper drives the free-preview flow, which now belongs to
+        // guests only — a signed-in user gets the paid confirmation modal instead.
+        renderWithProviders(<OptimizeSection isGuestMode onOptimize={parentOptimizeHandler} />);
         fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
         await waitFor(() => {
             expect(mockAnalyzeResumeWithAI).toHaveBeenCalled();
@@ -310,7 +318,7 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         }]));
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 45, topHits: [], missingKeywords: [] });
 
-        renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
+        renderWithProviders(<OptimizeSection isGuestMode onOptimize={parentOptimizeHandler} />);
         fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
         await waitFor(() => {
             expect(mockSetOptimizations).toHaveBeenCalled();

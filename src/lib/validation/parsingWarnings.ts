@@ -77,6 +77,15 @@ export function getParsingWarnings(resume: Resume): ParsingWarning[] {
         }
     }
 
+    // 1b. Home city. parse-quality now reports a lost `location` the same way it
+    // reports a lost section; without this consumer that signal was inert and a
+    // dropped home city stayed invisible. Only raised when the parser says it lost
+    // one — a resume that simply states no city is not a parse failure.
+    const hasHomeCity = Boolean(basics?.location?.city || basics?.location?.region);
+    if (!hasHomeCity && lossExplained('location')) {
+        warnings.push(warn('missing_location', 'contact', 'info'));
+    }
+
     // 2. Summary
     if (!basics?.summary || basics.summary.length < 50) {
         warnings.push(warn('short_summary', 'summary', 'info'));

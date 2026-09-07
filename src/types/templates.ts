@@ -244,6 +244,36 @@ export interface OptimizationMetrics {
  * holds the job-scoped, user-gated optimization cards + view state, replayed over the
  * shared base on open. See docs/adr/ADR-job-specific-resume-builder.md.
  */
+/**
+ * The last optimize run, kept so it survives leaving the page.
+ *
+ * The cards themselves lived in MainContent's local state while the scores derived
+ * from them were persisted, so navigating to another route and back showed a score
+ * and keyword chips with no rewrites behind them — which reads as a silent failure.
+ * `status` is what lets an interrupted run say so instead of showing nothing: a run
+ * still marked 'running' when the app mounts cannot be in flight, because the
+ * promise driving it died with the previous page.
+ */
+export interface OptimizeRunRecord {
+  status: 'running' | 'succeeded' | 'failed';
+  /**
+   * Which page load started this run.
+   *
+   * A record still marked 'running' means nothing on its own — the run may be in
+   * flight right now. It only proves an interruption when the page that started
+   * it is gone, which is exactly what a mismatched id says.
+   */
+  pageSessionId?: string;
+  startedAt: string;
+  finishedAt: string | null;
+  /** Last SSE phase reached, so an interrupted run can say where it stopped. */
+  phase: string | null;
+  error: string | null;
+  cards: unknown[];
+  data: unknown | null;
+  keywords: { add: string[]; remove: string[]; neutral: string[] };
+}
+
 export interface JobVariantSnapshot {
   optimizations: OptimizationResult[];
   keywordSuggestions: KeywordSuggestion[];
@@ -311,6 +341,7 @@ export interface ResumeState {
 
   // Optimization metrics for Results Summary
   optimizationMetrics: OptimizationMetrics;
+  optimizeRun: OptimizeRunRecord | null;
 
   // Baseline match score (original resume's score before any optimizations)
   baselineMatchScore: number | null;
@@ -349,6 +380,7 @@ export interface ResumeState {
 
   // Actions
   setOriginalResume: (resume: ResumeSchema) => void;
+  setOptimizeRun: (run: Partial<OptimizeRunRecord> | null) => void;
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;

@@ -48,6 +48,15 @@
     "optimizeValidating": "نتحقق من سيرتك...",
     "optimizeVulnerabilities": "نفحص مسارك المهني...",
     "optimizeAI": "الذكاء الاصطناعي يحلل ويعيد كتابة نقاطك...",
-    "optimizeBuildingResponse": "يبني بطاقات التحسين..."
+    "optimizeBuildingResponse": "يبني بطاقات التحسين...",
+    "optimizeInterrupted": "لم تكتمل عملية التحسين",
+    "optimizeInterruptedDesc": "توقفت أثناء {{phase}} بسبب إغلاق الصفحة. تحقق من رصيد النقاط ثم أعد المحاولة.",
+    "optimizePhase": {
+      "generic": "المعالجة",
+      "validating": "فحص سيرتك الذاتية",
+      "detecting_vulnerabilities": "مراجعة مسارك المهني",
+      "ai_processing": "إعادة صياغة النقاط",
+      "building_response": "تجهيز البطاقات"
+    }
   }
 }

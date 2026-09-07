@@ -61,7 +61,7 @@
       "refreshing": "Reloading…",
       "label": "Updated {{when}}",
       "justNow": "just now",
-      "explain": "Re-reads what the last board check found. The boards themselves are checked once a day.",
+      "explain": "Reload re-reads what the last board check found.",
       "boards": "Boards last checked {{when}}"
     },
     "filters": {
@@ -104,7 +104,7 @@
       "optimize": "Optimize for this role",
       "coverLetter": "Draft a cover letter",
       "save": "Save to pipeline",
-      "saved": "Saved",
+      "saved": "Saved to pipeline",
       "dismiss": "Not interested",
       "apply": "View posting"
     },
@@ -113,12 +113,19 @@
       "trackFailed": "Could not follow that company.",
       "signInRequired": "Sign in to follow companies.",
       "noDescription": "That posting has no description to match against.",
-      "noDescriptionHint": "Open the posting and paste its text into the Match tab."
+      "noDescriptionHint": "Open the posting and paste its text into the Match tab.",
+      "descriptionUnavailable": "Could not read that job description. The posting was not saved — try again in a moment."
     },
     "roles": {
       "heading": "From your CV",
       "help": "Tap one to start matching against it.",
       "add": "Add from your CV"
+    },
+    "boardCheck": {
+      "action": "Check boards for new roles",
+      "checking": "Checking boards…",
+      "queued": "Checking the boards now — new roles appear here once the check finishes.",
+      "fresh": "Every board you follow was checked within the last hour."
     }
   }
 }

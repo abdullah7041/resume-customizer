@@ -51,14 +51,12 @@
       "area": "Computer Science",
       "studyType": "BSc",
       "startDate": null,
-      "endDate": "2016",
-      "gpa": null
+      "endDate": "2016"
     }
   ],
   "skills": [
     {
       "name": null,
-      "level": null,
       "keywords": [
         "JavaScript",
         "TypeScript",
@@ -74,18 +72,15 @@
   "languages": [
     {
       "language": "Arabic",
-      "fluency": "Native",
-      "id": null
+      "fluency": "Native"
     },
     {
       "language": "English",
-      "fluency": "Fluent",
-      "id": null
+      "fluency": "Fluent"
     }
   ],
   "meta": {
     "version": "3.0.0",
-    "canonical": null,
-    "language": "en"
+    "canonical": null
   }
 }

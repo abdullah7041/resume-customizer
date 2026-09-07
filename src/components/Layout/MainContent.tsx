@@ -69,6 +69,7 @@ import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 import { useExitPresence } from "@/hooks/useExitPresence";
 import { cn } from "@/lib/utils/cn";
 import type { FeatureFlagName } from "@/types/featureFlags";
+import type { OptimizeRunRecord } from "@/types/templates";
 
 /** Lightweight skeleton shown while lazy sections load */
 function SectionSkeleton() {
@@ -173,6 +174,26 @@ const TOAST_IDS = {
   match: "toast:match",
   optimize: "toast:optimize",
 };
+/**
+ * Identifies THIS page load, so an in-flight run is never mistaken for a dead one.
+ *
+ * Reporting every 'running' record at mount was wrong: a remount while a run was
+ * genuinely in flight (a route change and back, React Strict Mode) would declare a
+ * live run failed and stamp the record as such. A leftover record only proves an
+ * interruption when the page that started it is gone.
+ */
+const PAGE_SESSION_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+/**
+ * How many toasts may be on screen at once.
+ *
+ * pushToast used to do setToasts([toast]) — it REPLACED the array, so exactly one
+ * toast could exist and two concurrent features silently overwrote each other's
+ * progress and results. Capped rather than unbounded so a burst cannot bury the
+ * page; the oldest drops out first.
+ */
+const MAX_VISIBLE_TOASTS = 3;
+
 const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
@@ -367,7 +388,7 @@ const buildAiDebugSnapshot = (
 export default function MainContent() {
   const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
-  const { refetch: refetchCredits } = useUserCredits();
+  const { refetch: refetchCredits, applyCreditsRemaining } = useUserCredits();
   const [guestMode, setGuestMode] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
@@ -523,9 +544,56 @@ export default function MainContent() {
       i18n.language,
     )
   );
-  const [optimizations, setOptimizations] = useState([]);
-  const [optimizationData, setOptimizationData] = useState(null);
-  const [optimizationKeywords, setOptimizationKeywords] = useState({ add: [], remove: [], neutral: [] });
+  /**
+   * The optimize deliverable, restored from the store rather than starting empty.
+   *
+   * These three lived in component-local state while the SCORES derived from them
+   * were persisted to the store, so navigating to a route like /pricing unmounted
+   * MainContent and came back showing a match score and keyword chips with no
+   * rewrite cards behind them. That is what "I left the page and came back and saw
+   * nothing" actually was.
+   */
+  const [optimizations, setOptimizations] = useState(
+    () => (useResumeStore.getState().optimizeRun?.cards as typeof optimizations) ?? [],
+  );
+  const [optimizationData, setOptimizationData] = useState(
+    () => useResumeStore.getState().optimizeRun?.data ?? null,
+  );
+  const [optimizationKeywords, setOptimizationKeywords] = useState(
+    () => useResumeStore.getState().optimizeRun?.keywords ?? { add: [], remove: [], neutral: [] },
+  );
+
+  /**
+   * Adopt a run that finished while this component was not mounted.
+   *
+   * The initializers above read the store ONCE. Navigate away mid-run and the
+   * promise keeps going and writes its cards through getState(); navigate back and
+   * the new instance has already initialized empty and never sees them — the exact
+   * "came back and saw nothing" symptom, now with a stored record claiming success.
+   * Only a run with no local cards is adopted, so this can never clobber what the
+   * page is currently showing.
+   */
+  useEffect(() => {
+    const adopt = (run: OptimizeRunRecord | null) => {
+      if (run?.status !== 'succeeded') return;
+      const cards = (run.cards ?? []) as typeof optimizations;
+      if (cards.length === 0) return;
+      setOptimizations((current) => (current.length > 0 ? current : cards));
+      setOptimizationData((current) => current ?? run.data ?? null);
+      setOptimizationKeywords((current) =>
+        current.add.length || current.remove.length || current.neutral.length
+          ? current
+          : run.keywords ?? current,
+      );
+    };
+
+    adopt(useResumeStore.getState().optimizeRun);
+    return useResumeStore.subscribe((state, previous) => {
+      if (state.optimizeRun !== previous.optimizeRun) adopt(state.optimizeRun);
+    });
+    // Mount-scoped by design: the setters are stable and the store is read fresh on
+    // every call, so there is nothing to re-subscribe for.
+  }, []);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTruthChecking, setIsTruthChecking] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -657,7 +725,18 @@ export default function MainContent() {
     (toast, options: { id?: string } = {}) => {
       const { toastId, ...toastPayload } = toast ?? {};
       const id = options.id ?? toastId ?? getId();
-      setToasts([{ id, ...toastPayload }]);
+      const next = { id, ...toastPayload };
+      // Replace in place when this id is already showing (a phase update replacing
+      // its own toast), otherwise append and drop the oldest beyond the cap.
+      setToasts((previous) => {
+        const existingIndex = previous.findIndex((entry) => entry.id === id);
+        if (existingIndex !== -1) {
+          const updated = [...previous];
+          updated[existingIndex] = next;
+          return updated;
+        }
+        return [...previous, next].slice(-MAX_VISIBLE_TOASTS);
+      });
       const lifetime = toast?.type === "danger" ? 6000 : 4200;
       const host = typeof window !== "undefined" ? window : globalThis;
       const existing = toastTimers.current.get(id);
@@ -670,6 +749,50 @@ export default function MainContent() {
     },
     [dismissToast]
   );
+
+  /**
+   * Say so when a run did not survive the page.
+   *
+   * A run still marked 'running' at mount cannot be in flight — the promise driving
+   * it died with the previous page — so the only honest thing to report is that it
+   * was interrupted. Without this the user came back to a quiet screen and had to
+   * infer the failure, which is exactly what was reported.
+   */
+  useEffect(() => {
+    const store = useResumeStore.getState();
+    const run = store.optimizeRun;
+    // A run this page started may still be in flight — only a record left behind by
+    // a previous page load proves it was interrupted.
+    if (run?.status !== 'running') return;
+    if (run.pageSessionId === PAGE_SESSION_ID) return;
+
+    store.setOptimizeRun({
+      status: 'failed',
+      finishedAt: new Date().toISOString(),
+      error: 'interrupted',
+    });
+
+    pushToast(
+      {
+        type: 'warning',
+        title: t('toasts.optimizeInterrupted', 'That optimization did not finish'),
+        description: t('toasts.optimizeInterruptedDesc', {
+          // Phase ids are machine names ('ai_processing'); dropped into a sentence
+          // they read as a leak, and in Arabic as an English token mid-sentence.
+          // Only ever interpolate translated copy.
+          phase: t(
+            `toasts.optimizePhase.${run.phase ?? 'generic'}`,
+            t('toasts.optimizePhase.generic', 'processing'),
+          ),
+          defaultValue:
+            'It stopped while {{phase}} because the page was closed. Check your credit balance, then run it again.',
+        }),
+      },
+      { id: TOAST_IDS.optimize },
+    );
+    // Mount only: this asks what happened BEFORE this render, and must not re-fire.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -1044,6 +1167,9 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    // The persisted run describes results that no longer exist. Leaving it behind
+    // would let a stale record be restored, or reported as interrupted.
+    useResumeStore.getState().setOptimizeRun(null);
     setActiveTab("resume");
     resetPipelineContext();
 
@@ -1079,6 +1205,7 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    useResumeStore.getState().setOptimizeRun(null);
     resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.resumeClearedTitle"), description: t("toasts.resumeClearedDesc") });
   }, [pushToast, resetPipelineContext, t]);
@@ -1096,6 +1223,7 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    useResumeStore.getState().setOptimizeRun(null);
 
     // Clear persisted Zustand state (survives refresh via localStorage)
     const store = useResumeStore.getState();
@@ -1222,6 +1350,7 @@ export default function MainContent() {
         setOptimizations([]);
         setOptimizationData(null);
         setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+        useResumeStore.getState().setOptimizeRun(null);
         resetPipelineContext();
         emitHRSuperSaudEvent('resume.uploaded');
         pushToast(
@@ -1508,6 +1637,23 @@ export default function MainContent() {
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
+        // Open a run record before the first await. If the page goes away mid-run this
+        // is the only thing left saying a run was in flight.
+        useResumeStore.getState().setOptimizeRun({
+          status: 'running',
+          pageSessionId: PAGE_SESSION_ID,
+          startedAt: new Date().toISOString(),
+          finishedAt: null,
+          phase: 'validating',
+          error: null,
+          // Cleared explicitly: setOptimizeRun merges over the previous record, so
+          // without this a run that then FAILS leaves a 'failed' record still holding
+          // the LAST run's cards — which the next mount would restore beside a
+          // different job description.
+          cards: [],
+          data: null,
+          keywords: { add: [], remove: [], neutral: [] },
+        });
         pushToast(
           {
             type: 'info',
@@ -1542,6 +1688,7 @@ export default function MainContent() {
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
+              useResumeStore.getState().setOptimizeRun({ phase });
               const message = phaseMessages[phase];
               if (message) {
                 pushToast(
@@ -1703,10 +1850,44 @@ export default function MainContent() {
           persistPreviewUsage();
         }
 
+        // Refresh the header balance after a run that actually spent credits.
+        // refetchCredits() was previously called ONLY in the interrupted-stream
+        // error branch, so a successful optimize left the balance showing the
+        // pre-run number — which reads as "it didn't charge me". Every other AI
+        // feature already refreshes here (see MatchSection / CoverLetterSection).
+        if (!freePreview) {
+          // The server already returned the exact post-run balance; use it rather
+          // than racing its own deduction with a timed refetch. The refetch stays
+          // as the fallback for responses that carry no number.
+          const remaining = (result as { creditsRemaining?: number | null })?.creditsRemaining;
+          if (typeof remaining === 'number') {
+            applyCreditsRemaining(remaining);
+          } else {
+            scheduleTimeout(() => {
+              refetchCredits().catch(() => { /* non-blocking */ });
+            }, 500);
+          }
+        }
+
+        // Persist the cards themselves, not only the scores derived from them.
+        useResumeStore.getState().setOptimizeRun({
+          status: 'succeeded',
+          finishedAt: new Date().toISOString(),
+          error: null,
+          cards: allCards,
+          data: result,
+          keywords: result.keywords ?? { add: [], remove: [], neutral: [] },
+        });
+
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 900);
         return result;
       } catch (error: any) {
+        useResumeStore.getState().setOptimizeRun({
+          status: 'failed',
+          finishedAt: new Date().toISOString(),
+          error: error?.message ?? 'Optimization failed',
+        });
         setAiDebug(buildAiDebugSnapshot(error, "error"));
         setFlowProgress(0);
         emitHRSuperSaudEvent('error.generic');
@@ -1738,7 +1919,7 @@ export default function MainContent() {
         setIsOptimizing(false);
       }
     },
-    [i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, resumeData, t]
+    [applyCreditsRemaining, i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, resumeData, t]
   );
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual
@@ -1771,70 +1952,82 @@ export default function MainContent() {
         }, []) || undefined;
       };
 
-      try {
-        const workHistory = buildWorkHistory();
-        const persistentHardStops = loadPersistentHardStops();
+      const workHistory = buildWorkHistory();
+      const persistentHardStops = loadPersistentHardStops();
 
-        // E1: only skip the clarification endpoint when deterministic evidence
-        // says this is a known strong match with no career vulnerabilities.
-        if (!shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
-          return await handleOptimizeActual({
-            mode,
-            workHistory,
-            userHardStops: persistentHardStops,
-            freePreview: options?.freePreview,
-          });
-        }
+      // The clarification step is wrapped on its OWN, deliberately.
+      //
+      // It used to share one try/catch with the optimize call, so a failed
+      // optimization was mistaken for a clarification error and the catch
+      // immediately re-ran the whole paid optimization. When that retry failed too,
+      // the rejection escaped handleOptimize into an un-awaited caller and landed as
+      // an unhandled promise rejection (Sentry JAVASCRIPT-REACT-1C). Clarification is
+      // free and non-fatal; optimize is neither. They no longer share a catch.
+      //
+      // E1: only call the clarification endpoint when deterministic evidence says
+      // this is not already a known strong match without career vulnerabilities.
+      if (shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
+        try {
+          // ---- Clarification Step (free, non-fatal) ----
+          // Show a lightweight toast while we call the gap-analysis endpoint
+          pushToast(
+            {
+              type: 'info',
+              title: t('toasts.generatingOptimizations'),
+              description: t('toasts.analyzingGaps', 'Analyzing resume gaps…'),
+            },
+            { id: TOAST_IDS.optimize }
+          );
 
-        // ---- Clarification Step (free, non-fatal) ----
-        // Show a lightweight toast while we call the gap-analysis endpoint
-        pushToast(
-          {
-            type: 'info',
-            title: t('toasts.generatingOptimizations'),
-            description: t('toasts.analyzingGaps', 'Analyzing resume gaps…'),
-          },
-          { id: TOAST_IDS.optimize }
-        );
+          const clarifyResult = await (async () => {
+            setIsCheckingClarifications(true);
+            try {
+              return await generateClarifications({
+                resumeText: resumeData.plainText,
+                jobDesc: jobDescription,
+                language: i18n.language,
+              });
+            } finally {
+              setIsCheckingClarifications(false);
+            }
+          })();
 
-        const clarifyResult = await (async () => {
-          setIsCheckingClarifications(true);
-          try {
-            return await generateClarifications({
-              resumeText: resumeData.plainText,
-              jobDesc: jobDescription,
-              language: i18n.language,
+          const unansweredQuestions = filterClarificationQuestionsByHardStops(
+            clarifyResult.clarifications ?? [],
+            persistentHardStops,
+          );
+
+          if (unansweredQuestions.length > 0) {
+            // Keep the caller pending until the modal continuation completes. The
+            // OptimizeSection uses that completion boundary to consume a free
+            // preview and verify only the cards that were actually generated.
+            return new Promise((resolve) => {
+              pendingOptimizeContinuation.current = { resolve };
+              setClarificationQuestions(unansweredQuestions);
+              setPendingOptimizeArgs({
+                mode,
+                workHistory,
+                persistentHardStops,
+                freePreview: options?.freePreview,
+              });
+              setIsInterrogating(true);
+              setIsOptimizing(false);
+              setFlowProgress(0);
             });
-          } finally {
-            setIsCheckingClarifications(false);
           }
-        })();
 
-        const unansweredQuestions = filterClarificationQuestionsByHardStops(
-          clarifyResult.clarifications ?? [],
-          persistentHardStops,
-        );
-
-        if (unansweredQuestions.length > 0) {
-          // Keep the caller pending until the modal continuation completes. The
-          // OptimizeSection uses that completion boundary to consume a free
-          // preview and verify only the cards that were actually generated.
-          return new Promise((resolve) => {
-            pendingOptimizeContinuation.current = { resolve };
-            setClarificationQuestions(unansweredQuestions);
-            setPendingOptimizeArgs({
-              mode,
-              workHistory,
-              persistentHardStops,
-              freePreview: options?.freePreview,
-            });
-            setIsInterrogating(true);
-            setIsOptimizing(false);
-            setFlowProgress(0);
-          });
+          // No questions → fall through to the single optimize call below.
+        } catch (clarificationError) {
+          // Clarification is free and advisory. Losing it costs context, not the run.
+          console.warn('[handleOptimize] Clarification error, optimizing without it:', clarificationError);
         }
+      }
 
-        // No questions → fall through to the actual optimize call
+      // Exactly one optimize call, on every path through this function.
+      // handleOptimizeActual has already surfaced any failure as the
+      // "Optimization failed" toast before re-throwing, so returning null here is
+      // what keeps the rejection from escaping into an un-awaited caller.
+      try {
         return await handleOptimizeActual({
           mode,
           workHistory,
@@ -1842,16 +2035,8 @@ export default function MainContent() {
           userHardStops: persistentHardStops,
           freePreview: options?.freePreview,
         });
-      } catch (outerError) {
-        // If clarification itself throws (shouldn't — it's non-fatal), proceed anyway
-        console.warn('[handleOptimize] Clarification error, proceeding without:', outerError);
-        return await handleOptimizeActual({
-          mode,
-          workHistory: buildWorkHistory(),
-          userClarifications: undefined,
-          userHardStops: loadPersistentHardStops(),
-          freePreview: options?.freePreview,
-        });
+      } catch {
+        return null;
       }
     },
     [handleOptimizeActual, i18n.language, isCheckingClarifications, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]

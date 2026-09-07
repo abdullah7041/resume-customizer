@@ -12,6 +12,8 @@ interface UseUserCreditsReturn {
   isLoading: boolean;
   error: Error | null;
   refetch: () => Promise<void>;
+  /** Apply a balance the server just reported, skipping a refetch round trip. */
+  applyCreditsRemaining: (remaining: number) => void;
   showUpgrade: boolean;
   setShowUpgrade: (show: boolean) => void;
   upgradeDismissedKey: string | null;

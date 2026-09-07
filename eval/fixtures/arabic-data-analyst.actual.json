@@ -7,7 +7,7 @@
     "location": {
       "city": "الدمام",
       "countryCode": "SA",
-      "country": "المملكة العربية السعودية"
+      "region": null
     },
     "profiles": [
       {
@@ -20,10 +20,10 @@
   },
   "work": [
     {
-      "position": "محلل بيانات أول",
       "name": "شركة الغانم",
+      "position": "محلل بيانات أول",
       "location": "الرياض",
-      "startDate": "03-2020",
+      "startDate": "مارس 2020",
       "endDate": "Present",
       "highlights": [
         "قاد تطوير ١٥ لوحة معلومات تفاعلية لدعم اتخاذ القرار.",
@@ -31,11 +31,11 @@
       ]
     },
     {
-      "position": "محلل بيانات",
       "name": "نون",
+      "position": "محلل بيانات",
       "location": "عن بعد",
-      "startDate": "01-2018",
-      "endDate": "02-2020",
+      "startDate": "يناير 2018",
+      "endDate": "فبراير 2020",
       "highlights": [
         "صمم تقارير المبيعات الأسبوعية لفريق الإدارة."
       ]
@@ -52,7 +52,7 @@
   ],
   "skills": [
     {
-      "name": "Technical Skills",
+      "name": null,
       "keywords": [
         "SQL",
         "Power BI",
@@ -66,14 +66,17 @@
   "languages": [
     {
       "language": "العربية",
-      "fluency": "اللغة الأم"
+      "fluency": "اللغة الأم",
+      "tag": null
     },
     {
       "language": "الإنجليزية",
-      "fluency": "متقدم"
+      "fluency": "متقدم",
+      "tag": null
     }
   ],
   "meta": {
-    "version": "3.0.0"
+    "version": "v1.0.0",
+    "canonical": null
   }
 }

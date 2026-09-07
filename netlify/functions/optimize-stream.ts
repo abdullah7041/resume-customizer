@@ -126,14 +126,14 @@ export default async function handler(request: Request): Promise<Response> {
       { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
-  const freePreview = rawBody.freePreview === true;
+  const freePreviewRequested = rawBody.freePreview === true;
 
   // --- Auth ---
   const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
   let user: any = null;
   let userEmail: string | undefined;
 
-  if (!freePreview && !authHeader) {
+  if (!freePreviewRequested && !authHeader) {
     return new Response(
       JSON.stringify({ error: "Authentication required. Please sign in." }),
       { status: 401, headers: { "Content-Type": "application/json" } }
@@ -159,6 +159,29 @@ export default async function handler(request: Request): Promise<Response> {
     }
     user = authUser;
     userEmail = authUser.email;
+  }
+
+  // `freePreview` is a claim made by the client, not an authorization.
+  //
+  // The client sent it for SIGNED-IN users whenever a localStorage counter was
+  // under three, so the guest limiter answered paying customers with 429
+  // `guest/free-preview-used` ("You've used your free preview... Please sign in")
+  // and no credit was ever consumed — Sentry JAVASCRIPT-REACT-1H, preview_mode
+  // true on a signed-in session. The claim is honoured ONLY for a caller we could
+  // not authenticate at all; an authenticated request always goes through billing.
+  const freePreview = freePreviewRequested && !user;
+
+  // An authenticated account with no email cannot be billed, so serving it for
+  // free was a bypass rather than a kindness. Google OAuth is the only sign-in
+  // path and always yields an email, so this branch means something is wrong.
+  if (user && !userEmail) {
+    return new Response(
+      JSON.stringify({
+        error: "Your account has no email address on file, so credits cannot be applied. Please contact support.",
+        code: "auth/no-email",
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   const ipAddress = getClientIPFromRequest(request);

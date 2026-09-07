@@ -1083,7 +1083,14 @@ describe("MainContent resume parsing", () => {
     expect(await screen.findByText(
       "Could not generate new questions. Your current questions are still available.",
     )).toBeInTheDocument();
-    expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "danger");
+    // Toasts are a queue now, not a single slot — a feature's result no longer
+    // wipes whatever else was on screen. Assert the danger toast is PRESENT
+    // rather than that it is the only one.
+    expect(
+      screen.getAllByTestId("toast-mock").some(
+        (node) => node.getAttribute("data-toast-type") === "danger",
+      ),
+    ).toBe(true);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Led cross-functional teams" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate different questions" })).not.toBeDisabled();
@@ -1121,7 +1128,14 @@ describe("MainContent resume parsing", () => {
     expect(await screen.findByText(
       "Could not generate new questions. Your current questions are still available.",
     )).toBeInTheDocument();
-    expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "danger");
+    // Toasts are a queue now, not a single slot — a feature's result no longer
+    // wipes whatever else was on screen. Assert the danger toast is PRESENT
+    // rather than that it is the only one.
+    expect(
+      screen.getAllByTestId("toast-mock").some(
+        (node) => node.getAttribute("data-toast-type") === "danger",
+      ),
+    ).toBe(true);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Led cross-functional teams" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate different questions" })).not.toBeDisabled();

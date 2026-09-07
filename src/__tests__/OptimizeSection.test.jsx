@@ -452,7 +452,7 @@ describe('OptimizeSection', () => {
                 return { cards: [sampleOptimization] };
             });
 
-            renderWithProviders(<OptimizeSection onOptimize={onOptimize} />);
+            renderWithProviders(<OptimizeSection isGuestMode onOptimize={onOptimize} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
 
             await waitFor(() => {
@@ -470,7 +470,7 @@ describe('OptimizeSection', () => {
             mockStoreState.originalResume = { basics: { name: 'Test User' } };
             const onOptimize = vi.fn().mockResolvedValue(null);
 
-            renderWithProviders(<OptimizeSection onOptimize={onOptimize} />);
+            renderWithProviders(<OptimizeSection isGuestMode onOptimize={onOptimize} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize resume/i }));
 
             await waitFor(() => {
@@ -1336,7 +1336,7 @@ describe('Optimization Card Types', () => {
                 }),
             });
 
-            renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
+            renderWithProviders(<OptimizeSection isGuestMode onOptimize={parentOptimizeHandler} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
             // Verification includes dynamic imports plus resume merge/format work;
@@ -1405,7 +1405,7 @@ describe('Optimization Card Types', () => {
                 }),
             });
 
-            renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
+            renderWithProviders(<OptimizeSection isGuestMode onOptimize={parentOptimizeHandler} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
             await waitFor(() => {
@@ -1460,7 +1460,7 @@ describe('Optimization Card Types', () => {
                 }),
             });
 
-            renderWithProviders(<OptimizeSection onOptimize={parentOptimizeHandler} />);
+            renderWithProviders(<OptimizeSection isGuestMode onOptimize={parentOptimizeHandler} />);
             fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
 
             await waitFor(() => {
