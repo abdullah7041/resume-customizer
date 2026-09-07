@@ -50,8 +50,12 @@
         "moderate": "معتدل",
         "minor": "طفيف"
       },
-      "itemCount_one": "{{count}} عنصر",
-      "itemCount_other": "{{count}} عناصر"
+      "itemCount_zero": "لا عناصر",
+      "itemCount_one": "عنصر واحد",
+      "itemCount_two": "عنصران",
+      "itemCount_few": "{{count}} عناصر",
+      "itemCount_many": "{{count}} عنصرًا",
+      "itemCount_other": "{{count}} عنصر"
     }
   }
 }
