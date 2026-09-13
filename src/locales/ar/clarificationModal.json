@@ -1,5 +1,11 @@
 {
   "clarificationModal": {
+    "round": "الجولة",
+    "selectMany": "اختر كل ما ينطبق عليك",
+    "selectOne": "اختر إجابة واحدة",
+    "optimizeNow": "حسّن الآن",
+    "continueQuestions": "متابعة الأسئلة",
+    "followupFailed": "تعذّر تحميل أسئلة المتابعة. إجاباتك محفوظة؛ حاول مجددًا أو حسّن الآن.",
     "title": "أسئلة سريعة لتحسين نتائجك",
     "question": "سؤال",
     "questions": "أسئلة",

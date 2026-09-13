@@ -129,7 +129,18 @@
       "action": "Check boards for new roles",
       "checking": "Checking boards…",
       "queued": "Checking the boards now — new roles appear here once the check finishes.",
-      "fresh": "Every board you follow was checked within the last hour."
+      "fresh": "Every board you follow was checked within the last hour.",
+      "completed": "Board checks finished. The feed has been reloaded.",
+      "partial": "Some boards could not be checked. Available results have been reloaded.",
+      "failed": "Board checks failed. Your existing roles are still available.",
+      "waiting": "The check is still pending. Reload later to see completed results."
+    },
+    "recommendation": {
+      "strong": "Strong evidence fit",
+      "adjacent": "Adjacent role to explore",
+      "unknown": "Experience fit not yet verified",
+      "explain": "Discovery relevance. Run Match for a full assessment.",
+      "gaps": "Requirements to verify"
     }
   }
 }

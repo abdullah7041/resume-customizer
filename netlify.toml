@@ -43,10 +43,10 @@
   timeout = 90  # Increased: OpenRouter timeout 65s + 25s cleanup buffer
 
 [functions."optimize"]
-  timeout = 120  # Increased: OpenRouter timeout 100s + 20s cleanup buffer
+  timeout = 60  # 40s AI deadline leaves time for validation, credits and delivery
 
 [functions."optimize-stream"]
-  timeout = 120  # SSE streaming variant — same AI call, same timeout
+  timeout = 60  # Streaming functions have the same platform execution limit
 
 [functions."generate-cover-letter"]
   timeout = 60  # Increased: OpenRouter timeout 50s + 10s buffer

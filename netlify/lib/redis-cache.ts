@@ -54,7 +54,10 @@ function getRedis(): Redis | null {
  * @returns          e.g. "watheq:optimize:a3f9c1..."
  */
 export function buildCacheKey(namespace: string, data: Record<string, unknown>): string {
-  const normalized = JSON.stringify(data, Object.keys(data).sort());
+  const normalized = JSON.stringify(data, (_key, value) =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]]))
+      : value);
   const hash = createHash('sha256').update(normalized).digest('hex');
   return `watheq:${namespace}:${hash}`;
 }

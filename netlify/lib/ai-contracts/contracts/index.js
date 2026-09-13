@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { feedProfileContract } from './feed-profile.js';
 import { taggedBlock, optionalTaggedBlock, buildMessages } from '../prompt.js';
 import { formatRagContext } from '../rag-context.js';
 import { AiContractError } from '../errors.js';
@@ -86,6 +87,7 @@ const resumeJsonSchema = {
           location: { type: 'string' },
           startDate: { type: 'string' },
           endDate: { type: 'string' },
+          description: { type: 'string', description: 'Unbulleted role or company introduction only. Keep achievement bullets in highlights.' },
           highlights: stringArray,
         },
         required: ['name', 'position', 'startDate', 'endDate', 'highlights'],
@@ -967,6 +969,7 @@ For EACH work entry you MUST extract:
 - location: extract the entry's city/country whenever the text shows one, in ANY layout. It is usually on the SAME line as the title or the employer rather than on a line of its own. Two common shapes, both of which you MUST handle: parenthesised after the employer — "CB&I (Dammam, KSA)" → employer "CB&I", location "Dammam, KSA"; and separated by whitespace or a bullet — "Founder & AI Product Engineer — Watheq   Riyadh, Saudi Arabia  |  Aug 2025 – Present" → employer "Watheq", location "Riyadh, Saudi Arabia". Never leave the city attached to the employer name, and never drop it
 - startDate and endDate: copied verbatim from the text for that specific entry — do NOT infer or use "Present" unless the word "Present" literally appears for that entry; a date range on a nearby line belongs to the adjacent entry
 - highlights: an array containing EVERY bullet point and achievement line under that entry — do not summarize, merge, skip, or omit any bullet; each bullet is a separate array item
+- description: preserve any unbulleted role/company introductory sentence separately; never turn that introduction into an achievement bullet or move an explicit bullet here
 
 Additional extraction rules:
 - The line directly under the candidate's name is a professional headline. Put it in basics.label, not as a work entry.
@@ -1154,11 +1157,13 @@ function buildClarificationMessages(input, context) {
   const languageInstruction = input.language === 'ar'
     ? '\nTranslate theme, rationale, question, and every option label into Arabic. Keep id, option value, and English ATS keywords in English.'
     : '';
-  const user = `Return 0 to 3 critical clarification questions. Return an empty array if the background is fundamentally incompatible or already well quantified. Every question must set type to single or multi, include at most 4 real selectable options, set allowOther to true, and end with exactly one option marked isHardStop true (for example, "I don't have this experience"). For numeric questions, provide ranges such as "1–3", "4–10", and "10+"; Other captures exact values. You may set defaultValue only when one option is clearly the most likely common answer.${languageInstruction}${withRagBlock(context.retrievedContext)}
+  const user = `This is round ${input.round || 1} of an adaptive interview. Return 2 to 3 critical clarification questions when useful gaps remain, or fewer when only fewer useful gaps remain. Return an empty array when there are no useful unanswered gaps. Build on the confirmed answer history below. Never repeat an answered question or ask again about experience the user explicitly denied. Use distinct IDs across rounds. Each question must improve an evidenced resume claim or clarify a realistic transferable skill; do not force unrelated experience. Every question must set type to single or multi, include at most 4 real selectable options, set allowOther to true, and end with exactly one option marked isHardStop true (for example, "I don't have this experience"). Use multi for compatible tools, responsibilities, projects and outcomes. Use single ONLY for mutually exclusive choices such as numeric ranges. For numeric questions, provide non-overlapping ranges such as "1–3", "4–9", and "10+"; Other captures exact values. Never provide defaultValue or infer that a user has experience. Choose options only as questions, not as asserted facts.${languageInstruction}${withRagBlock(context.retrievedContext)}
 
-${taggedBlock('job_description', truncateText(input.jobText, 3000))}
+${taggedBlock('confirmed_answer_history', JSON.stringify(input.history || []))}
 
-${taggedBlock('resume_text', truncateText(input.resumeText, 8000))}`;
+${taggedBlock('job_description', truncateText(input.jobText, 5000))}
+
+${taggedBlock('resume_text', truncateText(input.resumeText, 15000))}`;
   return buildMessages(system, user);
 }
 
@@ -1221,6 +1226,7 @@ ${taggedBlock('resume_text', input.resumeText)}`;
 }
 
 export const aiContracts = {
+  feed_candidate_profile: feedProfileContract,
   parse_resume: {
     id: 'parse_resume',
     modelType: 'lite',
@@ -1317,7 +1323,10 @@ export const aiContracts = {
     // cap in the prompt bounds growth; this gives headroom. Latency stays well under
     // timeoutMs (worst observed ~46s).
     maxTokens: 24576,
-    timeoutMs: 100000,
+    // Netlify streaming and synchronous functions stop at 60s. Leave time for
+    // auth, output validation, credit handling and delivery; no stacked fallback.
+    timeoutMs: 40000,
+    disableFallback: true,
     temperature: 0,
     reasoningBudget: 2048,
     buildMessages: buildOptimizeMessages,
@@ -1331,7 +1340,8 @@ export const aiContracts = {
     featureName: 'optimize_stream',
     // 24576 (was 16384): headroom for the source_span evidence field. See optimize.
     maxTokens: 24576,
-    timeoutMs: 100000,
+    timeoutMs: 40000,
+    disableFallback: true,
     temperature: 0,
     reasoningBudget: 2048,
     buildMessages: buildOptimizeMessages,

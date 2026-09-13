@@ -23,6 +23,8 @@ import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js
 import { resolveCompany } from '../lib/ats/probe.js';
 import { getProvider } from '../lib/ats/index.js';
 import type { AtsSource } from '../lib/ats/types.js';
+import { buildCacheKey, getCached, setCached } from '../lib/redis-cache.js';
+import { extractRequirements } from '../lib/job-requirements.js';
 
 initSentry();
 
@@ -61,7 +63,8 @@ const RecrawlSchema = z.object({
   action: z.literal('recrawl'),
 });
 
-const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema]);
+const RequirementsSchema = z.object({ action: z.literal('requirements'), postingIds: z.array(z.string().uuid()).max(500) });
+const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema, RequirementsSchema]);
 
 /**
  * How stale a company must be before a user-pressed check will re-read its board.
@@ -120,6 +123,8 @@ const baseHandler: Handler = async (event) => {
         return await handleUntrack(supabase, user.id, parsed.data.companyId);
       case 'recrawl':
         return await handleRecrawl(supabase, user.id);
+      case 'requirements':
+        return await handleRequirements(supabase, user.id, parsed.data.postingIds);
     }
   } catch (error) {
     captureError(error, { function: 'job-sources-api' });
@@ -147,6 +152,24 @@ async function handleResolve(query: string) {
 }
 
 type Supabase = NonNullable<ReturnType<typeof getSupabaseClient>>;
+
+async function handleRequirements(supabase: Supabase, userId: string, postingIds: string[]) {
+  const { data: tracked, error: trackingError } = await supabase.from('user_tracked_companies').select('company_id').eq('user_id', userId);
+  if (trackingError) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'feed/read-failed', 'Could not read followed companies') };
+  const ids = (tracked ?? []).map((row: { company_id: string }) => row.company_id);
+  if (!ids.length || !postingIds.length) return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ requirements: {} }) };
+  const { data, error } = await supabase.from('job_postings').select('id, description').in('company_id', ids).in('id', postingIds).is('closed_at', null);
+  if (error) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'feed/read-failed', 'Could not read job requirements') };
+  const rows = (data ?? []) as { id: string; description: string | null }[];
+  // Public requirements cache is candidate-independent and changes with every JD edit.
+  const key = buildCacheKey('feed-requirements-v1', { postings: JSON.stringify(rows.sort((a, b) => a.id.localeCompare(b.id))) });
+  let requirements = await getCached<Record<string, ReturnType<typeof extractRequirements>>>(key);
+  if (!requirements) {
+    requirements = Object.fromEntries(rows.map((row) => [row.id, extractRequirements(row.description ?? '')]));
+    await setCached(key, requirements, 86400);
+  }
+  return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ requirements }) };
+}
 
 interface TrackInput {
   source: AtsSource;
@@ -211,12 +234,13 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
 
   // Cold start: without an immediate crawl the feed sits empty until the next cron
   // run and the feature reads as broken on first use.
+  const requestedAt = new Date().toISOString();
   const crawlDispatched = await dispatchImmediateCrawl(company.id, Boolean(company.last_fetched_at));
 
   return {
     statusCode: 200,
     headers: jsonHeaders,
-    body: JSON.stringify({ status: 'ok', company, crawlDispatched }),
+    body: JSON.stringify({ status: 'ok', company, crawlDispatched, request: crawlDispatched ? { companyIds: [company.id], requestedAt } : undefined }),
   };
 }
 
@@ -242,9 +266,10 @@ async function handleUntrack(supabase: Supabase, userId: string, companyId: stri
  * last_fetched_at, so pressing it repeatedly costs nothing after the first run.
  */
 async function handleRecrawl(supabase: Supabase, userId: string) {
+  const requestedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from('user_tracked_companies')
-    .select('company_id, ats_companies!inner(id, last_fetched_at)')
+    .select('company_id, ats_companies!inner(id, last_fetched_at, crawl_lease_until)')
     .eq('user_id', userId);
 
   if (error) {
@@ -255,7 +280,7 @@ async function handleRecrawl(supabase: Supabase, userId: string) {
   // PostgREST returns an object for a many-to-one embed, but an array shape here
   // would make every row look stale and drop the throttle entirely, with no error.
   // Normalise rather than trust the cast.
-  type EmbeddedCompany = { id: string; last_fetched_at: string | null };
+  type EmbeddedCompany = { id: string; last_fetched_at: string | null; crawl_lease_until?: string | null };
   const rows = (data ?? []) as unknown as Array<{
     company_id: string;
     ats_companies: EmbeddedCompany | EmbeddedCompany[];
@@ -286,16 +311,32 @@ async function handleRecrawl(supabase: Supabase, userId: string) {
     };
   }
 
-  const crawlDispatched = await dispatchCrawl(stale.map((row) => row.company_id));
+  const leaseUntil = new Date(Date.now() + 16 * 60_000).toISOString();
+  const { data: claimed, error: claimError } = await supabase.from('ats_companies')
+    .update({ crawl_lease_until: leaseUntil })
+    .in('id', stale.map((row) => row.company_id))
+    .or(`crawl_lease_until.is.null,crawl_lease_until.lt.${requestedAt}`)
+    .or(`last_fetched_at.is.null,last_fetched_at.lt.${new Date(cutoff).toISOString()}`)
+    .select('id');
+  if (claimError) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'crawl/claim-failed', 'Could not queue board checks') };
+  const claimedIds = (claimed ?? []).map((row: { id: string }) => row.id);
+  const inProgressIds = stale.filter((row) => Date.parse(companyOf(row)?.crawl_lease_until ?? '') > Date.parse(requestedAt)).map((row) => row.company_id);
+  const crawlDispatched = claimedIds.length > 0 ? await dispatchCrawl(claimedIds) : inProgressIds.length > 0;
+  if (!crawlDispatched && claimedIds.length > 0) {
+    await supabase.from('ats_companies').update({ crawl_lease_until: null }).in('id', claimedIds).eq('crawl_lease_until', leaseUntil);
+    return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'crawl/dispatch-failed', 'Board checks could not be queued. Existing roles are unchanged.') };
+  }
+  const companyIds = [...new Set([...claimedIds, ...inProgressIds])];
 
   return {
     statusCode: 200,
     headers: jsonHeaders,
     body: JSON.stringify({
       status: 'ok',
-      dispatched: stale.length,
-      skipped: rows.length - stale.length,
+      dispatched: companyIds.length,
+      skipped: rows.length - companyIds.length,
       crawlDispatched,
+      request: companyIds.length > 0 ? { companyIds, requestedAt } : undefined,
     }),
   };
 }

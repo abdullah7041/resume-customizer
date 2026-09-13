@@ -70,6 +70,8 @@ const mockSetFeedState = vi.fn();
 const mockListFeedState = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
+  loadCandidateProfile: async () => null,
+  loadJobRequirements: async () => ({ data: { requirements: {} }, error: null }),
   listTrackedCompanies: () => Promise.resolve({ companies: [company], error: null }),
   listOpenPostings: () => mockListOpenPostings(),
   listFeedState: () => mockListFeedState(),

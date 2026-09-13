@@ -5,8 +5,10 @@
 // list companies or postings. Only outbound traffic to job boards goes through a
 // Netlify function (job-sources-api).
 
-import { supabase } from './supabase';
-import type { FeedIntent, FeedPosting } from '@/lib/jobs/types';
+import { supabase } from '@/services/supabase';
+import { importJobFromUrl } from '@/services/api';
+import type { CandidateProfile, EvidenceSource, JobRequirements, FeedIntent, FeedPosting } from '@/lib/jobs/types';
+import type { CrawlRequest } from '@/lib/jobs/boardFreshness';
 import type { SearchIntent } from '@/types/onboarding';
 
 const COMPANIES_TABLE = 'ats_companies';
@@ -93,7 +95,7 @@ export function trackCompany(input: {
   displayName: string;
   careersUrl?: string;
 }) {
-  return callSourcesApi<{ company: { id: string }; crawlDispatched: boolean }>({
+  return callSourcesApi<{ company: { id: string }; crawlDispatched: boolean; request?: CrawlRequest }>({
     action: 'track',
     ...input,
   });
@@ -114,9 +116,33 @@ export function untrackCompany(companyId: string) {
  * work was accepted, not that new postings have landed yet.
  */
 export function recrawlTrackedCompanies() {
-  return callSourcesApi<{ dispatched: number; skipped: number; crawlDispatched: boolean }>({
+  return callSourcesApi<{ dispatched: number; skipped: number; crawlDispatched: boolean; request?: CrawlRequest }>({
     action: 'recrawl',
   });
+}
+
+export async function loadJobRequirements(postingIds: string[]) {
+  const requirements: Record<string, JobRequirements> = {};
+  for (let offset = 0; offset < postingIds.length; offset += 500) {
+    const result = await callSourcesApi<{ requirements: Record<string, JobRequirements> }>({ action: 'requirements', postingIds: postingIds.slice(offset, offset + 500) });
+    if (result.error) return result;
+    Object.assign(requirements, result.data?.requirements);
+  }
+  return { data: { requirements }, error: null };
+}
+
+export async function loadCandidateProfile(sources: EvidenceSource[], claimedSkills: string[]): Promise<CandidateProfile | null> {
+  const headers = await authHeaders();
+  if (!headers) return null;
+  try {
+    const response = await fetch('/.netlify/functions/feed-profile', { method: 'POST', headers, body: JSON.stringify({ sources, claimedSkills }), signal: AbortSignal.timeout(25000) });
+    if (!response.ok) return null;
+    const body = await response.json() as { profile: CandidateProfile };
+    return body.profile;
+  } catch (error) {
+    console.warn('[JobFeed] Candidate profile unavailable:', summarizeError(error));
+    return null;
+  }
 }
 
 export async function listTrackedCompanies(): Promise<{ companies: TrackedCompany[]; error: string | null }> {
@@ -223,7 +249,7 @@ export async function listOpenPostings(
 export async function getPostingDescription(postingId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from(POSTINGS_TABLE)
-    .select('description')
+    .select('description, apply_url')
     .eq('id', postingId)
     .maybeSingle();
 
@@ -231,7 +257,12 @@ export async function getPostingDescription(postingId: string): Promise<string |
     console.error('[JobFeed] Failed to load description:', summarizeError(error));
     return null;
   }
-  return (data as { description?: string } | null)?.description ?? '';
+  const posting = data as { description?: string; apply_url?: string } | null;
+  if (posting?.description?.trim()) return posting.description;
+  if (!posting?.apply_url) return '';
+  const imported = await importJobFromUrl(posting.apply_url);
+  if (imported.status === 'ok') return imported.jobText;
+  return ['jd_not_found', 'unsupported_url'].includes(imported.failureReason) ? '' : null;
 }
 
 export async function listFeedState(): Promise<Map<string, FeedStateValue>> {

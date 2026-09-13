@@ -192,6 +192,7 @@ export function createSafeLookup(baseLookup: BaseLookup = dnsLookup) {
 }
 
 export interface SafeFetchOptions {
+  acceptJson?: boolean;
   timeoutMs?: number;
   maxBytes?: number;
   maxRedirects?: number;
@@ -335,7 +336,8 @@ export async function safeFetch(rawUrl: string, options: SafeFetchOptions = {}):
 
       const rawContentType = response.headers['content-type'];
       const contentType = (Array.isArray(rawContentType) ? rawContentType[0] : rawContentType ?? '').toLowerCase();
-      const isTextType = TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed));
+      const isTextType = TEXT_CONTENT_TYPES.some((allowed) => contentType.startsWith(allowed))
+        || (options.acceptJson === true && contentType.startsWith('application/json'));
       if (!isTextType) {
         response.abort();
         activeResponse = undefined;

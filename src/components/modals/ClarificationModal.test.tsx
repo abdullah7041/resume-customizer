@@ -27,6 +27,17 @@ const question = {
 };
 
 describe('ClarificationModal', () => {
+  it('never preselects model-guessed experience and allows Optimize now with multiple selected facts', () => {
+    const onOptimizeNow = vi.fn();
+    render(<ClarificationModal questions={[{ ...question, defaultValue: 'dashboards', options: [
+      ...question.options, { value: 'reporting', label: 'Built reporting workflows' },
+    ] }]} isOpen onSubmit={vi.fn()} onSkip={vi.fn()} onOptimizeNow={onOptimizeNow} />);
+    expect(screen.getByRole('button', { name: 'Built Excel dashboards' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Built Excel dashboards' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Built reporting workflows' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Optimize now' }));
+    expect(onOptimizeNow).toHaveBeenCalledWith({ excelExperience: { selectedValues: ['dashboards', 'reporting'], otherText: '' } });
+  });
   it('renders selectable options, Other, and a final hard-stop option', () => {
     render(
       <ClarificationModal

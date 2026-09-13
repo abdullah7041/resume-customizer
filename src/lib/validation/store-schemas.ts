@@ -36,6 +36,7 @@ export const BasicsSchema = z.object({
 });
 
 export const WorkSchema = z.object({
+    description: z.string().nullish().transform(val => val ?? ''),
     name: z.string().nullish().transform(val => val ?? ''),
     position: z.string().nullish().transform(val => val ?? ''),
     url: z.string().nullish().transform(val => val ?? ''),

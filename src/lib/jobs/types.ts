@@ -29,7 +29,14 @@ export interface ScoredPosting {
   score: number;
   /** Which intent terms the title supported — the deterministic "why this surfaced". */
   matched: string[];
+  recommendation?: Recommendation;
 }
+
+export interface EvidenceSource { id: string; text: string }
+export interface Capability { skill: string; aliases: string[]; sourceId: string; evidence: string }
+export interface CandidateProfile { capabilities: Capability[] }
+export interface JobRequirements { lines: string[]; available: boolean }
+export interface Recommendation { kind: 'strong' | 'adjacent' | 'unknown'; reasons: Capability[]; gaps: string[] }
 
 export interface DroppedPosting {
   posting: FeedPosting;

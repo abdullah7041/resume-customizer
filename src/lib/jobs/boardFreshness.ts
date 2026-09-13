@@ -6,6 +6,16 @@
 
 import type { TrackedCompany } from '@/services/jobFeed';
 
+export interface CrawlRequest { companyIds: string[]; requestedAt: string }
+export function crawlProgress(request: CrawlRequest, companies: readonly Pick<TrackedCompany, 'companyId' | 'lastFetchedAt' | 'lastStatus'>[]) {
+  const finished = companies.filter((company) => request.companyIds.includes(company.companyId) && company.lastStatus !== 'pending' && Date.parse(company.lastFetchedAt ?? '') >= Date.parse(request.requestedAt));
+  const succeeded = finished.filter((company) => company.lastStatus === 'ok').length;
+  const failed = finished.length - succeeded;
+  const pending = request.companyIds.length - finished.length;
+  const status = pending > 0 ? 'queued' : failed === 0 ? 'completed' : succeeded > 0 ? 'partial' : 'failed';
+  return { status, succeeded, failed, pending } as const;
+}
+
 /**
  * The oldest successful check across the followed boards, or `null` when none has
  * been read.
@@ -21,7 +31,7 @@ import type { TrackedCompany } from '@/services/jobFeed';
  */
 export function lastBoardCheck(companies: readonly TrackedCompany[]): number | null {
   const stamps = companies
-    .filter((company) => company.lastStatus !== 'failed')
+    .filter((company) => company.lastStatus === 'ok')
     .map((company) => (company.lastFetchedAt ? Date.parse(company.lastFetchedAt) : Number.NaN))
     .filter((value) => !Number.isNaN(value));
 

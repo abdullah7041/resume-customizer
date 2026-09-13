@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildOptimizeCacheKey } from '../redis-cache.js';
+import { buildCacheKey, buildOptimizeCacheKey } from '../redis-cache.js';
 
 describe('buildOptimizeCacheKey', () => {
   const baseInput = {
@@ -24,4 +24,9 @@ describe('buildOptimizeCacheKey', () => {
       userScope: 'user-456',
     }));
   });
+});
+
+it("includes nested clarification answers in cache identity", () => {
+ expect(buildCacheKey("clarify", {history: [{answer: "yes"}]})).not.toBe(buildCacheKey("clarify", {history: [{answer: "no"}]}));
+ expect(buildCacheKey("clarify", {history: [{answer: "yes", id: "1"}]})).toBe(buildCacheKey("clarify", {history: [{id: "1", answer: "yes"}]}));
 });

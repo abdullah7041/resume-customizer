@@ -385,6 +385,16 @@ export function buildExperience(
             );
         }
 
+        if (job.description) {
+            children.push(
+                new D.Paragraph({
+                    children: [new D.TextRun({ text: job.description, ...body, ...textDirection(opts) })],
+                    ...paragraphDirection(opts, D),
+                    spacing: { after: 40, ...spacing },
+                }),
+            );
+        }
+
         // Highlights / bullet points
         if (job.highlights) {
             for (const h of job.highlights) {

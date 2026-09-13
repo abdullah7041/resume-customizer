@@ -11,6 +11,8 @@ import {
   listFeedState,
   listOpenPostings,
   listTrackedCompanies,
+  loadCandidateProfile,
+  loadJobRequirements,
   fetchServerSearchIntent,
   readLastFeedSeenAt,
   resolveCompany,
@@ -25,7 +27,8 @@ import {
   type TrackedCompany,
 } from '@/services/jobFeed';
 import { bestRoleCoverage, buildFeed, isNew } from '@/lib/jobs/score';
-import { lastBoardCheck } from '@/lib/jobs/boardFreshness';
+import { crawlProgress, lastBoardCheck, type CrawlRequest } from '@/lib/jobs/boardFreshness';
+import { candidateEvidence, groundProfile } from '@/lib/jobs/evidence';
 import { suggestRolesFromResume } from '@/lib/jobs/roleSuggestions';
 import { DEFAULT_MAX_AGE_DAYS, postingAge } from '@/lib/jobs/age';
 import { looseArabicKey, normalizeText } from '@/lib/jobs/normalize';
@@ -35,7 +38,7 @@ import {
   unfollowedStarters,
   type StarterCompany,
 } from '@/lib/jobs/saudiStarterCompanies';
-import type { FeedIntent, FeedPosting, ScoredPosting } from '@/lib/jobs/types';
+import type { CandidateProfile, JobRequirements, FeedIntent, FeedPosting, ScoredPosting } from '@/lib/jobs/types';
 import type { SearchIntent } from '@/types/onboarding';
 
 const MAX_TRACKED_COMPANIES = 25;
@@ -70,6 +73,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const reduceMotion = useReducedMotion();
   const searchIntent = useSearchIntent();
   const resume = useActiveResume();
+  const evidenceInput = JSON.stringify({ sources: candidateEvidence(resume), claimedSkills: (resume?.skills ?? []).flatMap((skill) => [skill.name, ...skill.keywords ?? []]).filter(Boolean).slice(0, 100) });
+  const [profileResult, setProfileResult] = useState<{ input: string; profile: CandidateProfile | null } | null>(null);
+  const [requirements, setRequirements] = useState<Record<string, JobRequirements>>({});
+  const profile = profileResult?.input === evidenceInput ? profileResult.profile : null;
+  useEffect(() => {
+    let cancelled = false;
+    const input = JSON.parse(evidenceInput) as Parameters<typeof loadCandidateProfile> extends [infer S, infer C] ? { sources: S; claimedSkills: C } : never;
+    if (input.sources.length === 0) return;
+    void loadCandidateProfile(input.sources, input.claimedSkills).then((result) => {
+      if (!cancelled) setProfileResult({ input: evidenceInput, profile: result ? groundProfile(result, input.sources) : null });
+    });
+    return () => { cancelled = true; };
+  }, [evidenceInput]);
 
   const [companies, setCompanies] = useState<TrackedCompany[]>([]);
   const [postings, setPostings] = useState<FeedPosting[]>([]);
@@ -196,8 +212,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    * its own: silently choosing what the feed filters on is drift they cannot see.
    */
   const roleSuggestions = useMemo(
-    () => suggestRolesFromResume(resume, { exclude: intent?.targetRoles ?? [] }),
-    [resume, intent],
+    () => {
+      const excluded = new Set((intent?.targetRoles ?? []).map(normalizeText));
+      const evidenced = profile ? buildFeed(postings, intent ?? { targetRoles: [] }, { profile, requirements })
+        .kept.filter(row => (row.recommendation?.reasons.length ?? 0) > 0).map(row => row.posting.title) : [];
+      return [...new Set([...evidenced, ...suggestRolesFromResume(resume, { exclude: intent?.targetRoles ?? [] })])]
+        .filter(role => !excluded.has(normalizeText(role))).slice(0, 6);
+    },
+    [resume, intent, profile, postings, requirements],
   );
 
   const [applyingRole, setApplyingRole] = useState<string | null>(null);
@@ -287,10 +309,18 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
     if (postingsError) {
       setLoadFailed(true);
+      finish(false);
+      return;
     }
 
     setCompanies(tracked);
     setPostings(open);
+    // Requirements are keyed by the current JD server-side; every reload revalidates them.
+    void loadJobRequirements(open.map((posting) => posting.id)).then(({ data, error }) => {
+      // Never keep stale requirement evidence after a failed refresh. An empty
+      // map retains deterministic title filtering until a verified JD arrives.
+      setRequirements(error ? {} : (data?.requirements ?? {}));
+    });
     setFeedStateMap(state);
     setLastSeenAt(seen);
     setServerIntent(profileIntent);
@@ -309,14 +339,35 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, [load]);
 
   /** null = idle, 'checking', 'queued' (crawl accepted), 'fresh' (nothing was stale). */
-  const [boardCheck, setBoardCheck] = useState<null | 'checking' | 'queued' | 'fresh'>(null);
-  const boardCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (boardCheckTimer.current) clearTimeout(boardCheckTimer.current);
-    },
-    [],
-  );
+  const [boardCheck, setBoardCheck] = useState<null | 'checking' | 'queued' | 'fresh' | 'completed' | 'partial' | 'failed' | 'waiting'>(null);
+  const [crawlRequest, setCrawlRequest] = useState<CrawlRequest | null>(null);
+  useEffect(() => {
+    if (!crawlRequest) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const deadline = Date.now() + 16 * 60_000;
+    const poll = async () => {
+      const result = await listTrackedCompanies();
+      if (cancelled) return;
+      if (!result.error) {
+        const progress = crawlProgress(crawlRequest, result.companies);
+        if (progress.status !== 'queued') {
+          setBoardCheck(progress.status);
+          setCrawlRequest(null);
+          await load({ silent: true });
+          return;
+        }
+      }
+      if (Date.now() >= deadline) {
+        setBoardCheck('waiting');
+        setCrawlRequest(null);
+        return;
+      }
+      timer = setTimeout(() => void poll(), 3000);
+    };
+    timer = setTimeout(() => void poll(), 3000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [crawlRequest, load]);
 
   /**
    * Go out to the employer boards, rather than re-reading what the last crawl stored.
@@ -341,20 +392,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     if (!data || data.dispatched === 0) {
       // Every board was read recently. That is a fact, not a failure.
       setBoardCheck('fresh');
-      boardCheckTimer.current = setTimeout(() => setBoardCheck(null), 6000);
       return;
     }
 
     setBoardCheck('queued');
-    // The crawl runs on its own clock; this pulls in whatever has landed so far and
-    // the "boards last checked" line keeps telling the truth either way.
-    boardCheckTimer.current = setTimeout(() => {
-      // Clear the status with the reload it describes, so the line does not sit
-      // there claiming a check is in progress long after it finished.
-      setBoardCheck(null);
-      void load({ silent: true });
-    }, 6000);
-  }, [load]);
+    if (data.request) setCrawlRequest(data.request);
+    else setBoardCheck('waiting');
+  }, []);
 
   useEffect(() => {
     void load();
@@ -407,8 +451,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
      * so a second press cannot create a second pipeline entry.
      */
     const visible = postings.filter((posting) => feedState.get(posting.id) !== 'dismissed');
-    return buildFeed(visible, intent, { maxAgeDays: maxAgeDays ?? undefined, now });
-  }, [postings, feedState, intent, maxAgeDays, now]);
+    return buildFeed(visible, intent, { maxAgeDays: maxAgeDays ?? undefined, now, profile, requirements });
+  }, [postings, feedState, intent, maxAgeDays, now, profile, requirements]);
 
   const visibleKept = useMemo(() => {
     if (!feed) return [];
@@ -588,7 +632,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const handleTrack = useCallback(
     async (candidate: ResolutionCandidate, displayName: string) => {
       setBusyCompany(candidate.token);
-      const { error: trackError } = await trackCompany({
+      const { data, error: trackError } = await trackCompany({
         source: candidate.source,
         token: candidate.token,
         displayName,
@@ -604,6 +648,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       setResolution(null);
       setStarterMatch(null);
       await load({ silent: true });
+      if (data?.request) { setCrawlRequest(data.request); setBoardCheck('queued'); }
     },
     [load],
   );
@@ -611,7 +656,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const handleStarter = useCallback(
     async (company: StarterCompany) => {
       setBusyCompany(company.token);
-      const { error: trackError } = await trackCompany({
+      const { data, error: trackError } = await trackCompany({
         source: company.source,
         token: company.token,
         displayName: company.displayName,
@@ -630,6 +675,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       setStarterMatch(null);
       setResolution(null);
       await load({ silent: true });
+      if (data?.request) { setCrawlRequest(data.request); setBoardCheck('queued'); }
     },
     [load],
   );
@@ -1019,7 +1065,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
               <button
                 type="button"
                 onClick={() => void handleCheckBoards()}
-                disabled={boardCheck === 'checking'}
+                disabled={boardCheck === 'checking' || boardCheck === 'queued'}
                 className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border px-3 text-sm font-medium text-gray-900 transition-[color,border-color,background-color,scale] duration-200 hover:border-primary hover:bg-primary/5 active:scale-[0.96] disabled:opacity-60 dark:text-white"
               >
                 <Radar
@@ -1049,6 +1095,9 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   <span>
                     {t('jobFeed.boardCheck.fresh', 'Every board you follow was checked within the last hour.')}
                   </span>
+                )}
+                {boardCheck && ['completed', 'partial', 'failed', 'waiting'].includes(boardCheck) && (
+                  <p role="status" className="text-xs text-muted-foreground">{t(`jobFeed.boardCheck.${boardCheck}`)}</p>
                 )}
                 {lastLoadedAt !== null && (
                   <span>
@@ -1441,7 +1490,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                   </>
                   )}
                 </p>
-                {coverage && (
+                {scored.recommendation && (
+                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">{t(`jobFeed.recommendation.${scored.recommendation.kind}`)}</p>
+                    <p>{t('jobFeed.recommendation.explain', 'Discovery relevance, not your Match score. Check the match for a full assessment.')}</p>
+                    {scored.recommendation.reasons.map((reason) => <p key={`${reason.sourceId}:${reason.skill}`}><strong>{reason.skill}</strong>: {reason.evidence}</p>)}
+                    {scored.recommendation.gaps.length > 0 && <p>{t('jobFeed.recommendation.gaps', 'Requirements to verify')}: {scored.recommendation.gaps.join(' · ')}</p>}
+                  </div>
+                )}
+                {coverage && !scored.recommendation && (
                   /*
                    * One sentence, and it names what it counted.
                    *

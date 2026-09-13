@@ -210,6 +210,7 @@ export function ATSResume({ resume }: { resume: ResumeSchema }) {
                 {job.startDate && ` | ${job.startDate}`}
                 {job.endDate && ` - ${job.endDate}`}
               </p>
+              {job.description && <p style={{ marginBottom: '2pt' }}>{job.description}</p>}
               {job.highlights && job.highlights.length > 0 && (
                 <ul style={ATS_STYLES.bulletList}>
                   {job.highlights.map((h, j) => (

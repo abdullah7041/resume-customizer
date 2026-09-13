@@ -1182,36 +1182,23 @@ export function OptimizeSection({
         {/* Optimize Button */}
         {!hasOptimizationResults && (
           <>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={isBusy || !hasResume}
-            aria-busy={isBusy || undefined}
-            className={cn(
-              "w-full relative group overflow-hidden rounded-xl p-[1px] transition-all duration-300 transform active:scale-[0.99]",
-              (!hasResume || isBusy) ? "opacity-70 cursor-not-allowed" : "hover:shadow-lg hover:shadow-emerald-900/20"
-            )}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-teal-600 to-emerald-700 opacity-100 group-hover:opacity-100 animate-gradient-xy transition-opacity" />
-            <div className="relative bg-[color:var(--surface-glass-elevated)] backdrop-blur-xl rounded-xl px-6 py-4 flex items-center justify-center gap-3 transition-colors group-hover:bg-[color:var(--surface-glass-strong)] dark:bg-gray-900/90 dark:group-hover:bg-gray-900/80">
+          <GlassButton type="button" variant="primary" size="lg" onClick={handleGenerate} disabled={isBusy || !hasResume} isLoading={isBusy} aria-busy={isBusy || undefined} className="w-full">
               {isOptimizing ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
-                  <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
+                  <span className="font-semibold">
                     {t('sections.optimize.optimizingResume', 'Optimizing Resume...')}
                   </span>
                 </>
               ) : isCheckingQuestions ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-gray-400/30 border-t-gray-900 dark:border-white/30 dark:border-t-white rounded-full animate-spin" />
-                  <span className="text-gray-900 dark:text-white font-semibold tracking-wide">
+                  <span className="font-semibold">
                     {t('sections.optimize.checkingQuestions', 'Checking if a few quick questions can improve your result…')}
                   </span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-5 h-5 text-emerald-700 group-hover:text-emerald-800 dark:text-emerald-300 dark:group-hover:text-white transition-colors" />
-                  <span className="text-gray-900 dark:text-white font-bold tracking-wide">
+                  <Sparkles className="h-5 w-5" />
+                  <span className="font-semibold">
                     {hasResume
                       ? (
                         <>
@@ -1229,8 +1216,7 @@ export function OptimizeSection({
                   </span>
                 </>
               )}
-            </div>
-          </button>
+          </GlassButton>
           {isCheckingQuestions && (
             <p role="status" className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
               {t('sections.optimize.checkingQuestionsDescription', 'If useful, we’ll ask up to 3 short questions before optimizing.')}

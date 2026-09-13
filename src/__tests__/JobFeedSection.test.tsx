@@ -50,6 +50,8 @@ const mockResolveCompany = vi.fn();
 const mockSaveSearchIntent = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
+  loadCandidateProfile: async () => null,
+  loadJobRequirements: async () => ({ data: { requirements: {} }, error: null }),
   listTrackedCompanies: () => mockListTracked(),
   listOpenPostings: () => mockListPostings(),
   listFeedState: () => Promise.resolve(new Map()),

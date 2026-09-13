@@ -24,6 +24,12 @@ const {
 } = await import('../ai-contracts/index.js');
 
 describe('AI contract layer', () => {
+  it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {
+    for (const id of ['optimize', 'optimize_stream']) {
+      expect(aiContracts[id].timeoutMs).toBeLessThanOrEqual(40000);
+      expect(aiContracts[id].disableFallback).toBe(true);
+    }
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -34,6 +40,7 @@ describe('AI contract layer', () => {
       'ai_match_reality_check',
       'clarification_questions',
       'cover_letter',
+      'feed_candidate_profile',
       'interview_prep',
       'job_metadata_extraction',
       'optimize',

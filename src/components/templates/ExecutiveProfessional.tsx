@@ -209,6 +209,7 @@ export function ExecutiveProfessional({
                   </p>
                 </div>
                 {/* Bullet points */}
+                {job.description && <p style={{ fontSize: fs(10), color: '#444', marginBottom: '2px' }}>{job.description}</p>}
                 {job.highlights && job.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (

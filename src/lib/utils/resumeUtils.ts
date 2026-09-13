@@ -207,6 +207,7 @@ export const formatResumeToText = (resume: any): string => {
             if (w.endDate) dates += (dates ? " - " : "") + w.endDate;
             if (dates) parts.push(dates);
             
+            if (w.description) parts.push(w.description);
             if (w.summary) parts.push(w.summary);
             
             if (w.highlights && Array.isArray(w.highlights)) {

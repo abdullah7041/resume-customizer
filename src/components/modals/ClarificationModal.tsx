@@ -43,6 +43,9 @@ interface ClarificationModalProps {
   onSubmit: (answers: ClarificationAnswers) => void;
   onSkip: () => void;
   onRegenerate?: () => void;
+  onOptimizeNow?: (answers: ClarificationAnswers) => void;
+  initialAnswers?: ClarificationAnswers;
+  round?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -68,14 +71,18 @@ export function ClarificationModal({
   onSubmit,
   onSkip,
   onRegenerate,
+  onOptimizeNow,
+  initialAnswers,
+  round = 1,
 }: ClarificationModalProps) {
   const { t } = useTranslation();
+  const hardStopFallback = t('clarificationModal.hardStopFallback', "I don't have this / I never do this");
   const normalizedQuestions = useMemo(
     () => questions.map(question => normalizeClarificationQuestion(
       question,
-      t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
+      hardStopFallback,
     )),
-    [questions, t],
+    [questions, hardStopFallback],
   );
   const [answers, setAnswers] = useState<ClarificationAnswers>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -97,26 +104,24 @@ export function ClarificationModal({
     if (isOpen) {
       setAnswers(Object.fromEntries(normalizedQuestions.map(question => [
         question.id,
-        question.defaultValue && question.options.some(option => option.value === question.defaultValue)
-          ? { selectedValues: [question.defaultValue], otherText: '' }
-          : emptyAnswer(),
+        initialAnswers?.[question.id] ?? emptyAnswer(),
       ])));
       setTouched({});
       // Focus first textarea after animation settles
       const t = setTimeout(() => firstRef.current?.focus(), 80);
       return () => clearTimeout(t);
     }
-  }, [isOpen, normalizedQuestions]);
+  }, [isOpen, normalizedQuestions, initialAnswers]);
 
   // Keyboard handler: Escape skips the modal
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onSkip();
+      if (e.key === 'Escape' && !isRegenerating) onSkip();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onSkip]);
+  }, [isOpen, onSkip, isRegenerating]);
 
   const handleOptionToggle = useCallback((question: ClarificationQuestion, option: ClarificationOption) => {
     setAnswers(previous => {
@@ -160,7 +165,7 @@ export function ClarificationModal({
     setTouched(prev => ({ ...prev, [id]: true }));
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const collectAnswers = useCallback(() => {
     const validAnswers = Object.fromEntries(normalizedQuestions.flatMap(question => {
       const answer = answers[question.id] ?? emptyAnswer();
       const selectedValues = answer.selectedValues.filter(value => (
@@ -172,8 +177,8 @@ export function ClarificationModal({
         otherText: selectedValues.includes(OTHER_OPTION_VALUE) ? answer.otherText.trim() : '',
       }]];
     }));
-    onSubmit(validAnswers);
-  }, [answers, normalizedQuestions, onSubmit]);
+    return validAnswers;
+  }, [answers, normalizedQuestions]);
 
   // At least one valid answer required to enable submit
   const hasAnyValidAnswer = normalizedQuestions.some(question => {
@@ -190,7 +195,7 @@ export function ClarificationModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/65 backdrop-blur-md"
-        onClick={onSkip}
+        onClick={isRegenerating ? undefined : onSkip}
         aria-hidden="true"
       />
 
@@ -220,6 +225,7 @@ export function ClarificationModal({
                 {t('clarificationModal.title', 'Quick questions to sharpen your results')}
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {t('clarificationModal.round', 'Round')} {round} ·{' '}
                 {questions.length} {questions.length !== 1 ? t('clarificationModal.questions', 'questions') : t('clarificationModal.question', 'question')} · {t('clarificationModal.duration', '~1 min')}
               </p>
             </div>
@@ -246,6 +252,7 @@ export function ClarificationModal({
             <button
               type="button"
               onClick={onSkip}
+              disabled={isRegenerating}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/10 transition-colors"
               aria-label="Skip and proceed without answers"
             >
@@ -292,6 +299,9 @@ export function ClarificationModal({
                 </p>
 
                 <div className="space-y-2" role="group" aria-label={q.question}>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {q.type === 'multi' ? t('clarificationModal.selectMany', 'Select all that apply') : t('clarificationModal.selectOne', 'Select one')}
+                  </p>
                   {[...q.options.filter(option => !option.isHardStop), ...(q.allowOther ? [{ value: OTHER_OPTION_VALUE, label: t('clarificationModal.otherOption', 'Other') }] : []), ...q.options.filter(option => option.isHardStop)].map((option, optionIndex) => {
                     const selected = selectedValueSet.has(option.value);
                     return (
@@ -299,6 +309,7 @@ export function ClarificationModal({
                         key={option.value}
                         ref={idx === 0 && optionIndex === 0 ? firstRef : undefined}
                         type="button"
+                        disabled={isRegenerating}
                         aria-pressed={selected}
                         onClick={() => handleOptionToggle(q, option)}
                         className={cn(
@@ -319,6 +330,8 @@ export function ClarificationModal({
                     <input
                       id={`clarify-other-${q.id}`}
                       value={answer.otherText}
+                      maxLength={1000}
+                      disabled={isRegenerating}
                       onChange={event => handleOtherChange(q.id, event.target.value)}
                       onBlur={() => handleBlur(q.id)}
                       aria-label={t('clarificationModal.otherInputLabel', 'Other answer')}
@@ -353,21 +366,22 @@ export function ClarificationModal({
           <div className="flex gap-3">
             <GlassButton
               variant="secondary"
-              onClick={onSkip}
+              onClick={() => onOptimizeNow ? onOptimizeNow(collectAnswers()) : onSkip()}
+              disabled={isRegenerating}
               className="flex-1"
               id="clarify-skip-btn"
             >
-              {t('clarificationModal.skipBtn', 'Skip for now')}
+              {onOptimizeNow ? t('clarificationModal.optimizeNow', 'Optimize now') : t('clarificationModal.skipBtn', 'Skip for now')}
             </GlassButton>
 
             <GlassButton
               variant="primary"
-              onClick={handleSubmit}
-              disabled={!hasAnyValidAnswer}
+              onClick={() => onSubmit(collectAnswers())}
+              disabled={!hasAnyValidAnswer || isRegenerating || round >= 10}
               className="flex-1 gap-1.5"
               id="clarify-submit-btn"
             >
-              {t('clarificationModal.submitBtn', 'Submit Answers')}
+              {round >= 3 ? t('clarificationModal.continueQuestions', 'Continue questions') : t('clarificationModal.submitBtn', 'Submit Answers')}
               <ChevronRight className="w-4 h-4" />
             </GlassButton>
           </div>

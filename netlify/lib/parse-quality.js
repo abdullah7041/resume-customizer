@@ -631,6 +631,13 @@ export function parseWorkBlocks(lines) {
       continue;
     }
 
+    // Preserve an introduction only when explicit bullets follow it. Plain-text
+    // resumes without bullet markers retain their existing achievement parsing.
+    if (!current.highlights.length && !BULLET_PREFIX_RE.test(line)
+      && BULLET_PREFIX_RE.test(nextLine)) {
+      current.description = line;
+      continue;
+    }
     // Continuation line → highlight on the open entry (strip a leading bullet).
     const bullet = line.replace(BULLET_PREFIX_RE, "").trim();
     if (bullet) current.highlights.push(bullet);

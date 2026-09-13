@@ -43,6 +43,7 @@ export interface Basics {
  * Work experience entry
  */
 export interface Work {
+    description?: string; // Unbulleted role or company introduction
     name: string; // Company name
     position: string;
     url?: string; // Company website

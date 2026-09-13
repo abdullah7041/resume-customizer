@@ -19,6 +19,7 @@ import { z } from 'zod';
 import { withRateLimit, checkFreePreviewRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { SafeFetchError, safeFetch } from '../lib/safe-fetch.js';
+import { publicAtsDescription } from '../lib/public-ats-description.js';
 import type { SafeFetchFailure } from '../lib/safe-fetch.js';
 import {
   MAX_JOB_TEXT_CHARS,
@@ -144,6 +145,13 @@ const baseHandler: Handler = async (event) => {
       return failed(sourceUrl, 'unsupported_url');
     }
     const fetchUrl = linkedIn.canonicalUrl ?? sourceUrl;
+
+    try {
+      const detail = await publicAtsDescription(fetchUrl);
+      if (detail) return json(200, { status: 'ok', ...detail, sourceUrl, finalUrl: fetchUrl });
+    } catch {
+      // Public HTML remains a useful fallback when a board changes its API.
+    }
 
     let page;
     try {

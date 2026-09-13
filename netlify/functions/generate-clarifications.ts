@@ -88,13 +88,16 @@ const baseHandler: Handler = async (event) => {
     };
   }
 
-  const { resumeText, jobText, language, regenerate } = parseResult.data;
+  const { resumeText, jobText, language, regenerate, history = [], round = 1 } = parseResult.data;
 
   // --- Redis cache check (30-min TTL) ---
-  const cacheKey = buildCacheKey('clarify', {
-    resumeText: resumeText.trim().substring(0, 500), // Use first 500 chars as fingerprint (fast hash)
-    jobText: jobText.trim().substring(0, 300),
+  const cacheKey = buildCacheKey('clarify-v2', {
+    userId: user.id,
+    resumeText: resumeText.trim(),
+    jobText: jobText.trim(),
     language: language || 'en',
+    history,
+    round,
   });
 
   if (regenerate) {
@@ -119,8 +122,16 @@ const baseHandler: Handler = async (event) => {
       resumeText,
       jobText,
       language: language || 'en',
+      ...(history.length ? { history, round } : {}),
     });
-    parsed.clarifications = parsed.clarifications.slice(0, 3);
+    const asked = new Set(history.map(item => item.question.trim().toLocaleLowerCase()));
+    const ids = new Set(history.map(item => item.id));
+    const stopped = new Set(history.flatMap(item => item.hardStops.length ? [item.theme.toLocaleLowerCase()] : []));
+    parsed.clarifications = parsed.clarifications.filter(question => (
+      !ids.has(question.id) && !asked.has(question.question.trim().toLocaleLowerCase())
+      && !stopped.has(question.theme.toLocaleLowerCase())
+    )).slice(0, 3).map(({ defaultValue: _defaultValue, ...question }) => question);
+    parsed.complete = parsed.clarifications.length === 0;
 
     console.log(`[generate-clarifications] Returning ${parsed.clarifications.length} question(s)`);
 
@@ -142,7 +153,7 @@ const baseHandler: Handler = async (event) => {
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clarifications: [] }),
+      body: JSON.stringify({ clarifications: [], complete: false, unavailable: true }),
     };
   }
 };

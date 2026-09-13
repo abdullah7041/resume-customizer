@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getSessionMock = vi.hoisted(() => vi.fn());
 const recordFailureMock = vi.hoisted(() => vi.fn());
@@ -57,6 +57,7 @@ const interruptedStreamResponse = () =>
   );
 
 describe('optimizeResumeStream billing-state errors', () => {
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
   beforeEach(() => {
     vi.clearAllMocks();
     getSessionMock.mockResolvedValue({
@@ -173,5 +174,44 @@ describe('optimizeResumeStream billing-state errors', () => {
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
       cacheOnly: true,
     });
+  });
+
+  it.each(['\r\n\r\n', ''])('accepts a complete result with CRLF framing or at EOF (%j)', async (ending) => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(
+      `event: result\r\ndata: {"cards":[{"id":"delivered"}]}${ending}`,
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' });
+    expect(result.cards[0].id).toBe('delivered');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves an SSE error without retryable instead of swallowing it as invalid JSON', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(sseResponse(
+      'event: error\ndata: {"error":"Provider rejected","code":"AI_CONTRACT_VALIDATION_FAILED","status":502,"billingStateUnknown":false}\n\n',
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' })).rejects.toMatchObject({
+      message: 'Provider rejected', code: 'AI_CONTRACT_VALIDATION_FAILED', status: 502,
+      isBillingStateUnknown: false,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for an in-flight result to reach cache without starting another generation', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(interruptedStreamResponse())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cacheOnlyMiss: true }), { status: 404 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ cards: [{ id: 'later' }] }), {
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    vi.stubGlobal('fetch', fetchMock);
+    const pending = optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' });
+    const assertion = expect(pending).resolves.toMatchObject({ cards: [{ id: 'later' }] });
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls.slice(1).every(([, init]) => JSON.parse(init.body).cacheOnly)).toBe(true);
   });
 });

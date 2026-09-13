@@ -19,11 +19,12 @@ import { getSupabaseClient } from '../lib/supabase-client.js';
 import { batchWithConcurrency } from '../lib/rate-limiter.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 import { fetchCompany, getProvider } from '../lib/ats/index.js';
-import type { AtsSource, RawPosting } from '../lib/ats/types.js';
+import type { AtsProvider, AtsSource, CompanyRef, RawPosting } from '../lib/ats/types.js';
 
 initSentry();
 
 const CONCURRENCY = 4;
+const MAX_EAGER_DESCRIPTIONS_PER_COMPANY = 20;
 const CLOSED_RETENTION_DAYS = 30;
 const MAX_COMPANIES_PER_RUN = 200;
 
@@ -130,6 +131,16 @@ export const handler: Handler = async (event) => {
 };
 
 async function crawlCompany(supabase: Supabase, company: CompanyRow): Promise<CrawlResult> {
+  try {
+    return await crawlCompanyAttempt(supabase, company);
+  } catch (error) {
+    console.error('[JobCrawl] Board attempt failed:', summarizeErrorForLog(error));
+    await supabase.from('ats_companies').update({ last_fetched_at: new Date().toISOString(), last_status: 'failed', last_error: 'crawl failed', crawl_lease_until: null }).eq('id', company.id);
+    return { company: company.display_name, ok: false, postings: 0, closed: 0, error: 'crawl failed' };
+  }
+}
+
+async function crawlCompanyAttempt(supabase: Supabase, company: CompanyRow): Promise<CrawlResult> {
   const outcome = await fetchCompany({ source: company.source, token: company.token });
 
   // A failed fetch also returns zero postings. Stamping the attempt keeps a broken
@@ -151,8 +162,10 @@ async function crawlCompany(supabase: Supabase, company: CompanyRow): Promise<Cr
     return { company: company.display_name, ok: false, postings: 0, closed: 0, error: outcome.error };
   }
 
+  const provider = getProvider(company.source);
+  const postings = await hydratePostingDescriptions(provider, company, outcome.postings);
   const now = new Date().toISOString();
-  const rows = outcome.postings.map((posting: RawPosting) => ({
+  const rows = postings.map((posting: RawPosting) => ({
     company_id: company.id,
     external_id: posting.externalId,
     title: posting.title,
@@ -176,7 +189,7 @@ async function crawlCompany(supabase: Supabase, company: CompanyRow): Promise<Cr
       console.error(`[JobCrawl] ${company.display_name}: upsert failed`, summarizeErrorForLog(upsertError));
       await supabase
         .from('ats_companies')
-        .update({ last_status: 'failed', last_error: 'upsert failed', crawl_lease_until: null })
+        .update({ last_fetched_at: new Date().toISOString(), last_status: 'failed', last_error: 'upsert failed', crawl_lease_until: null })
         .eq('id', company.id);
       return { company: company.display_name, ok: false, postings: 0, closed: 0, error: 'upsert failed' };
     }
@@ -184,7 +197,7 @@ async function crawlCompany(supabase: Supabase, company: CompanyRow): Promise<Cr
 
   // Some sources cannot be believed about absence — a careers page with no
   // structured data means "unreadable today", not "every role is gone".
-  const trusted = getProvider(company.source)?.closureSignal !== 'untrusted';
+  const trusted = provider?.closureSignal !== 'untrusted';
   const closed = trusted
     ? await reconcileClosures(supabase, company, rows.map((row) => row.external_id), now)
     : 0;
@@ -202,6 +215,28 @@ async function crawlCompany(supabase: Supabase, company: CompanyRow): Promise<Cr
 
   console.log(`[JobCrawl] ${company.display_name}: ${rows.length} postings, ${closed} closed`);
   return { company: company.display_name, ok: true, postings: rows.length, closed };
+}
+
+export async function hydratePostingDescriptions(
+  provider: AtsProvider | undefined,
+  company: CompanyRef,
+  postings: RawPosting[],
+): Promise<RawPosting[]> {
+  if (!provider?.fetchDescription) return postings;
+  const fetchDescription = provider.fetchDescription;
+  // One Workday detail call can consume two 12-second attempts. Hydrate only
+  // the newest list page during the crawl so this best-effort enrichment cannot
+  // exhaust the background-function window; older rows remain available and
+  // their description is fetched lazily when the user opens them.
+  const eager = postings.slice(0, MAX_EAGER_DESCRIPTIONS_PER_COMPANY);
+  const settled = await batchWithConcurrency(eager, async (posting) => ({
+    ...posting,
+    description: posting.description || await fetchDescription(company, posting),
+  }), { concurrency: CONCURRENCY });
+  return [
+    ...settled.map((result, index) => result.status === 'fulfilled' ? result.value : eager[index]),
+    ...postings.slice(MAX_EAGER_DESCRIPTIONS_PER_COMPANY),
+  ];
 }
 
 /**
@@ -230,7 +265,7 @@ async function reconcileClosures(
   const { data, error } = await query.select('id');
   if (error) {
     console.error(`[JobCrawl] ${company.display_name}: close pass failed`, summarizeErrorForLog(error));
-    return 0;
+    throw new Error('Postings reconciliation failed');
   }
   return data?.length ?? 0;
 }

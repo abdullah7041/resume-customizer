@@ -589,12 +589,13 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
-  return retryWithBackoff(async () => {
+  return (async () => {
     try {
       const headers = await getAuthHeaders({ requireAuth: !freePreview });
 
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
+        signal: AbortSignal.timeout(65000),
         headers,
         body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, ...(freePreview ? { freePreview } : {}) }),
       });
@@ -629,13 +630,14 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
       // Handle timeout/gateway errors with consistent messaging
       if (error.status === 502 || error.status === 504) {
         recordFailure('openrouter-ai');
-        throw new Error('AI service is experiencing high load. We automatically retried but the request still timed out. Please try again in a moment.');
+        error.isBillingStateUnknown = true;
+        throw error;
       }
 
       recordFailure('openrouter-ai');
       throw error;
     }
-  }, 3, 2000); // 3 retries, 2s base delay
+  })();
 };
 
 /**
@@ -701,7 +703,7 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
 };
 
 /**
- * Fetch 0–3 targeted clarification questions before optimization.
+ * Fetch the next 0–3 targeted clarification questions before optimization.
  * NON-FATAL: always resolves — returns { clarifications: [] } on any error.
  *
  * @param {object} params
@@ -709,6 +711,8 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
  * @param {string} params.jobDesc
  * @param {string} [params.language='en']
  * @param {boolean} [params.regenerate]
+ * @param {import('../lib/clarifications').ClarificationHistoryEntry[]} [params.history]
+ * @param {number} [params.round]
  * @returns {Promise<{ clarifications: Array<{
  *   id: string,
  *   theme: string,
@@ -718,24 +722,26 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
  *   options: Array<{value: string, label: string, isHardStop?: boolean}>,
  *   allowOther: boolean,
  *   defaultValue?: string
- * }> }>}
+ * }>, complete?: boolean, unavailable?: boolean }>}
  */
-export const generateClarifications = async ({ resumeText, jobDesc, language = 'en', regenerate }) => {
+export const generateClarifications = async ({ resumeText, jobDesc, language = 'en', regenerate, history, round }) => {
   try {
     const headers = await getAuthHeaders({ requireAuth: true });
     const response = await fetch(CLARIFY_ENDPOINT, {
       method: 'POST',
       headers,
+      signal: AbortSignal.timeout(25000),
       body: JSON.stringify({
         resumeText,
         jobText: jobDesc,
         language,
         ...(typeof regenerate === 'boolean' ? { regenerate } : {}),
+        ...(history ? { history, round } : {}),
       }),
     });
     if (!response.ok) {
       console.warn('[API] generateClarifications returned non-OK status:', response.status);
-      return { clarifications: [] };
+      return { clarifications: [], unavailable: true, complete: false };
     }
     return await response.json();
   } catch (error) {
@@ -743,7 +749,7 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
       throw error;
     }
     console.warn('[API] generateClarifications failed (non-fatal), proceeding without:', summarizeErrorForConsole(error));
-    return { clarifications: [] };
+    return { clarifications: [], unavailable: true, complete: false };
   }
 };
 
@@ -756,15 +762,17 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
 export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false }, onStatus) => {
-  if (isCircuitOpen('openrouter-ai')) {
+  if (!cacheOnly && isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
 
   const requestPayload = { resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, ...(freePreview ? { freePreview } : {}) };
   const recoverFromCacheOnly = async () => {
     if (cacheOnly) return null;
-    try {
-      return await optimizeResumeStream({
+    for (const delay of [0, 1500, 3500]) {
+      if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+      try {
+        const recovered = await optimizeResumeStream({
         resumeText,
         jobDesc,
         mode,
@@ -775,11 +783,14 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         userHardStops,
         freePreview,
         cacheOnly: true,
-      }, onStatus);
-    } catch (recoveryErr) {
-      console.warn('[optimize-stream] Cache-only recovery after interrupted stream failed:', summarizeErrorForConsole(recoveryErr));
-      return null;
+        }, onStatus);
+        return recovered;
+      } catch (recoveryErr) {
+        // Only a cache miss can become a hit while the original request finishes.
+        if (!recoveryErr.cacheOnlyMiss) break;
+      }
     }
+    return null;
   };
   const headers = await getAuthHeaders({ requireAuth: !freePreview });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
@@ -788,6 +799,13 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     method: 'POST',
     headers,
     body: JSON.stringify(cacheOnly ? { ...requestPayload, cacheOnly: true } : requestPayload),
+    signal: AbortSignal.timeout(cacheOnly ? 8000 : 65000),
+  }).catch(async error => {
+    const recovered = await recoverFromCacheOnly();
+    if (recovered) return new Response(JSON.stringify(recovered), { headers: { 'Content-Type': 'application/json' } });
+    error.isBillingStateUnknown = !cacheOnly;
+    error.code ||= 'STREAM_INTERRUPTED';
+    throw error;
   });
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
@@ -796,6 +814,14 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     const data = await response.json().catch(() => ({ error: response.statusText }));
     const error = new Error(data.error || 'Optimization failed');
     error.status = response.status;
+    error.code = data.code;
+    error.cacheOnlyMiss = data.cacheOnlyMiss === true;
+    // Gateway failures can occur after processing: never start a paid fallback.
+    error.isBillingStateUnknown = response.status >= 500;
+    if (error.isBillingStateUnknown) {
+      const recovered = await recoverFromCacheOnly();
+      if (recovered) return recovered;
+    }
     if (data.creditsRequired) error.creditsRequired = data.creditsRequired;
     if (data.creditsAvailable != null) error.creditsAvailable = data.creditsAvailable;
     attachErrorDebug(error, response, data);
@@ -810,7 +836,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   const contentType = response.headers.get('Content-Type') || '';
   if (contentType.includes('application/json')) {
     const data = await response.json().catch(() => null);
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
+    if (data && typeof data === 'object' && Array.isArray(data.cards)) {
       recordSuccess('openrouter-ai');
       return attachResponseDebug(data, response, data);
     }
@@ -822,68 +848,53 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   let buffer = '';
   let result = null;
 
+  const consumeEvent = (eventBlock) => {
+    let eventType = '';
+    const dataLines = [];
+    for (const line of eventBlock.split(/\r?\n/)) {
+      if (line.startsWith('event:')) eventType = line.slice(6).trim();
+      else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''));
+    }
+    if (!eventType || !dataLines.length) return;
+    // Keep JSON decoding separate: application errors must never be swallowed.
+    const parsed = JSON.parse(dataLines.join('\n'));
+    if (eventType === 'status') onStatus?.(parsed.phase, parsed);
+    if (eventType === 'result' && Array.isArray(parsed.cards)) {
+      result = attachResponseDebug(parsed, response, parsed);
+      recordSuccess('openrouter-ai');
+    }
+    if (eventType === 'error') {
+      const error = new Error(parsed.error || 'Optimization failed');
+      error.retryable = parsed.retryable === true;
+      error.code = parsed.code;
+      error.status = parsed.status;
+      error.isBillingStateUnknown = parsed.billingStateUnknown === true;
+      attachErrorDebug(error, response, parsed);
+      recordFailure('openrouter-ai');
+      throw error;
+    }
+    if (eventType === 'done' && result && typeof parsed.durationMs === 'number') {
+      result.debug = { ...(result.debug || {}), latencyMs: parsed.durationMs };
+    }
+  };
+
   try {
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
+      if (done) {
+        buffer += decoder.decode();
+        if (buffer.trim()) consumeEvent(buffer);
+        break;
+      }
 
       buffer += decoder.decode(value, { stream: true });
 
       // Process complete SSE events (delimited by \n\n)
-      const events = buffer.split('\n\n');
+      const events = buffer.split(/\r?\n\r?\n/);
       buffer = events.pop() || ''; // Keep incomplete event in buffer
 
       for (const eventBlock of events) {
-        if (!eventBlock.trim()) continue;
-
-        let eventType = '';
-        let eventData = '';
-
-        for (const line of eventBlock.split('\n')) {
-          if (line.startsWith('event: ')) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith('data: ')) {
-            eventData = line.slice(6);
-          }
-        }
-
-        if (!eventType || !eventData) continue;
-
-        try {
-          const parsed = JSON.parse(eventData);
-
-          switch (eventType) {
-            case 'status':
-              onStatus?.(parsed.phase, parsed);
-              break;
-            case 'result':
-              result = attachResponseDebug(parsed, response, parsed);
-              recordSuccess('openrouter-ai');
-              break;
-            case 'error': {
-              // billingStateUnknown=true means credits were or may have been consumed;
-              // recover through the cache-only path, not a fresh paid fallback.
-              const error = new Error(parsed.error);
-              error.retryable = parsed.retryable;
-              error.isBillingStateUnknown = parsed.billingStateUnknown === true;
-              attachErrorDebug(error, response, parsed);
-              recordFailure('openrouter-ai');
-              throw error;
-            }
-            case 'done':
-              if (result && typeof parsed.durationMs === 'number') {
-                result.debug = {
-                  ...(result.debug || {}),
-                  latencyMs: parsed.durationMs,
-                };
-              }
-              console.log(`[optimize-stream] Complete in ${parsed.durationMs}ms`);
-              break;
-          }
-        } catch (parseErr) {
-          if (parseErr.retryable !== undefined) throw parseErr; // Re-throw SSE errors
-          console.warn('[optimize-stream] Failed to parse SSE event:', eventType, summarizeErrorForConsole(parseErr));
-        }
+        if (eventBlock.trim()) consumeEvent(eventBlock);
       }
     }
   } catch (streamErr) {
@@ -903,6 +914,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
       return recovered;
     }
     streamErr.isBillingStateUnknown = true;
+    streamErr.code ||= 'OPTIMIZE_STREAM_INTERRUPTED';
     throw streamErr;
   } finally {
     reader.releaseLock();
@@ -916,6 +928,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     }
     const err = new Error('SSE stream ended without a result event');
     err.isBillingStateUnknown = true;
+    err.code = 'OPTIMIZE_STREAM_INCOMPLETE';
     throw err;
   }
 

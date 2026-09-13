@@ -22,9 +22,9 @@ export const GlassTextarea = forwardRef<HTMLTextAreaElement, GlassTextareaProps>
                     <textarea
                         ref={ref}
                         className={cn(
-                            'neu-inset w-full px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-[border-color,background-color,box-shadow]',
+                            'w-full border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-3 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-[border-color,background-color,box-shadow]',
                             'min-h-[120px] resize-y',
-                            'focus:bg-gray-50 dark:focus:bg-black/40 focus:border-emerald-500/30',
+                            'focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50',
                             error && 'border-red-500/50 focus:border-red-500',
                             className
                         )}
