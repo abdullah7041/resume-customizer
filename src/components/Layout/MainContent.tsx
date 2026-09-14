@@ -15,11 +15,14 @@ import {
 import { type ClarificationQuestion } from "../modals/ClarificationModal";
 import {
   filterClarificationQuestionsByHardStops,
+  appendClarificationHistory,
+  formatClarificationHistory,
   formatClarificationAnswers,
   loadPersistentHardStops,
   persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
+  type ClarificationHistoryEntry,
   type WorkEntry,
 } from "@/lib/clarifications";
 import { useAuth } from "../../hooks/useAuth";
@@ -610,6 +613,11 @@ export default function MainContent() {
   const [isCheckingClarifications, setIsCheckingClarifications] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
+  const clarificationHistory = useRef<ClarificationHistoryEntry[]>([]);
+  const [clarificationRound, setClarificationRound] = useState(1);
+  const [clarificationDraft, setClarificationDraft] = useState<ClarificationAnswers>({});
+  const clarificationBusy = useRef(false);
+  const clarificationContext = useRef('');
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{
     mode: string;
     workHistory?: WorkEntry[];
@@ -617,6 +625,20 @@ export default function MainContent() {
     freePreview?: boolean;
   } | null>(null);
   const pendingOptimizeContinuation = useRef<PendingOptimizeContinuation | null>(null);
+  useEffect(() => {
+    const context = JSON.stringify([resumeData?.plainText, jobDescription, i18n.language]);
+    if (clarificationContext.current && clarificationContext.current !== context) {
+      clarificationHistory.current = [];
+      setClarificationQuestions([]);
+      setClarificationDraft({});
+      setClarificationRound(1);
+      setIsInterrogating(false);
+      setPendingOptimizeArgs(null);
+      pendingOptimizeContinuation.current?.resolve(null);
+      pendingOptimizeContinuation.current = null;
+    }
+    clarificationContext.current = context;
+  }, [resumeData?.plainText, jobDescription, i18n.language]);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.DEV;
 
@@ -1724,9 +1746,14 @@ export default function MainContent() {
             // Do NOT fall back to legacy: that would trigger a second paid optimization request.
             // Force-refresh credit balance so the UI reflects what actually happened.
             refetchCredits().catch(() => { /* non-blocking */ });
-            throw new Error(t('credits.connectionInterrupted',
-              'The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.'));
+            // Retain the actual transport/provider code and request trace.
+            streamError.message = `${t('credits.connectionInterrupted',
+              'The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.')} (${streamError.message})`;
+            throw streamError;
           }
+          // Only an unavailable route warrants a legacy request. Application
+          // errors, authentication failures and timeouts must not silently rerun AI.
+          if (![404, 405].includes(streamError.status)) throw streamError;
           // Server explicitly rejected before processing (non-2xx, SSE error event) —
           // billing state is known-safe, fall back to legacy endpoint.
           console.warn('[optimize] SSE rejected before processing, falling back to legacy:', streamError.message);
@@ -1970,6 +1997,13 @@ export default function MainContent() {
 
       const workHistory = buildWorkHistory();
       const persistentHardStops = loadPersistentHardStops();
+      const context = JSON.stringify([resumeData.plainText, jobDescription, i18n.language]);
+      if (clarificationContext.current !== context) {
+        clarificationHistory.current = [];
+        clarificationContext.current = context;
+        setClarificationRound(1);
+        setClarificationDraft({});
+      }
 
       // The clarification step is wrapped on its OWN, deliberately.
       //
@@ -1982,7 +2016,7 @@ export default function MainContent() {
       //
       // E1: only call the clarification endpoint when deterministic evidence says
       // this is not already a known strong match without career vulnerabilities.
-      if (shouldRequestClarifications(matchAnalysis?.score, workHistory)) {
+      if (shouldRequestClarifications(matchAnalysis?.score, workHistory) && clarificationHistory.current.length < 30) {
         try {
           // ---- Clarification Step (free, non-fatal) ----
           // Show a lightweight toast while we call the gap-analysis endpoint
@@ -2002,6 +2036,8 @@ export default function MainContent() {
                 resumeText: resumeData.plainText,
                 jobDesc: jobDescription,
                 language: i18n.language,
+                history: clarificationHistory.current,
+                round: clarificationHistory.current.length ? Math.min(10, clarificationRound + 1) : 1,
               });
             } finally {
               setIsCheckingClarifications(false);
@@ -2020,6 +2056,7 @@ export default function MainContent() {
             return new Promise((resolve) => {
               pendingOptimizeContinuation.current = { resolve };
               setClarificationQuestions(unansweredQuestions);
+              setClarificationDraft({});
               setPendingOptimizeArgs({
                 mode,
                 workHistory,
@@ -2047,22 +2084,27 @@ export default function MainContent() {
         return await handleOptimizeActual({
           mode,
           workHistory,
-          userClarifications: undefined,
-          userHardStops: persistentHardStops,
+          userClarifications: formatClarificationHistory(clarificationHistory.current).userClarifications,
+          userHardStops: [...new Set([...persistentHardStops, ...(formatClarificationHistory(clarificationHistory.current).userHardStops ?? [])])].slice(0, 20),
           freePreview: options?.freePreview,
         });
       } catch {
         return null;
       }
     },
-    [handleOptimizeActual, i18n.language, isCheckingClarifications, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
+    [clarificationRound, handleOptimizeActual, i18n.language, isCheckingClarifications, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
 
-  const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers) => {
-    setIsInterrogating(false);
-    const { userClarifications, userHardStops, persistentHardStops: newPersistentHardStops } = formatClarificationAnswers(
+  const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers, optimizeNow = false) => {
+    if (clarificationBusy.current || !pendingOptimizeArgs) return;
+    clarificationBusy.current = true;
+    const requestContext = clarificationContext.current;
+    setIsRegenerating(true);
+    setClarificationDraft(answers);
+    clarificationHistory.current = appendClarificationHistory(clarificationHistory.current, clarificationQuestions, answers);
+    const { persistentHardStops: newPersistentHardStops } = formatClarificationAnswers(
       clarificationQuestions,
       answers,
       t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
@@ -2074,37 +2116,73 @@ export default function MainContent() {
       freePreview,
     } = pendingOptimizeArgs || {};
     const allHardStops = persistHardStops([...persistentHardStops, ...(newPersistentHardStops ?? [])]);
+    const { userClarifications, userHardStops } = formatClarificationHistory(clarificationHistory.current);
+    try {
+      if (!optimizeNow && clarificationRound < 10 && clarificationHistory.current.length < 30) {
+        const next = await generateClarifications({
+          resumeText: resumeData?.plainText,
+          jobDesc: jobDescription,
+          language: i18n.language,
+          history: clarificationHistory.current,
+          round: clarificationRound + 1,
+        });
+        if (clarificationContext.current !== requestContext) return;
+        if (next.unavailable) {
+          pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
+          return;
+        }
+        const unanswered = filterClarificationQuestionsByHardStops(next.clarifications ?? [], allHardStops)
+          .filter(question => !clarificationHistory.current.some(entry => entry.id === question.id || entry.question === question.question));
+        if (unanswered.length) {
+          setClarificationQuestions(unanswered);
+          setClarificationRound(previous => previous + 1);
+          setClarificationDraft({});
+          return;
+        }
+      }
+    } catch {
+      pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
+      return;
+    } finally {
+      setIsRegenerating(false);
+      clarificationBusy.current = false;
+    }
+    clarificationBusy.current = true;
+    setIsInterrogating(false);
+    const outcome = clarificationHistory.current.length ? 'answered' : 'skipped';
     analytics.trackClarificationOutcome({
-      outcome: 'answered',
+      outcome,
       questionCount: clarificationQuestions.length,
       answeredCount: Object.keys(answers).length,
       hardStopCount: userHardStops?.length ?? 0,
     });
-    setPendingOptimizeArgs(null);
-    setClarificationQuestions([]);
     try {
       const result = await handleOptimizeActual({
         mode,
         workHistory,
         userClarifications,
-        userHardStops: allHardStops,
+        userHardStops: [...new Set([...allHardStops, ...(userHardStops ?? [])])].slice(0, 20),
         freePreview,
-        clarificationOutcome: 'answered',
+        clarificationOutcome: outcome,
       });
       pendingOptimizeContinuation.current?.resolve(result);
+      pendingOptimizeContinuation.current = null;
+      setPendingOptimizeArgs(null);
+      setClarificationQuestions([]);
     } catch {
       // The actual handler has already surfaced the failure. Resolve the
       // original UI action as incomplete so it neither spends a preview nor
       // verifies stale cards.
-      pendingOptimizeContinuation.current?.resolve(null);
+      // Keep the current questions and draft available to explicitly retry.
+      if (clarificationContext.current === requestContext) setIsInterrogating(true);
     } finally {
-      pendingOptimizeContinuation.current = null;
+      clarificationBusy.current = false;
     }
-  }, [clarificationQuestions, handleOptimizeActual, pendingOptimizeArgs, t]);
+  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, pushToast, t]);
 
-  const handleClarificationSkip = useCallback(async () => {
+  const handleClarificationSkip = useCallback(() => {
+    if (clarificationBusy.current) return;
     setIsInterrogating(false);
-    const { mode, workHistory, persistentHardStops, freePreview } = pendingOptimizeArgs || {};
     analytics.trackClarificationOutcome({
       outcome: 'skipped',
       questionCount: clarificationQuestions.length,
@@ -2113,28 +2191,15 @@ export default function MainContent() {
     });
     setPendingOptimizeArgs(null);
     setClarificationQuestions([]);
-    try {
-      const result = await handleOptimizeActual({
-        mode,
-        workHistory,
-        userClarifications: undefined,
-        userHardStops: persistentHardStops,
-        freePreview,
-        clarificationOutcome: 'skipped',
-      });
-      pendingOptimizeContinuation.current?.resolve(result);
-    } catch {
-      // See the answered path: errors are already surfaced by the optimize
-      // handler, while the original child action must remain incomplete.
-      pendingOptimizeContinuation.current?.resolve(null);
-    } finally {
-      pendingOptimizeContinuation.current = null;
-    }
-  }, [clarificationQuestions.length, handleOptimizeActual, pendingOptimizeArgs]);
+    pendingOptimizeContinuation.current?.resolve(null);
+    pendingOptimizeContinuation.current = null;
+  }, [clarificationQuestions.length]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
-    if (!resumeData?.plainText || !jobDescription) return;
+    if (!resumeData?.plainText || !jobDescription || clarificationBusy.current) return;
+    clarificationBusy.current = true;
+    const requestContext = clarificationContext.current;
     const notifyRegenerateFailure = () => pushToast({
       type: 'danger',
       title: t(
@@ -2150,7 +2215,10 @@ export default function MainContent() {
         jobDesc: jobDescription,
         language: i18n.language,
         regenerate: true,
+        history: clarificationHistory.current,
+        round: clarificationRound,
       });
+      if (clarificationContext.current !== requestContext) return;
       const refreshedQuestions = filterClarificationQuestionsByHardStops(
         result.clarifications ?? [],
         loadPersistentHardStops(),
@@ -2165,8 +2233,9 @@ export default function MainContent() {
       notifyRegenerateFailure();
     } finally {
       setIsRegenerating(false);
+      clarificationBusy.current = false;
     }
-  }, [i18n.language, jobDescription, pushToast, resumeData, t]);
+  }, [clarificationRound, i18n.language, jobDescription, pushToast, resumeData, t]);
 
   const handleMarkApplied = useCallback(async () => {
     if (isGuestMode) {
@@ -2800,6 +2869,9 @@ export default function MainContent() {
             questions={clarificationQuestions}
             isOpen={isInterrogating}
             isRegenerating={isRegenerating}
+            round={clarificationRound}
+            initialAnswers={clarificationDraft}
+            onOptimizeNow={answers => { void handleClarificationSubmit(answers, true); }}
             onSubmit={handleClarificationSubmit}
             onSkip={handleClarificationSkip}
             onRegenerate={handleRegenerate}

@@ -70,6 +70,20 @@ beforeEach(() => {
 });
 
 describe('generate-clarifications handler', () => {
+  it('uses full input and confirmed history for follow-up questions and cache identity', async () => {
+    getCachedMock.mockResolvedValue(null);
+    const history = [{ id: 'scope', theme: 'Migration scope', question: 'What scope?', answer: 'Three products', hardStops: [] }];
+    executeAiContractMock.mockResolvedValue({ clarifications: [
+      { id: 'scope', theme: 'Migration scope', question: 'What scope?' },
+      { id: 'new', theme: 'Outcome', question: 'What changed?' },
+    ] });
+    const body = { ...validBody, resumeText: 'a'.repeat(501) + 'new evidence', history, round: 2 };
+    const response = await invoke(body);
+    expect(parseBody(response).clarifications.map((q: { id: string }) => q.id)).toEqual(['new']);
+    expect(parseBody(response).complete).toBe(false);
+    expect(executeAiContractMock).toHaveBeenCalledWith('clarification_questions', expect.objectContaining({ history, round: 2 }));
+    expect(buildCacheKeyMock).toHaveBeenCalledWith('clarify-v2', expect.objectContaining({ resumeText: body.resumeText, history, userId: 'user-1' }));
+  });
   describe('auth, validation, and AI contract', () => {
     beforeEach(() => {
       getCachedMock.mockResolvedValue(null);
@@ -169,11 +183,11 @@ describe('generate-clarifications handler', () => {
 
       expect(response.statusCode).toBe(200);
       expect(response.headers?.['X-Cache']).toBe('MISS');
-      expect(parseBody(response)).toEqual({ clarifications: clarifications.slice(0, 3) });
+      expect(parseBody(response)).toEqual({ clarifications: clarifications.slice(0, 3), complete: false });
       expect(executeAiContractMock).toHaveBeenCalledWith('clarification_questions', validBody);
       expect(setCachedMock).toHaveBeenCalledWith(
         'clarification-cache-key',
-        { clarifications: clarifications.slice(0, 3) },
+        { clarifications: clarifications.slice(0, 3), complete: false },
         600,
       );
     });
@@ -184,14 +198,14 @@ describe('generate-clarifications handler', () => {
       const response = await invoke(validBody);
 
       expect(response.statusCode).toBe(200);
-      expect(parseBody(response)).toEqual({ clarifications: [] });
+      expect(parseBody(response)).toEqual({ clarifications: [], complete: false, unavailable: true });
       expect(setCachedMock).not.toHaveBeenCalled();
     });
   });
 
   describe('regeneration and caching', () => {
     const cachedResult = { clarifications: [{ id: 'cached-question' }] };
-    const freshResult = { clarifications: [{ id: 'fresh-question' }] };
+    const freshResult = { clarifications: [{ id: 'fresh-question', theme: 'Impact', question: 'What changed?' }], complete: false };
 
     beforeEach(() => {
       getCachedMock.mockResolvedValue(cachedResult);

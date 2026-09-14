@@ -212,6 +212,7 @@ export function ModernProfessional({
                     {job.location && ` | ${job.location}`}
                   </p>
                 </div>
+                {job.description && <p className="mb-1 text-gray-600" style={{ fontSize: fs(10.5) }}>{job.description}</p>}
                 {job.highlights && job.highlights.length > 0 && (
                   <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (

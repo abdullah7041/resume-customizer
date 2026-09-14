@@ -129,3 +129,11 @@ describe('the Arabic counts that used to fall through to the "other" form', () =
     expect(await render('en', 'sections.explainability.itemCount', { count: 2 })).toBe('2 items');
   });
 });
+
+describe('clarification modal translations', () => {
+  it('resolves adaptive-round controls from the real locale tree', async () => {
+    expect(await render('en', 'clarificationModal.optimizeNow', {})).toBe('Optimize now');
+    expect(await render('ar', 'clarificationModal.optimizeNow', {})).toBe('حسّن الآن');
+    expect(await render('ar', 'clarificationModal.continueQuestions', {})).toBe('متابعة الأسئلة');
+  });
+});

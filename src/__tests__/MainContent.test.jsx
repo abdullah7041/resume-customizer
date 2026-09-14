@@ -769,13 +769,13 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: "I don't have Excel experience" }));
     fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
 
-    expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userClarifications: undefined,
-        userHardStops: ["Excel"],
+        userHardStops: expect.arrayContaining(["Excel"]),
       }),
       expect.any(Function),
-    );
+    ));
     expect(JSON.parse(localStorage.getItem("watheq:hardStops"))).toEqual(["Excel"]);
     expect(analyticsMock.trackClarificationOutcome).toHaveBeenCalledWith({
       outcome: "answered",
@@ -827,6 +827,34 @@ describe("MainContent resume parsing", () => {
     await waitFor(() => {
       expect(screen.getByTestId("optimization-handler-status")).toHaveTextContent("completed");
     });
+  });
+
+  it("carries compatible selections through three adaptive rounds into one optimization", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Analytics role");
+    const question = (id) => ({ id, theme: id, question: `Verify ${id}`, rationale: "Add evidence", type: "multi", allowOther: false,
+      options: [{ value: "a", label: `${id} dashboards` }, { value: "b", label: `${id} reporting` }] });
+    generateClarificationsMock.mockResolvedValueOnce({ clarifications: [question("Excel")] })
+      .mockResolvedValueOnce({ clarifications: [question("SQL")] })
+      .mockResolvedValueOnce({ clarifications: [question("Python")] });
+    optimizeResumeStreamMock.mockResolvedValueOnce({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: "gemini" });
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    for (const topic of ["Excel", "SQL", "Python"]) {
+      fireEvent.click(await screen.findByRole("button", { name: `${topic} dashboards` }));
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: `${topic} dashboards` })).toHaveAttribute("aria-pressed", "true");
+      });
+      expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: topic === "Python" ? /optimize now/i : /submit answers/i }));
+    }
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    const payload = optimizeResumeStreamMock.mock.calls[0][0];
+    for (const topic of ["Excel", "SQL", "Python"]) {
+      expect(payload.userClarifications).toContain(`${topic} dashboards`);
+    }
+    expect(generateClarificationsMock.mock.calls[2][0].history).toHaveLength(2);
   });
 
   it("shows the clarification check state and prevents a second request while questions are being checked", async () => {
@@ -915,7 +943,7 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /skip for now/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /optimize now/i }));
 
     await waitFor(() => {
       expect(analyticsMock.trackClarificationOutcome).toHaveBeenCalledWith({
@@ -1269,7 +1297,7 @@ describe("MainContent resume parsing", () => {
     useResumeStore.getState().resetOptimizationMetrics();
     optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error("stream unavailable"), {
       isBillingStateUnknown: false,
-      status: 503,
+      status: 404,
       code: "STREAM_UNAVAILABLE",
     }));
     optimizeResumeMock.mockResolvedValueOnce({
@@ -1323,7 +1351,7 @@ describe("MainContent resume parsing", () => {
     useResumeStore.getState().resetOptimizationMetrics();
     optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error("stream unavailable"), {
       isBillingStateUnknown: false,
-      status: 503,
+      status: 404,
       code: "STREAM_UNAVAILABLE",
     }));
     optimizeResumeMock.mockResolvedValueOnce({

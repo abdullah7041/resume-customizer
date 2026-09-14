@@ -7,9 +7,12 @@
 import { matchedRoleTerms } from './normalize';
 import { deriveRoleTerms, dropReason } from './filters';
 import { withinAgeWindow } from './age';
-import type { FeedIntent, FeedPosting, FeedResult, ScoredPosting } from './types';
+import type { CandidateProfile, JobRequirements, FeedIntent, FeedPosting, FeedResult, ScoredPosting } from './types';
+import { recommend } from '@/lib/jobs/evidence';
 
 export interface BuildFeedOptions {
+  profile?: CandidateProfile | null;
+  requirements?: Record<string, JobRequirements>;
   /** Hide dated postings older than this. Undated boards are never filtered — see `age.ts`. */
   maxAgeDays?: number;
   /** Injectable clock, so the window is testable without faking timers. */
@@ -46,7 +49,11 @@ export function buildFeed(
   const dropped: FeedResult['dropped'] = [];
 
   for (const posting of postings) {
-    const reason = dropReason(posting, intent);
+    const recommendation = options.profile ? recommend(options.profile, options.requirements?.[posting.id]) : undefined;
+    let reason = dropReason(posting, intent);
+    // Only grounded evidence can override a title mismatch. Missing or failed
+    // requirements must retain deterministic intent filtering.
+    if (reason === 'role' && recommendation?.reasons.length) reason = null;
     if (reason) {
       dropped.push({ posting, reason });
       continue;
@@ -57,7 +64,12 @@ export function buildFeed(
       dropped.push({ posting, reason: 'age' });
       continue;
     }
-    kept.push(scorePosting(posting, roleTerms));
+    const scored = scorePosting(posting, roleTerms);
+    if (recommendation) {
+      scored.recommendation = recommendation;
+      scored.score = recommendation.reasons.length * 100 + scored.matched.length;
+    }
+    kept.push(scored);
   }
 
   kept.sort((a, b) => {

@@ -58,6 +58,28 @@ beforeEach(() => {
 });
 
 describe('import-job-url handler', () => {
+  it('imports the complete Oracle CandidateExperience description from the public API', async () => {
+    safeFetchMock.mockResolvedValue({ status: 200, headers: {}, finalUrl: 'https://example.com', redirects: [],
+      body: JSON.stringify({ items: [{ Id: '9067', Title: 'Data Scientist', ExternalDescriptionStr: '<p>' + 'Build reliable machine learning applications. '.repeat(10) + '</p>', ExternalQualificationsStr: '<p>Python and SQL required.</p>' }] }),
+    });
+    const response = await invoke({ url: 'https://fa-epod-saasfaprod1.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX/job/9067' });
+    expect(parseBody(response)).toMatchObject({ status: 'ok', jobTitle: 'Data Scientist', source: 'ats-api' });
+    expect(parseBody(response).jobText).toContain('Python and SQL required.');
+    expect(safeFetchMock.mock.calls[0][0]).toContain('recruitingCEJobRequisitionDetails');
+  });
+
+  it.each([
+    ['Greenhouse', 'https://boards.greenhouse.io/acme/jobs/123', { title: 'Platform Engineer', content: '<p>' + 'Operate a reliable cloud platform. '.repeat(10) + '</p>' }, 'boards-api.greenhouse.io'],
+    ['Lever', 'https://jobs.lever.co/acme/11111111-1111-1111-1111-111111111111', { text: 'Platform Engineer', description: '<p>' + 'Operate a reliable cloud platform. '.repeat(10) + '</p>' }, 'api.lever.co'],
+    ['Workday', 'https://acme.wd5.myworkdayjobs.com/en-US/Careers/job/Riyadh/Platform-Engineer_R123', { jobPostingInfo: { title: 'Platform Engineer', jobDescription: '<p>' + 'Operate a reliable cloud platform. '.repeat(10) + '</p>' } }, '/wday/cxs/acme/Careers/job/'],
+  ])('uses the %s public detail API before HTML fallback', async (_provider, url, payload, endpointPart) => {
+    safeFetchMock.mockResolvedValue({ status: 200, headers: {}, finalUrl: url, redirects: [], body: JSON.stringify(payload) });
+    const response = await invoke({ url });
+    expect(parseBody(response)).toMatchObject({ status: 'ok', jobTitle: 'Platform Engineer', source: 'ats-api' });
+    expect(safeFetchMock.mock.calls[0][0]).toContain(endpointPart);
+    expect(safeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('imports a public job page (guest, rate-limited path)', async () => {
     safeFetchMock.mockResolvedValue({
       status: 200,

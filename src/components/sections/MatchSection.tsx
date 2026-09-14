@@ -697,7 +697,7 @@ export function MatchSection({
                 setImportedCriteria(null);
               }}
               placeholder={t('sections.match.jobInput.placeholder', 'Paste the job description here...')}
-              className="mb-4 h-64 w-full font-mono text-sm leading-relaxed"
+              className="mb-4 min-h-64 w-full rounded-2xl border-emerald-900/15 bg-white/80 p-5 font-sans text-sm leading-7 shadow-inner focus:border-emerald-500 dark:border-emerald-300/20 dark:bg-emerald-950/40"
               error={error}
             />
           )}

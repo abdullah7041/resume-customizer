@@ -27,7 +27,7 @@ function buildCallOptions(contract, options) {
     featureName: options.featureName || contract.featureName,
     responseFormat: contract.responseFormat,
     modelId: options.modelId,
-    disableFallback: options.disableFallback === true,
+    disableFallback: contract.disableFallback === true || options.disableFallback === true,
     includeResponseMetadata: options.includeResponseMetadata === true,
     userRef: options.userRef,
     // Telemetry options map to user_ref / jd_fingerprint at the logger boundary.

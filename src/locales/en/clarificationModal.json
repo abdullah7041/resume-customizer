@@ -1,5 +1,11 @@
 {
   "clarificationModal": {
+    "round": "Round",
+    "selectMany": "Select all that apply",
+    "selectOne": "Select one",
+    "optimizeNow": "Optimize now",
+    "continueQuestions": "Continue questions",
+    "followupFailed": "Could not load follow-up questions. Your answers are saved; retry or optimize now.",
     "title": "Quick questions to sharpen your results",
     "question": "question",
     "questions": "questions",

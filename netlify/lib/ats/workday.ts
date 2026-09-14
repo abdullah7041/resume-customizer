@@ -13,8 +13,9 @@
 //  - `postedOn` is relative prose ("Posted Yesterday"), not a date. It is NOT
 //    parsed — `postedAt` stays null and ordering falls back to first-seen.
 //
-// The JD needs one GET per job, the only Tier 1 source that scales per posting,
-// so it is fetched lazily rather than during the crawl.
+// The JD needs one GET per job, the only Tier 1 source that scales per posting.
+// The crawler eagerly enriches only the newest page under a strict cap; older
+// descriptions remain lazy and are fetched when the user opens the posting.
 
 import { boundDescription, getJson, postJson, stripHtml } from './http.js';
 import type { AtsProvider, CompanyRef, FetchOutcome, ProbeResult, RawPosting } from './types.js';

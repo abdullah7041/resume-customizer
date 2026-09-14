@@ -40,6 +40,7 @@ export const BasicsSchema = z.object({
 });
 
 export const WorkSchema = z.object({
+    description: z.string().optional().default(""),
     name: z.string().min(1, "Company name is required"),
     position: z.string().min(1, "Position is required"),
     url: z.url().optional(),
@@ -239,7 +240,7 @@ export const OptimizeRequestSchema = z.object({
     workHistory: z.array(WorkHistoryEntrySchema).optional(),
     language: z.enum(["en", "ar"]).optional().default("en"),
     // Optional structured Q&A from the clarification modal — injected into AI prompt context
-    userClarifications: z.string().max(5000).optional(),
+    userClarifications: z.string().max(50000).optional(),
     // Explicit user-confirmed exclusions that override keyword weaving.
     userHardStops: z.array(z.string().trim().min(1).max(300)).max(20).optional(),
     // Recovery-only retry after an interrupted paid stream. Must never trigger AI or credit use.
@@ -253,6 +254,14 @@ export const ClarificationRequestSchema = z.object({
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
     regenerate: z.boolean().optional(),
+    round: z.number().int().min(1).max(10).optional(),
+    history: z.array(z.object({
+        id: z.string().max(200),
+        theme: z.string().max(200),
+        question: z.string().max(1000),
+        answer: z.string().max(1500),
+        hardStops: z.array(z.string().max(300)).max(5),
+    })).max(30).optional(),
 });
 
 export const PredictQuestionsRequestSchema = z.object({

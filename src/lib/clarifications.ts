@@ -36,6 +36,43 @@ export interface ClarificationAnswer {
 
 export type ClarificationAnswers = Record<string, ClarificationAnswer>;
 
+export interface ClarificationHistoryEntry {
+  id: string;
+  theme: string;
+  question: string;
+  answer: string;
+  hardStops: string[];
+}
+
+export function appendClarificationHistory(
+  history: ClarificationHistoryEntry[],
+  questions: ClarificationQuestion[],
+  answers: ClarificationAnswers,
+): ClarificationHistoryEntry[] {
+  const next = new Map(history.map(entry => [entry.id, entry]));
+  for (const question of questions) {
+    const formatted = formatClarificationAnswers([question], answers);
+    if (!formatted.userClarifications && !formatted.userHardStops?.length) continue;
+    next.set(question.id, {
+      id: question.id,
+      theme: question.theme,
+      question: question.question,
+      answer: formatted.userClarifications?.split('\nA: ').slice(1).join('\nA: ').slice(0, 1500) || '',
+      hardStops: formatted.userHardStops ?? [],
+    });
+  }
+  return [...next.values()].slice(0, 30);
+}
+
+export function formatClarificationHistory(history: ClarificationHistoryEntry[]): FormattedClarifications {
+  return {
+    userClarifications: history.filter(entry => entry.answer).map(entry => (
+      `[${entry.theme}]\nQ: ${entry.question}\nA: ${entry.answer}`
+    )).join('\n\n').slice(0, 50000) || undefined,
+    userHardStops: [...new Set(history.flatMap(entry => entry.hardStops))].slice(0, 20),
+  };
+}
+
 export interface FormattedClarifications {
   userClarifications?: string;
   userHardStops?: string[];
@@ -126,6 +163,7 @@ export function filterClarificationQuestionsByHardStops(
 
 export function isValidOtherAnswer(text: string): boolean {
   const trimmed = text.trim();
+  if (/^[\p{N}]+(?:[.,][\p{N}]+)?\s*[%٪]?[+]?$/u.test(trimmed)) return true;
   if (trimmed.length < 6) return false;
   const words = trimmed.match(/\p{L}{2,}/gu) || [];
   return words.length >= 3;

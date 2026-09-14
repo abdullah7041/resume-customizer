@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  appendClarificationHistory,
+  formatClarificationHistory,
+  isValidOtherAnswer,
   filterClarificationQuestionsByHardStops,
   formatClarificationAnswers,
   loadPersistentHardStops,
@@ -24,6 +27,29 @@ const excelQuestion: ClarificationQuestion = {
 };
 
 describe('clarification helpers', () => {
+  it('keeps confirmed answers across rounds and replaces a corrected answer', () => {
+    const first = appendClarificationHistory([], [excelQuestion], {
+      excelExperience: { selectedValues: ['dashboards'], otherText: '' },
+    });
+    const next = appendClarificationHistory(first, [{ ...excelQuestion, id: 'impact', theme: 'Impact' }], {
+      impact: { selectedValues: ['no_excel'], otherText: '' },
+    });
+    expect(formatClarificationHistory(next)).toMatchObject({
+      userClarifications: expect.stringContaining('Built Excel dashboards'),
+      userHardStops: ["Impact: I don't have Excel experience"],
+    });
+    const corrected = appendClarificationHistory(next, [excelQuestion], {
+      excelExperience: { selectedValues: ['no_excel'], otherText: '' },
+    });
+    expect(formatClarificationHistory(corrected).userClarifications).toBeUndefined();
+    expect(corrected).toHaveLength(2);
+  });
+
+  it('accepts a verifiable exact metric in Other', () => {
+    expect(isValidOtherAnswer('12')).toBe(true);
+    expect(isValidOtherAnswer('12.5%')).toBe(true);
+    expect(isValidOtherAnswer('')).toBe(false);
+  });
   it('adds a localized hard-stop as the final option when the model omits one', () => {
     const normalized = normalizeClarificationQuestion(
       { ...excelQuestion, options: excelQuestion.options.slice(0, 1) },
