@@ -4,6 +4,8 @@
     "selectMany": "Select all that apply",
     "selectOne": "Select one",
     "optimizeNow": "Optimize now",
+    "keepAnswering": "Keep answering",
+    "exitWarning": "Your valid answers will be kept. Keep answering, or optimize now with what you have.",
     "continueQuestions": "Continue questions",
     "followupFailed": "Could not load follow-up questions. Your answers are saved; retry or optimize now.",
     "title": "Quick questions to sharpen your results",

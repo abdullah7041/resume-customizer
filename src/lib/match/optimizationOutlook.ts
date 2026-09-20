@@ -6,10 +6,12 @@
 // be depended on here.
 import type { StrategicRealityCheck } from '@/types/analysis';
 
+export type FitPotentialBand = 'high' | 'medium' | 'low';
 export type OptimizationOutlookBand = 'high_potential' | 'worth_it_with_gaps' | 'low_ceiling';
 
 export interface OptimizationOutlook {
   band: OptimizationOutlookBand;
+  fitPotential: FitPotentialBand;
   /** Confirmed-risk titles that cap the outcome, most severe first, capped at 3. */
   blockers: string[];
 }
@@ -31,14 +33,31 @@ export function computeOptimizationOutlook(
   const riskTier = realityCheck?.riskTier ?? null;
   const blockers = confirmedRisks.map((risk) => risk.title).slice(0, MAX_BLOCKERS);
 
+  const hasCriticalRisk = confirmedRisks.some((risk) => risk.severity === 'critical');
+  const hasHighOrCriticalRisk = confirmedRisks.some(
+    (risk) => risk.severity === 'high' || risk.severity === 'critical',
+  );
+  const recommendation = realityCheck?.recommendation ?? null;
+
   let band: OptimizationOutlookBand;
-  if (score < 35 || confirmedRisks.length >= 2 || riskTier === 'critical') {
+  if (
+    score < 60
+    || hasCriticalRisk
+    || riskTier === 'critical'
+    || recommendation === 'review_role_fit'
+  ) {
     band = 'low_ceiling';
-  } else if (score >= 55 && confirmedRisks.length === 0) {
+  } else if (score >= 80 && !hasHighOrCriticalRisk) {
     band = 'high_potential';
   } else {
     band = 'worth_it_with_gaps';
   }
 
-  return { band, blockers };
+  const fitPotential: FitPotentialBand = band === 'high_potential'
+    ? 'high'
+    : band === 'worth_it_with_gaps'
+      ? 'medium'
+      : 'low';
+
+  return { band, fitPotential, blockers };
 }

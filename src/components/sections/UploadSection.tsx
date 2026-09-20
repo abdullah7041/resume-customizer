@@ -7,6 +7,7 @@ import { useResumeStore } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import type { ResumeSchema } from '../../types/resume';
 import { ParsingWarningsBanner } from '../ui/ParsingWarningsBanner';
+import { MAX_RESUME_LIBRARY_SIZE, useResumeLibraryStore } from '@/lib/resumeLibrary';
 
 interface Toast {
     type: 'success' | 'warning' | 'danger' | 'info';
@@ -51,6 +52,11 @@ export default function UploadSection({
 
     // Get store actions
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
+    const libraryEntries = useResumeLibraryStore((state) => state.entries);
+    const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
+    const activateResume = useResumeLibraryStore((state) => state.activateResume);
+    const renameResume = useResumeLibraryStore((state) => state.renameResume);
+    const removeResume = useResumeLibraryStore((state) => state.removeResume);
 
     const handleFileSelect = useCallback((selectedFile: File) => {
         setFile(selectedFile);
@@ -65,10 +71,14 @@ export default function UploadSection({
         setError(null);
         setStatus('idle');
         setProgress(0);
-        // Clear store data as well
+        if (activeResumeId && resumeDocument?.plainText) {
+            void removeResume(activeResumeId);
+            return;
+        }
+        // Clear unsaved input and legacy state.
         clearAll();
         onClear();
-    }, [onClear, clearAll]);
+    }, [activeResumeId, clearAll, onClear, removeResume, resumeDocument?.plainText]);
 
     const handleTextChange = useCallback((text: string) => {
         setPastedText(text);
@@ -110,6 +120,14 @@ export default function UploadSection({
                 type: 'warning',
                 title: 'No resume provided',
                 description: 'Please upload a file or paste text',
+            });
+            return;
+        }
+        if (libraryEntries.length >= MAX_RESUME_LIBRARY_SIZE) {
+            onToast({
+                type: 'warning',
+                title: t('upload.library.limitTitle', 'Resume library is full'),
+                description: t('upload.library.limitDescription', 'Remove one of your five saved resumes before adding another.'),
             });
             return;
         }
@@ -239,7 +257,7 @@ export default function UploadSection({
                 description,
             });
         }
-    }, [file, onParseResume, onToast, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);
+    }, [file, libraryEntries.length, onParseResume, onToast, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);
 
     const fileName = file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
@@ -251,6 +269,56 @@ export default function UploadSection({
         <div data-tour="upload" className="space-y-6">
             {/* Validation Warnings — rendered from store via shared banner component */}
             <ParsingWarningsBanner className="mb-4" />
+
+            {libraryEntries.length > 0 && (
+                <section className="rounded-2xl border border-emerald-900/10 bg-white/70 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04]" aria-labelledby="resume-library-title">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                            <h3 id="resume-library-title" className="font-semibold text-gray-900 dark:text-white">
+                                {t('upload.library.title', 'Your resumes')}
+                            </h3>
+                            <p className="text-xs text-gray-600 dark:text-emerald-100/70">
+                                {t('upload.library.count', '{{count}} of {{max}} saved on this device', { count: libraryEntries.length, max: MAX_RESUME_LIBRARY_SIZE })}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="grid gap-2">
+                        {libraryEntries.map((entry) => {
+                            const active = entry.id === activeResumeId;
+                            return (
+                                <div key={entry.id} className={`flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center ${active ? 'border-emerald-500/50 bg-emerald-50/80 dark:bg-emerald-500/10' : 'border-gray-200 bg-white/70 dark:border-white/10 dark:bg-black/20'}`}>
+                                    <input
+                                        key={`${entry.id}:${entry.name}`}
+                                        defaultValue={entry.name}
+                                        maxLength={80}
+                                        aria-label={t('upload.library.nameLabel', 'Resume name')}
+                                        onBlur={(event) => void renameResume(entry.id, event.target.value)}
+                                        className="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-white/15 dark:bg-black/30 dark:text-white"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => activateResume(entry.id)}
+                                            disabled={active}
+                                            className="min-h-10 flex-1 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:bg-emerald-100 disabled:text-emerald-800 dark:disabled:bg-emerald-500/20 dark:disabled:text-emerald-100 sm:flex-none"
+                                        >
+                                            {active ? t('upload.library.active', 'Active') : t('upload.library.use', 'Use resume')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => void removeResume(entry.id)}
+                                            aria-label={t('upload.library.remove', 'Remove {{name}}', { name: entry.name })}
+                                            className="min-h-10 rounded-lg px-3 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
+                                        >
+                                            {t('common.remove', 'Remove')}
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </section>
+            )}
 
             <UploadCard
                 fileName={fileName}

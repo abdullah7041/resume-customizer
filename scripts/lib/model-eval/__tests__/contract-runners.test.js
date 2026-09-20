@@ -55,6 +55,7 @@ const validOutputs = {
   clarification: {
     clarifications: [{
       id: 'react-depth',
+      topicKey: 'react_depth',
       theme: 'React depth',
       rationale: 'The role needs detailed React evidence.',
       question: 'Which React responsibility best reflects your experience?',

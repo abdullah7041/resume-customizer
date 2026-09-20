@@ -6,6 +6,17 @@
     "browse": "Browse Files",
     "supported": "Supported formats: PDF, DOCX, TXT",
     "maxSize": "Maximum file size: 5MB",
+    "library": {
+      "title": "Your resumes",
+      "count": "{{count}} of {{max}} saved on this device",
+      "nameLabel": "Resume name",
+      "active": "Active",
+      "use": "Use resume",
+      "remove": "Remove {{name}}",
+      "limitTitle": "Resume library is full",
+      "limitDescription": "Remove one of your five saved resumes before adding another.",
+      "saveFailed": "Resume parsed, but could not be added to your device library."
+    },
     "paste": "Or paste your resume text",
     "card": {
       "step": "Step 1",

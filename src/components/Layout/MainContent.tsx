@@ -19,6 +19,7 @@ import {
   formatClarificationHistory,
   formatClarificationAnswers,
   loadPersistentHardStops,
+  isRepeatedClarificationQuestion,
   persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
@@ -29,6 +30,7 @@ import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
 import { isOnboarded } from "../../lib/onboarding/onboardedFlag";
+import { fingerprintResume, useResumeLibraryStore } from "@/lib/resumeLibrary";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
 // Lazy-loaded tab sections — each gets its own chunk
@@ -454,6 +456,11 @@ export default function MainContent() {
       return "";
     }
   });
+  const libraryEntries = useResumeLibraryStore((state) => state.entries);
+  const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
+  const libraryInitialized = useResumeLibraryStore((state) => state.initialized);
+  const initializeResumeLibrary = useResumeLibraryStore((state) => state.initialize);
+  const projectedResumeId = useRef<string | null>(null);
   const hasResume = Boolean(resumeData?.plainText);
   const { setWorkflowState: setHRSuperSaudWorkflowState } = useHRSuperSaud();
   const resumeGateReason = t(
@@ -692,6 +699,62 @@ export default function MainContent() {
     setExportedJobApplicationId(null);
     setExtractedMetadata(null);
   }, []);
+
+  useEffect(() => {
+    const document = resumeData && typeof resumeData === 'object' ? resumeData : null;
+    const parsedResume = document?.data?.basics
+      ? document.data
+      : useResumeStore.getState().originalResume;
+    const plainText = typeof document?.plainText === 'string'
+      ? document.plainText
+      : useResumeStore.getState().parsedResumeText || '';
+    void initializeResumeLibrary(parsedResume && plainText ? {
+      parsedResume,
+      plainText,
+      sourceFileName: document?.fileName,
+    } : null);
+  }, [initializeResumeLibrary, resumeData]);
+
+  useEffect(() => {
+    if (!libraryInitialized) return;
+    const active = libraryEntries.find(entry => entry.id === activeResumeId);
+    if (!active) {
+      if (projectedResumeId.current) {
+        projectedResumeId.current = null;
+        setResumeData('');
+        useResumeStore.getState().resetForNewUpload();
+      }
+      return;
+    }
+    if (projectedResumeId.current === active.id) return;
+
+    const currentText = resumeData && typeof resumeData === 'object' && typeof resumeData.plainText === 'string'
+      ? resumeData.plainText
+      : '';
+    projectedResumeId.current = active.id;
+    if (currentText && fingerprintResume(currentText) === active.fingerprint) return;
+
+    const document = {
+      data: structuredClone(active.parsedResume),
+      plainText: active.plainText,
+      fileName: active.sourceFileName || active.name,
+    };
+    setResumeData(document);
+    const resumeStore = useResumeStore.getState();
+    resumeStore.resetForNewUpload();
+    resumeStore.setOriginalResume(document.data);
+    resumeStore.setParsedResumeText(document.plainText);
+    setMatchAnalysis(null);
+    setTruthCheckResult(null);
+    setJobDescription('');
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    resumeStore.setOptimizeRun(null);
+    clearStoredMatchAnalysis();
+    if (typeof window !== 'undefined') window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    resetPipelineContext();
+  }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData]);
 
   const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
     setActiveJobApplicationId(application.id);
@@ -1003,7 +1066,7 @@ export default function MainContent() {
    * only just clicked, and the Match tab already has the button for it.
    */
   const handleFeedMatchPosting = useCallback(
-    ({ jobDescription: postingDescription, companyName, jobTitle }: { jobDescription: string; companyName: string; jobTitle: string }) => {
+    ({ jobDescription: postingDescription, companyName, jobTitle, match }: { jobDescription: string; companyName: string; jobTitle: string; match?: MatchResult }) => {
       if (!hasResume) {
         handleTabChange("match");
         return;
@@ -1027,15 +1090,21 @@ export default function MainContent() {
         window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
       }
 
-      // Drop the PREVIOUS job's analysis before switching tab.
+      // Reuse the feed's verified comparison for the selected resume. This is the
+      // same AI contract as Match, so opening the result does not spend a credit.
       //
       // MatchSection hides its job-description editor entirely whenever results
       // exist (the `hasResults` gate), so arriving with a stale analysis showed the
       // old posting's score and no visible JD box — the hand-off looked like it had
       // only navigated, when in fact it had pasted the description behind a results
       // view for a different job.
-      setMatchAnalysis(null);
-      clearStoredMatchAnalysis();
+      if (match) {
+        setMatchAnalysis(match);
+        saveMatchAnalysis(match, trimmed);
+      } else {
+        setMatchAnalysis(null);
+        clearStoredMatchAnalysis();
+      }
       // Every other "this is a different job now" path pairs those two with this
       // (confirmDeleteAllData, handleClearResume, handleClearMatch, new upload).
       // Without it activeJobApplicationId still points at the PREVIOUS posting, and
@@ -1213,6 +1282,7 @@ export default function MainContent() {
 
     // Reset persisted Zustand store state
     useResumeStore.getState().clearAll();
+    void useResumeLibraryStore.getState().clearLibrary();
 
     setShowDeleteConfirm(false);
 
@@ -1377,6 +1447,27 @@ export default function MainContent() {
               storageUserId: storage?.userId,
             }
             : parsed;
+        const parsedResume = enriched?.data?.basics
+          ? enriched.data
+          : enriched?.basics
+            ? enriched
+            : null;
+        if (parsedResume && typeof enriched?.plainText === 'string' && enriched.plainText.trim()) {
+          try {
+            const saved = await useResumeLibraryStore.getState().saveResume({
+              parsedResume,
+              plainText: enriched.plainText,
+              sourceFileName: enriched.fileName,
+            });
+            projectedResumeId.current = saved.id;
+          } catch (libraryError) {
+            pushToast({
+              type: 'warning',
+              title: t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.'),
+              description: libraryError instanceof Error ? libraryError.message : undefined,
+            });
+          }
+        }
         setResumeData(enriched);
         setMatchAnalysis(null);
         setTruthCheckResult(null);
@@ -2037,7 +2128,7 @@ export default function MainContent() {
                 jobDesc: jobDescription,
                 language: i18n.language,
                 history: clarificationHistory.current,
-                round: clarificationHistory.current.length ? Math.min(10, clarificationRound + 1) : 1,
+                round: clarificationHistory.current.length ? Math.min(3, clarificationRound + 1) : 1,
               });
             } finally {
               setIsCheckingClarifications(false);
@@ -2049,7 +2140,7 @@ export default function MainContent() {
             persistentHardStops,
           );
 
-          if (unansweredQuestions.length > 0) {
+          if (!clarifyResult.complete && unansweredQuestions.length > 0) {
             // Keep the caller pending until the modal continuation completes. The
             // OptimizeSection uses that completion boundary to consume a free
             // preview and verify only the cards that were actually generated.
@@ -2118,7 +2209,7 @@ export default function MainContent() {
     const allHardStops = persistHardStops([...persistentHardStops, ...(newPersistentHardStops ?? [])]);
     const { userClarifications, userHardStops } = formatClarificationHistory(clarificationHistory.current);
     try {
-      if (!optimizeNow && clarificationRound < 10 && clarificationHistory.current.length < 30) {
+      if (!optimizeNow && clarificationRound < 3 && clarificationHistory.current.length < 30) {
         const next = await generateClarifications({
           resumeText: resumeData?.plainText,
           jobDesc: jobDescription,
@@ -2132,8 +2223,8 @@ export default function MainContent() {
           return;
         }
         const unanswered = filterClarificationQuestionsByHardStops(next.clarifications ?? [], allHardStops)
-          .filter(question => !clarificationHistory.current.some(entry => entry.id === question.id || entry.question === question.question));
-        if (unanswered.length) {
+          .filter(question => !isRepeatedClarificationQuestion(question, clarificationHistory.current));
+        if (!next.complete && unanswered.length) {
           setClarificationQuestions(unanswered);
           setClarificationRound(previous => previous + 1);
           setClarificationDraft({});

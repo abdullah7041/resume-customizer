@@ -95,11 +95,51 @@ describe('ClarificationModal', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Other' }));
     const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'too short' } });
+    fireEvent.change(input, { target: { value: '...' } });
     fireEvent.blur(input);
 
     expect(screen.getByRole('button', { name: /submit answers/i })).toBeDisabled();
     expect(screen.getByText(/meaningful answer/i)).toBeInTheDocument();
+  });
+
+  it('always labels the primary action Submit Answers, including round three', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        round={3}
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /submit answers/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue questions/i })).not.toBeInTheDocument();
+  });
+
+  it('asks before closing and can optimize once with the answers already entered', () => {
+    const onSkip = vi.fn();
+    const onOptimizeNow = vi.fn();
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={onSkip}
+        onOptimizeNow={onOptimizeNow}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Built Excel dashboards' }));
+    fireEvent.click(screen.getByRole('button', { name: /skip and proceed without answers/i }));
+
+    expect(onSkip).not.toHaveBeenCalled();
+    expect(screen.getByText(/valid answers will be kept/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /optimize now/i }));
+    expect(onOptimizeNow).toHaveBeenCalledOnce();
+    expect(onOptimizeNow).toHaveBeenCalledWith({
+      excelExperience: { selectedValues: ['dashboards'], otherText: '' },
+    });
   });
 
   it('renders a localized regenerate control and invokes it on click', () => {

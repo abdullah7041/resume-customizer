@@ -328,6 +328,7 @@ describe('AI contract layer', () => {
     callOpenRouterMock.mockResolvedValue(JSON.stringify({
       clarifications: [{
         id: 'excelExperience',
+        topicKey: 'excel_tools',
         theme: 'Excel',
         rationale: 'The job requires Excel evidence.',
         question: 'Which Excel work can you verify?',

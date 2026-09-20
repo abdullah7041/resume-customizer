@@ -74,8 +74,8 @@ describe('generate-clarifications handler', () => {
     getCachedMock.mockResolvedValue(null);
     const history = [{ id: 'scope', theme: 'Migration scope', question: 'What scope?', answer: 'Three products', hardStops: [] }];
     executeAiContractMock.mockResolvedValue({ clarifications: [
-      { id: 'scope', theme: 'Migration scope', question: 'What scope?' },
-      { id: 'new', theme: 'Outcome', question: 'What changed?' },
+      { id: 'scope', topicKey: 'migration_scope', theme: 'Migration scope', question: 'What scope?' },
+      { id: 'new', topicKey: 'outcome', theme: 'Outcome', question: 'What changed?' },
     ] });
     const body = { ...validBody, resumeText: 'a'.repeat(501) + 'new evidence', history, round: 2 };
     const response = await invoke(body);
@@ -84,6 +84,20 @@ describe('generate-clarifications handler', () => {
     expect(executeAiContractMock).toHaveBeenCalledWith('clarification_questions', expect.objectContaining({ history, round: 2 }));
     expect(buildCacheKeyMock).toHaveBeenCalledWith('clarify-v2', expect.objectContaining({ resumeText: body.resumeText, history, userId: 'user-1' }));
   });
+
+  it('returns only the first question when one AI batch repeats a semantic topic', async () => {
+    getCachedMock.mockResolvedValue(null);
+    executeAiContractMock.mockResolvedValue({ clarifications: [
+      { id: 'crm-1', topicKey: 'crm_tools', theme: 'CRM tools', question: 'Which CRM did you use?' },
+      { id: 'crm-2', topicKey: 'crm-tools', theme: 'CRM experience', question: 'Describe your CRM work.' },
+      { id: 'metrics', topicKey: 'service_metrics', theme: 'Service metrics', question: 'Which metric improved?' },
+    ] });
+
+    const response = await invoke(validBody);
+
+    expect(parseBody(response).clarifications.map((question: { id: string }) => question.id)).toEqual(['crm-1', 'metrics']);
+  });
+
   describe('auth, validation, and AI contract', () => {
     beforeEach(() => {
       getCachedMock.mockResolvedValue(null);
@@ -126,6 +140,7 @@ describe('generate-clarifications handler', () => {
       const clarifications = [
         {
           id: 'scope',
+          topicKey: 'migration_scope',
           theme: 'Migration scope',
           rationale: 'The resume does not quantify the platform migration.',
           question: 'What was the migration scope?',
@@ -139,6 +154,7 @@ describe('generate-clarifications handler', () => {
         },
         {
           id: 'users',
+          topicKey: 'user_impact',
           theme: 'User impact',
           rationale: 'The scale of the migration is not visible.',
           question: 'How many users were affected?',
@@ -152,6 +168,7 @@ describe('generate-clarifications handler', () => {
         },
         {
           id: 'outcome',
+          topicKey: 'launch_outcome',
           theme: 'Launch outcome',
           rationale: 'The resume does not state what changed after launch.',
           question: 'What changed after launch?',
@@ -165,6 +182,7 @@ describe('generate-clarifications handler', () => {
         },
         {
           id: 'team',
+          topicKey: 'team_size',
           theme: 'Team size',
           rationale: 'The leadership scope is not quantified.',
           question: 'How large was the team?',
@@ -205,7 +223,7 @@ describe('generate-clarifications handler', () => {
 
   describe('regeneration and caching', () => {
     const cachedResult = { clarifications: [{ id: 'cached-question' }] };
-    const freshResult = { clarifications: [{ id: 'fresh-question', theme: 'Impact', question: 'What changed?' }], complete: false };
+    const freshResult = { clarifications: [{ id: 'fresh-question', topicKey: 'impact', theme: 'Impact', question: 'What changed?' }], complete: false };
 
     beforeEach(() => {
       getCachedMock.mockResolvedValue(cachedResult);

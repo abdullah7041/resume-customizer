@@ -254,9 +254,10 @@ export const ClarificationRequestSchema = z.object({
     jobText: z.string().min(1, "Job description is required").max(MAX_JOB_LENGTH, "Job description too large"),
     language: z.enum(["en", "ar"]).optional().default("en"),
     regenerate: z.boolean().optional(),
-    round: z.number().int().min(1).max(10).optional(),
+    round: z.number().int().min(1).max(3).optional(),
     history: z.array(z.object({
         id: z.string().max(200),
+        topicKey: z.string().max(200).optional(),
         theme: z.string().max(200),
         question: z.string().max(1000),
         answer: z.string().max(1500),

@@ -706,6 +706,7 @@ const clarificationJsonSchema = {
         type: 'object',
         properties: {
           id: { type: 'string' },
+          topicKey: { type: 'string' },
           theme: { type: 'string' },
           rationale: { type: 'string' },
           question: { type: 'string' },
@@ -727,7 +728,7 @@ const clarificationJsonSchema = {
           allowOther: { type: 'boolean' },
           defaultValue: { type: 'string' },
         },
-        required: ['id', 'theme', 'rationale', 'question', 'type', 'options', 'allowOther'],
+        required: ['id', 'topicKey', 'theme', 'rationale', 'question', 'type', 'options', 'allowOther'],
       },
     },
   },
@@ -737,6 +738,7 @@ const clarificationJsonSchema = {
 const clarificationOutput = z.object({
   clarifications: z.array(z.object({
     id: z.string(),
+    topicKey: z.string(),
     theme: z.string(),
     rationale: z.string(),
     question: z.string(),
@@ -1155,9 +1157,9 @@ ${taggedBlock('resume_text', input.resumeText)}`;
 function buildClarificationMessages(input, context) {
   const system = `You are an elite resume strategist performing precision gap analysis before optimization. Ask only for missing quantifiable metrics, a tool or skill required by the job description but not evidenced by the resume, tool equivalencies, or contextual evidence likely to improve optimization.`;
   const languageInstruction = input.language === 'ar'
-    ? '\nTranslate theme, rationale, question, and every option label into Arabic. Keep id, option value, and English ATS keywords in English.'
+    ? '\nTranslate theme, rationale, question, and every option label into Arabic. Keep id, topicKey, option value, and English ATS keywords in English.'
     : '';
-  const user = `This is round ${input.round || 1} of an adaptive interview. Return 2 to 3 critical clarification questions when useful gaps remain, or fewer when only fewer useful gaps remain. Return an empty array when there are no useful unanswered gaps. Build on the confirmed answer history below. Never repeat an answered question or ask again about experience the user explicitly denied. Use distinct IDs across rounds. Each question must improve an evidenced resume claim or clarify a realistic transferable skill; do not force unrelated experience. Every question must set type to single or multi, include at most 4 real selectable options, set allowOther to true, and end with exactly one option marked isHardStop true (for example, "I don't have this experience"). Use multi for compatible tools, responsibilities, projects and outcomes. Use single ONLY for mutually exclusive choices such as numeric ranges. For numeric questions, provide non-overlapping ranges such as "1–3", "4–9", and "10+"; Other captures exact values. Never provide defaultValue or infer that a user has experience. Choose options only as questions, not as asserted facts.${languageInstruction}${withRagBlock(context.retrievedContext)}
+  const user = `This is round ${input.round || 1} of an adaptive interview. Return 2 to 3 critical clarification questions when useful gaps remain, or fewer when only fewer useful gaps remain. Return an empty array when there are no useful unanswered gaps. Build on the confirmed answer history below. Never repeat an answered question or ask again about experience the user explicitly denied. Use distinct IDs across rounds. Give every question a stable concise topicKey in English snake_case (for example, customer_service_metrics or crm_tools); reuse the same topicKey for the same underlying evidence gap even if the wording changes. Do not repeat a topicKey within a response. Each question must improve an evidenced resume claim or clarify a realistic transferable skill; do not force unrelated experience. Every question must set type to single or multi, include at most 4 real selectable options, set allowOther to true, and end with exactly one option marked isHardStop true (for example, "I don't have this experience"). Use multi for compatible tools, responsibilities, projects and outcomes. Use single ONLY for mutually exclusive choices such as numeric ranges. For numeric questions, provide non-overlapping ranges such as "1–3", "4–9", and "10+"; Other captures exact values. Never provide defaultValue or infer that a user has experience. Choose options only as questions, not as asserted facts.${languageInstruction}${withRagBlock(context.retrievedContext)}
 
 ${taggedBlock('confirmed_answer_history', JSON.stringify(input.history || []))}
 
