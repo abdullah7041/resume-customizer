@@ -48,6 +48,7 @@ const mockTrackCompany = vi.fn();
 const mockUntrackCompany = vi.fn();
 const mockResolveCompany = vi.fn();
 const mockSaveSearchIntent = vi.fn();
+const mockVerifyFeedPosting = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
   loadCandidateProfile: async () => null,
@@ -64,10 +65,12 @@ vi.mock('@/services/jobFeed', () => ({
   untrackCompany: (id: string) => mockUntrackCompany(id),
   recrawlTrackedCompanies: () => Promise.resolve({ data: { dispatched: 0, skipped: 0, crawlDispatched: false }, error: null }),
   saveSearchIntent: (intent: unknown) => mockSaveSearchIntent(intent),
+  verifyFeedPosting: (...args: unknown[]) => mockVerifyFeedPosting(...args),
   setFeedState: vi.fn(),
 }));
 
 import { JobFeedSection } from '../components/sections/JobFeedSection';
+import { useResumeLibraryStore } from '@/lib/resumeLibrary';
 
 const SENIOR_INTENT = {
   targetRoles: ['Senior AI Engineer'],
@@ -114,6 +117,69 @@ beforeEach(() => {
   mockResolveCompany.mockResolvedValue({ data: null, error: null });
   mockUntrackCompany.mockResolvedValue({ data: null, error: null });
   mockSaveSearchIntent.mockResolvedValue({ error: null });
+  mockVerifyFeedPosting.mockResolvedValue({ results: [], failures: [], error: null });
+  useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
+});
+
+it('shows only medium/high verified jobs and compares every saved resume', async () => {
+  mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+  const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+  useResumeLibraryStore.setState({
+    initialized: true,
+    activeResumeId: 'universal',
+    entries: [
+      { id: 'universal', name: 'Universal', sourceFileName: 'universal.pdf', parsedResume, plainText: 'software', fingerprint: 'u1', createdAt: 1, updatedAt: 1 },
+      { id: 'service', name: 'Customer Service', sourceFileName: 'service.pdf', parsedResume, plainText: 'customer service', fingerprint: 's1', createdAt: 2, updatedAt: 2 },
+    ],
+  });
+  mockVerifyFeedPosting.mockResolvedValue({
+    error: null,
+    failures: [],
+    results: [
+      { resumeId: 'universal', resumeFingerprint: 'u1', cached: false, match: { score: 42, strategicRealityCheck: null } },
+      { resumeId: 'service', resumeFingerprint: 's1', cached: false, match: { score: 84, strategicRealityCheck: null } },
+    ],
+  });
+
+  render(<JobFeedSection />);
+
+  const scores = await screen.findAllByText(/84%/);
+  expect(scores.some(node => node.textContent?.includes('Customer Service'))).toBe(true);
+  expect(screen.getByText('Compare resumes')).toBeInTheDocument();
+  expect(screen.getByText(/Universal: 42%/)).toBeInTheDocument();
+  expect(screen.getByText(/Customer Service: 84%/)).toBeInTheDocument();
+});
+
+it('checks every deterministic candidate instead of hiding jobs behind a pair cap', async () => {
+  mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  mockListPostings.mockResolvedValue({
+    postings: Array.from({ length: 11 }, (_, index) => posting({
+      id: `posting-${index}`,
+      title: `Senior AI Engineer ${index}`,
+    })),
+    error: null,
+  });
+  const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+  useResumeLibraryStore.setState({
+    initialized: true,
+    activeResumeId: 'resume-0',
+    entries: Array.from({ length: 5 }, (_, index) => ({
+      id: `resume-${index}`,
+      name: `Resume ${index}`,
+      sourceFileName: `resume-${index}.pdf`,
+      parsedResume,
+      plainText: `Resume ${index}`,
+      fingerprint: `fingerprint-${index}`,
+      createdAt: index,
+      updatedAt: index,
+    })),
+  });
+
+  render(<JobFeedSection />);
+
+  // The previous 50-pair shortlist checked only floor(50 / 5) = 10 jobs.
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(11));
 });
 
 describe('Saudi starter companies', () => {

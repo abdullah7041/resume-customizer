@@ -22,6 +22,8 @@ import {
   touchLastFeedSeenAt,
   trackCompany,
   untrackCompany,
+  verifyFeedPosting,
+  type VerifiedFeedMatch,
   type ResolutionCandidate,
   type ResolutionReport,
   type TrackedCompany,
@@ -40,6 +42,9 @@ import {
 } from '@/lib/jobs/saudiStarterCompanies';
 import type { CandidateProfile, JobRequirements, FeedIntent, FeedPosting, ScoredPosting } from '@/lib/jobs/types';
 import type { SearchIntent } from '@/types/onboarding';
+import type { MatchResult } from '@/types/analysis';
+import { useResumeLibraryStore } from '@/lib/resumeLibrary';
+import { computeOptimizationOutlook, type FitPotentialBand } from '@/lib/match/optimizationOutlook';
 
 const MAX_TRACKED_COMPANIES = 25;
 
@@ -63,8 +68,22 @@ const AGE_OPTIONS: { days: number | null; key: string; fallback: string }[] = [
 
 interface JobFeedSectionProps {
   /** Hands a posting to the Match tab. The feed never scores against the CV itself. */
-  onMatchPosting?: (input: { jobDescription: string; companyName: string; jobTitle: string }) => void;
+  onMatchPosting?: (input: { jobDescription: string; companyName: string; jobTitle: string; match?: MatchResult }) => void;
 }
+
+interface ClassifiedFeedMatch extends VerifiedFeedMatch {
+  band: FitPotentialBand;
+}
+
+interface VerifiedPostingState {
+  status: 'checking' | 'ready' | 'failed';
+  matches: ClassifiedFeedMatch[];
+}
+
+type VerifiedScoredPosting = ScoredPosting & {
+  verifiedMatches?: ClassifiedFeedMatch[];
+  bestMatch?: ClassifiedFeedMatch;
+};
 
 export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const { t, i18n } = useTranslation();
@@ -73,6 +92,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const reduceMotion = useReducedMotion();
   const searchIntent = useSearchIntent();
   const resume = useActiveResume();
+  const resumeLibrary = useResumeLibraryStore((state) => state.entries);
+  const activateResume = useResumeLibraryStore((state) => state.activateResume);
+  const [verifiedByPosting, setVerifiedByPosting] = useState<Record<string, VerifiedPostingState>>({});
+  const requestedVerifications = useRef(new Set<string>());
+  const resumeVerificationKey = resumeLibrary.map(entry => `${entry.id}:${entry.fingerprint}`).join('|');
   const evidenceInput = JSON.stringify({ sources: candidateEvidence(resume), claimedSkills: (resume?.skills ?? []).flatMap((skill) => [skill.name, ...skill.keywords ?? []]).filter(Boolean).slice(0, 100) });
   const [profileResult, setProfileResult] = useState<{ input: string; profile: CandidateProfile | null } | null>(null);
   const [requirements, setRequirements] = useState<Record<string, JobRequirements>>({});
@@ -454,11 +478,90 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     return buildFeed(visible, intent, { maxAgeDays: maxAgeDays ?? undefined, now, profile, requirements });
   }, [postings, feedState, intent, maxAgeDays, now, profile, requirements]);
 
+  const verificationCandidates = useMemo(
+    () => resumeLibrary.length > 0
+      ? (feed?.kept ?? [])
+      : [],
+    [feed, resumeLibrary.length],
+  );
+
+  useEffect(() => {
+    if (verificationCandidates.length === 0 || !resumeVerificationKey) return;
+    const resumes = useResumeLibraryStore.getState().entries.map(entry => ({
+      id: entry.id,
+      fingerprint: entry.fingerprint,
+      text: entry.plainText,
+    }));
+    let cancelled = false;
+    let next = 0;
+
+    const worker = async (): Promise<void> => {
+      if (cancelled || next >= verificationCandidates.length) return;
+      const scored = verificationCandidates[next++];
+      const requestKey = `${scored.posting.id}:${resumeVerificationKey}:${language}`;
+      if (requestedVerifications.current.has(requestKey)) return worker();
+      requestedVerifications.current.add(requestKey);
+      setVerifiedByPosting(previous => ({
+        ...previous,
+        [scored.posting.id]: { status: 'checking', matches: [] },
+      }));
+      const result = await verifyFeedPosting(
+        scored.posting.id,
+        resumes,
+        language,
+      );
+      if (cancelled) return;
+      const matches = result.results.flatMap((verified): ClassifiedFeedMatch[] => {
+        const outlook = computeOptimizationOutlook(verified.match.score, verified.match.strategicRealityCheck);
+        return outlook ? [{ ...verified, band: outlook.fitPotential }] : [];
+      });
+      if (result.error || result.failures.length > 0) requestedVerifications.current.delete(requestKey);
+      setVerifiedByPosting(previous => ({
+        ...previous,
+        [scored.posting.id]: {
+          status: result.error || (result.results.length === 0 && result.failures.length > 0) ? 'failed' : 'ready',
+          matches,
+        },
+      }));
+      return worker();
+    };
+    // Postings are traversed sequentially here; verifyFeedPosting owns the only
+    // concurrency layer and runs at most two resume-job pairs at a time.
+    void worker();
+    return () => { cancelled = true; };
+  }, [language, resumeVerificationKey, verificationCandidates]);
+
+  const verifiedKept = useMemo<VerifiedScoredPosting[]>(() => {
+    if (!feed || resumeLibrary.length === 0) return feed?.kept ?? [];
+    const bandRank: Record<FitPotentialBand, number> = { high: 2, medium: 1, low: 0 };
+    return feed.kept.flatMap((scored) => {
+      const allMatches = [...(verifiedByPosting[scored.posting.id]?.matches ?? [])]
+        .sort((a, b) => bandRank[b.band] - bandRank[a.band] || b.match.score - a.match.score);
+      const qualifying = allMatches.filter(match => match.band !== 'low');
+      return qualifying.length ? [{ ...scored, verifiedMatches: allMatches, bestMatch: qualifying[0] }] : [];
+    }).sort((a, b) => {
+      const aBest = a.bestMatch;
+      const bBest = b.bestMatch;
+      if (!aBest || !bBest) return 0;
+      return bandRank[bBest.band] - bandRank[aBest.band] || bBest.match.score - aBest.match.score;
+    });
+  }, [feed, resumeLibrary.length, verifiedByPosting]);
+
   const visibleKept = useMemo(() => {
     if (!feed) return [];
-    if (selectedCompanyIds.size === 0) return feed.kept;
-    return feed.kept.filter((scored) => selectedCompanyIds.has(scored.posting.companyId));
-  }, [feed, selectedCompanyIds]);
+    if (selectedCompanyIds.size === 0) return verifiedKept;
+    return verifiedKept.filter((scored) => selectedCompanyIds.has(scored.posting.companyId));
+  }, [feed, selectedCompanyIds, verifiedKept]);
+
+  const verificationPending = useMemo(
+    () => resumeLibrary.length > 0
+      ? verificationCandidates.filter(scored => verifiedByPosting[scored.posting.id]?.status === 'checking' || !verifiedByPosting[scored.posting.id]).length
+      : 0,
+    [resumeLibrary.length, verificationCandidates, verifiedByPosting],
+  );
+  const verificationFailed = verificationCandidates.filter(
+    scored => verifiedByPosting[scored.posting.id]?.status === 'failed',
+  ).length;
 
   /**
    * How many roles each chip actually stands for.
@@ -470,11 +573,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    */
   const matchCountByCompany = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const scored of feed?.kept ?? []) {
+    for (const scored of verifiedKept) {
       counts.set(scored.posting.companyId, (counts.get(scored.posting.companyId) ?? 0) + 1);
     }
     return counts;
-  }, [feed]);
+  }, [verifiedKept]);
 
   /**
    * Role coverage for the rows on screen, computed once per feed.
@@ -736,7 +839,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, []);
 
   const handleSave = useCallback(
-    async (scored: ScoredPosting) => {
+    async (scored: VerifiedScoredPosting) => {
       // try/finally, not the bare set-then-clear used by handleTrack above. Those
       // helpers return { error } rather than throwing, so the risk there is latent
       // rather than live — but an unexpected rejection would strand the flag and the
@@ -786,10 +889,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   );
 
   const handleMatch = useCallback(
-    async (scored: ScoredPosting) => {
+    async (scored: VerifiedScoredPosting) => {
       if (!onMatchPosting) return;
       setMatchingPostingId(scored.posting.id);
       try {
+        if (scored.bestMatch) activateResume(scored.bestMatch.resumeId);
         const description = await getPostingDescription(scored.posting.id);
 
         // null is a failed READ; '' is a board that publishes no body. Collapsing
@@ -812,12 +916,13 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           jobDescription: description,
           companyName: scored.posting.companyName,
           jobTitle: scored.posting.title,
+          match: scored.bestMatch?.match,
         });
       } finally {
         setMatchingPostingId(null);
       }
     },
-    [onMatchPosting, t],
+    [activateResume, onMatchPosting, t],
   );
 
   if (loading) {
@@ -837,6 +942,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             <p className="text-sm text-muted-foreground">
               {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
             </p>
+            {resumeLibrary.length > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground" role="status">
+                {verificationPending > 0
+                  ? t('jobFeed.verification.checking', 'Checking {{count}} shortlisted roles against your saved resumes…', { count: verificationPending })
+                  : verificationFailed > 0
+                      ? t('jobFeed.verification.failed', '{{count}} roles could not be verified and remain hidden.', { count: verificationFailed })
+                    : t('jobFeed.verification.ready', 'Showing only medium- and high-fit roles verified against your saved resumes.')}
+              </p>
+            )}
           </div>
           {/* Either an upload or a swap, depending on whether there is a CV to
               swap. The feed is reachable with none — it ranks from a target role
@@ -1375,7 +1489,27 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       {/* An empty feed always names the rule that emptied it. The age window gets
           its own wording and its own way out, because it is the one rule the user
           just chose and can undo in a click. */}
-      {feed && visibleKept.length === 0 && postings.length > 0 && (
+      {feed && visibleKept.length === 0 && postings.length > 0 && verificationPending > 0 && (
+        <GlassCard className="p-6">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            {t('jobFeed.verification.pending', 'Verifying the strongest candidates. Roles appear only after they reach medium or high fit.')}
+          </div>
+        </GlassCard>
+      )}
+
+      {feed && visibleKept.length === 0 && postings.length > 0 && verificationPending === 0 && verificationFailed > 0 && (
+        <GlassCard className="p-6">
+          <p className="text-base font-medium text-gray-900 dark:text-white">
+            {t('jobFeed.verification.noneVerified', 'No role could be confirmed as a medium or high fit yet.')}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('jobFeed.verification.failedHelp', '{{count}} verification checks failed and those roles remain hidden. Reload to retry.', { count: verificationFailed })}
+          </p>
+        </GlassCard>
+      )}
+
+      {feed && visibleKept.length === 0 && postings.length > 0 && verificationPending === 0 && verificationFailed === 0 && (
         <GlassCard className="p-6">
           {/* Asked in order of how much the user can do about it. The age window
               is theirs to widen in one click, and `agedOut` counts only the
@@ -1496,6 +1630,31 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                     <p>{t('jobFeed.recommendation.explain', 'Discovery relevance, not your Match score. Check the match for a full assessment.')}</p>
                     {scored.recommendation.reasons.map((reason) => <p key={`${reason.sourceId}:${reason.skill}`}><strong>{reason.skill}</strong>: {reason.evidence}</p>)}
                     {scored.recommendation.gaps.length > 0 && <p>{t('jobFeed.recommendation.gaps', 'Requirements to verify')}: {scored.recommendation.gaps.join(' · ')}</p>}
+                  </div>
+                )}
+                {scored.bestMatch && (
+                  <div className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-50/70 p-3 dark:bg-emerald-500/10">
+                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                      {scored.bestMatch.match.score}% · {scored.bestMatch.band === 'high'
+                        ? t('jobFeed.verification.high', 'High fit')
+                        : t('jobFeed.verification.medium', 'Medium fit')}
+                      {' · '}
+                      {resumeLibrary.find(entry => entry.id === scored.bestMatch?.resumeId)?.name ?? t('upload.library.active', 'Resume')}
+                    </p>
+                    {(scored.verifiedMatches?.length ?? 0) > 1 && (
+                      <details className="mt-2 text-xs text-muted-foreground">
+                        <summary className="cursor-pointer font-medium text-foreground">
+                          {t('jobFeed.verification.compare', 'Compare resumes')}
+                        </summary>
+                        <ul className="mt-2 space-y-1">
+                          {scored.verifiedMatches?.map(match => (
+                            <li key={match.resumeId}>
+                              {resumeLibrary.find(entry => entry.id === match.resumeId)?.name ?? match.resumeId}: {match.match.score}% · {match.band}
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
                   </div>
                 )}
                 {coverage && !scored.recommendation && (

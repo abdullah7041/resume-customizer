@@ -2,6 +2,18 @@
   "jobFeed": {
     "title": "Job feed",
     "subtitle": "New roles from the company boards you follow, matched against your target role.",
+    "verification": {
+      "checking": "Checking {{count}} shortlisted roles against your saved resumes…",
+      "capped": "Showing verified matches. {{count}} lower-priority roles were not checked within today’s limit.",
+      "failed": "{{count}} roles could not be verified and remain hidden.",
+      "noneVerified": "No role could be confirmed as a medium or high fit yet.",
+      "failedHelp": "{{count}} verification checks failed and those roles remain hidden. Reload to retry.",
+      "ready": "Showing only medium- and high-fit roles verified against your saved resumes.",
+      "pending": "Verifying the strongest candidates. Roles appear only after they reach medium or high fit.",
+      "high": "High fit",
+      "medium": "Medium fit",
+      "compare": "Compare resumes"
+    },
     "newBadge": "New",
     "companies": {
       "heading": "Companies you follow",

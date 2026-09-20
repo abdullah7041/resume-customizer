@@ -35,18 +35,18 @@ describe('computeOptimizationOutlook', () => {
     expect(computeOptimizationOutlook(Number.NaN, null)).toBeNull();
   });
 
-  it('is low_ceiling below 35 regardless of risks', () => {
-    expect(computeOptimizationOutlook(34, null)?.band).toBe('low_ceiling');
+  it('is low_ceiling below 60 regardless of risks', () => {
+    expect(computeOptimizationOutlook(59, null)?.band).toBe('low_ceiling');
     expect(computeOptimizationOutlook(0, makeRealityCheck())?.band).toBe('low_ceiling');
   });
 
-  it('is worth_it_with_gaps in the 35-54 range with no confirmed risks', () => {
-    expect(computeOptimizationOutlook(35, null)?.band).toBe('worth_it_with_gaps');
-    expect(computeOptimizationOutlook(54, makeRealityCheck())?.band).toBe('worth_it_with_gaps');
+  it('is worth_it_with_gaps in the 60-79 range with no confirmed risks', () => {
+    expect(computeOptimizationOutlook(60, null)?.band).toBe('worth_it_with_gaps');
+    expect(computeOptimizationOutlook(79, makeRealityCheck())?.band).toBe('worth_it_with_gaps');
   });
 
-  it('is high_potential at 55+ with zero confirmed risks', () => {
-    expect(computeOptimizationOutlook(55, makeRealityCheck())?.band).toBe('high_potential');
+  it('is high_potential at 80+ with zero confirmed high or critical risks', () => {
+    expect(computeOptimizationOutlook(80, makeRealityCheck())?.band).toBe('high_potential');
     expect(computeOptimizationOutlook(90, null)?.band).toBe('high_potential');
   });
 
@@ -55,15 +55,37 @@ describe('computeOptimizationOutlook', () => {
     expect(computeOptimizationOutlook(80, realityCheck)?.band).toBe('worth_it_with_gaps');
   });
 
-  it('caps at low_ceiling with two or more confirmed risks, even at a high score', () => {
+  it('keeps a 68 score with two medium risks in the medium band', () => {
     const realityCheck = makeRealityCheck({
-      confirmedRisks: [makeRisk('Missing required degree'), makeRisk('Under the required years of experience')],
+      confirmedRisks: [
+        makeRisk('Missing required degree', { severity: 'medium' }),
+        makeRisk('Under the required years of experience', { severity: 'medium' }),
+      ],
+    });
+    expect(computeOptimizationOutlook(68, realityCheck)?.band).toBe('worth_it_with_gaps');
+  });
+
+  it('caps a high score at medium with a confirmed high risk', () => {
+    const realityCheck = makeRealityCheck({
+      confirmedRisks: [makeRisk('Missing required degree', { severity: 'high' })],
+    });
+    expect(computeOptimizationOutlook(90, realityCheck)?.band).toBe('worth_it_with_gaps');
+  });
+
+  it('is low_ceiling with any confirmed critical risk', () => {
+    const realityCheck = makeRealityCheck({
+      confirmedRisks: [makeRisk('Legally cannot perform this role', { severity: 'critical' })],
     });
     expect(computeOptimizationOutlook(90, realityCheck)?.band).toBe('low_ceiling');
   });
 
   it('caps at low_ceiling when riskTier is critical, even with zero confirmed risks', () => {
     const realityCheck = makeRealityCheck({ riskTier: 'critical', confirmedRisks: [] });
+    expect(computeOptimizationOutlook(95, realityCheck)?.band).toBe('low_ceiling');
+  });
+
+  it('caps at low_ceiling when the recommendation is to review role fit', () => {
+    const realityCheck = makeRealityCheck({ recommendation: 'review_role_fit' });
     expect(computeOptimizationOutlook(95, realityCheck)?.band).toBe('low_ceiling');
   });
 

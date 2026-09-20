@@ -53,11 +53,6 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
       setCurrentMessageIndex((prev) => (prev + 1) % messages.length);
     }, 4000);
 
-    // Tip rotation
-    const tipInterval = setInterval(() => {
-      setCurrentTipIndex((prev) => (prev + 1) % PRO_TIPS.length);
-    }, 6000);
-
     // Smooth progress animation
     const startTime = Date.now();
     const progressInterval = setInterval(() => {
@@ -75,10 +70,17 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
 
     return () => {
       clearInterval(messageInterval);
-      clearInterval(tipInterval);
       clearInterval(progressInterval);
     };
   }, [estimatedTime, messages.length]);
+
+  useEffect(() => {
+    if (type !== 'pdf') return undefined;
+    const tipInterval = window.setInterval(() => {
+      setCurrentTipIndex((prev) => (prev + 1) % PRO_TIPS.length);
+    }, 6000);
+    return () => window.clearInterval(tipInterval);
+  }, [type]);
 
   return (
     <div className={cn(
@@ -131,7 +133,7 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
       </div>
 
       {/* Tip Section */}
-      <div className="bg-gradient-to-br from-white/50 to-white/10 dark:from-white/5 dark:to-transparent rounded-lg p-3 border border-white/20 dark:border-white/5 relative z-10">
+      {type === 'pdf' && <div className="bg-gradient-to-br from-white/50 to-white/10 dark:from-white/5 dark:to-transparent rounded-lg p-3 border border-white/20 dark:border-white/5 relative z-10">
         <div className="flex gap-2.5">
           <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-1">
@@ -143,7 +145,7 @@ export function LoadingMessages({ type, estimatedTime = 5000, className }: Loadi
             </p>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

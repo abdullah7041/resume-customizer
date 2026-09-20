@@ -847,14 +847,40 @@ describe("MainContent resume parsing", () => {
         expect(screen.getByRole("button", { name: `${topic} dashboards` })).toHaveAttribute("aria-pressed", "true");
       });
       expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole("button", { name: topic === "Python" ? /optimize now/i : /submit answers/i }));
+      fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
     }
     await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    expect(generateClarificationsMock).toHaveBeenCalledTimes(3);
     const payload = optimizeResumeStreamMock.mock.calls[0][0];
     for (const topic of ["Excel", "SQL", "Python"]) {
       expect(payload.userClarifications).toContain(`${topic} dashboards`);
     }
     expect(generateClarificationsMock.mock.calls[2][0].history).toHaveLength(2);
+  });
+
+  it("respects a complete clarification response and optimizes without reopening questions", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Analytics role");
+    generateClarificationsMock.mockResolvedValueOnce({
+      complete: true,
+      clarifications: [{
+        id: "stale",
+        theme: "Stale",
+        rationale: "Should be ignored",
+        question: "Should this appear?",
+        type: "single",
+        options: [{ value: "yes", label: "Stale option" }],
+        allowOther: false,
+      }],
+    });
+    optimizeResumeStreamMock.mockResolvedValueOnce({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: "gemini" });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: "Stale option" })).not.toBeInTheDocument();
   });
 
   it("shows the clarification check state and prevents a second request while questions are being checked", async () => {
