@@ -948,6 +948,11 @@ export default function MainContent() {
     [dismissToast]
   );
 
+  useEffect(() => {
+    if (!resumeSwitchNotice) return;
+    pushToast({ type: "info", title: resumeSwitchNotice }, { id: "resume-switch" });
+  }, [pushToast, resumeSwitchNotice]);
+
   /**
    * Say so when a run did not survive the page.
    *
@@ -2684,7 +2689,7 @@ export default function MainContent() {
       <button
         type="button"
         onClick={handleClearAllData}
-        className="btn-danger-glass flex-shrink-0 group flex items-center gap-1.5 px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-[color,background-color,border-color,box-shadow] duration-200"
+        className="btn-danger-glass group flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-[background-color,box-shadow,scale] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 active:scale-[0.96] sm:min-w-0 sm:text-xs"
         title={t("workspace.clearAll")}
         aria-label={t("workspace.clearAll")}
       >
@@ -2793,16 +2798,19 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* Workflow navigation */}
-        {!isGuestMode && libraryEntries.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-3">
-            <span className="text-sm font-medium text-ink-muted">{t('upload.library.selected', 'Selected resume')}</span>
-            <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
-            {resumeSwitchNotice && <span role="status" className="text-sm text-ink-muted">{resumeSwitchNotice}</span>}
-          </div>
-        )}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
+        {/* Keep resume switching beside the workflow controls without the old full-width context bar. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          {((!isGuestMode && libraryEntries.length > 0) || Boolean(resumeData?.plainText)) && (
+            <div className="flex min-w-0 items-center gap-2 sm:order-2 sm:shrink-0">
+              {!isGuestMode && libraryEntries.length > 0 && (
+                <div className="min-w-0 flex-1 sm:w-36 sm:flex-none md:w-44 lg:w-56">
+                  <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+                </div>
+              )}
+              {renderClearAllAction(false)}
+            </div>
+          )}
+          <div className="min-w-0 sm:order-1 sm:flex-1">
             <div className="sm:hidden">
               <MobileWorkflowNav
                 primarySteps={mobilePrimarySteps}
@@ -2810,7 +2818,6 @@ export default function MainContent() {
                 activeValue={activeTab}
                 onStepChange={handleTabChange}
                 gateReason={mobileWorkflowGateReason}
-                rightAction={renderClearAllAction(false)}
               />
             </div>
             <div className="hidden sm:block">
@@ -2820,19 +2827,16 @@ export default function MainContent() {
                   onStepClick={handleTabChange}
                   className="flex-1"
                 />
-                <div className="flex shrink-0 items-center gap-2">
-                  <GlassButton
-                    type="button"
-                    variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
-                    size="sm"
-                    onClick={() => handleTabChange("more-tools")}
-                    className="whitespace-nowrap"
-                  >
-                    <MoreHorizontal className="h-4 w-4 me-1.5" />
-                    {t("tabs.moreTools", "More tools")}
-                  </GlassButton>
-                  {renderClearAllAction(false)}
-                </div>
+                <GlassButton
+                  type="button"
+                  variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => handleTabChange("more-tools")}
+                  className="whitespace-nowrap"
+                >
+                  <MoreHorizontal className="h-4 w-4 me-1.5" />
+                  {t("tabs.moreTools", "More tools")}
+                </GlassButton>
               </div>
             </div>
           </div>
@@ -3119,7 +3123,7 @@ export default function MainContent() {
         >
           <div
             className={cn(
-              "absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md duration-200",
+              "absolute inset-0 bg-gray-950/60 backdrop-blur-xl duration-200 dark:bg-black/75",
               deleteConfirmPresence.isExiting ? "animate-out fade-out ease-out" : "animate-in fade-in"
             )}
             onClick={() => setShowDeleteConfirm(false)}
@@ -3127,39 +3131,39 @@ export default function MainContent() {
           />
           <div
             className={cn(
-              "relative w-full max-w-md neu-card shadow-2xl rounded-2xl duration-200 ease-out overflow-hidden",
+              "relative w-full max-w-md overflow-hidden rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] shadow-2xl shadow-emerald-950/10 backdrop-blur-xl duration-200 ease-out dark:border-white/10 dark:bg-[#071f1a] dark:shadow-black/60",
               deleteConfirmPresence.isExiting
                 ? "animate-out fade-out zoom-out-95"
                 : "animate-in fade-in zoom-in-95"
             )}
           >
-            <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-white/10">
-              <div className="p-2 neu-inset rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 shrink-0">
+            <div className="flex items-center gap-3 border-b border-[color:var(--glass-border)] p-5 dark:border-white/10">
+              <div className="shrink-0 rounded-xl border border-red-500/15 bg-red-500/10 p-2.5 text-red-600 dark:border-red-400/20 dark:text-red-300">
                 <AlertTriangle className="w-5 h-5" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-bold text-gray-950 dark:text-white">
                 {t("workspace.deleteAllConfirm.title", "Delete All Data?")}
               </h3>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+            <div className="p-5 sm:p-6">
+              <p className="mb-6 leading-relaxed text-gray-700 dark:text-white/70">
                 {t(
                   "workspace.deleteAllConfirm.description",
                   "This will permanently delete your uploaded resume, optimizations, and all saved progress. This action cannot be undone."
                 )}
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-out bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md active:scale-[0.96]"
+                  className="min-h-11 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-2.5 font-semibold text-gray-800 shadow-sm transition-[background-color,box-shadow,scale] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 active:scale-[0.96] dark:border-white/15 dark:text-white/85"
                 >
                   {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={confirmDeleteAllData}
-                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-out bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_8px_30px_rgba(239,68,68,0.4)] border border-red-400/20 flex items-center justify-center gap-2 active:scale-[0.96]"
+                  className="btn-danger-glass inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold shadow-sm transition-[background-color,box-shadow,scale] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 active:scale-[0.96]"
                 >
                   <Trash2 className="w-4 h-4" />
                   {t("workspace.deleteAllConfirm.confirm", "Delete All")}
