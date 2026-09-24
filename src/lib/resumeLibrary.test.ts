@@ -16,7 +16,7 @@ describe('resume library', () => {
   it('migrates the existing resume once only when the library is empty', () => {
     const migrated = migrateLegacyResume([], { parsedResume: resume('Universal'), plainText: 'universal resume', sourceFileName: 'universal.pdf' }, 10);
     expect(migrated).toHaveLength(1);
-    expect(migrated[0]).toMatchObject({ name: 'Universal', sourceFileName: 'universal.pdf' });
+    expect(migrated[0]).toMatchObject({ name: 'universal.pdf', sourceFileName: 'universal.pdf' });
     expect(migrateLegacyResume(migrated, { parsedResume: resume('Other'), plainText: 'other' }, 20)).toBe(migrated);
   });
 
@@ -46,5 +46,13 @@ describe('resume library', () => {
     const result = addResumeToLibrary([], { parsedResume: source, plainText: 'text' }, 1);
     source.basics.name = 'Mutated';
     expect(result.entry.parsedResume.basics.name).toBe('Original');
+  });
+
+  it('uses the complete filename for new uploads and distinct labels for pasted versions', () => {
+    const first = addResumeToLibrary([], { parsedResume: resume('Same Person'), plainText: 'first', sourceFileName: 'Engineering Resume.pdf' }, 1);
+    const second = addResumeToLibrary(first.entries, { parsedResume: resume('Same Person'), plainText: 'second' }, 2);
+    expect(first.entry.name).toBe('Engineering Resume.pdf');
+    expect(second.entry.name).toContain('Same Person');
+    expect(second.entry.name).not.toBe(first.entry.name);
   });
 });

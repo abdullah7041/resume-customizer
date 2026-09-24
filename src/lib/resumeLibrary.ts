@@ -32,11 +32,13 @@ export function fingerprintResume(text: string): string {
   return (hash >>> 0).toString(36);
 }
 
-function defaultResumeName(input: ResumeLibraryInput): string {
-  return input.name?.trim()
-    || input.parsedResume.basics?.name?.trim()
-    || input.sourceFileName?.replace(/\.[^.]+$/, '').trim()
-    || 'Resume';
+function defaultResumeName(input: ResumeLibraryInput, entries: ResumeLibraryEntry[], now: number): string {
+  if (input.sourceFileName?.trim() && !/^pasted (resume text|text)$/i.test(input.sourceFileName.trim())) return input.sourceFileName.trim();
+  const candidate = input.parsedResume.basics?.name?.trim() || 'Resume';
+  const date = new Date(now).toISOString().slice(0, 10);
+  const base = `${candidate} — ${date}`;
+  const duplicates = entries.filter(entry => entry.name === base || entry.name.startsWith(`${base} (`)).length;
+  return duplicates ? `${base} (${duplicates + 1})` : base;
 }
 
 export function addResumeToLibrary(
@@ -52,7 +54,7 @@ export function addResumeToLibrary(
 
   const entry: ResumeLibraryEntry = {
     id: existing?.id ?? `resume-${fingerprint}-${now}`,
-    name: input.name?.trim() || existing?.name || defaultResumeName(input),
+    name: input.name?.trim() || existing?.name || defaultResumeName(input, entries, now),
     sourceFileName: input.sourceFileName,
     parsedResume: structuredClone(input.parsedResume),
     plainText: input.plainText,

@@ -99,6 +99,16 @@ describe('MatchSection guest free-run counter', () => {
 });
 
 describe('MatchSection signed-in users never take the guest free-run path', () => {
+  it('replaces the job editor text when the active resume context changes', () => {
+    const common = { onAnalyzeMatchAI: vi.fn(), matchAnalysis: null, hasResume: true, onClear: vi.fn() };
+    const view = renderWithProviders(<MatchSection {...common} resumeContextKey="a:one" jobDescription="A job description" />);
+    expect(document.getElementById('jobDescription')).toHaveValue('A job description');
+    view.rerender(<DirectionProvider><MatchSection {...common} resumeContextKey="b:two" jobDescription="" /></DirectionProvider>);
+    expect(document.getElementById('jobDescription')).toHaveValue('');
+    view.rerender(<DirectionProvider><MatchSection {...common} resumeContextKey="a:one" jobDescription="A job description" /></DirectionProvider>);
+    expect(document.getElementById('jobDescription')).toHaveValue('A job description');
+  });
+
   /**
    * Regression cover for Sentry JAVASCRIPT-REACT-1H.
    *

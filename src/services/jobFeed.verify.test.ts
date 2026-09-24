@@ -68,4 +68,10 @@ describe('verifyFeedPosting', () => {
     ]);
     expect(result.error).toBeNull();
   });
+
+  it('reports the missing description as a distinct failure', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'missing_description', error: 'No description' }), { status: 422 }));
+    const result = await verifyFeedPosting('posting-1', resumes.slice(0, 1), 'en');
+    expect(result.failures[0].code).toBe('missing_description');
+  });
 });

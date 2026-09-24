@@ -256,6 +256,8 @@ export interface OptimizationMetrics {
  */
 export interface OptimizeRunRecord {
   status: 'running' | 'succeeded' | 'failed';
+  resumeId?: string;
+  resumeFingerprint?: string;
   /**
    * Which page load started this run.
    *

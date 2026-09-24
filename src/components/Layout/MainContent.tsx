@@ -31,6 +31,7 @@ import UploadSection from "../sections/UploadSection";
 import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
 import { isOnboarded } from "../../lib/onboarding/onboardedFlag";
 import { fingerprintResume, useResumeLibraryStore } from "@/lib/resumeLibrary";
+import { ResumeSelector } from "@/components/ui/ResumeSelector";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
 // Lazy-loaded tab sections — each gets its own chunk
@@ -233,6 +234,11 @@ const getResumeFingerprint = (text: string) => {
   }
   return `${text.length}:${(first >>> 0).toString(36)}:${(second >>> 0).toString(36)}`;
 };
+const currentLibraryResumeKey = () => {
+  const state = useResumeLibraryStore.getState();
+  const active = state.entries.find(entry => entry.id === state.activeResumeId);
+  return active ? `${active.id}:${active.fingerprint}` : null;
+};
 const getTruthCheckLanguage = (language?: string) => language?.toLowerCase().startsWith('ar') ? 'ar' : 'en';
 const getHardStopsFingerprint = (hardStops: string[]) => hardStops
   .flatMap(value => {
@@ -246,6 +252,7 @@ const loadCachedTruthCheck = (
   resumeText: string,
   hardStops: string[] = [],
   language?: string,
+  allowUnscoped = false,
 ): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
@@ -256,10 +263,16 @@ const loadCachedTruthCheck = (
       resumeHash?: string;
       hardStopsHash?: string;
       language?: string;
+      resumeId?: string;
+      resumeFingerprint?: string;
       result?: ResumeTruthCheckResult;
     };
+    const library = useResumeLibraryStore.getState();
+    const active = library.entries.find(entry => entry.id === library.activeResumeId);
+    if (!active && !allowUnscoped) return null;
     return parsed?.contractVersion === TRUTH_CHECK_CONTRACT_VERSION
       && parsed?.resumeHash === getResumeFingerprint(resumeText)
+      && (!active || (parsed.resumeId === active.id && parsed.resumeFingerprint === active.fingerprint))
       && (parsed.hardStopsHash ?? '') === getHardStopsFingerprint(hardStops)
       && parsed.language === getTruthCheckLanguage(language)
       && parsed.result
@@ -460,7 +473,10 @@ export default function MainContent() {
   const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
   const libraryInitialized = useResumeLibraryStore((state) => state.initialized);
   const initializeResumeLibrary = useResumeLibraryStore((state) => state.initialize);
+  const activateLibraryResume = useResumeLibraryStore((state) => state.activateResume);
   const projectedResumeId = useRef<string | null>(null);
+  const [resumeSwitchNotice, setResumeSwitchNotice] = useState<string | null>(null);
+  const switchNoticeFrame = useRef<number | null>(null);
   const hasResume = Boolean(resumeData?.plainText);
   const { setWorkflowState: setHRSuperSaudWorkflowState } = useHRSuperSaud();
   const resumeGateReason = t(
@@ -544,7 +560,8 @@ export default function MainContent() {
   });
   const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(() =>
     loadCachedMatchAnalysis(
-      typeof window === "undefined" ? "" : window.localStorage.getItem(JOB_STORAGE_KEY) || ""
+      typeof window === "undefined" ? "" : window.localStorage.getItem(JOB_STORAGE_KEY) || "",
+      (() => { const state = useResumeLibraryStore.getState(); const entry = state.entries.find(item => item.id === state.activeResumeId); return entry ? { resumeId: entry.id, resumeFingerprint: entry.fingerprint } : { resumeId: '', resumeFingerprint: '' }; })(),
     )
   );
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
@@ -564,14 +581,68 @@ export default function MainContent() {
    * nothing" actually was.
    */
   const [optimizations, setOptimizations] = useState(
-    () => (useResumeStore.getState().optimizeRun?.cards as typeof optimizations) ?? [],
+    () => {
+      const run = useResumeStore.getState().optimizeRun;
+      const active = useResumeLibraryStore.getState();
+      const entry = active.entries.find(item => item.id === active.activeResumeId);
+      return run?.status === 'succeeded' && entry && run.resumeId === entry.id && run.resumeFingerprint === entry.fingerprint
+        ? (run.cards as typeof optimizations) ?? [] : [];
+    },
   );
-  const [optimizationData, setOptimizationData] = useState(
-    () => useResumeStore.getState().optimizeRun?.data ?? null,
+  const [optimizationData, setOptimizationData] = useState<OptimizeRunRecord['data']>(
+    () => null,
   );
   const [optimizationKeywords, setOptimizationKeywords] = useState(
-    () => useResumeStore.getState().optimizeRun?.keywords ?? { add: [], remove: [], neutral: [] },
+    () => ({ add: [], remove: [], neutral: [] }),
   );
+  const resultsByResume = useRef(new Map<string, {
+    match: typeof matchAnalysis;
+    truth: typeof truthCheckResult;
+    job: typeof jobDescription;
+    cards: typeof optimizations;
+    optimization: typeof optimizationData;
+    keywords: typeof optimizationKeywords;
+    optimizeRun: ReturnType<typeof useResumeStore.getState>['optimizeRun'];
+    optimizationMetrics: ReturnType<typeof useResumeStore.getState>['optimizationMetrics'];
+    analysisCache: ReturnType<typeof useResumeStore.getState>['analysisCache'];
+    storeOptimizations: ReturnType<typeof useResumeStore.getState>['optimizations'];
+    keywordSuggestions: ReturnType<typeof useResumeStore.getState>['keywordSuggestions'];
+    optimizationOrigin: ReturnType<typeof useResumeStore.getState>['optimizationOrigin'];
+    baselineMatchScore: ReturnType<typeof useResumeStore.getState>['baselineMatchScore'];
+    showOptimized: ReturnType<typeof useResumeStore.getState>['showOptimized'];
+    jobVariants: ReturnType<typeof useResumeStore.getState>['jobVariants'];
+    activeVariantId: ReturnType<typeof useResumeStore.getState>['activeVariantId'];
+  }>());
+  const preUploadSnapshotKey = useRef<string | null>(null);
+
+  const snapshotActiveResumeResults = useCallback((beforeUpload = false) => {
+    const state = useResumeLibraryStore.getState();
+    const previous = state.entries.find(entry => entry.id === projectedResumeId.current);
+    if (!previous) return;
+    const key = `${previous.id}:${previous.fingerprint}`;
+    const store = useResumeStore.getState();
+    resultsByResume.current.set(key, {
+      match: matchAnalysis, truth: truthCheckResult, job: jobDescription,
+      cards: optimizations, optimization: optimizationData, keywords: optimizationKeywords,
+      optimizeRun: store.optimizeRun, optimizationMetrics: store.optimizationMetrics,
+      analysisCache: store.analysisCache, storeOptimizations: store.optimizations,
+      keywordSuggestions: store.keywordSuggestions, optimizationOrigin: store.optimizationOrigin,
+      baselineMatchScore: store.baselineMatchScore, showOptimized: store.showOptimized,
+      jobVariants: store.jobVariants, activeVariantId: store.activeVariantId,
+    });
+    if (beforeUpload) preUploadSnapshotKey.current = key;
+  }, [matchAnalysis, truthCheckResult, jobDescription, optimizations, optimizationData, optimizationKeywords]);
+
+  const confirmResumeSwitch = useCallback((name: string) => {
+    if (switchNoticeFrame.current !== null) window.cancelAnimationFrame(switchNoticeFrame.current);
+    switchNoticeFrame.current = window.requestAnimationFrame(() => {
+      setResumeSwitchNotice(t('upload.library.switched', 'Using {{name}}', { name }));
+      switchNoticeFrame.current = null;
+    });
+  }, [t]);
+  useEffect(() => () => {
+    if (switchNoticeFrame.current !== null) window.cancelAnimationFrame(switchNoticeFrame.current);
+  }, []);
 
   /**
    * Adopt a run that finished while this component was not mounted.
@@ -586,6 +657,9 @@ export default function MainContent() {
   useEffect(() => {
     const adopt = (run: OptimizeRunRecord | null) => {
       if (run?.status !== 'succeeded') return;
+      const active = useResumeLibraryStore.getState();
+      const entry = active.entries.find(item => item.id === active.activeResumeId);
+      if (!entry || run.resumeId !== entry.id || run.resumeFingerprint !== entry.fingerprint) return;
       const cards = (run.cards ?? []) as typeof optimizations;
       if (cards.length === 0) return;
       setOptimizations((current) => (current.length > 0 ? current : cards));
@@ -728,11 +802,35 @@ export default function MainContent() {
     }
     if (projectedResumeId.current === active.id) return;
 
+    const previous = libraryEntries.find(entry => entry.id === projectedResumeId.current);
+    const previousKey = previous ? `${previous.id}:${previous.fingerprint}` : null;
+    if (previous && previousKey !== preUploadSnapshotKey.current) snapshotActiveResumeResults();
+    preUploadSnapshotKey.current = null;
+    const restored = resultsByResume.current.get(`${active.id}:${active.fingerprint}`);
+    setResumeSwitchNotice(t('upload.library.switching', 'Updating results for {{name}}…', { name: active.name }));
+
     const currentText = resumeData && typeof resumeData === 'object' && typeof resumeData.plainText === 'string'
       ? resumeData.plainText
       : '';
     projectedResumeId.current = active.id;
-    if (currentText && fingerprintResume(currentText) === active.fingerprint) return;
+    if (previous === undefined && currentText && fingerprintResume(currentText) === active.fingerprint) {
+      setMatchAnalysis(loadCachedMatchAnalysis(jobDescription, { resumeId: active.id, resumeFingerprint: active.fingerprint }));
+      setTruthCheckResult(loadCachedTruthCheck(active.plainText, loadPersistentHardStops(), i18n.language));
+      const run = useResumeStore.getState().optimizeRun;
+      const validRun = run?.status === 'succeeded' && run.resumeId === active.id && run.resumeFingerprint === active.fingerprint ? run : null;
+      setOptimizations((validRun?.cards as typeof optimizations) ?? []);
+      setOptimizationData(validRun?.data ?? null);
+      setOptimizationKeywords(validRun?.keywords ?? { add: [], remove: [], neutral: [] });
+      if (!validRun) {
+        const store = useResumeStore.getState();
+        store.resetForNewUpload();
+        store.setOriginalResume(structuredClone(active.parsedResume));
+        store.setParsedResumeText(active.plainText);
+        store.setOptimizeRun(null);
+      }
+      confirmResumeSwitch(active.name);
+      return;
+    }
 
     const document = {
       data: structuredClone(active.parsedResume),
@@ -740,21 +838,36 @@ export default function MainContent() {
       fileName: active.sourceFileName || active.name,
     };
     setResumeData(document);
+    setIsAnalyzing(false);
+    setIsTruthChecking(false);
+    setIsOptimizing(false);
     const resumeStore = useResumeStore.getState();
     resumeStore.resetForNewUpload();
     resumeStore.setOriginalResume(document.data);
     resumeStore.setParsedResumeText(document.plainText);
-    setMatchAnalysis(null);
-    setTruthCheckResult(null);
-    setJobDescription('');
-    setOptimizations([]);
-    setOptimizationData(null);
-    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
-    resumeStore.setOptimizeRun(null);
+    if (restored) useResumeStore.setState({
+      optimizationMetrics: restored.optimizationMetrics,
+      analysisCache: restored.analysisCache,
+      optimizations: restored.storeOptimizations,
+      keywordSuggestions: restored.keywordSuggestions,
+      optimizationOrigin: restored.optimizationOrigin,
+      baselineMatchScore: restored.baselineMatchScore,
+      showOptimized: restored.showOptimized,
+      jobVariants: restored.jobVariants,
+      activeVariantId: restored.activeVariantId,
+    });
+    setMatchAnalysis(restored?.match ?? null);
+    setTruthCheckResult(restored?.truth ?? null);
+    setJobDescription(restored?.job ?? '');
+    setOptimizations(restored?.cards ?? []);
+    setOptimizationData(restored?.optimization ?? null);
+    setOptimizationKeywords(restored?.keywords ?? { add: [], remove: [], neutral: [] });
+    resumeStore.setOptimizeRun(restored?.optimizeRun ?? null);
     clearStoredMatchAnalysis();
     if (typeof window !== 'undefined') window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     resetPipelineContext();
-  }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData]);
+    confirmResumeSwitch(active.name);
+  }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData, snapshotActiveResumeResults, jobDescription, i18n.language, t, confirmResumeSwitch]);
 
   const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
     setActiveJobApplicationId(application.id);
@@ -1100,7 +1213,7 @@ export default function MainContent() {
       // view for a different job.
       if (match) {
         setMatchAnalysis(match);
-        saveMatchAnalysis(match, trimmed);
+        { const active = useResumeLibraryStore.getState(); const entry = active.entries.find(item => item.id === active.activeResumeId); saveMatchAnalysis(match, trimmed, entry ? { resumeId: entry.id, resumeFingerprint: entry.fingerprint } : undefined); }
       } else {
         setMatchAnalysis(null);
         clearStoredMatchAnalysis();
@@ -1457,9 +1570,10 @@ export default function MainContent() {
             const saved = await useResumeLibraryStore.getState().saveResume({
               parsedResume,
               plainText: enriched.plainText,
-              sourceFileName: enriched.fileName,
+              sourceFileName: parseInput instanceof File ? enriched.fileName : undefined,
             });
             projectedResumeId.current = saved.id;
+            preUploadSnapshotKey.current = null;
           } catch (libraryError) {
             pushToast({
               type: 'warning',
@@ -1531,6 +1645,7 @@ export default function MainContent() {
 
   const handleAnalyzeMatchAI = useCallback(
     async (jobDescriptionInput, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => {
+      const requestedResumeKey = currentLibraryResumeKey();
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -1590,6 +1705,7 @@ export default function MainContent() {
         const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
 
         const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language, options);
+        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
         // Tag provenance so a later export/save can tell a free guest-preview
         // result apart from a credit-charged one (see optimizationOrigin).
         result.origin = options?.freePreview ? 'guest_preview' : 'paid';
@@ -1598,7 +1714,7 @@ export default function MainContent() {
         setJobDescription(trimmedJob);
         // Persist the displayed result so it survives a page refresh (restored
         // by the matchAnalysis lazy initializer while the JD still matches).
-        saveMatchAnalysis(result, trimmedJob);
+        { const active = useResumeLibraryStore.getState(); const entry = active.entries.find(item => item.id === active.activeResumeId); saveMatchAnalysis(result, trimmedJob, entry ? { resumeId: entry.id, resumeFingerprint: entry.fingerprint } : undefined); }
         void metadataPromise.then((metadata) =>
           autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, trimmedJob)
         );
@@ -1654,6 +1770,7 @@ export default function MainContent() {
         scheduleTimeout(() => setFlowProgress(0), 800);
         return result;
       } catch (error) {
+        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
         setAiDebug(buildAiDebugSnapshot(error, "error"));
         setFlowProgress(0);
         emitHRSuperSaudEvent('error.generic');
@@ -1667,13 +1784,14 @@ export default function MainContent() {
         );
         throw error;
       } finally {
-        setIsAnalyzing(false);
+        if (requestedResumeKey === currentLibraryResumeKey()) setIsAnalyzing(false);
       }
     },
     [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, t]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
+    const requestedResumeKey = currentLibraryResumeKey();
     if (isGuestMode) {
       requireSignInForGuestAction();
       return null;
@@ -1694,7 +1812,7 @@ export default function MainContent() {
     const userHardStops = loadPersistentHardStops();
     const hardStopsHash = getHardStopsFingerprint(userHardStops);
     const truthCheckLanguage = getTruthCheckLanguage(i18n.language);
-    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops, truthCheckLanguage);
+    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops, truthCheckLanguage, true);
     if (cached) {
       setTruthCheckResult(cached);
       return cached;
@@ -1716,6 +1834,7 @@ export default function MainContent() {
         language: truthCheckLanguage,
         userHardStops,
       }) as ResumeTruthCheckResult;
+      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
 
       setAiDebug(buildAiDebugSnapshot(result, "success"));
       setTruthCheckResult(result);
@@ -1723,6 +1842,8 @@ export default function MainContent() {
         window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
           contractVersion: TRUTH_CHECK_CONTRACT_VERSION,
           resumeHash,
+          resumeId: useResumeLibraryStore.getState().activeResumeId,
+          resumeFingerprint: useResumeLibraryStore.getState().entries.find(entry => entry.id === useResumeLibraryStore.getState().activeResumeId)?.fingerprint,
           hardStopsHash,
           language: truthCheckLanguage,
           result,
@@ -1744,6 +1865,7 @@ export default function MainContent() {
       );
       return result;
     } catch (error) {
+      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
       setAiDebug(buildAiDebugSnapshot(error, "error"));
       pushToast(
         {
@@ -1755,13 +1877,14 @@ export default function MainContent() {
       );
       throw error;
     } finally {
-      setIsTruthChecking(false);
+      if (requestedResumeKey === currentLibraryResumeKey()) setIsTruthChecking(false);
     }
   }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t]);
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
     async ({ mode, workHistory, userClarifications, userHardStops, freePreview, clarificationOutcome }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean; clarificationOutcome?: ClarificationOutcome }) => {
+      const requestedResumeKey = currentLibraryResumeKey();
       if (!resumeData?.plainText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
@@ -1770,6 +1893,8 @@ export default function MainContent() {
         // is the only thing left saying a run was in flight.
         useResumeStore.getState().setOptimizeRun({
           status: 'running',
+          resumeId: useResumeLibraryStore.getState().activeResumeId ?? undefined,
+          resumeFingerprint: useResumeLibraryStore.getState().entries.find(entry => entry.id === useResumeLibraryStore.getState().activeResumeId)?.fingerprint,
           pageSessionId: PAGE_SESSION_ID,
           startedAt: new Date().toISOString(),
           finishedAt: null,
@@ -1817,6 +1942,7 @@ export default function MainContent() {
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
+              if (requestedResumeKey !== currentLibraryResumeKey()) return;
               useResumeStore.getState().setOptimizeRun({ phase });
               const message = phaseMessages[phase];
               if (message) {
@@ -1862,6 +1988,7 @@ export default function MainContent() {
             }
           );
         }
+        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
         // has already resolved to a single successful `result` — never inside
@@ -2017,6 +2144,7 @@ export default function MainContent() {
         scheduleTimeout(() => setFlowProgress(0), 900);
         return result;
       } catch (error: any) {
+        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
           finishedAt: new Date().toISOString(),
@@ -2050,7 +2178,7 @@ export default function MainContent() {
 
         throw error;
       } finally {
-        setIsOptimizing(false);
+        if (requestedResumeKey === currentLibraryResumeKey()) setIsOptimizing(false);
       }
     },
     [applyCreditsRemaining, i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, resumeData, t]
@@ -2666,6 +2794,13 @@ export default function MainContent() {
         )}
 
         {/* Workflow navigation */}
+        {!isGuestMode && libraryEntries.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-3">
+            <span className="text-sm font-medium text-ink-muted">{t('upload.library.selected', 'Selected resume')}</span>
+            <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+            {resumeSwitchNotice && <span role="status" className="text-sm text-ink-muted">{resumeSwitchNotice}</span>}
+          </div>
+        )}
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="sm:hidden">
@@ -2710,6 +2845,7 @@ export default function MainContent() {
             <>
               <UploadSection
                 onParseResume={handleParseResume}
+                onBeforeParseResume={() => snapshotActiveResumeResults(true)}
                 resumeDocument={resumeData}
                 onToast={handleUploadToast}
                 onClear={handleClearResume}
@@ -2742,7 +2878,8 @@ export default function MainContent() {
                   resumeText={resumeData?.plainText || ''}
                   onToast={pushToast}
                   onClear={handleClearMatch}
-                  jobDescription={jobDescription}
+                  jobDescription={activeResumeId && projectedResumeId.current !== activeResumeId ? '' : jobDescription}
+                  resumeContextKey={activeResumeId ? `${activeResumeId}:${libraryEntries.find(entry => entry.id === activeResumeId)?.fingerprint ?? ''}` : undefined}
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
                   savedApplicationId={activeJobApplicationId}

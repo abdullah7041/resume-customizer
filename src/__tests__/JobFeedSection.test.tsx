@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // A fresh `t` per render, which is what react-i18next does in production when the
@@ -121,7 +121,7 @@ beforeEach(() => {
   useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
 });
 
-it('shows only medium/high verified jobs and compares every saved resume', async () => {
+it('verifies only the active resume and hides other resumes matches', async () => {
   mockListTracked.mockResolvedValue({ companies: [company], error: null });
   mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
   const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
@@ -144,14 +144,12 @@ it('shows only medium/high verified jobs and compares every saved resume', async
 
   render(<JobFeedSection />);
 
-  const scores = await screen.findAllByText(/84%/);
-  expect(scores.some(node => node.textContent?.includes('Customer Service'))).toBe(true);
-  expect(screen.getByText('Compare resumes')).toBeInTheDocument();
-  expect(screen.getByText(/Universal: 42%/)).toBeInTheDocument();
-  expect(screen.getByText(/Customer Service: 84%/)).toBeInTheDocument();
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalled());
+  expect(mockVerifyFeedPosting.mock.calls[0][1]).toEqual([{ id: 'universal', fingerprint: 'u1', text: 'software' }]);
+  expect(screen.queryByText(/84%/)).not.toBeInTheDocument();
 });
 
-it('checks every deterministic candidate instead of hiding jobs behind a pair cap', async () => {
+it('checks the first ten deterministic candidates and waits for an explicit request to check more', async () => {
   mockListTracked.mockResolvedValue({ companies: [company], error: null });
   mockListPostings.mockResolvedValue({
     postings: Array.from({ length: 11 }, (_, index) => posting({
@@ -178,8 +176,53 @@ it('checks every deterministic candidate instead of hiding jobs behind a pair ca
 
   render(<JobFeedSection />);
 
-  // The previous 50-pair shortlist checked only floor(50 / 5) = 10 jobs.
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(10));
+  expect(screen.getByRole('button', { name: /check 10 more/i })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /check 10 more/i }));
   await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(11));
+});
+
+it('ignores a late result from the previously selected resume', async () => {
+  mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+  const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+  useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+    { id: 'a', name: 'A.pdf', parsedResume, plainText: 'a', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+    { id: 'b', name: 'B.pdf', parsedResume, plainText: 'b', fingerprint: 'b1', createdAt: 2, updatedAt: 2 },
+  ] });
+  let resolveA: (value: unknown) => void = () => {};
+  mockVerifyFeedPosting.mockImplementation((_postingId, resumes) => resumes[0].id === 'a'
+    ? new Promise(resolve => { resolveA = resolve; })
+    : Promise.resolve({ results: [{ resumeId: 'b', resumeFingerprint: 'b1', cached: false, match: { score: 82, strategicRealityCheck: null } }], failures: [], error: null }));
+
+  render(<JobFeedSection />);
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalled());
+  act(() => useResumeLibraryStore.setState({ activeResumeId: 'b' }));
+  expect(await screen.findByText(/82%/)).toBeInTheDocument();
+  await act(async () => resolveA({ results: [{ resumeId: 'a', resumeFingerprint: 'a1', cached: false, match: { score: 96, strategicRealityCheck: null } }], failures: [], error: null }));
+  expect(screen.queryByText(/96%/)).not.toBeInTheDocument();
+});
+
+it('keeps the same two checks in flight when the display clock advances', async () => {
+  window.localStorage.clear();
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  try {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ id: 'first', postedAt: daysAgo(0), firstSeenAt: daysAgo(0) }), posting({ id: 'second', postedAt: daysAgo(0), firstSeenAt: daysAgo(0) })], error: null });
+    const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+    useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+      { id: 'a', name: 'A.pdf', parsedResume, plainText: 'resume text', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+    ] });
+    mockVerifyFeedPosting.mockImplementation(() => new Promise(() => {}));
+    render(<JobFeedSection />);
+    await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2));
+    const initialSignals = mockVerifyFeedPosting.mock.calls.map(call => call[3] as AbortSignal);
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2);
+    expect(initialSignals.every(signal => !signal.aborted)).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 describe('Saudi starter companies', () => {

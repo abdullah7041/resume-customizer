@@ -13,6 +13,9 @@ const CONTRACT_VERSION = 'feed-match-v2';
 const MAX_MATCH_RESUME_CHARS = 15_000;
 const MAX_MATCH_JOB_CHARS = 5_000;
 const jsonHeaders = { 'Content-Type': 'application/json' };
+const failure = (statusCode: number, code: string, error: string) => ({
+  statusCode, headers: jsonHeaders, body: JSON.stringify({ code, error }),
+});
 const ResumeSchema = z.object({
   id: z.string().trim().min(1).max(200),
   fingerprint: z.string().trim().min(1).max(200),
@@ -28,25 +31,25 @@ type MatchResult = Awaited<ReturnType<typeof processMatchOnly>>;
 
 export const handler: Handler = async (event) => {
   try {
-    if (event.httpMethod !== 'POST') return { statusCode: 405, headers: jsonHeaders, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+    if (event.httpMethod !== 'POST') return failure(405, 'method_not_allowed', 'Method Not Allowed');
     const authHeader = event.headers.authorization || event.headers.Authorization;
-    if (!authHeader) return { statusCode: 401, headers: jsonHeaders, body: JSON.stringify({ error: 'Authentication required' }) };
+    if (!authHeader) return failure(401, 'auth_required', 'Authentication required');
 
     const supabase = getSupabaseClient();
-    if (!supabase) return { statusCode: 503, headers: jsonHeaders, body: JSON.stringify({ error: 'Service unavailable' }) };
+    if (!supabase) return failure(503, 'service_unavailable', 'Service unavailable');
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace(/^Bearer\s+/i, ''));
-    if (authError || !user) return { statusCode: 401, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid session' }) };
+    if (authError || !user) return failure(401, 'invalid_session', 'Invalid session');
 
     const parsed = RequestSchema.safeParse(JSON.parse(event.body || '{}'));
-    if (!parsed.success) return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid request payload' }) };
+    if (!parsed.success) return failure(400, 'invalid_request', 'Invalid request payload');
 
     const { data: tracked, error: trackedError } = await supabase
       .from('user_tracked_companies')
       .select('company_id')
       .eq('user_id', user.id);
-    if (trackedError) return { statusCode: 503, headers: jsonHeaders, body: JSON.stringify({ error: 'Could not verify followed companies' }) };
+    if (trackedError) return failure(503, 'service_unavailable', 'Could not verify followed companies');
     const companyIds = (tracked ?? []).map((row: { company_id: string }) => row.company_id);
-    if (!companyIds.length) return { statusCode: 404, headers: jsonHeaders, body: JSON.stringify({ error: 'Posting not found' }) };
+    if (!companyIds.length) return failure(404, 'posting_not_found', 'Posting not found');
 
     const { data: posting, error: postingError } = await supabase
       .from('job_postings')
@@ -55,9 +58,9 @@ export const handler: Handler = async (event) => {
       .in('company_id', companyIds)
       .is('closed_at', null)
       .maybeSingle();
-    if (postingError) return { statusCode: 503, headers: jsonHeaders, body: JSON.stringify({ error: 'Could not load posting' }) };
+    if (postingError) return failure(503, 'service_unavailable', 'Could not load posting');
     const jobText = typeof posting?.description === 'string' ? posting.description.trim() : '';
-    if (!jobText) return { statusCode: 422, headers: jsonHeaders, body: JSON.stringify({ error: 'This posting has no complete job description to verify.' }) };
+    if (!jobText) return failure(422, 'missing_description', 'This posting has no complete job description to verify.');
     const matchedJobText = jobText.slice(0, MAX_MATCH_JOB_CHARS);
     const jobFingerprint = createHash('sha256').update(matchedJobText).digest('hex');
     const outcomes = await Promise.all(parsed.data.resumes.map(async (resume) => {
@@ -86,6 +89,7 @@ export const handler: Handler = async (event) => {
         const match = await processMatchOnly(matchedResumeText, matchedJobText, parsed.data.language, {
           featureName: 'feed_match',
           disableFallback: true,
+          timeoutMs: 30_000,
         });
         await setCached(cacheKey, match, 86_400);
         return { ok: true as const, resumeId: resume.id, resumeFingerprint, cached: false, match };
@@ -107,6 +111,6 @@ export const handler: Handler = async (event) => {
   } catch (error) {
     captureError(error, { function: 'feed-match' });
     console.error('[feed-match] failed:', summarizeErrorForLog(error));
-    return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Match verification failed' }) };
+    return failure(500, 'verification_unavailable', 'Match verification failed');
   }
 };
