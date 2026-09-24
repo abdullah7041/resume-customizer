@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChevronDown } from 'lucide-react';
 import UploadCard from '../ui/UploadCard';
 import { isAuthRequiredError } from '../../services/api.js';
 import { AppError } from '../../services/supabase.js';
@@ -56,7 +57,6 @@ export default function UploadSection({
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
     const libraryEntries = useResumeLibraryStore((state) => state.entries);
     const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
-    const activateResume = useResumeLibraryStore((state) => state.activateResume);
     const renameResume = useResumeLibraryStore((state) => state.renameResume);
     const removeResume = useResumeLibraryStore((state) => state.removeResume);
 
@@ -275,54 +275,54 @@ export default function UploadSection({
 
             {libraryEntries.length > 0 && (
                 <section className="rounded-2xl border border-emerald-900/10 bg-white/70 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04]" aria-labelledby="resume-library-title">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                        <div>
-                            <h3 id="resume-library-title" className="font-semibold text-gray-900 dark:text-white">
-                                {t('upload.library.title', 'Your resumes')}
-                            </h3>
-                            <p className="text-xs text-gray-600 dark:text-emerald-100/70">
-                                {t('upload.library.count', '{{count}} of {{max}} saved on this device', { count: libraryEntries.length, max: MAX_RESUME_LIBRARY_SIZE })}
-                            </p>
+                    <details className="group">
+                        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 [&::-webkit-details-marker]:hidden">
+                            <span>
+                                <span id="resume-library-title" className="block font-semibold text-gray-900 dark:text-white">
+                                    {t('upload.library.manage', 'Manage saved resumes')}
+                                </span>
+                                <span className="block text-xs text-gray-600 dark:text-emerald-100/70">
+                                    {t('upload.library.count', '{{count}} of {{max}} saved on this device', { count: libraryEntries.length, max: MAX_RESUME_LIBRARY_SIZE })}
+                                </span>
+                            </span>
+                            <ChevronDown className="h-5 w-5 shrink-0 text-ink-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+                        </summary>
+                        <div className="mt-3 grid gap-2">
+                            {libraryEntries.map((entry) => {
+                                const active = entry.id === activeResumeId;
+                                return (
+                                    <div key={entry.id} className={`flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center ${active ? 'border-emerald-500/50 bg-emerald-50/80 dark:bg-emerald-500/10' : 'border-gray-200 bg-white/70 dark:border-white/10 dark:bg-black/20'}`}>
+                                        <div className="min-w-0 flex-1">
+                                            <input
+                                                key={`${entry.id}:${entry.name}`}
+                                                defaultValue={entry.name}
+                                                maxLength={80}
+                                                aria-label={t('upload.library.nameLabel', 'Resume name')}
+                                                onBlur={(event) => void renameResume(entry.id, event.target.value)}
+                                                className="min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base font-medium text-ink outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 sm:text-sm"
+                                            />
+                                            <p className="mt-1 break-words text-sm text-ink-muted">{entry.parsedResume.basics?.name}</p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {active && (
+                                                <span className="inline-flex min-h-11 items-center rounded-lg bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+                                                    {t('upload.library.active', 'Active')}
+                                                </span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => void removeResume(entry.id)}
+                                                aria-label={t('upload.library.remove', 'Remove {{name}}', { name: entry.name })}
+                                                className="min-h-11 rounded-lg px-3 text-sm font-medium text-red-700 transition-[background-color,scale] hover:bg-red-50 active:scale-[0.96] dark:text-red-300 dark:hover:bg-red-500/10"
+                                            >
+                                                {t('common.remove', 'Remove')}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    </div>
-                    <div className="grid gap-2">
-                        {libraryEntries.map((entry) => {
-                            const active = entry.id === activeResumeId;
-                            return (
-                                <div key={entry.id} className={`flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center ${active ? 'border-emerald-500/50 bg-emerald-50/80 dark:bg-emerald-500/10' : 'border-gray-200 bg-white/70 dark:border-white/10 dark:bg-black/20'}`}>
-                                    <div className="min-w-0 flex-1">
-                                        <input
-                                            key={`${entry.id}:${entry.name}`}
-                                            defaultValue={entry.name}
-                                            maxLength={80}
-                                            aria-label={t('upload.library.nameLabel', 'Resume name')}
-                                            onBlur={(event) => void renameResume(entry.id, event.target.value)}
-                                            className="min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base font-medium text-ink outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 sm:text-sm"
-                                        />
-                                        <p className="mt-1 break-words text-sm text-ink-muted">{entry.parsedResume.basics?.name}</p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => activateResume(entry.id)}
-                                            disabled={active}
-                                            className="min-h-11 flex-1 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white transition-[background-color,scale] hover:bg-emerald-700 active:scale-[0.96] disabled:bg-emerald-100 disabled:text-emerald-800 dark:disabled:bg-emerald-500/20 dark:disabled:text-emerald-100 sm:flex-none"
-                                        >
-                                            {active ? t('upload.library.active', 'Active') : t('upload.library.use', 'Use resume')}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => void removeResume(entry.id)}
-                                            aria-label={t('upload.library.remove', 'Remove {{name}}', { name: entry.name })}
-                                            className="min-h-11 rounded-lg px-3 text-sm font-medium text-red-700 transition-[background-color,scale] hover:bg-red-50 active:scale-[0.96] dark:text-red-300 dark:hover:bg-red-500/10"
-                                        >
-                                            {t('common.remove', 'Remove')}
-                                        </button>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                    </details>
                 </section>
             )}
 

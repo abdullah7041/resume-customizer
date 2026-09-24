@@ -8,6 +8,7 @@
     "maxSize": "Maximum file size: 5MB",
     "library": {
       "title": "Your resumes",
+      "manage": "Manage saved resumes",
       "count": "{{count}} of {{max}} saved on this device",
       "nameLabel": "Resume name",
       "select": "Select resume",
@@ -17,7 +18,6 @@
       "switching": "Updating results for {{name}}…",
       "switched": "Using {{name}}",
       "active": "Active",
-      "use": "Use resume",
       "remove": "Remove {{name}}",
       "limitTitle": "Resume library is full",
       "limitDescription": "Remove one of your five saved resumes before adding another.",

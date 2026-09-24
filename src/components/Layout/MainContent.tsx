@@ -2689,7 +2689,7 @@ export default function MainContent() {
       <button
         type="button"
         onClick={handleClearAllData}
-        className="btn-danger-glass group flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-[background-color,box-shadow,scale] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 active:scale-[0.96] sm:min-w-0 sm:text-xs"
+        className="btn-danger-glass group col-start-2 row-start-1 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-[background-color,box-shadow,scale] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 active:scale-[0.96] sm:min-w-0 sm:text-xs"
         title={t("workspace.clearAll")}
         aria-label={t("workspace.clearAll")}
       >
@@ -2798,20 +2798,28 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* Keep resume switching beside the workflow controls without the old full-width context bar. */}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-          {((!isGuestMode && libraryEntries.length > 0) || Boolean(resumeData?.plainText)) && (
-            <div className="flex min-w-0 items-center gap-2 sm:order-2 sm:shrink-0">
-              {!isGuestMode && libraryEntries.length > 0 && (
-                <div className="min-w-0 flex-1 sm:w-36 sm:flex-none md:w-44 lg:w-56">
-                  <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
-                </div>
-              )}
-              {renderClearAllAction(false)}
-            </div>
-          )}
-          <div className="min-w-0 sm:order-1 sm:flex-1">
-            <div className="sm:hidden">
+        {/* The desktop action column gives the selector its own row below More tools. */}
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-3">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:col-start-2 md:row-start-1 md:w-64 lg:w-72">
+            <GlassButton
+              type="button"
+              variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => handleTabChange("more-tools")}
+              className="hidden whitespace-nowrap md:col-start-1 md:row-start-1 md:inline-flex md:min-h-11 md:w-full"
+            >
+              <MoreHorizontal className="h-4 w-4 me-1.5" />
+              {t("tabs.moreTools", "More tools")}
+            </GlassButton>
+            {!isGuestMode && libraryEntries.length > 0 && (
+              <div className="col-start-1 row-start-1 min-w-0 md:col-span-2 md:row-start-2">
+                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+              </div>
+            )}
+            {renderClearAllAction(false)}
+          </div>
+          <div className="min-w-0 md:col-start-1 md:row-start-1">
+            <div className="md:hidden">
               <MobileWorkflowNav
                 primarySteps={mobilePrimarySteps}
                 secondarySteps={mobileSecondarySteps}
@@ -2820,24 +2828,12 @@ export default function MainContent() {
                 gateReason={mobileWorkflowGateReason}
               />
             </div>
-            <div className="hidden sm:block">
-              <div className="flex items-start gap-3">
-                <WorkflowStepper
-                  steps={workflowSteps}
-                  onStepClick={handleTabChange}
-                  className="flex-1"
-                />
-                <GlassButton
-                  type="button"
-                  variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => handleTabChange("more-tools")}
-                  className="whitespace-nowrap"
-                >
-                  <MoreHorizontal className="h-4 w-4 me-1.5" />
-                  {t("tabs.moreTools", "More tools")}
-                </GlassButton>
-              </div>
+            <div className="hidden md:block">
+              <WorkflowStepper
+                steps={workflowSteps}
+                onStepClick={handleTabChange}
+                className="min-w-0"
+              />
             </div>
           </div>
         </div>
