@@ -31,6 +31,18 @@ describe('matchAnalysisCache', () => {
     expect(loadCachedMatchAnalysis('A different job description entirely.')).toBeNull();
   });
 
+  it('restores only when saved resume provenance matches', () => {
+    saveMatchAnalysis(sampleResult, JOB_TEXT, { resumeId: 'resume-a', resumeFingerprint: 'a1' });
+    expect(loadCachedMatchAnalysis(JOB_TEXT, { resumeId: 'resume-a', resumeFingerprint: 'a1' })).toEqual(sampleResult);
+    expect(loadCachedMatchAnalysis(JOB_TEXT, { resumeId: 'resume-b', resumeFingerprint: 'b1' })).toBeNull();
+    expect(loadCachedMatchAnalysis(JOB_TEXT, { resumeId: 'resume-a', resumeFingerprint: 'a2' })).toBeNull();
+  });
+
+  it('does not restore a legacy result when resume provenance is required', () => {
+    saveMatchAnalysis(sampleResult, JOB_TEXT);
+    expect(loadCachedMatchAnalysis(JOB_TEXT, { resumeId: 'resume-a', resumeFingerprint: 'a1' })).toBeNull();
+  });
+
   it('returns null for an empty job description', () => {
     saveMatchAnalysis(sampleResult, JOB_TEXT);
     expect(loadCachedMatchAnalysis('')).toBeNull();

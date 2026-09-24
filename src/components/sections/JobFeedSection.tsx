@@ -76,8 +76,10 @@ interface ClassifiedFeedMatch extends VerifiedFeedMatch {
 }
 
 interface VerifiedPostingState {
-  status: 'checking' | 'ready' | 'failed';
+  status: 'checking' | 'ready' | 'no_match' | 'failed' | 'timed_out';
   matches: ClassifiedFeedMatch[];
+  failureCode?: string;
+  jobFingerprint?: string;
 }
 
 type VerifiedScoredPosting = ScoredPosting & {
@@ -93,10 +95,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const searchIntent = useSearchIntent();
   const resume = useActiveResume();
   const resumeLibrary = useResumeLibraryStore((state) => state.entries);
+  const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
+  const activeLibraryResume = resumeLibrary.find(entry => entry.id === activeResumeId);
   const activateResume = useResumeLibraryStore((state) => state.activateResume);
   const [verifiedByPosting, setVerifiedByPosting] = useState<Record<string, VerifiedPostingState>>({});
   const requestedVerifications = useRef(new Set<string>());
-  const resumeVerificationKey = resumeLibrary.map(entry => `${entry.id}:${entry.fingerprint}`).join('|');
+  const [verificationLimitState, setVerificationLimitState] = useState({ key: '', count: 10 });
+  const [retryRevision, setRetryRevision] = useState(0);
+  const [verificationStartedAt, setVerificationStartedAt] = useState<number | null>(null);
+  const [verificationSlow, setVerificationSlow] = useState(false);
+  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
+  const resumeVerificationKey = activeLibraryResume ? `${activeLibraryResume.id}:${activeLibraryResume.fingerprint}:${language}:${lastLoadedAt ?? 0}` : '';
+  const verificationLimit = verificationLimitState.key === resumeVerificationKey ? verificationLimitState.count : 10;
+  const verificationKey = useCallback((postingId: string) => `${postingId}:${resumeVerificationKey}`, [resumeVerificationKey]);
   const evidenceInput = JSON.stringify({ sources: candidateEvidence(resume), claimedSkills: (resume?.skills ?? []).flatMap((skill) => [skill.name, ...skill.keywords ?? []]).filter(Boolean).slice(0, 100) });
   const [profileResult, setProfileResult] = useState<{ input: string; profile: CandidateProfile | null } | null>(null);
   const [requirements, setRequirements] = useState<Record<string, JobRequirements>>({});
@@ -148,7 +159,6 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    * everything after it owns this.
    */
   const [refreshing, setRefreshing] = useState(false);
-  const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
 
   /**
    * A ticking clock, so relative times stay true.
@@ -479,63 +489,77 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, [postings, feedState, intent, maxAgeDays, now, profile, requirements]);
 
   const verificationCandidates = useMemo(
-    () => resumeLibrary.length > 0
-      ? (feed?.kept ?? [])
+    () => activeLibraryResume
+      ? (feed?.kept ?? []).slice(0, verificationLimit)
       : [],
-    [feed, resumeLibrary.length],
+    [feed, activeLibraryResume, verificationLimit],
   );
+  // Relative-time refreshes rebuild `feed` every minute; IDs, not array identity,
+  // determine whether the verification batch actually changed.
+  const verificationCandidateIdsKey = JSON.stringify(verificationCandidates.map(scored => scored.posting.id));
 
   useEffect(() => {
-    if (verificationCandidates.length === 0 || !resumeVerificationKey) return;
-    const resumes = useResumeLibraryStore.getState().entries.map(entry => ({
-      id: entry.id,
-      fingerprint: entry.fingerprint,
-      text: entry.plainText,
-    }));
+    const postingIds = JSON.parse(verificationCandidateIdsKey) as string[];
+    if (postingIds.length === 0 || !resumeVerificationKey) return;
+    const library = useResumeLibraryStore.getState();
+    const resume = library.entries.find(entry => entry.id === library.activeResumeId);
+    if (!resume) return;
     let cancelled = false;
     let next = 0;
+    const controller = new AbortController();
+    const inFlight = new Set<string>();
+    const requested = requestedVerifications.current;
+    setVerificationStartedAt(Date.now());
 
     const worker = async (): Promise<void> => {
-      if (cancelled || next >= verificationCandidates.length) return;
-      const scored = verificationCandidates[next++];
-      const requestKey = `${scored.posting.id}:${resumeVerificationKey}:${language}`;
-      if (requestedVerifications.current.has(requestKey)) return worker();
-      requestedVerifications.current.add(requestKey);
+      if (cancelled || next >= postingIds.length) return;
+      const postingId = postingIds[next++];
+      const requestKey = `${postingId}:${resumeVerificationKey}`;
+      if (requested.has(requestKey)) return worker();
+      requested.add(requestKey);
+      inFlight.add(requestKey);
       setVerifiedByPosting(previous => ({
         ...previous,
-        [scored.posting.id]: { status: 'checking', matches: [] },
+        [requestKey]: { status: 'checking', matches: [] },
       }));
       const result = await verifyFeedPosting(
-        scored.posting.id,
-        resumes,
+        postingId,
+        [{ id: resume.id, fingerprint: resume.fingerprint, text: resume.plainText }],
         language,
+        controller.signal,
       );
       if (cancelled) return;
-      const matches = result.results.flatMap((verified): ClassifiedFeedMatch[] => {
+      inFlight.delete(requestKey);
+      const matches = result.results.filter(verified => verified.resumeId === resume.id).flatMap((verified): ClassifiedFeedMatch[] => {
         const outlook = computeOptimizationOutlook(verified.match.score, verified.match.strategicRealityCheck);
         return outlook ? [{ ...verified, band: outlook.fitPotential }] : [];
       });
-      if (result.error || result.failures.length > 0) requestedVerifications.current.delete(requestKey);
       setVerifiedByPosting(previous => ({
         ...previous,
-        [scored.posting.id]: {
-          status: result.error || (result.results.length === 0 && result.failures.length > 0) ? 'failed' : 'ready',
+        [requestKey]: {
+          status: result.failures.some(failure => failure.code === 'timed_out') ? 'timed_out'
+            : result.error || result.failures.length > 0 ? 'failed'
+              : matches.some(match => match.band !== 'low') ? 'ready' : 'no_match',
           matches,
+          failureCode: result.failures[0]?.code,
+          jobFingerprint: result.jobFingerprint,
         },
       }));
       return worker();
     };
-    // Postings are traversed sequentially here; verifyFeedPosting owns the only
-    // concurrency layer and runs at most two resume-job pairs at a time.
-    void worker();
-    return () => { cancelled = true; };
-  }, [language, resumeVerificationKey, verificationCandidates]);
+    void Promise.all([worker(), worker()]);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      inFlight.forEach(key => requested.delete(key));
+    };
+  }, [language, resumeVerificationKey, verificationCandidateIdsKey, retryRevision]);
 
   const verifiedKept = useMemo<VerifiedScoredPosting[]>(() => {
-    if (!feed || resumeLibrary.length === 0) return feed?.kept ?? [];
+    if (!feed || !activeLibraryResume) return feed?.kept ?? [];
     const bandRank: Record<FitPotentialBand, number> = { high: 2, medium: 1, low: 0 };
     return feed.kept.flatMap((scored) => {
-      const allMatches = [...(verifiedByPosting[scored.posting.id]?.matches ?? [])]
+      const allMatches = [...(verifiedByPosting[verificationKey(scored.posting.id)]?.matches ?? [])]
         .sort((a, b) => bandRank[b.band] - bandRank[a.band] || b.match.score - a.match.score);
       const qualifying = allMatches.filter(match => match.band !== 'low');
       return qualifying.length ? [{ ...scored, verifiedMatches: allMatches, bestMatch: qualifying[0] }] : [];
@@ -545,7 +569,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       if (!aBest || !bBest) return 0;
       return bandRank[bBest.band] - bandRank[aBest.band] || bBest.match.score - aBest.match.score;
     });
-  }, [feed, resumeLibrary.length, verifiedByPosting]);
+  }, [feed, verifiedByPosting, activeLibraryResume, verificationKey]);
 
   const visibleKept = useMemo(() => {
     if (!feed) return [];
@@ -554,14 +578,23 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, [feed, selectedCompanyIds, verifiedKept]);
 
   const verificationPending = useMemo(
-    () => resumeLibrary.length > 0
-      ? verificationCandidates.filter(scored => verifiedByPosting[scored.posting.id]?.status === 'checking' || !verifiedByPosting[scored.posting.id]).length
+    () => activeLibraryResume
+      ? verificationCandidates.filter(scored => verifiedByPosting[verificationKey(scored.posting.id)]?.status === 'checking' || !verifiedByPosting[verificationKey(scored.posting.id)]).length
       : 0,
-    [resumeLibrary.length, verificationCandidates, verifiedByPosting],
+    [activeLibraryResume, verificationCandidates, verifiedByPosting, verificationKey],
   );
   const verificationFailed = verificationCandidates.filter(
-    scored => verifiedByPosting[scored.posting.id]?.status === 'failed',
+    scored => ['failed', 'timed_out'].includes(verifiedByPosting[verificationKey(scored.posting.id)]?.status ?? ''),
   ).length;
+  const verificationChecked = verificationCandidates.length - verificationPending;
+  const verificationTimedOut = verificationCandidates.filter(scored => verifiedByPosting[verificationKey(scored.posting.id)]?.status === 'timed_out').length;
+  const verificationQuotaReached = verificationCandidates.some(scored => verifiedByPosting[verificationKey(scored.posting.id)]?.failureCode === 'limit_reached');
+  useEffect(() => {
+    if (!verificationPending) { setVerificationSlow(false); return; }
+    const elapsed = verificationStartedAt ? Date.now() - verificationStartedAt : 0;
+    const timer = setTimeout(() => setVerificationSlow(true), Math.max(0, 15_000 - elapsed));
+    return () => clearTimeout(timer);
+  }, [verificationPending, verificationStartedAt]);
 
   /**
    * How many roles each chip actually stands for.
@@ -942,14 +975,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             <p className="text-sm text-muted-foreground">
               {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
             </p>
-            {resumeLibrary.length > 0 && (
-              <p className="mt-1 text-xs text-muted-foreground" role="status">
-                {verificationPending > 0
-                  ? t('jobFeed.verification.checking', 'Checking {{count}} shortlisted roles against your saved resumes…', { count: verificationPending })
-                  : verificationFailed > 0
-                      ? t('jobFeed.verification.failed', '{{count}} roles could not be verified and remain hidden.', { count: verificationFailed })
-                    : t('jobFeed.verification.ready', 'Showing only medium- and high-fit roles verified against your saved resumes.')}
-              </p>
+            {activeLibraryResume && (
+              <div className="mt-2 space-y-1 text-sm text-muted-foreground" role="status" aria-live="polite">
+                <p className="tabular-nums">
+                  {t('jobFeed.verification.progress', '{{checked}} of {{total}} checked against {{name}}', {
+                    checked: verificationChecked, total: verificationCandidates.length, name: activeLibraryResume.name,
+                  })}
+                </p>
+                <p className="tabular-nums">{t('jobFeed.verification.verifiedCount', '{{count}} medium/high matches confirmed', { count: verifiedKept.filter(row => verificationCandidates.some(candidate => candidate.posting.id === row.posting.id)).length })}</p>
+                {verificationPending > 0 && verificationSlow && (
+                  <p>{t('jobFeed.verification.slow', 'Verification is taking longer than usual. Results appear as each check finishes.')}</p>
+                )}
+                {verificationFailed > 0 && <p>{t('jobFeed.verification.failed', '{{count}} checks failed.', { count: verificationFailed })}</p>}
+              </div>
             )}
           </div>
           {/* Either an upload or a swap, depending on whether there is a CV to
@@ -1493,7 +1531,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         <GlassCard className="p-6">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            {t('jobFeed.verification.pending', 'Verifying the strongest candidates. Roles appear only after they reach medium or high fit.')}
+            {t('jobFeed.verification.pending', 'Checking roles against your selected resume. Matches appear as each check finishes.')}
           </div>
         </GlassCard>
       )}
@@ -1504,12 +1542,40 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             {t('jobFeed.verification.noneVerified', 'No role could be confirmed as a medium or high fit yet.')}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t('jobFeed.verification.failedHelp', '{{count}} verification checks failed and those roles remain hidden. Reload to retry.', { count: verificationFailed })}
+            {verificationQuotaReached
+              ? t('jobFeed.verification.quota', 'Daily verification limit reached. Cached results remain available.')
+              : verificationTimedOut > 0
+                ? t('jobFeed.verification.timeouts', '{{count}} checks timed out. You can retry them.', { count: verificationTimedOut })
+                : t('jobFeed.verification.failedHelp', '{{count}} verification checks failed. You can retry them.', { count: verificationFailed })}
           </p>
         </GlassCard>
       )}
 
-      {feed && visibleKept.length === 0 && postings.length > 0 && verificationPending === 0 && verificationFailed === 0 && (
+      {activeLibraryResume && feed && feed.kept.length > 0 && selectedCompanyIds.size === 0 && visibleKept.length === 0 && verificationPending === 0 && verificationFailed === 0 && (
+        <GlassCard className="p-6">
+          <p className="text-base font-medium text-ink">{t('jobFeed.verification.noMatch', 'No medium- or high-fit roles found for this resume in the checked jobs.')}</p>
+        </GlassCard>
+      )}
+
+      {activeLibraryResume && verificationFailed > 0 && verificationPending === 0 && !verificationQuotaReached && (
+        <button type="button" className="min-h-11 rounded-xl border border-line bg-surface px-4 text-sm font-medium text-ink transition-[background-color,scale] active:scale-[0.96]" onClick={() => {
+          const failed = verificationCandidates.map(scored => verificationKey(scored.posting.id)).filter(key => ['failed', 'timed_out'].includes(verifiedByPosting[key]?.status ?? ''));
+          failed.forEach(key => requestedVerifications.current.delete(key));
+          setVerifiedByPosting(previous => {
+            const next = { ...previous };
+            failed.forEach(key => delete next[key]);
+            return next;
+          });
+          setRetryRevision(revision => revision + 1);
+        }}>{t('jobFeed.verification.retry', 'Retry failed checks')}</button>
+      )}
+      {activeLibraryResume && verificationPending === 0 && (feed?.kept.length ?? 0) > verificationLimit && !verificationQuotaReached && (
+        <button type="button" className="min-h-11 rounded-xl border border-line bg-surface px-4 text-sm font-medium text-ink transition-[background-color,scale] active:scale-[0.96]" onClick={() => setVerificationLimitState({ key: resumeVerificationKey, count: verificationLimit + 10 })}>
+          {t('jobFeed.verification.more', 'Check 10 more')}
+        </button>
+      )}
+
+      {feed && visibleKept.length === 0 && postings.length > 0 && verificationPending === 0 && verificationFailed === 0 && (!activeLibraryResume || feed.kept.length === 0 || selectedCompanyIds.size > 0) && (
         <GlassCard className="p-6">
           {/* Asked in order of how much the user can do about it. The age window
               is theirs to widen in one click, and `agedOut` counts only the
@@ -1641,20 +1707,6 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
                       {' · '}
                       {resumeLibrary.find(entry => entry.id === scored.bestMatch?.resumeId)?.name ?? t('upload.library.active', 'Resume')}
                     </p>
-                    {(scored.verifiedMatches?.length ?? 0) > 1 && (
-                      <details className="mt-2 text-xs text-muted-foreground">
-                        <summary className="cursor-pointer font-medium text-foreground">
-                          {t('jobFeed.verification.compare', 'Compare resumes')}
-                        </summary>
-                        <ul className="mt-2 space-y-1">
-                          {scored.verifiedMatches?.map(match => (
-                            <li key={match.resumeId}>
-                              {resumeLibrary.find(entry => entry.id === match.resumeId)?.name ?? match.resumeId}: {match.match.score}% · {match.band}
-                            </li>
-                          ))}
-                        </ul>
-                      </details>
-                    )}
                   </div>
                 )}
                 {coverage && !scored.recommendation && (

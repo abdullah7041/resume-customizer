@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MainContent from "../components/Layout/MainContent";
 import { useResumeStore } from "../lib/stores/resumeStore";
+import { useResumeLibraryStore } from "../lib/resumeLibrary";
 
 const {
   parseResumeMock,
@@ -1470,8 +1471,10 @@ describe("job feed hand-off", () => {
     authMockState.user = { id: "user-123", user_metadata: {}, app_metadata: {} };
     authMockState.loading = false;
     parseResumeMock.mockReset();
+    analyzeResumeMock.mockClear();
     parseResumeMock.mockResolvedValue({ plainText: "Parsed resume", bullets: [], sections: [] });
     useResumeStore.setState({ originalResume: null, searchIntent: null });
+    useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
     Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     const storage = {};
     global.localStorage = {
@@ -1480,6 +1483,74 @@ describe("job feed hand-off", () => {
       removeItem: vi.fn((key) => { delete storage[key]; }),
       clear: vi.fn(() => { Object.keys(storage).forEach((key) => delete storage[key]); }),
     };
+  });
+
+  it("never renders a legacy Truth Check before resume provenance is known", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "truth-check");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:resumeTruthCheck", JSON.stringify({
+      contractVersion: 1,
+      resumeHash: "13:b2znuz:n3scy7",
+      hardStopsHash: "",
+      language: "en",
+      result: { overallRisk: "high", summary: "Old result", claims: [], limits: { cannotVerify: [] } },
+    }));
+    useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
+    render(<MainContent />);
+    await screen.findByRole('button', { name: /run truth check/i });
+    expect(screen.queryByText(/Truth risk: high/i)).not.toBeInTheDocument();
+  });
+
+  it("restores match results only for the resume that produced them", async () => {
+    const parsedResume = { basics: { name: 'Same Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+    useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+      { id: 'a', name: 'A.pdf', parsedResume, plainText: 'First resume experience', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+      { id: 'b', name: 'B.pdf', parsedResume, plainText: 'Second resume experience', fingerprint: 'b1', createdAt: 2, updatedAt: 2 },
+    ] });
+    analyzeResumeMock.mockResolvedValue({ score: 77, missingKeywords: [], topHits: [], suggestions: [] });
+    render(<MainContent />);
+    await act(async () => { window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'match' } })); });
+    await act(async () => { fireEvent.click(screen.getByText('Run match')); });
+    await waitFor(() => expect(matchSectionMockProps.current.matchAnalysis?.score).toBe(77));
+    act(() => useResumeLibraryStore.setState({ activeResumeId: 'b' }));
+    await waitFor(() => expect(matchSectionMockProps.current.matchAnalysis).toBeNull());
+    act(() => useResumeLibraryStore.setState({ activeResumeId: 'a' }));
+    await waitFor(() => expect(matchSectionMockProps.current.matchAnalysis?.score).toBe(77));
+  });
+
+  it("preserves export state when an upload resets the store before parsing", async () => {
+    const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+    useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+      { id: 'a', name: 'A.pdf', parsedResume, plainText: 'First resume experience', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+      { id: 'b', name: 'B.pdf', parsedResume, plainText: 'Second resume experience', fingerprint: 'b1', createdAt: 2, updatedAt: 2 },
+    ] });
+    render(<MainContent />);
+    await waitFor(() => expect(screen.getByRole('button', { name: /Select resume: A.pdf/ })).toBeInTheDocument());
+    act(() => useResumeStore.setState({
+      optimizationMetrics: { ...useResumeStore.getState().optimizationMetrics, beforeScore: 71 },
+      optimizationOrigin: 'paid',
+    }));
+    act(() => {
+      resumeUploadMockProps.current.onBeforeParseResume?.();
+      useResumeStore.getState().resetForNewUpload();
+      useResumeLibraryStore.setState({ activeResumeId: 'b' });
+    });
+    await waitFor(() => expect(useResumeLibraryStore.getState().activeResumeId).toBe('b'));
+    act(() => useResumeLibraryStore.setState({ activeResumeId: 'a' }));
+    await waitFor(() => expect(useResumeStore.getState().optimizationMetrics.beforeScore).toBe(71));
+    expect(useResumeStore.getState().optimizationOrigin).toBe('paid');
+  });
+
+  it("announces updating before confirming a resume switch", async () => {
+    const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+    useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+      { id: 'a', name: 'A.pdf', parsedResume, plainText: 'First resume experience', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+      { id: 'b', name: 'B.pdf', parsedResume, plainText: 'Second resume experience', fingerprint: 'b1', createdAt: 2, updatedAt: 2 },
+    ] });
+    render(<MainContent />);
+    act(() => useResumeLibraryStore.setState({ activeResumeId: 'b' }));
+    expect(screen.getByText(/Updating results for/)).toBeInTheDocument();
+    expect(await screen.findByText(/Using/)).toBeInTheDocument();
   });
 
   it("gives the feed somewhere to send a posting", async () => {

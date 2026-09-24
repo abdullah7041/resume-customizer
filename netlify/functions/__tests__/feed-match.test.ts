@@ -55,6 +55,22 @@ beforeEach(() => {
 });
 
 describe('feed-match', () => {
+  it('returns machine-readable codes for unavailable service and missing posting', async () => {
+    fromMock.mockImplementationOnce(() => query({ data: null, error: new Error('offline') }));
+    const unavailable = await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'a', fingerprint: 'a', text: 'resume' }] });
+    expect(JSON.parse(unavailable.body ?? '{}').code).toBe('service_unavailable');
+
+    fromMock.mockImplementationOnce(() => query({ data: [], error: null }));
+    const missing = await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'a', fingerprint: 'a', text: 'resume' }] });
+    expect(JSON.parse(missing.body ?? '{}').code).toBe('posting_not_found');
+  });
+
+  it('returns a code when unexpected provider or database work fails', async () => {
+    getUserMock.mockRejectedValueOnce(new Error('unexpected'));
+    const response = await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'a', fingerprint: 'a', text: 'resume' }] });
+    expect(JSON.parse(response.body ?? '{}').code).toBe('verification_unavailable');
+  });
+
   it('requires authentication', async () => {
     expect((await invoke({}, false)).statusCode).toBe(401);
   });
@@ -75,7 +91,7 @@ describe('feed-match', () => {
       'customer service specialist',
       'Customer service and CRM experience required.',
       'en',
-      { featureName: 'feed_match', disableFallback: true },
+      { featureName: 'feed_match', disableFallback: true, timeoutMs: 30_000 },
     );
     expect(checkRateLimitMock).toHaveBeenCalledTimes(1);
     expect(checkRateLimitMock).toHaveBeenCalledWith('feed-match', 'user-1');

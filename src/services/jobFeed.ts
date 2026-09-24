@@ -136,6 +136,7 @@ interface VerificationFailure {
 }
 
 type VerificationResponse = {
+  jobFingerprint?: string;
   results: VerifiedFeedMatch[];
   failures: VerificationFailure[];
 };
@@ -144,7 +145,8 @@ export async function verifyFeedPosting(
   postingId: string,
   resumes: Array<{ id: string; fingerprint: string; text: string }>,
   language: string,
-): Promise<{ results: VerifiedFeedMatch[]; failures: Array<{ resumeId: string; code: string; error: string }>; error: string | null }> {
+  signal?: AbortSignal,
+): Promise<{ results: VerifiedFeedMatch[]; failures: VerificationFailure[]; error: string | null; jobFingerprint?: string }> {
   // One request represents exactly one resume-job pair. Two workers keep the
   // browser below the product's AI concurrency ceiling while still letting a
   // cached pair behind a quota failure surface normally.
@@ -152,6 +154,7 @@ export async function verifyFeedPosting(
   if (!headers) return { results: [], failures: [], error: 'Not signed in' };
   const results: VerifiedFeedMatch[] = [];
   const failures: VerificationFailure[] = [];
+  let jobFingerprint: string | undefined;
   let next = 0;
 
   const worker = async () => {
@@ -162,25 +165,26 @@ export async function verifyFeedPosting(
           method: 'POST',
           headers,
           body: JSON.stringify({ postingId, resumes: [resume], language: language === 'ar' ? 'ar' : 'en' }),
-          signal: AbortSignal.timeout(80_000),
+          signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(35_000)]) : AbortSignal.timeout(35_000),
         });
         if (!response.ok) {
-          const body = await response.json().catch(() => ({})) as { error?: string };
-          failures.push({ resumeId: resume.id, code: 'request_failed', error: body.error || 'Could not verify this posting' });
+          const body = await response.json().catch(() => ({})) as { code?: string; error?: string };
+          failures.push({ resumeId: resume.id, code: body.code || (response.status === 422 ? 'missing_description' : 'request_failed'), error: body.error || 'Could not verify this posting' });
           continue;
         }
         const body = await response.json() as VerificationResponse;
+        jobFingerprint = body.jobFingerprint;
         results.push(...(body.results ?? []));
         failures.push(...(body.failures ?? []));
       } catch (error) {
         console.warn('[JobFeed] Verified matching unavailable:', summarizeError(error));
-        failures.push({ resumeId: resume.id, code: 'request_failed', error: 'Could not verify this posting' });
+        failures.push({ resumeId: resume.id, code: error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError') ? 'timed_out' : 'request_failed', error: 'Could not verify this posting' });
       }
     }
   };
 
   await Promise.all(Array.from({ length: Math.min(2, resumes.length) }, () => worker()));
-  return { results, failures, error: null };
+  return { results, failures, error: null, jobFingerprint };
 }
 
 export async function loadJobRequirements(postingIds: string[]) {

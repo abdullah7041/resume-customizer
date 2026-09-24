@@ -131,6 +131,7 @@ interface MatchSectionProps {
   onToast?: (toast: Toast) => void;
   onClear?: () => void;
   jobDescription?: string;
+  resumeContextKey?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
   onJobSaved?: (application: JobApplication) => void;
   savedApplicationId?: string | null;
@@ -244,6 +245,7 @@ export function MatchSection({
   onToast,
   onClear,
   jobDescription = '',
+  resumeContextKey,
   extractedMetadata,
   onJobSaved,
   savedApplicationId,
@@ -252,6 +254,7 @@ export function MatchSection({
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
+    if (resumeContextKey) return jobDescription;
     if (typeof window === 'undefined') return '';
     return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
@@ -274,6 +277,13 @@ export function MatchSection({
   });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+
+  useEffect(() => {
+    if (resumeContextKey) {
+      setJobText(jobDescription);
+      setImportedCriteria(null);
+    }
+  }, [resumeContextKey, jobDescription]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
