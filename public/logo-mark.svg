@@ -1,0 +1,44 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Watheq logo mark</title>
+  <desc id="desc">A dark Saudi green confidence mark combining a resume sheet, verification stroke, and subtle Arabic-inspired loop.</desc>
+  <defs>
+    <linearGradient id="watheq-bg" x1="48" y1="22" x2="218" y2="235" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A6B3D"/>
+      <stop offset="0.56" stop-color="#075337"/>
+      <stop offset="1" stop-color="#042E24"/>
+    </linearGradient>
+    <linearGradient id="watheq-paper" x1="78" y1="56" x2="185" y2="201" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF9EA"/>
+      <stop offset="1" stop-color="#EDE2C6"/>
+    </linearGradient>
+    <linearGradient id="watheq-stroke" x1="84" y1="100" x2="180" y2="161" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E7A4A"/>
+      <stop offset="1" stop-color="#024833"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="31" y="34" width="194" height="194" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#021C15" flood-opacity="0.28"/>
+    </filter>
+    <filter id="paper-shadow" x="56" y="46" width="144" height="174" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#02291F" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <rect x="18" y="18" width="220" height="220" rx="58" fill="url(#watheq-bg)" filter="url(#soft-shadow)"/>
+  <rect x="28" y="28" width="200" height="200" rx="50" stroke="#D6B76A" stroke-opacity="0.36" stroke-width="2"/>
+  <path d="M52 72C76 42 129 33 169 52C205 69 222 106 214 143" stroke="#FFFFFF" stroke-opacity="0.13" stroke-width="12" stroke-linecap="round"/>
+
+  <g filter="url(#paper-shadow)">
+    <path d="M74 65C74 59.4772 78.4772 55 84 55H153.5C156.153 55 158.696 56.0536 160.571 57.9289L190.071 87.4289C191.946 89.3043 193 91.8478 193 94.5V190C193 195.523 188.523 200 183 200H84C78.4772 200 74 195.523 74 190V65Z" fill="url(#watheq-paper)"/>
+    <path d="M158 56V88C158 91.3137 160.686 94 164 94H192" fill="#E3D3AA" fill-opacity="0.82"/>
+    <path d="M158 56V88C158 91.3137 160.686 94 164 94H192" stroke="#C8A64F" stroke-opacity="0.45" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+
+  <path d="M99 78H134" stroke="#0A6B3D" stroke-opacity="0.34" stroke-width="7" stroke-linecap="round"/>
+  <path d="M99 174H158" stroke="#0A6B3D" stroke-opacity="0.22" stroke-width="7" stroke-linecap="round"/>
+
+  <path d="M101.5 127.5C91 114.5 96 97 111.5 92.5C127.5 87.8 141 98.7 140.5 114.5C140 130.2 127.1 140.3 111 139.7C99.9 139.3 91.2 134.2 87 127.9" stroke="url(#watheq-stroke)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M104 139.5L126 160.5L176 111.5" stroke="url(#watheq-stroke)" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="190" cy="66" r="18" fill="#D6B76A"/>
+  <path d="M181.5 66.5L187.5 72.5L198.5 59.5" stroke="#042E24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
