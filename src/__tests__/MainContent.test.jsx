@@ -11,6 +11,7 @@ const {
   analyzeResumeTruthCheckMock,
   generateClarificationsMock,
   extractJobMetadataMock,
+  createJobApplicationMock,
   onboardExtractMock,
   analyticsMock,
 } = vi.hoisted(() => ({
@@ -23,6 +24,7 @@ const {
   // Non-fatal: always returns empty clarifications in tests so the optimize flow proceeds directly
   generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
   extractJobMetadataMock: vi.fn(() => Promise.resolve(null)),
+  createJobApplicationMock: vi.fn(),
   analyticsMock: {
     trackGuestPreviewStarted: vi.fn(),
     trackGuestPreviewLimitHit: vi.fn(),
@@ -252,6 +254,12 @@ vi.mock("../services/supabase.js", () => ({
   },
 }));
 
+vi.mock("../services/pipeline", () => ({
+  createJobApplication: createJobApplicationMock,
+  updateJobApplication: vi.fn(),
+  attachExportToJobApplication: vi.fn(),
+}));
+
 vi.mock("../services/supabaseExport.js", () => ({
   saveResumeToSupabase: vi.fn(),
   saveOptimizationToSupabase: vi.fn(),
@@ -305,13 +313,15 @@ describe("MainContent resume parsing", () => {
     analyzeResumeTruthCheckMock.mockReset();
     extractJobMetadataMock.mockReset();
     extractJobMetadataMock.mockResolvedValue(null);
+    createJobApplicationMock.mockReset();
     generateClarificationsMock.mockReset();
     generateClarificationsMock.mockResolvedValue({ clarifications: [] });
     onboardExtractMock.mockReset();
     onboardExtractMock.mockResolvedValue({ value: {}, confidence: "low" });
     // Path-A inline panel gates on the store — reset so it only appears where a test
     // opts in by setting originalResume.
-    useResumeStore.setState({ originalResume: null, searchIntent: null });
+    useResumeStore.setState({ originalResume: null, searchIntent: null, parsedResumeText: null,
+      analysisCache: {}, baselineMatchScore: null });
     Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     parseResumeMock.mockResolvedValue({
       plainText: "Parsed resume",
@@ -337,6 +347,184 @@ describe("MainContent resume parsing", () => {
       }),
     };
     global.localStorage = localStorageMock;
+  });
+
+  const deferred = () => {
+    let resolve, reject;
+    const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+    return { promise, resolve, reject };
+  };
+  const openMatch = async (job = '') => {
+    useResumeStore.setState({ parsedResumeText: '', analysisCache: {}, baselineMatchScore: null });
+    localStorage.setItem('watheq:lastActiveTab', 'match');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Original resume', sections: [] }));
+    if (job) localStorage.setItem('watheq:lastJobDescription', job);
+    render(<MainContent />);
+    await screen.findByTestId('job-match-mock');
+  };
+
+  it.each(['success', 'failure'])('Match ownership: late A %s cannot replace newer A or finalize its loading', async (outcome) => {
+    await openMatch();
+    const old = deferred(), newer = deferred();
+    analyzeResumeMock.mockReturnValueOnce(old.promise).mockReturnValueOnce(newer.promise);
+    let first, second;
+    await act(async () => { first = matchSectionMockProps.current.onAnalyzeMatchAI('Job A').catch(() => null); });
+    await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalledTimes(1));
+    act(() => matchSectionMockProps.current.onJobDescriptionChange('Job B'));
+    act(() => matchSectionMockProps.current.onJobDescriptionChange('Job A'));
+    await act(async () => { second = matchSectionMockProps.current.onAnalyzeMatchAI('Job A'); });
+    await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      if (outcome === 'success') old.resolve({ score: 11 });
+      else old.reject(new Error('old failure'));
+      await first;
+    });
+    expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+    expect(matchSectionMockProps.current.isAnalyzing).toBe(true);
+    expect(useResumeStore.getState().baselineMatchScore).toBeNull();
+    expect(screen.queryByText('old failure')).not.toBeInTheDocument();
+    await act(async () => { newer.resolve({ score: 83 }); await second; });
+    expect(matchSectionMockProps.current.matchAnalysis.score).toBe(83);
+    expect(useResumeStore.getState().baselineMatchScore).toBe(83);
+    expect(matchSectionMockProps.current.isAnalyzing).toBe(false);
+    const saved = JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis'));
+    expect(saved.assessment.jobSnapshot).toBe('Job A');
+  });
+
+  it('Match ownership: a same-context rerun restores without a second paid call', async () => {
+    await openMatch();
+    analyzeResumeMock.mockResolvedValue({ score: 75 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Full job'); });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Full job'); });
+    expect(analyzeResumeMock).toHaveBeenCalledTimes(1);
+    expect(matchSectionMockProps.current.matchAnalysis.score).toBe(75);
+  });
+
+  it('Match ownership: stores the full submitted job instead of a truncated display variant', async () => {
+    await openMatch();
+    const fullJob = `${'Requirement '.repeat(810)}final requirement`;
+    analyzeResumeMock.mockResolvedValue({ score: 68 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI(fullJob); });
+    expect(analyzeResumeMock).toHaveBeenCalledWith('Original resume', fullJob, 'en', undefined);
+    expect(JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis')).assessment.jobSnapshot).toBe(fullJob);
+  });
+
+  it('Match ownership: a mismatched saved job snapshot cannot satisfy the current context', async () => {
+    await openMatch();
+    analyzeResumeMock.mockResolvedValueOnce({ score: 68 }).mockResolvedValueOnce({ score: 79 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Role A'); });
+    const stored = JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis'));
+    stored.assessment.jobSnapshot = 'Different job';
+    localStorage.setItem('watheq:lastMatchAnalysis', JSON.stringify(stored));
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Role A'); });
+    expect(analyzeResumeMock).toHaveBeenCalledTimes(2);
+    expect(matchSectionMockProps.current.matchAnalysis.score).toBe(79);
+  });
+
+  it('Match ownership: metadata completing after a job edit cannot populate the new job', async () => {
+    await openMatch();
+    const metadata = deferred();
+    extractJobMetadataMock.mockReturnValueOnce(metadata.promise);
+    analyzeResumeMock.mockResolvedValue({ score: 75 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Old job'); });
+    act(() => matchSectionMockProps.current.onJobDescriptionChange('New job'));
+    await act(async () => { metadata.resolve({ companyName: 'Old company', jobTitle: 'Old title' }); });
+    expect(matchSectionMockProps.current.extractedMetadata).toBeNull();
+    expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+    await waitFor(() => expect(matchSectionMockProps.current.historicalMatch?.status).toBe('outdated'));
+    expect(createJobApplicationMock).not.toHaveBeenCalled();
+  });
+
+  it('Match ownership: a late pipeline response cannot attach the old job to the current view', async () => {
+    await openMatch();
+    const pendingSave = deferred();
+    extractJobMetadataMock.mockResolvedValueOnce({ companyName: 'Old company', jobTitle: 'Old title' });
+    createJobApplicationMock.mockReturnValueOnce(pendingSave.promise);
+    analyzeResumeMock.mockResolvedValueOnce({ score: 75 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Old job'); });
+    await waitFor(() => expect(createJobApplicationMock).toHaveBeenCalledTimes(1));
+    act(() => matchSectionMockProps.current.onJobDescriptionChange('New job'));
+    await act(async () => { pendingSave.resolve({ data: { id: 'old-job-id' }, error: null }); });
+    expect(matchSectionMockProps.current.savedApplicationId).toBeNull();
+  });
+
+  it('Match ownership: metadata arriving after a failed analysis cannot update or save the job', async () => {
+    await openMatch();
+    const metadata = deferred();
+    extractJobMetadataMock.mockReturnValueOnce(metadata.promise);
+    analyzeResumeMock.mockRejectedValueOnce(new Error('analysis failed'));
+    await act(async () => {
+      await expect(matchSectionMockProps.current.onAnalyzeMatchAI('Failed job')).rejects.toThrow('analysis failed');
+    });
+    await act(async () => { metadata.resolve({ companyName: 'Failed company', jobTitle: 'Failed title' }); });
+    expect(matchSectionMockProps.current.extractedMetadata).toBeNull();
+    expect(createJobApplicationMock).not.toHaveBeenCalled();
+  });
+
+  it('Match ownership: editing during context hashing prevents a stale paid request', async () => {
+    await openMatch();
+    const pendingDigest = deferred();
+    const originalDigest = crypto.subtle.digest.bind(crypto.subtle);
+    const digestSpy = vi.spyOn(crypto.subtle, 'digest')
+      .mockImplementationOnce(() => pendingDigest.promise)
+      .mockImplementationOnce(() => pendingDigest.promise);
+    try {
+      let first;
+      await act(async () => { first = matchSectionMockProps.current.onAnalyzeMatchAI('Old job'); });
+      act(() => matchSectionMockProps.current.onJobDescriptionChange('New job'));
+      const digest = await originalDigest('SHA-256', new TextEncoder().encode('test'));
+      await act(async () => { pendingDigest.resolve(digest); await first; });
+      expect(analyzeResumeMock).not.toHaveBeenCalled();
+      expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+      expect(matchSectionMockProps.current.isAnalyzing).toBe(false);
+    } finally {
+      digestSpy.mockRestore();
+    }
+  });
+
+  it('Match ownership: a legacy saved result stays inspectable but cannot satisfy a new analysis', async () => {
+    localStorage.setItem('watheq:lastMatchAnalysis', JSON.stringify({
+      analysis: { score: 29, reasoning: 'Old explanation' }, jobText: 'Old job', savedAt: Date.now(),
+    }));
+    await openMatch('Old job');
+    await waitFor(() => expect(matchSectionMockProps.current.historicalMatch?.status).toBe('legacy'));
+    expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+    expect(analyzeResumeMock).not.toHaveBeenCalled();
+    analyzeResumeMock.mockResolvedValue({ score: 74 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Old job'); });
+    expect(analyzeResumeMock).toHaveBeenCalledTimes(1);
+    expect(matchSectionMockProps.current.matchAnalysis.score).toBe(74);
+  });
+
+  it('Match ownership: language change invalidates a pending result', async () => {
+    const { default: i18n } = await import('../lib/i18n');
+    await i18n.changeLanguage('en');
+    await openMatch();
+    const pending = deferred();
+    analyzeResumeMock.mockReturnValueOnce(pending.promise);
+    let oldRun;
+    await act(async () => { oldRun = matchSectionMockProps.current.onAnalyzeMatchAI('Role A'); });
+    await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalledTimes(1));
+    try {
+      await act(async () => { await i18n.changeLanguage('ar'); });
+      await act(async () => { pending.resolve({ score: 12 }); await oldRun; });
+      expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+      expect(useResumeStore.getState().baselineMatchScore).toBeNull();
+    } finally {
+      await act(async () => { await i18n.changeLanguage('en'); });
+      i18n.removeResourceBundle('en', 'translation');
+      i18n.removeResourceBundle('ar', 'translation');
+    }
+  });
+
+  it('Match ownership: a guest preview cannot satisfy a later confirmed paid run', async () => {
+    await openMatch();
+    analyzeResumeMock.mockResolvedValueOnce({ score: 51 }).mockResolvedValueOnce({ score: 77 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Same role', { freePreview: true }); });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Same role'); });
+    expect(analyzeResumeMock).toHaveBeenCalledTimes(2);
+    expect(matchSectionMockProps.current.matchAnalysis.score).toBe(77);
+    expect(JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis')).assessment.result.origin).toBe('paid');
   });
 
   it("passes upload payloads through parseResume with storage metadata", async () => {
@@ -520,7 +708,7 @@ describe("MainContent resume parsing", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
-    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined, { freePreview: true });
+    await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", "en", { freePreview: true, importedCriteria: null }));
     expect(analyticsMock.trackGuestPreviewLimitHit).not.toHaveBeenCalledWith({
       source: "protected_action",
       status: 401,
@@ -560,8 +748,8 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
 
     expect(await screen.findByText(/Reality tier: critical/i)).toBeInTheDocument();
-    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", undefined, { freePreview: true });
-    expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", undefined);
+    expect(analyzeResumeMock).toHaveBeenCalledWith("Parsed resume", "Target job description", "en", { freePreview: true, importedCriteria: null });
+    expect(extractJobMetadataMock).toHaveBeenCalledWith("Target job description", "en");
   });
 
   it("shows Truth Check as a primary workflow step after resume upload and before match", async () => {
@@ -712,6 +900,7 @@ describe("MainContent resume parsing", () => {
     expect(screen.getByText("google/gemini-2.5-flash")).toBeInTheDocument();
     expect(screen.getByText("1234 ms")).toBeInTheDocument();
     expect(screen.getByText(/Request ID: match-debug-1/i)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis')).assessment.model).toBe('google/gemini-2.5-flash');
   });
 
   it("populates the dev AI debug panel from optimize metadata", async () => {
@@ -1192,7 +1381,7 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
     fireEvent.click(await screen.findByRole("button", { name: /run match/i }));
-    expect(analyzeResumeMock).toHaveBeenCalled();
+    await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalled());
 
     const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
     fireEvent.click(within(workflow).getByRole("button", { name: /optimize improve resume/i }));

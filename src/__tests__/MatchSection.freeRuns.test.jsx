@@ -127,4 +127,45 @@ describe('MatchSection signed-in users never take the guest free-run path', () =
     );
     expect(window.localStorage.getItem(FREE_MATCH_KEY)).toBeNull();
   });
+
+  it('reports draft edits immediately so the parent can invalidate an in-flight assessment', () => {
+    const onJobDescriptionChange = vi.fn();
+    renderWithProviders(<MatchSection onAnalyzeMatchAI={vi.fn()} matchAnalysis={null} hasResume
+      onJobDescriptionChange={onJobDescriptionChange} onClear={vi.fn()} />);
+    typeJob();
+    expect(onJobDescriptionChange).toHaveBeenLastCalledWith('We need a backend engineer with Node.js experience.');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(onJobDescriptionChange).toHaveBeenLastCalledWith('');
+  });
+
+  it('reuses a saved paid result without showing another credit confirmation', async () => {
+    const job = 'We need a backend engineer with Node.js experience.';
+    window.localStorage.setItem('watheq:lastJobDescription', job);
+    const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 72, origin: 'paid' });
+    renderWithProviders(<MatchSection onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={{ score: 72, origin: 'paid' }}
+      jobDescription={job} hasResume onClear={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'View/edit' }));
+    expect(screen.queryByText(/2 credits/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View saved analysis' }));
+    await waitFor(() => expect(onAnalyzeMatchAI).toHaveBeenCalledTimes(1));
+    expect(onAnalyzeMatchAI).toHaveBeenCalledWith(job, expect.objectContaining({ importedCriteria: null }));
+  });
+
+  it('keeps a legacy result inspectable without presenting it as the active match', () => {
+    renderWithProviders(<MatchSection onAnalyzeMatchAI={vi.fn()} matchAnalysis={null}
+      historicalMatch={{ status: 'legacy', result: { score: 29, reasoning: 'Old explanation' } }}
+      hasResume onClear={vi.fn()} />);
+    expect(screen.getByText('Previous analysis — its inputs were not recorded')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('View previous result'));
+    expect(screen.getByText('Old explanation')).toBeInTheDocument();
+    expect(document.getElementById('jobDescription')).toBeInTheDocument();
+  });
+
+  it('discloses that requirements beyond the Match prompt limit are not evaluated', () => {
+    const longJob = `${'a'.repeat(5000)}later requirement`;
+    window.localStorage.setItem('watheq:lastJobDescription', longJob);
+    renderWithProviders(<MatchSection onAnalyzeMatchAI={vi.fn()} matchAnalysis={null}
+      jobDescription={longJob} hasResume onClear={vi.fn()} />);
+    expect(screen.getByRole('note')).toHaveTextContent('Later requirements were not evaluated');
+  });
 });

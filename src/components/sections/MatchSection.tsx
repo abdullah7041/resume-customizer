@@ -42,6 +42,8 @@ import { computeOptimizationOutlook, type OptimizationOutlookBand } from '@/lib/
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
+// Match and Reality Check prompts currently use this prefix (contracts/index.js).
+const MATCH_PROMPT_JOB_CHAR_LIMIT = 5000;
 const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchRuns';
 const FREE_MATCH_LEGACY_KEY = 'watheq:freeMatchUsed';
 const MAX_FREE_MATCH_RUNS = 3;
@@ -123,14 +125,16 @@ interface Toast {
 }
 
 interface MatchSectionProps {
-  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchResult>;
+  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchResult | null>;
   matchAnalysis: MatchResult | null;
+  historicalMatch?: { status: 'legacy' | 'outdated'; result: MatchResult } | null;
   isAnalyzing?: boolean;
   hasResume?: boolean;
   resumeText?: string;
   onToast?: (toast: Toast) => void;
   onClear?: () => void;
   jobDescription?: string;
+  onJobDescriptionChange?: (jobDescription: string) => void;
   extractedMetadata?: ExtractedJobMetadata | null;
   onJobSaved?: (application: JobApplication) => void;
   savedApplicationId?: string | null;
@@ -239,11 +243,13 @@ const handleOptimizeClick = () => {
 export function MatchSection({
   onAnalyzeMatchAI,
   matchAnalysis,
+  historicalMatch,
   isAnalyzing = false,
   hasResume = false,
   onToast,
   onClear,
   jobDescription = '',
+  onJobDescriptionChange,
   extractedMetadata,
   onJobSaved,
   savedApplicationId,
@@ -255,6 +261,10 @@ export function MatchSection({
     if (typeof window === 'undefined') return '';
     return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
+  const updateJobText = (text: string) => {
+    setJobText(text);
+    onJobDescriptionChange?.(text);
+  };
   const [error, setError] = useState('');
   const [jobUrl, setJobUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -322,7 +332,7 @@ export function MatchSection({
     try {
       const result = await importJobFromUrl(url, i18n.language === 'ar' ? 'ar' : 'en');
       if (result?.status === 'ok' && result.jobText) {
-        setJobText(result.jobText);
+        updateJobText(result.jobText);
         setImportedCriteria(result.criteria ?? null);
         setJobUrl('');
         analytics.track('job_url_import_succeeded', { source: result.source, confidence: result.confidence });
@@ -371,8 +381,8 @@ export function MatchSection({
   };
 
   const handleAnalyzeActual = async (options?: { freePreview?: boolean }) => {
-    const trimmedJob = jobText.trim();
-    if (!trimmedJob) {
+    const submittedJob = jobText;
+    if (!submittedJob.trim()) {
       const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
       setError(message);
       onToast?.({
@@ -387,14 +397,14 @@ export function MatchSection({
     analytics.trackMatchAnalysisStarted();
     if (isGuestMode) analytics.trackGuestRunStarted();
     try {
-      const result = await onAnalyzeMatchAI(trimmedJob, { ...options, importedCriteria });
-      if (options?.freePreview) markFreePreviewUsed();
+      const result = await onAnalyzeMatchAI(submittedJob, { ...options, importedCriteria });
+      if (options?.freePreview && result) markFreePreviewUsed();
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
         if (isGuestMode) {
           const attempt = getFreeMatchRunCount();
           analytics.trackGuestMatchScored({ attempt, score: result.score });
-          const fingerprint = fingerprintJobDescription(trimmedJob);
+          const fingerprint = fingerprintJobDescription(submittedJob);
           const previousFingerprint = window.localStorage.getItem(LAST_GUEST_JOB_FINGERPRINT_KEY);
           if (previousFingerprint && previousFingerprint !== fingerprint) {
             analytics.trackSecondJobAdRun({ attempt });
@@ -451,6 +461,11 @@ export function MatchSection({
     // and never spends the credits they actually have.
     if (isGuestMode && hasFreePreviewRun()) {
       void handleAnalyzeActual({ freePreview: true });
+      return;
+    }
+
+    if (matchAnalysis?.origin === 'paid' && jobText === jobDescription) {
+      void handleAnalyzeActual();
       return;
     }
 
@@ -512,6 +527,7 @@ export function MatchSection({
   );
   const jobWordCount = getJobWordCount(jobText);
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
+  const hasReusablePaidResult = matchAnalysis?.origin === 'paid' && jobText === jobDescription;
   const disabledHint = !hasResume
     ? t('sections.match.hints.uploadFirst', 'Upload or paste your resume first.')
     : !jobText.trim()
@@ -558,6 +574,32 @@ export function MatchSection({
   return (
     <>
       <div className="space-y-5">
+        {jobText.length > MATCH_PROMPT_JOB_CHAR_LIMIT && (
+          <p role="note" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            {i18n.language === 'ar'
+              ? 'يستخدم تحليل المطابقة أول ٥٬٠٠٠ حرف فقط من وصف الوظيفة. المتطلبات التي تلي ذلك لم تدخل في التقييم.'
+              : 'Match analysis uses only the first 5,000 characters of this job description. Later requirements were not evaluated.'}
+          </p>
+        )}
+        {historicalMatch && !matchAnalysis && (
+          <aside className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            <p className="font-semibold">
+              {historicalMatch.status === 'legacy'
+                ? (i18n.language === 'ar' ? 'تحليل سابق — لم تُحفظ معه بيانات المدخلات' : 'Previous analysis — its inputs were not recorded')
+                : (i18n.language === 'ar' ? 'تحليل سابق — لا يطابق المدخلات الحالية' : 'Previous analysis — does not match current inputs')}
+            </p>
+            <details className="mt-2">
+              <summary className="cursor-pointer font-medium">
+                {i18n.language === 'ar' ? 'عرض النتيجة السابقة' : 'View previous result'}
+              </summary>
+              <p className="mt-2">{i18n.language === 'ar' ? 'الدرجة السابقة:' : 'Previous score:'} {historicalMatch.result.score}</p>
+              {historicalMatch.result.reasoning && <p className="mt-2 whitespace-pre-wrap">{historicalMatch.result.reasoning}</p>}
+              {historicalMatch.result.missingKeywords?.length ? (
+                <p className="mt-2">{i18n.language === 'ar' ? 'الفجوات السابقة:' : 'Previous gaps:'} {historicalMatch.result.missingKeywords.join(', ')}</p>
+              ) : null}
+            </details>
+          </aside>
+        )}
         <GlassCard className="mx-auto w-full">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -577,7 +619,7 @@ export function MatchSection({
               <button
                 type="button"
                 onClick={() => {
-                  setJobText('');
+                  updateJobText('');
                   setImportedCriteria(null);
                   onClear?.();
                 }}
@@ -609,7 +651,7 @@ export function MatchSection({
                   <button
                     type="button"
                     onClick={() => {
-                      setJobText('');
+                      updateJobText('');
                       setImportedCriteria(null);
                       onClear?.();
                     }}
@@ -690,7 +732,7 @@ export function MatchSection({
               name="jobDescription"
               value={jobText}
               onChange={(event) => {
-                setJobText(event.target.value);
+                updateJobText(event.target.value);
                 // A manual edit means the text may no longer be the imported
                 // job — don't let stale seniority/employmentType override the
                 // AI's inference for whatever the user pasted over it with.
@@ -720,9 +762,11 @@ export function MatchSection({
             >
               {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
                 <>
-                  {t('sections.match.analyze', 'Analyze Match with AI')}
-                  {/* Signed-in users always pay — show the price. */}
-                  {(!isGuestMode || !hasFreePreviewRun()) && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
+                  {hasReusablePaidResult
+                    ? (i18n.language === 'ar' ? 'عرض التحليل المحفوظ' : 'View saved analysis')
+                    : t('sections.match.analyze', 'Analyze Match with AI')}
+                  {/* A saved paid result for these exact inputs can be reused without another charge. */}
+                  {!hasReusablePaidResult && (!isGuestMode || !hasFreePreviewRun()) && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
                 </>
               )}
             </GlassButton>

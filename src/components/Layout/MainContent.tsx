@@ -1,4 +1,4 @@
-import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, Lock, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
 import {
@@ -58,8 +58,10 @@ import { shouldAutoSaveJob } from "@/lib/utils/pipelineAutoSave";
 import { analytics } from "../../services/analytics";
 import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
+import { createAssessmentContext, canAcceptAssessment } from "@/lib/match/assessmentContext";
+import type { AssessmentContext, AssessmentInput } from "@/types/assessment";
 import type { MatchResult } from "@/types/analysis";
-import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
+import { clearStoredMatchAnalysis, loadStoredMatchAssessment, saveMatchAssessment } from "@/lib/utils/matchAnalysisCache";
 import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
@@ -200,6 +202,18 @@ const MAX_VISIBLE_TOASTS = 3;
 const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
+const MATCH_RUBRIC_VERSION = 'match-v1';
+type MatchRequest = { id: string; input: AssessmentInput; context?: AssessmentContext; failed?: boolean };
+
+const sameMatchInput = (left: AssessmentInput | undefined, right: AssessmentInput): boolean => {
+  if (!left) return false;
+  return left.resumeText === right.resumeText &&
+    left.jobDescription === right.jobDescription &&
+    left.language === right.language &&
+    left.kind === right.kind &&
+    left.isOptimized === right.isOptimized &&
+    left.rubricVersion === right.rubricVersion;
+};
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
 const TRUTH_CHECK_STORAGE_KEY = "watheq:resumeTruthCheck";
@@ -531,15 +545,65 @@ export default function MainContent() {
     [isFlagEnabled, t]
   );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
-  const [jobDescription, setJobDescription] = useState(() => {
+  const [jobDescription, setJobDescriptionState] = useState(() => {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
   });
-  const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(() =>
-    loadCachedMatchAnalysis(
-      typeof window === "undefined" ? "" : window.localStorage.getItem(JOB_STORAGE_KEY) || ""
-    )
-  );
+  const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(null);
+  const [historicalMatch, setHistoricalMatch] = useState<{ status: 'legacy' | 'outdated'; result: MatchResult } | null>(null);
+  const matchRequest = useRef<MatchRequest | null>(null);
+  const matchResumeText = useResumeStore(state => state.parsedResumeText) || resumeData?.plainText || '';
+  const matchLanguage = i18n.language === 'ar' ? 'ar' : 'en';
+  const latestMatchInput = useRef<AssessmentInput>({ resumeText: matchResumeText, jobDescription,
+    language: matchLanguage, kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false });
+  latestMatchInput.current = { resumeText: matchResumeText, jobDescription,
+    language: matchLanguage, kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false };
+  const invalidateMatch = useCallback(() => {
+    matchRequest.current = null;
+    setMatchAnalysis(null);
+    setIsAnalyzing(false);
+    setFlowProgress(0);
+    setExtractedMetadata(null);
+    setActiveJobApplicationId(null);
+    setActiveJobApplication(null);
+    setPendingAttachment(null);
+    setExportedJobApplicationId(null);
+    const store = useResumeStore.getState();
+    store.setBaselineMatchScore(null);
+    store.setOptimizationMetrics({ beforeScore: null });
+  }, []);
+  const setJobDescription = useCallback((text: string) => {
+    latestMatchInput.current = { ...latestMatchInput.current, jobDescription: text };
+    if (matchRequest.current?.input.jobDescription !== text) invalidateMatch();
+    setJobDescriptionState(text);
+  }, [invalidateMatch]);
+
+  // Invalidate before paint. A handler may already own this input while hashing.
+  useLayoutEffect(() => {
+    const input = latestMatchInput.current;
+    if (sameMatchInput(matchRequest.current?.input, input)) return;
+    invalidateMatch();
+    if (!input.resumeText || !input.jobDescription) return;
+    const request: MatchRequest = { id: crypto.randomUUID(), input };
+    matchRequest.current = request;
+    void createAssessmentContext(input).then(context => {
+      if (matchRequest.current !== request || !sameMatchInput(request.input, latestMatchInput.current)) return;
+      request.context = context;
+      const saved = loadStoredMatchAssessment(context);
+      if (saved?.status === 'current' && saved.assessment.jobSnapshot === input.jobDescription) {
+        setHistoricalMatch(null);
+        setMatchAnalysis(saved.assessment.result);
+        useResumeStore.getState().setBaselineMatchScore(saved.assessment.result.score);
+        useResumeStore.getState().setOptimizationMetrics({ beforeScore: saved.assessment.result.score, hasJobDescription: true });
+      } else if (saved) {
+        setHistoricalMatch({ status: saved.status === 'legacy' ? 'legacy' : 'outdated',
+          result: saved.status === 'legacy' ? saved.analysis : saved.assessment.result });
+      } else {
+        setHistoricalMatch(null);
+      }
+    }).catch(() => { /* Restoration must never trigger a paid request. */ });
+  }, [matchResumeText, jobDescription, matchLanguage, invalidateMatch]);
+  useEffect(() => () => { matchRequest.current = null; }, []);
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
     loadCachedTruthCheck(
       typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
@@ -704,8 +768,8 @@ export default function MainContent() {
   // user lands in the pipeline as 'saved' (createJobApplication dedupes
   // company+title within 7 days server-side, so re-analyses update one row).
   const autoSaveJobToPipeline = useCallback(
-    async (metadata: ExtractedJobMetadata | null, matchScore: number | null, jobText: string) => {
-      if (!shouldAutoSaveJob({ isSignedIn: Boolean(user), isGuestMode, metadata }) || !metadata) return;
+    async (metadata: ExtractedJobMetadata | null, matchScore: number | null, jobText: string, isCurrent: () => boolean) => {
+      if (!isCurrent() || !shouldAutoSaveJob({ isSignedIn: Boolean(user), isGuestMode, metadata }) || !metadata) return;
       try {
         const { data, error, isDuplicate } = await createJobApplication({
           company_name: metadata.companyName ?? null,
@@ -719,15 +783,16 @@ export default function MainContent() {
           status: "saved",
           metadata: { autoSaved: true, extractionConfidence: metadata.confidence ?? null },
         }, { duplicateStrategy: 'preserve_user_fields' });
+        if (!isCurrent()) return;
         if (error || !data) {
-          console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
+          console.warn("[MainContent] Pipeline auto-save failed (non-fatal)");
           return;
         }
         setActiveJobApplicationId(data.id);
         setActiveJobApplication(data);
         analytics.trackPipelineJobSaved({ is_duplicate: Boolean(isDuplicate), auto: true });
-      } catch (error) {
-        console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
+      } catch {
+        if (isCurrent()) console.warn("[MainContent] Pipeline auto-save failed (non-fatal)");
       }
     },
     [user, isGuestMode]
@@ -938,7 +1003,7 @@ export default function MainContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     setJobDescription(window.localStorage.getItem(JOB_STORAGE_KEY) || "");
-  }, [variantRestoreNonce]);
+  }, [variantRestoreNonce, setJobDescription]);
 
   // Warn user before closing tab with unsaved changes
   useEffect(() => {
@@ -1048,7 +1113,7 @@ export default function MainContent() {
       analytics.track("job_feed_match_handoff", { company: companyName, title: jobTitle });
       handleTabChange("match");
     },
-    [handleTabChange, hasResume, pushToast, resetPipelineContext, setMatchAnalysis, t]
+    [handleTabChange, hasResume, pushToast, resetPipelineContext, setJobDescription, setMatchAnalysis, t]
   );
 
   useEffect(() => {
@@ -1201,6 +1266,7 @@ export default function MainContent() {
     setResumeData("");
     setJobDescription("");
     setMatchAnalysis(null);
+    setHistoricalMatch(null);
     setTruthCheckResult(null);
     setOptimizations([]);
     setOptimizationData(null);
@@ -1221,7 +1287,7 @@ export default function MainContent() {
       title: t("toasts.dataClearedTitle"),
       description: t("toasts.dataClearedDesc"),
     });
-  }, [pushToast, resetPipelineContext, t]);
+  }, [pushToast, resetPipelineContext, setJobDescription, t]);
 
   const handleClearResume = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1238,6 +1304,7 @@ export default function MainContent() {
     setResumeData("");
     // Also clear dependent data
     setMatchAnalysis(null);
+    setHistoricalMatch(null);
     setTruthCheckResult(null);
     setJobDescription("");
     setOptimizations([]);
@@ -1246,15 +1313,16 @@ export default function MainContent() {
     useResumeStore.getState().setOptimizeRun(null);
     resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.resumeClearedTitle"), description: t("toasts.resumeClearedDesc") });
-  }, [pushToast, resetPipelineContext, t]);
+  }, [pushToast, resetPipelineContext, setJobDescription, t]);
 
   const handleClearMatch = useCallback(() => {
     clearStoredMatchAnalysis();
     setMatchAnalysis(null);
+    setHistoricalMatch(null);
     setJobDescription("");
     resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.matchClearedTitle"), description: t("toasts.matchClearedDesc") });
-  }, [pushToast, resetPipelineContext, t]);
+  }, [pushToast, resetPipelineContext, setJobDescription, t]);
 
   const handleClearOptimizations = useCallback(() => {
     // Clear local component state
@@ -1435,11 +1503,11 @@ export default function MainContent() {
         throw error;
       }
     },
-    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, t]
+    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, setJobDescription, t]
   );
 
   const handleAnalyzeMatchAI = useCallback(
-    async (jobDescriptionInput, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => {
+    async (jobDescriptionInput: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => {
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -1450,8 +1518,42 @@ export default function MainContent() {
         throw error;
       }
 
+      const input: AssessmentInput = {
+        resumeText: useResumeStore.getState().parsedResumeText || resumeData.plainText || '',
+        jobDescription: jobDescriptionInput,
+        language: i18n.language === 'ar' ? 'ar' : 'en',
+        kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false,
+      };
+      setJobDescription(input.jobDescription);
+      // Ownership precedes asynchronous hashing; returning to A is a new request.
+      const request: MatchRequest = { id: crypto.randomUUID(), input };
+      matchRequest.current = request;
+      const isCurrent = () => {
+        const active = matchRequest.current;
+        if (!active || active.id !== request.id || request.failed || !sameMatchInput(request.input, latestMatchInput.current)) return false;
+        return !request.context || Boolean(active.context &&
+          canAcceptAssessment(active.id, request.id, request.context, active.context));
+      };
+      const capturedOptions = options ? { ...options, importedCriteria: options.importedCriteria ? { ...options.importedCriteria } : null } : undefined;
       try {
         setIsAnalyzing(true);
+        const context = await createAssessmentContext(input);
+        if (!isCurrent()) return null;
+        request.context = context;
+        const stored = loadStoredMatchAssessment(context);
+        // The store's score cache is intentionally partial. Only the complete
+        // persisted result can be displayed without a new request.
+        const restored = stored?.status === 'current' && stored.assessment.jobSnapshot === input.jobDescription
+          ? stored.assessment.result : null;
+        // A preview still needs the charged run when a signed-in user confirms one.
+        if (restored && (restored.origin === 'paid' || (capturedOptions?.freePreview && restored.origin === 'guest_preview'))) {
+          if (!isCurrent()) return null;
+          setHistoricalMatch(null);
+          setMatchAnalysis(restored);
+          useResumeStore.getState().setBaselineMatchScore(restored.score);
+          useResumeStore.getState().setOptimizationMetrics({ beforeScore: restored.score, hasJobDescription: true });
+          return restored;
+        }
         setFlowProgress(22);
         pushToast(
           {
@@ -1461,14 +1563,15 @@ export default function MainContent() {
           },
           { id: TOAST_IDS.match }
         );
-        const trimmedJob = jobDescriptionInput.trim();
+        const submittedJob = input.jobDescription;
         resetPipelineContext();
 
         // Non-blocking metadata extraction from pasted job description. The
         // resolved value also feeds pipeline auto-save once the analysis lands.
-        const importedCriteria = options?.importedCriteria;
-        const metadataPromise: Promise<ExtractedJobMetadata | null> = extractJobMetadata(trimmedJob, i18n.language)
+        const importedCriteria = capturedOptions?.importedCriteria;
+        const metadataPromise: Promise<ExtractedJobMetadata | null> = extractJobMetadata(submittedJob, input.language)
           .then((aiMetadata) => {
+            if (!isCurrent()) return null;
             // Verbatim page criteria win over the AI's inference for the two
             // fields it's most prone to guess wrong on.
             const metadata: ExtractedJobMetadata | null = aiMetadata && importedCriteria
@@ -1487,38 +1590,38 @@ export default function MainContent() {
             return metadata ?? null;
           })
           .catch(() => {
+            if (!isCurrent()) return null;
             setExtractedMetadata(null);
             analytics.trackJobMetadataExtractionFailed('request_failed');
             return null;
           });
 
-        // Fix B1: Always analyze the ORIGINAL resume text for match scoring
-        // This prevents the optimized score (e.g. 87) from leaking into match analysis
-        // when showOptimized is true after optimization + download
-        const { parsedResumeText } = useResumeStore.getState();
-        const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
-
-        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language, options);
+        const response = await analyzeResumeWithAI(input.resumeText, submittedJob, input.language, capturedOptions);
+        if (!isCurrent()) return null;
         // Tag provenance so a later export/save can tell a free guest-preview
         // result apart from a credit-charged one (see optimizationOrigin).
-        result.origin = options?.freePreview ? 'guest_preview' : 'paid';
+        const result: MatchResult = { ...response, origin: capturedOptions?.freePreview ? 'guest_preview' : 'paid' };
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        setHistoricalMatch(null);
         setMatchAnalysis(result);
-        setJobDescription(trimmedJob);
+
         // Persist the displayed result so it survives a page refresh (restored
         // by the matchAnalysis lazy initializer while the JD still matches).
-        saveMatchAnalysis(result, trimmedJob);
+        saveMatchAssessment({ context, requestId: request.id, jobSnapshot: submittedJob,
+          createdAt: new Date().toISOString(), result,
+          ...(typeof response.debug?.model === 'string' ? { model: response.debug.model } : {}),
+        });
         void metadataPromise.then((metadata) =>
-          autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, trimmedJob)
+          autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, submittedJob, isCurrent)
         );
 
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
         if (result && typeof result.score === 'number') {
-          const { setCachedAnalysis, setOptimizationMetrics, setBaselineMatchScore } = useResumeStore.getState();
+          const { setCachedAssessment, setOptimizationMetrics, setBaselineMatchScore } = useResumeStore.getState();
           // CRITICAL: Cache using the SAME text we used for analysis
           // This ensures cache key matches what we analyzed (original or optimized)
-          setCachedAnalysis(resumeTextToAnalyze, trimmedJob, {
+          setCachedAssessment(context, {
             score: result.score,
             matchedKeywords: result.matchedKeywords || result.topHits || [],
             missingKeywords: result.missingKeywords || [],
@@ -1528,7 +1631,7 @@ export default function MainContent() {
             // the "Why this score" panel from the original match after refresh.
             categoryScores: result.categoryScores ?? null,
             strategicRealityCheck: result.strategicRealityCheck ?? null,
-          }, false);
+          });
 
           // Always save match analysis score — line 500 already ensures we analyze
           // the ORIGINAL resume text regardless of showOptimized state.
@@ -1560,9 +1663,12 @@ export default function MainContent() {
           { id: TOAST_IDS.match }
         );
         setFlowProgress(100);
-        scheduleTimeout(() => setFlowProgress(0), 800);
+        scheduleTimeout(() => { if (isCurrent()) setFlowProgress(0); }, 800);
         return result;
       } catch (error) {
+        if (!isCurrent()) return null;
+        request.failed = true;
+        setExtractedMetadata(null);
         setAiDebug(buildAiDebugSnapshot(error, "error"));
         setFlowProgress(0);
         emitHRSuperSaudEvent('error.generic');
@@ -1576,10 +1682,10 @@ export default function MainContent() {
         );
         throw error;
       } finally {
-        setIsAnalyzing(false);
+        if (matchRequest.current === request) setIsAnalyzing(false);
       }
     },
-    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, t]
+    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, setJobDescription, t]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
@@ -2652,6 +2758,8 @@ export default function MainContent() {
                   onToast={pushToast}
                   onClear={handleClearMatch}
                   jobDescription={jobDescription}
+                  historicalMatch={historicalMatch}
+                  onJobDescriptionChange={setJobDescription}
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
                   savedApplicationId={activeJobApplicationId}
