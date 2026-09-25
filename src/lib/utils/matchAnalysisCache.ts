@@ -44,8 +44,8 @@ export function loadStoredMatchAssessment(context: AssessmentContext): StoredMat
     }
     if (!assessment.context || !assessment.result || typeof assessment.result.score !== 'number') return null;
     return { status: sameContext(assessment.context, context) ? 'current' : 'outdated', assessment };
-  } catch (error) {
-    console.warn('[MatchAnalysisCache] Failed to load cached match analysis:', error);
+  } catch {
+    console.warn('[MatchAnalysisCache] Failed to load cached match analysis');
     try {
       window.localStorage.removeItem(MATCH_STORAGE_KEY);
     } catch {
@@ -68,8 +68,8 @@ export function saveMatchAssessment(assessment: AssessmentRecord<MatchResult>): 
         assessment,
       } satisfies ContextualStoredMatchAnalysis),
     );
-  } catch (error) {
-    console.warn('[MatchAnalysisCache] Failed to persist match analysis:', error);
+  } catch {
+    console.warn('[MatchAnalysisCache] Failed to persist match analysis');
   }
 }
 
@@ -82,8 +82,8 @@ export function loadCachedMatchAnalysis(jobText: string): MatchResult | null {
     return parsed?.jobText === jobText && parsed.analysis && typeof parsed.analysis.score === 'number'
       ? parsed.analysis
       : null;
-  } catch (error) {
-    console.warn('[MatchAnalysisCache] Failed to load cached match analysis:', error);
+  } catch {
+    console.warn('[MatchAnalysisCache] Failed to load cached match analysis');
     try {
       window.localStorage.removeItem(MATCH_STORAGE_KEY);
     } catch {
@@ -100,8 +100,8 @@ export function saveMatchAnalysis(analysis: MatchResult, jobText: string): void 
       MATCH_STORAGE_KEY,
       JSON.stringify({ analysis, jobText, savedAt: Date.now() } satisfies StoredMatchAnalysis),
     );
-  } catch (error) {
-    console.warn('[MatchAnalysisCache] Failed to persist match analysis:', error);
+  } catch {
+    console.warn('[MatchAnalysisCache] Failed to persist match analysis');
   }
 }
 

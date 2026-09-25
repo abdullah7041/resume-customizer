@@ -61,6 +61,29 @@ describe('matchAnalysisCache', () => {
     expect(loadCachedMatchAnalysis(JOB_TEXT)).toBeNull();
   });
 
+  it('never logs malformed stored content or the parsing error', async () => {
+    const sensitiveText = 'Private resume and job description text';
+    const context = await createAssessmentContext({
+      resumeText: sensitiveText, jobDescription: JOB_TEXT,
+      language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1',
+    });
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      for (const load of [() => loadStoredMatchAssessment(context), () => loadCachedMatchAnalysis(JOB_TEXT)]) {
+        window.localStorage.setItem(MATCH_STORAGE_KEY, `{invalid ${sensitiveText}`);
+        expect(load()).toBeNull();
+        expect(window.localStorage.getItem(MATCH_STORAGE_KEY)).toBeNull();
+      }
+      expect(warning.mock.calls).toEqual([
+        ['[MatchAnalysisCache] Failed to load cached match analysis'],
+        ['[MatchAnalysisCache] Failed to load cached match analysis'],
+      ]);
+      expect(JSON.stringify(warning.mock.calls)).not.toContain(sensitiveText);
+    } finally {
+      warning.mockRestore();
+    }
+  });
+
   it('restores old records explicitly as legacy without admitting them as current', async () => {
     const context = await createAssessmentContext({
       resumeText: 'Candidate resume', jobDescription: JOB_TEXT,
