@@ -1,11 +1,15 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   MATCH_STORAGE_KEY,
   clearStoredMatchAnalysis,
   loadCachedMatchAnalysis,
+  loadStoredMatchAssessment,
+  saveMatchAssessment,
   saveMatchAnalysis,
 } from '@/lib/utils/matchAnalysisCache';
 import type { MatchResult } from '@/types/analysis';
+import { createAssessmentContext } from '@/lib/match/assessmentContext';
+import type { AssessmentRecord } from '@/types/assessment';
 
 const sampleResult: MatchResult = {
   score: 62,
@@ -55,5 +59,34 @@ describe('matchAnalysisCache', () => {
       JSON.stringify({ analysis: { score: 'high' }, jobText: JOB_TEXT }),
     );
     expect(loadCachedMatchAnalysis(JOB_TEXT)).toBeNull();
+  });
+
+  it('restores old records explicitly as legacy without admitting them as current', async () => {
+    const context = await createAssessmentContext({
+      resumeText: 'Candidate resume', jobDescription: JOB_TEXT,
+      language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1',
+    });
+    saveMatchAnalysis(sampleResult, JOB_TEXT);
+    expect(loadStoredMatchAssessment(context)).toMatchObject({
+      status: 'legacy', analysis: sampleResult, jobText: JOB_TEXT,
+    });
+  });
+
+  it('round-trips a full assessment and marks mismatched context outdated', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const context = await createAssessmentContext({
+      resumeText: 'Candidate resume', jobDescription: JOB_TEXT,
+      language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1',
+    });
+    const assessment: AssessmentRecord<MatchResult> = {
+      context, jobSnapshot: JOB_TEXT, requestId: 'request-1',
+      createdAt: '2026-09-24T00:00:00.000Z', result: sampleResult,
+    };
+    saveMatchAssessment(assessment);
+    expect(loadStoredMatchAssessment(context)).toEqual({ status: 'current', assessment });
+    expect(loadStoredMatchAssessment({ ...context, rubricVersion: 'match-v2' })).toEqual({ status: 'outdated', assessment });
+    expect(loadCachedMatchAnalysis(JOB_TEXT)).toEqual(sampleResult);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 });

@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { PartialResumeSchema, ResumeSchema } from '../../types/resume';
 import type { AiSuggestionEntry } from '../../types/analysis';
 import type { SearchIntent } from '../../types/onboarding';
+import type { AssessmentContext } from '@/types/assessment';
 import type {
   ResumeState,
   OptimizationResult,
@@ -107,6 +108,15 @@ const computeCompleteness = (resume: ResumeSchema | null, intent: SearchIntent |
 // Cache validity duration: 30 minutes
 // Users re-analyzing the same resume+JD pair within this window hit cache instead of burning credits
 const CACHE_TTL_MS = 30 * 60 * 1000;
+
+const sameAssessmentContext = (left: AssessmentContext, right: AssessmentContext): boolean =>
+  left.key === right.key &&
+  left.resumeFingerprint === right.resumeFingerprint &&
+  left.jobFingerprint === right.jobFingerprint &&
+  left.language === right.language &&
+  left.kind === right.kind &&
+  left.isOptimized === right.isOptimized &&
+  left.rubricVersion === right.rubricVersion;
 
 // Memoization cache for cache key generation (performance optimization)
 const cacheKeyMemo = new Map<string, string>();
@@ -485,6 +495,31 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       // Analysis caching methods
+      getCachedAssessment: (context) => {
+        const cached = get().analysisCache[context.key];
+        if (!cached?.context || !sameAssessmentContext(cached.context, context)) return null;
+        return Date.now() - cached.timestamp > CACHE_TTL_MS ? null : cached;
+      },
+
+      setCachedAssessment: (context, analysis) => {
+        set((state) => {
+          const newCache = {
+            ...state.analysisCache,
+            [context.key]: {
+              ...analysis,
+              context: { ...context },
+              timestamp: Date.now(),
+            },
+          };
+          const entries = Object.entries(newCache);
+          return {
+            analysisCache: entries.length > 10
+              ? Object.fromEntries(entries.sort((a, b) => a[1].timestamp - b[1].timestamp).slice(-10))
+              : newCache,
+          };
+        });
+      },
+
       getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean): CachedAnalysis | null => {
         const state = get();
         // Allow explicit override of isOptimized flag for specific lookups

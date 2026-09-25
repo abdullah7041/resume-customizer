@@ -1,10 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useResumeStore } from './resumeStore';
 import type { ResumeSchema } from '../../types/resume';
 import type { OptimizationResult } from '../../types/templates';
 import { buildScorePresentation, verificationSignature } from '@/lib/optimize/scoreModel';
+import { createAssessmentContext } from '@/lib/match/assessmentContext';
+import type { AssessmentInput } from '@/types/assessment';
 
 describe('resumeStore', () => {
+    afterEach(() => vi.useRealTimers());
     beforeEach(() => {
         useResumeStore.getState().clearAll();
     });
@@ -737,6 +740,74 @@ describe('resumeStore.getActiveResume()', () => {
       const cached = useResumeStore.getState().getCachedAnalysis('resume text for cache', 'job description for cache', false);
       expect(cached?.score).toBe(64);
       expect(cached?.matchedKeywords).toEqual(['React']);
+    });
+  });
+
+  describe('context-bound assessment cache', () => {
+    const input: AssessmentInput = {
+      resumeText: 'r'.repeat(120) + 'A',
+      jobDescription: 'j'.repeat(120) + 'A',
+      language: 'en',
+      kind: 'match',
+      isOptimized: false,
+      rubricVersion: 'match-v1',
+    };
+    const analysis = { score: 71, missingKeywords: ['Kubernetes'] };
+
+    it('separates full-prefix collisions and all scoring dimensions', async () => {
+      const base = await createAssessmentContext(input);
+      useResumeStore.getState().setCachedAssessment(base, analysis);
+      expect(useResumeStore.getState().getCachedAssessment(base)).toMatchObject({ ...analysis, context: base });
+
+      const variations: AssessmentInput[] = [
+        { ...input, resumeText: 'r'.repeat(120) + 'B' },
+        { ...input, jobDescription: 'j'.repeat(120) + 'B' },
+        { ...input, language: 'ar' },
+        { ...input, kind: 'optimize' },
+        { ...input, isOptimized: true },
+        { ...input, rubricVersion: 'match-v2' },
+      ];
+      for (const variation of variations) {
+        const changed = await createAssessmentContext(variation);
+        expect(changed.key).not.toBe(base.key);
+        expect(useResumeStore.getState().getCachedAssessment(changed)).toBeNull();
+      }
+      expect(useResumeStore.getState().getCachedAssessment({ ...base, language: 'ar' })).toBeNull();
+    });
+
+    it('does not admit legacy entries or mutate candidate data', async () => {
+      const context = await createAssessmentContext(input);
+      const originalResume = {
+        basics: { name: 'Candidate', label: 'Engineer', email: '', phone: '', summary: 'Original summary', location: { city: '', countryCode: '', region: '' }, profiles: [] },
+        work: [], education: [], skills: [], projects: [],
+      } satisfies ResumeSchema;
+      useResumeStore.setState({ originalResume });
+      useResumeStore.getState().setCachedAnalysis(input.resumeText, input.jobDescription, analysis, false);
+      expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
+      useResumeStore.setState({ analysisCache: { [context.key]: { ...analysis, timestamp: Date.now() } } });
+      expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
+      useResumeStore.getState().setCachedAssessment(context, analysis);
+      expect(useResumeStore.getState().originalResume).toBe(originalResume);
+      expect(originalResume.basics.summary).toBe('Original summary');
+      expect(input.resumeText).toBe('r'.repeat(120) + 'A');
+    });
+
+    it('expires at 30 minutes and retains at most 10 entries', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-09-24T00:00:00Z'));
+      const first = await createAssessmentContext(input);
+      useResumeStore.getState().setCachedAssessment(first, analysis);
+      vi.advanceTimersByTime(30 * 60 * 1000);
+      expect(useResumeStore.getState().getCachedAssessment(first)).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(useResumeStore.getState().getCachedAssessment(first)).toBeNull();
+      for (let index = 0; index < 11; index++) {
+        vi.advanceTimersByTime(1);
+        const context = await createAssessmentContext({ ...input, jobDescription: `job-${index}` });
+        useResumeStore.getState().setCachedAssessment(context, analysis);
+      }
+      expect(Object.keys(useResumeStore.getState().analysisCache)).toHaveLength(10);
+      expect(useResumeStore.getState().getCachedAssessment(first)).toBeNull();
     });
   });
 });

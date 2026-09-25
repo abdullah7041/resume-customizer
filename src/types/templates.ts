@@ -1,6 +1,7 @@
 // Template system types - extends JSON Resume schema
 import type { PartialResumeSchema, ResumeSchema } from './resume';
 import type { SearchIntent } from './onboarding';
+import type { AssessmentContext } from './assessment';
 import type { StrategicRealityCheck } from './analysis';
 import type { CategoryScoresData } from '../components/ScoreBreakdown';
 
@@ -111,6 +112,8 @@ export interface CachedAnalysis {
   categoryScores?: CategoryScoresData | null;
   strategicRealityCheck?: StrategicRealityCheck | null;
   timestamp: number;
+  /** Present only on context-bound entries; older saved entries remain legacy. */
+  context?: AssessmentContext;
 }
 
 /**
@@ -404,6 +407,8 @@ export interface ResumeState {
   resetOptimizationMetrics: () => void;
 
   // Cache actions
+  getCachedAssessment: (context: AssessmentContext) => CachedAnalysis | null;
+  setCachedAssessment: (context: AssessmentContext, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
   getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean) => CachedAnalysis | null;
   setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => void;
   clearAnalysisCache: () => void;
