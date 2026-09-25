@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -34,7 +34,7 @@ import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsC
 import { FEATURE_COSTS } from '@/types/credits';
 import { analytics } from '@/services/analytics';
 import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
-import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
+import type { MatchResult, MatchRunResult, StrategicRealityCheck } from '@/types/analysis';
 import type { AtsExplainabilitySource } from '@/types/explainability';
 import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
 import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
@@ -44,6 +44,7 @@ import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
 // Match and Reality Check prompts currently use this prefix (contracts/index.js).
 const MATCH_PROMPT_JOB_CHAR_LIMIT = 5000;
+const MATCH_PROMPT_RESUME_CHAR_LIMIT = 15000;
 const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchRuns';
 const FREE_MATCH_LEGACY_KEY = 'watheq:freeMatchUsed';
 const MAX_FREE_MATCH_RUNS = 3;
@@ -125,7 +126,7 @@ interface Toast {
 }
 
 interface MatchSectionProps {
-  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchResult | null>;
+  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchRunResult | null>;
   matchAnalysis: MatchResult | null;
   historicalMatch?: { status: 'legacy' | 'outdated'; result: MatchResult } | null;
   isAnalyzing?: boolean;
@@ -246,9 +247,10 @@ export function MatchSection({
   historicalMatch,
   isAnalyzing = false,
   hasResume = false,
+  resumeText,
   onToast,
   onClear,
-  jobDescription = '',
+  jobDescription,
   onJobDescriptionChange,
   extractedMetadata,
   onJobSaved,
@@ -258,10 +260,14 @@ export function MatchSection({
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
+    if (jobDescription !== undefined) return jobDescription;
     if (typeof window === 'undefined') return '';
     return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
+  const previousParentJob = useRef(jobDescription);
+  const lastLocalEdit = useRef<string | null>(null);
   const updateJobText = (text: string) => {
+    lastLocalEdit.current = text;
     setJobText(text);
     onJobDescriptionChange?.(text);
   };
@@ -284,6 +290,19 @@ export function MatchSection({
   });
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+
+  useLayoutEffect(() => {
+    if (jobDescription === undefined || jobDescription === previousParentJob.current) return;
+    previousParentJob.current = jobDescription;
+    if (jobDescription === lastLocalEdit.current) {
+      lastLocalEdit.current = null;
+      return;
+    }
+    lastLocalEdit.current = null;
+    setJobText(jobDescription);
+    setImportedCriteria(null);
+    setError('');
+  }, [jobDescription]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -398,7 +417,7 @@ export function MatchSection({
     if (isGuestMode) analytics.trackGuestRunStarted();
     try {
       const result = await onAnalyzeMatchAI(submittedJob, { ...options, importedCriteria });
-      if (options?.freePreview && result) markFreePreviewUsed();
+      if (options?.freePreview && result && !result.reusedFromCache) markFreePreviewUsed();
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
         if (isGuestMode) {
@@ -579,6 +598,13 @@ export function MatchSection({
             {i18n.language === 'ar'
               ? 'يستخدم تحليل المطابقة أول ٥٬٠٠٠ حرف فقط من وصف الوظيفة. المتطلبات التي تلي ذلك لم تدخل في التقييم.'
               : 'Match analysis uses only the first 5,000 characters of this job description. Later requirements were not evaluated.'}
+          </p>
+        )}
+        {(resumeText?.length ?? 0) > MATCH_PROMPT_RESUME_CHAR_LIMIT && (
+          <p role="note" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            {i18n.language === 'ar'
+              ? 'يستخدم تحليل المطابقة أول ١٥٬٠٠٠ حرف فقط من السيرة الذاتية. المحتوى الذي يلي ذلك لم يدخل في التقييم.'
+              : 'Match analysis uses only the first 15,000 characters of this resume. Later resume content was not evaluated.'}
           </p>
         )}
         {historicalMatch && !matchAnalysis && (

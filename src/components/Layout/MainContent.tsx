@@ -1552,7 +1552,7 @@ export default function MainContent() {
           setMatchAnalysis(restored);
           useResumeStore.getState().setBaselineMatchScore(restored.score);
           useResumeStore.getState().setOptimizationMetrics({ beforeScore: restored.score, hasJobDescription: true });
-          return restored;
+          return { ...restored, reusedFromCache: true };
         }
         setFlowProgress(22);
         pushToast(
@@ -2754,7 +2754,7 @@ export default function MainContent() {
                   matchAnalysis={matchAnalysis}
                   isAnalyzing={isAnalyzing}
                   hasResume={Boolean(resumeData?.plainText)}
-                  resumeText={resumeData?.plainText || ''}
+                  resumeText={matchResumeText}
                   onToast={pushToast}
                   onClear={handleClearMatch}
                   jobDescription={jobDescription}

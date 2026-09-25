@@ -527,6 +527,19 @@ describe("MainContent resume parsing", () => {
     expect(JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis')).assessment.result.origin).toBe('paid');
   });
 
+  it('Match ownership: a cached guest preview is marked reused without another request', async () => {
+    await openMatch();
+    analyzeResumeMock.mockResolvedValueOnce({ score: 51 });
+    let first;
+    let second;
+    await act(async () => { first = await matchSectionMockProps.current.onAnalyzeMatchAI('Same role', { freePreview: true }); });
+    await act(async () => { second = await matchSectionMockProps.current.onAnalyzeMatchAI('Same role', { freePreview: true }); });
+    expect(first.reusedFromCache).toBeUndefined();
+    expect(second.reusedFromCache).toBe(true);
+    expect(analyzeResumeMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis')).assessment.result.reusedFromCache).toBeUndefined();
+  });
+
   it("passes upload payloads through parseResume with storage metadata", async () => {
     render(<MainContent />);
 

@@ -1,15 +1,16 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { MatchSection } from '../components/sections/MatchSection';
 
 const FREE_MATCH_KEY = 'watheq:freeMatchRuns';
 const FREE_MATCH_LEGACY_KEY = 'watheq:freeMatchUsed';
+const language = vi.hoisted(() => ({ current: 'en' }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, options) => typeof options === 'string' ? options || key : options?.defaultValue || key,
-    i18n: { language: 'en', changeLanguage: vi.fn() },
+    i18n: { language: language.current, changeLanguage: vi.fn() },
   }),
 }));
 
@@ -51,7 +52,10 @@ beforeAll(() => {
   });
 });
 
-beforeEach(() => window.localStorage.clear());
+beforeEach(() => {
+  window.localStorage.clear();
+  language.current = 'en';
+});
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -65,6 +69,25 @@ const typeJob = () => {
 };
 
 describe('MatchSection guest free-run counter', () => {
+  it('counts only a fresh preview, not a cached result for the same job', async () => {
+    const onAnalyzeMatchAI = vi.fn()
+      .mockResolvedValueOnce({ score: 70, origin: 'guest_preview' })
+      .mockResolvedValueOnce({ score: 70, origin: 'guest_preview', reusedFromCache: true });
+    renderWithProviders(<MatchSection isGuestMode onAnalyzeMatchAI={onAnalyzeMatchAI}
+      matchAnalysis={null} hasResume onClear={vi.fn()} />);
+    typeJob();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: analyzeButtonName }));
+    });
+    expect(window.localStorage.getItem(FREE_MATCH_KEY)).toBe('1');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: analyzeButtonName }));
+    });
+    expect(onAnalyzeMatchAI).toHaveBeenCalledTimes(2);
+    expect(window.localStorage.getItem(FREE_MATCH_KEY)).toBe('1');
+  });
+
   it('allows three free successful runs, then shows the paid confirmation path', async () => {
     const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 70 });
     renderWithProviders(<MatchSection isGuestMode onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()} />);
@@ -167,5 +190,31 @@ describe('MatchSection signed-in users never take the guest free-run path', () =
     renderWithProviders(<MatchSection onAnalyzeMatchAI={vi.fn()} matchAnalysis={null}
       jobDescription={longJob} hasResume onClear={vi.fn()} />);
     expect(screen.getByRole('note')).toHaveTextContent('Later requirements were not evaluated');
+  });
+
+  it('discloses omitted resume content in English and Arabic', () => {
+    const longResume = 'a'.repeat(15001);
+    const props = { onAnalyzeMatchAI: vi.fn(), matchAnalysis: null, resumeText: longResume,
+      hasResume: true, onClear: vi.fn() };
+    const { rerender } = renderWithProviders(<MatchSection {...props} />);
+    expect(screen.getByRole('note')).toHaveTextContent('Later resume content was not evaluated');
+    language.current = 'ar';
+    rerender(<DirectionProvider><MatchSection {...props} /></DirectionProvider>);
+    expect(screen.getByRole('note')).toHaveTextContent('المحتوى الذي يلي ذلك لم يدخل في التقييم');
+  });
+
+  it('adopts a new parent job while preserving local typing across unchanged parent renders', () => {
+    const onJobDescriptionChange = vi.fn();
+    const props = { onAnalyzeMatchAI: vi.fn(), matchAnalysis: null, hasResume: true,
+      onJobDescriptionChange, onClear: vi.fn() };
+    const { rerender } = renderWithProviders(<MatchSection {...props} jobDescription="Role A" />);
+    expect(document.getElementById('jobDescription')).toHaveValue('Role A');
+    fireEvent.change(document.getElementById('jobDescription'), { target: { value: 'Draft typed by candidate' } });
+    rerender(<DirectionProvider><MatchSection {...props} jobDescription="Role A" /></DirectionProvider>);
+    expect(document.getElementById('jobDescription')).toHaveValue('Draft typed by candidate');
+    rerender(<DirectionProvider><MatchSection {...props} jobDescription="Role B from parent" /></DirectionProvider>);
+    expect(document.getElementById('jobDescription')).toHaveValue('Role B from parent');
+    expect(onJobDescriptionChange).toHaveBeenCalledWith('Draft typed by candidate');
+    expect(onJobDescriptionChange).not.toHaveBeenCalledWith('Role B from parent');
   });
 });

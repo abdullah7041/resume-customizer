@@ -85,6 +85,9 @@ export interface MatchResult {
   freeVerify?: boolean;
 }
 
+/** Request outcome metadata for the Match UI; never persisted with an assessment. */
+export type MatchRunResult = MatchResult & { reusedFromCache?: boolean };
+
 export interface StoredMatchAnalysis {
   analysis?: MatchResult;
   jobText?: string;
