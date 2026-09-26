@@ -38,6 +38,8 @@ export interface TemplateConfig {
  */
 export interface OptimizationResult {
   sectionId: string;
+  /** Assessment that produced this proposal; applied state may carry only within it. */
+  assessmentKey?: string;
   sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline' | 'education' | 'certifications';
   original: string | string[];
   optimized: string | string[];

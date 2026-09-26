@@ -120,6 +120,7 @@ interface OptimizeSectionProps {
   resumeText?: string | null;
   jobDescription?: string;
   assessmentCurrent?: boolean;
+  assessmentKey?: string;
   // Pipeline integration
   activeJobApplicationId?: string | null;
   pendingAttachment?: { filePath: string; fileName: string } | null;
@@ -262,6 +263,7 @@ export function OptimizeSection({
   resumeText: propResumeText,
   jobDescription: propJobDescription,
   assessmentCurrent = true,
+  assessmentKey,
   activeJobApplicationId,
   pendingAttachment,
   onMarkApplied,
@@ -306,6 +308,15 @@ export function OptimizeSection({
   const latestVerificationInputKey = useRef(verificationInputKey);
   latestVerificationInputKey.current = verificationInputKey;
   const fullVerifyRequest = useRef<string | null>(null);
+  const mounted = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      fullVerifyRequest.current = null;
+      appliedVerifyInFlightRef.current = null;
+    };
+  }, []);
 
   const [viewMode, setViewMode] = useState<'split' | 'diff'>('split');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
@@ -362,15 +373,20 @@ export function OptimizeSection({
               e.original === normalizedOpt.original)
         );
 
-        // Preserve applied state if exists
-        if (existingOpt) {
+        // An old job can reuse a section ID or source sentence. Its applied flag
+        // belongs to its exact assessment and proposal, not to the new card.
+        if (assessmentKey && existingOpt?.assessmentKey === assessmentKey &&
+          existingOpt.sectionType === normalizedOpt.sectionType &&
+          JSON.stringify(existingOpt.original) === JSON.stringify(normalizedOpt.original) &&
+          JSON.stringify(existingOpt.optimized) === JSON.stringify(normalizedOpt.optimized)) {
           return {
             ...normalizedOpt,
+            assessmentKey,
             applied: existingOpt.applied,
           };
         }
 
-        return normalizedOpt;
+        return { ...normalizedOpt, assessmentKey };
       });
 
       // Only update if there are actual differences to avoid infinite loops
@@ -379,7 +395,9 @@ export function OptimizeSection({
         if (!existing) return true;
         return opt.sectionId !== existing.sectionId ||
           opt.original !== existing.original ||
-          opt.optimized !== existing.optimized;
+          opt.optimized !== existing.optimized ||
+          opt.assessmentKey !== existing.assessmentKey ||
+          opt.applied !== existing.applied;
       }) || normalized.length !== existingOptimizations.length;
 
       if (hasChanges) {
@@ -387,7 +405,7 @@ export function OptimizeSection({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propOptimizations]); // setOptimizations and storeOptimizations intentionally excluded to prevent infinite loop
+  }, [propOptimizations, assessmentKey]); // setOptimizations and storeOptimizations intentionally excluded to prevent infinite loop
 
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
@@ -574,7 +592,7 @@ export function OptimizeSection({
       partitionOptimizations(useResumeStore.getState().optimizations).actionable,
       resumeText ?? '', jobDescription,
     );
-    const isCurrent = () => fullVerifyRequest.current === requestId &&
+    const isCurrent = () => mounted.current && fullVerifyRequest.current === requestId &&
       latestVerificationInputKey.current === inputKey &&
       verificationSignature(partitionOptimizations(useResumeStore.getState().optimizations).actionable,
         resumeText ?? '', jobDescription) === cardSignature;
@@ -697,7 +715,7 @@ export function OptimizeSection({
     const requestId = crypto.randomUUID();
     const inputKey = latestVerificationInputKey.current;
     appliedVerifyInFlightRef.current = { signature, id: requestId };
-    const isCurrent = () => appliedVerifyInFlightRef.current?.id === requestId &&
+    const isCurrent = () => mounted.current && appliedVerifyInFlightRef.current?.id === requestId &&
       latestVerificationInputKey.current === inputKey &&
       appliedVerificationSignature(partitionOptimizations(useResumeStore.getState().optimizations).actionable,
         resumeText ?? '', jobDescription) === signature;

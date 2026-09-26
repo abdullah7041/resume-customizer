@@ -630,6 +630,7 @@ export default function MainContent() {
     null as unknown,
   );
   const [optimizeAssessmentCurrent, setOptimizeAssessmentCurrent] = useState(false);
+  const [optimizeAssessmentKey, setOptimizeAssessmentKey] = useState<string | null>(null);
   const [optimizationKeywords, setOptimizationKeywords] = useState(
     () => ({ add: [], remove: [], neutral: [] } as { add: string[]; remove: string[]; neutral: string[] }),
   );
@@ -663,6 +664,7 @@ export default function MainContent() {
           : run.keywords ?? current,
       );
       setOptimizeAssessmentCurrent(true);
+      setOptimizeAssessmentKey(context.key);
     };
 
     void adopt(useResumeStore.getState().optimizeRun).catch(() => { /* No paid restoration on context failure. */ });
@@ -725,6 +727,7 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setOptimizeAssessmentCurrent(false);
+    setOptimizeAssessmentKey(null);
     pendingOptimizeContinuation.current?.resolve(null);
     pendingOptimizeContinuation.current = null;
   }, [optimizeInput.resumeText, optimizeInput.jobDescription, optimizeInput.language]);
@@ -1311,6 +1314,7 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setOptimizeAssessmentCurrent(false);
+    setOptimizeAssessmentKey(null);
     // The persisted run describes results that no longer exist. Leaving it behind
     // would let a stale record be restored, or reported as interrupted.
     useResumeStore.getState().setOptimizeRun(null);
@@ -1370,6 +1374,7 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setOptimizeAssessmentCurrent(false);
+    setOptimizeAssessmentKey(null);
     useResumeStore.getState().setOptimizeRun(null);
 
     // Clear persisted Zustand state (survives refresh via localStorage)
@@ -1981,6 +1986,7 @@ export default function MainContent() {
         setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
         setOptimizeAssessmentCurrent(true);
+        setOptimizeAssessmentKey(request.context!.key);
 
         // FIX: Also persist keywords to Zustand store so they survive page refresh
         if (result.keywords) {
@@ -2902,6 +2908,7 @@ export default function MainContent() {
                   resumeText={resumeData?.plainText || ''}
                   jobDescription={jobDescription}
                   assessmentCurrent={optimizeAssessmentCurrent}
+                  assessmentKey={optimizeAssessmentKey ?? undefined}
                   onCopy={handleCopy}
                   previewUsed={previewUsed}
                   onUpgrade={handleUpgrade}

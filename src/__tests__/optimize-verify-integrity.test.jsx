@@ -312,6 +312,21 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         expect(mockSetCachedAssessment).not.toHaveBeenCalled();
     });
 
+    it('does not store a full-set verification after the Optimize tab unmounts', async () => {
+        setupChangedResumeScenario();
+        let resolveVerify;
+        mockAnalyzeResumeWithAI.mockReturnValueOnce(new Promise((resolve) => { resolveVerify = resolve; }));
+        const { unmount } = renderWithProviders(<OptimizeSection isGuestMode
+            onOptimize={parentOptimizeHandler} jobDescription="Role A"
+            resumeText={mockStoreState.parsedResumeText} />);
+        fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
+        await waitFor(() => expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1));
+        unmount();
+        await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
+        expect(mockStoreState.optimizationMetrics.verifiedPotential).toBeFalsy();
+        expect(mockSetCachedAssessment).not.toHaveBeenCalled();
+    });
+
     it('R2: verification must not mutate store applied state', async () => {
         setupChangedResumeScenario();
         mockAnalyzeResumeWithAI.mockResolvedValue({ score: 52, topHits: ['React'], missingKeywords: [] });
@@ -438,6 +453,24 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
         expect(mockStoreState.optimizationMetrics.verifiedApplied).toBeFalsy();
         expect(mockSetCachedAnalysis).not.toHaveBeenCalled();
+        expect(mockSetCachedAssessment).not.toHaveBeenCalled();
+    });
+
+    it('does not store an applied-subset verification after the Optimize tab unmounts', async () => {
+        setupAppliedScenario();
+        let resolveVerify;
+        mockAnalyzeResumeWithAI.mockReturnValueOnce(new Promise((resolve) => { resolveVerify = resolve; }));
+        const { unmount } = renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+        await advancePastDebounce();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue|continue \(free\)/i }));
+            await Promise.resolve();
+        });
+        expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
+        unmount();
+        await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
+        expect(mockStoreState.optimizationMetrics.verifiedApplied).toBeFalsy();
         expect(mockSetCachedAssessment).not.toHaveBeenCalled();
     });
 

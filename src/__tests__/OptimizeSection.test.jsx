@@ -367,6 +367,42 @@ describe('OptimizeSection', () => {
             expect(screen.getByRole('button', { name: 'Applied' })).toBeInTheDocument();
         });
 
+        it('does not carry Job A applied state into a different Job B rewrite', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-b" jobDescription="Job B"
+                optimizations={[{ ...sampleOptimization, optimized: 'Built TypeScript services for Job B.' }]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ optimized: 'Built TypeScript services for Job B.', applied: false, assessmentKey: 'job-b' }),
+            ]);
+        });
+
+        it('does not carry an applied flag across assessments even when the edit text matches', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-b" jobDescription="Job B"
+                optimizations={[sampleOptimization]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ applied: false, assessmentKey: 'job-b' }),
+            ]);
+        });
+
+        it('does not carry an applied flag to a different edit in the same assessment', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-a" jobDescription="Job A"
+                optimizations={[{ ...sampleOptimization, optimized: 'A different rewrite.' }]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ optimized: 'A different rewrite.', applied: false, assessmentKey: 'job-a' }),
+            ]);
+        });
+
+        it('preserves applied state only for the same assessment and identical edit', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, sectionId: 'legacy-summary', applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-a" jobDescription="Job A"
+                optimizations={[{ ...sampleOptimization, rationale: 'Updated explanation' }]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ optimized: sampleOptimization.optimized, applied: true, assessmentKey: 'job-a' }),
+            ]);
+        });
+
         it('renders collapsed strategy section when optimization strategy exists', () => {
             mockStoreState.optimizations = [sampleOptimization];
             renderWithProviders(<OptimizeSection keywords={{ add: ['React'], neutral: [], remove: [] }} />);
