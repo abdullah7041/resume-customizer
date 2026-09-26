@@ -15,6 +15,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useResumeStore } from "../lib/stores/resumeStore";
+import { createAssessmentContext } from "../lib/match/assessmentContext";
+
+const matchContext = (resumeText, jobDescription, isOptimized = false) => createAssessmentContext({
+  resumeText, jobDescription, language: 'en', kind: 'match', isOptimized, rubricVersion: 'match-v1',
+});
 
 describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
   beforeEach(() => {
@@ -25,7 +30,7 @@ describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
     });
   });
 
-  it("should NOT overwrite beforeScore when analyzing optimized resume", () => {
+  it("should NOT overwrite beforeScore when analyzing optimized resume", async () => {
     const { result } = renderHook(() => useResumeStore());
 
     // Step 1: Set up original resume
@@ -38,10 +43,11 @@ describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
     });
 
     const jobDescription = "Looking for Engineer with 5+ years";
+    const originalContext = await matchContext("John Doe, Engineer at Tech Corp with 5 years experience", jobDescription);
 
     // Step 2: Simulate original resume analysis (score: 95)
     act(() => {
-      result.current.setCachedAnalysis("John Doe, Engineer at Tech Corp with 5 years experience", jobDescription, {
+      result.current.setCachedAssessment(originalContext, {
         score: 95,
         matchedKeywords: ["Engineer", "5 years"],
         missingKeywords: [],
@@ -74,9 +80,10 @@ describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
 
     // Step 4: Simulate optimized resume analysis (score: 89)
     const optimizedResumeText = "John Doe - Senior Engineer at Tech Corp (5+ years) | Expert in [keywords]";
+    const optimizedContext = await matchContext(optimizedResumeText, jobDescription, true);
 
     act(() => {
-      result.current.setCachedAnalysis(optimizedResumeText, jobDescription, {
+      result.current.setCachedAssessment(optimizedContext, {
         score: 89,
         matchedKeywords: ["Engineer", "5+ years", "Senior"],
         missingKeywords: [],
@@ -115,8 +122,9 @@ describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
     console.log("✓ Step 5: Re-upload simulation - baseline and metrics cleared");
 
     // Step 7: Re-analyze (AI returns 87)
+    const reuploadedContext = await matchContext("Re-uploaded PDF text", jobDescription);
     act(() => {
-      result.current.setCachedAnalysis("Re-uploaded PDF text", jobDescription, {
+      result.current.setCachedAssessment(reuploadedContext, {
         score: 87,
         matchedKeywords: ["Engineer"],
         missingKeywords: [],
@@ -133,7 +141,7 @@ describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
     console.log(`✗ Step 6: Re-upload score is 87 (expected to reference baseline 95, but baseline was cleared)`);
   });
 
-  it("should preserve baseline score across optimized analysis", () => {
+  it("should preserve baseline score across optimized analysis", async () => {
     const { result } = renderHook(() => useResumeStore());
 
     // Setup original resume with baseline
@@ -153,8 +161,9 @@ describe("Score Drift Bug: Optimized analysis overwrites baseline", () => {
     });
 
     // Simulate MainContent.tsx behavior when analyzing optimized resume
+    const optimizedContext = await matchContext("Optimized text", "Job desc", true);
     act(() => {
-      result.current.setCachedAnalysis("Optimized text", "Job desc", { score: 89 });
+      result.current.setCachedAssessment(optimizedContext, { score: 89 });
 
       // AFTER FIX: This should only happen when showOptimized=false
       if (!result.current.showOptimized) {

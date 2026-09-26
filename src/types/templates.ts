@@ -413,8 +413,6 @@ export interface ResumeState {
   // Cache actions
   getCachedAssessment: (context: AssessmentContext) => CachedAnalysis | null;
   setCachedAssessment: (context: AssessmentContext, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
-  getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean) => CachedAnalysis | null;
-  setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => void;
   clearAnalysisCache: () => void;
 
   // Display options actions

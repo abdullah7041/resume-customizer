@@ -38,7 +38,6 @@ const mockApplyOptimization = vi.fn();
 const mockRevertOptimization = vi.fn();
 const mockApplyAllOptimizations = vi.fn();
 const mockSetOptimizationMetrics = vi.fn();
-const mockSetCachedAnalysis = vi.fn();
 const mockSetCachedAssessment = vi.fn();
 
 let mockStoreState = {};
@@ -69,8 +68,6 @@ const buildStoreState = () => ({
     },
     setOptimizationMetrics: mockSetOptimizationMetrics,
     resetOptimizationMetrics: vi.fn(),
-    getCachedAnalysis: vi.fn(() => null),
-    setCachedAnalysis: mockSetCachedAnalysis,
     getCachedAssessment: vi.fn(() => null),
     setCachedAssessment: mockSetCachedAssessment,
     getActiveResume: vi.fn(() => null),
@@ -308,7 +305,6 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         rerender(<DirectionProvider><OptimizeSection {...props} jobDescription="Role B" /></DirectionProvider>);
         await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
         expect(mockStoreState.optimizationMetrics.verifiedPotential).toBeFalsy();
-        expect(mockSetCachedAnalysis).not.toHaveBeenCalled();
         expect(mockSetCachedAssessment).not.toHaveBeenCalled();
     });
 
@@ -452,7 +448,6 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         rerender(<DirectionProvider><OptimizeSection jobDescription="Role B" /></DirectionProvider>);
         await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
         expect(mockStoreState.optimizationMetrics.verifiedApplied).toBeFalsy();
-        expect(mockSetCachedAnalysis).not.toHaveBeenCalled();
         expect(mockSetCachedAssessment).not.toHaveBeenCalled();
     });
 

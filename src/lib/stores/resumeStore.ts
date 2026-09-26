@@ -10,7 +10,6 @@ import type {
   OptimizationResult,
   KeywordSuggestion,
   TemplateId,
-  CachedAnalysis,
   JobVariant,
   JobVariantSnapshot,
 } from '../../types/templates';
@@ -117,45 +116,6 @@ const sameAssessmentContext = (left: AssessmentContext, right: AssessmentContext
   left.kind === right.kind &&
   left.isOptimized === right.isOptimized &&
   left.rubricVersion === right.rubricVersion;
-
-// Memoization cache for cache key generation (performance optimization)
-const cacheKeyMemo = new Map<string, string>();
-
-/**
- * Generate a cache key from resume and job description
- * Uses FNV-1a hash with memoization for performance
- * CRITICAL: Now includes isOptimized flag to prevent cache collisions
- */
-const generateCacheKey = (resumeText: string, jobDescription: string, isOptimized: boolean = false): string => {
-  // Use FULL text for hash to prevent collisions between original/optimized versions
-  // Include isOptimized flag to separate cache entries
-  const normalizedResumeText = (resumeText || '').trim();
-  const normalizedJobDescription = (jobDescription || '').trim();
-  const fullKey = `${normalizedResumeText}|${normalizedJobDescription}|${isOptimized ? 'opt' : 'orig'}`;
-
-  // Check memo cache first (key now includes optimization flag)
-  const memoKey = `${fullKey.slice(0, 100)}|${fullKey.length}|${isOptimized}`;
-  const cached = cacheKeyMemo.get(memoKey);
-  if (cached) return cached;
-
-  // FNV-1a hash - faster than djb2 and works with Arabic
-  let hash = 2166136261;
-  for (let i = 0; i < fullKey.length; i++) {
-    hash ^= fullKey.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  const result = `match-${(hash >>> 0).toString(36)}`;
-
-  // Memoize result (limit size to prevent memory leak)
-  cacheKeyMemo.set(memoKey, result);
-  if (cacheKeyMemo.size > 100) {
-    const firstKey = cacheKeyMemo.keys().next().value;
-    if (firstKey) cacheKeyMemo.delete(firstKey);
-  }
-
-  return result;
-};
 
 // --- Job variant helpers (module-level, pure) -----------------------------
 // JD stored truncated for retention hygiene (ADR §5); variants are local-only.
@@ -520,58 +480,6 @@ export const useResumeStore = create<ResumeState>()(
         });
       },
 
-      getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean): CachedAnalysis | null => {
-        const state = get();
-        // Allow explicit override of isOptimized flag for specific lookups
-        // This is needed when OptimizeSection wants the original score regardless of current showOptimized state
-        const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
-        const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
-        const cached = state.analysisCache[cacheKey];
-
-        if (!cached) {
-          return null;
-        }
-
-        // Check if cache is still valid
-        const age = Date.now() - cached.timestamp;
-        if (age > CACHE_TTL_MS) {
-          return null;
-        }
-
-        return cached;
-      },
-
-      setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => {
-        const state = get();
-        // Fix B2: Allow explicit override of isOptimized flag, matching getCachedAnalysis
-        const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
-        const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
-
-        set((state) => {
-          const newCache = {
-            ...state.analysisCache,
-            [cacheKey]: {
-              ...analysis,
-              timestamp: Date.now(),
-            },
-          };
-
-          // Evict oldest entries if cache exceeds 10 entries
-          const MAX_CACHE_SIZE = 10;
-          const cacheEntries = Object.entries(newCache);
-          if (cacheEntries.length > MAX_CACHE_SIZE) {
-            // Sort by timestamp (oldest first) and keep only newest MAX_CACHE_SIZE
-            const sortedEntries = cacheEntries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-            const keepEntries = sortedEntries.slice(-MAX_CACHE_SIZE);
-            return {
-              analysisCache: Object.fromEntries(keepEntries),
-            };
-          }
-
-          return { analysisCache: newCache };
-        });
-      },
-
       clearAnalysisCache: () => {
         set({ analysisCache: {} });
       },
@@ -769,7 +677,6 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       clearAll: () => {
-        cacheKeyMemo.clear();
         set({
           originalResume: null,
           parsedResumeText: null,
@@ -809,7 +716,6 @@ export const useResumeStore = create<ResumeState>()(
       resetForNewUpload: () => {
         // NOTE: searchIntent is intentionally NOT reset here — the target role is
         // profile-level intent that should survive a new resume upload.
-        cacheKeyMemo.clear();
         set({
           originalResume: null,
           parsedResumeText: null,

@@ -44,8 +44,6 @@ const mockRefineOptimization = vi.fn();
 const mockSetKeywordSuggestions = vi.fn();
 const mockSetOptimizationMetrics = vi.fn();
 const mockResetOptimizationMetrics = vi.fn();
-const mockGetCachedAnalysis = vi.fn(() => null);
-const mockSetCachedAnalysis = vi.fn();
 const mockGetCachedAssessment = vi.fn(() => null);
 const mockSetCachedAssessment = vi.fn();
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -77,8 +75,6 @@ let mockStoreState = {
     },
     setOptimizationMetrics: mockSetOptimizationMetrics,
     resetOptimizationMetrics: mockResetOptimizationMetrics,
-    getCachedAnalysis: mockGetCachedAnalysis,
-    setCachedAnalysis: mockSetCachedAnalysis,
     getCachedAssessment: mockGetCachedAssessment,
     setCachedAssessment: mockSetCachedAssessment,
     getActiveResume: vi.fn(() => null),
@@ -275,8 +271,6 @@ beforeEach(() => {
         },
         setOptimizationMetrics: mockSetOptimizationMetrics,
         resetOptimizationMetrics: mockResetOptimizationMetrics,
-        getCachedAnalysis: mockGetCachedAnalysis,
-        setCachedAnalysis: mockSetCachedAnalysis,
         getCachedAssessment: mockGetCachedAssessment,
         setCachedAssessment: mockSetCachedAssessment,
         getActiveResume: vi.fn(() => null),
@@ -1272,8 +1266,6 @@ describe('Optimization Card Types', () => {
             },
             setOptimizationMetrics: mockSetOptimizationMetrics,
             resetOptimizationMetrics: mockResetOptimizationMetrics,
-            getCachedAnalysis: mockGetCachedAnalysis,
-            setCachedAnalysis: mockSetCachedAnalysis,
             getCachedAssessment: mockGetCachedAssessment,
             setCachedAssessment: mockSetCachedAssessment,
             getActiveResume: vi.fn(() => null),
@@ -1317,7 +1309,6 @@ describe('Optimization Card Types', () => {
             mockStoreState.baselineMatchScore = null;
             mockStoreState.optimizationMetrics.beforeScore = null;
             mockStoreState.parsedResumeText = 'Original resume for this job';
-            mockGetCachedAnalysis.mockReturnValue({ score: 96, matchedKeywords: [], missingKeywords: [], timestamp: Date.now() });
             renderWithProviders(<OptimizeSection jobDescription="Role A" />);
             expect(screen.queryAllByText('96%')).toHaveLength(0);
         });
@@ -1352,7 +1343,6 @@ describe('Optimization Card Types', () => {
                 skills: [],
                 meta: { match_score: null },
             };
-            mockGetCachedAnalysis.mockReturnValue(null);
 
             renderWithProviders(<OptimizeSection />);
 
@@ -1498,11 +1488,8 @@ describe('Optimization Card Types', () => {
                     improvement: -45,
                 })
             );
-            expect(mockSetCachedAnalysis).not.toHaveBeenCalledWith(
-                expect.any(String),
-                'Backend engineer role',
-                expect.objectContaining({ score: 0 }),
-                true
+            expect(mockSetCachedAssessment).not.toHaveBeenCalledWith(
+                expect.any(Object), expect.objectContaining({ score: 0 })
             );
             expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });

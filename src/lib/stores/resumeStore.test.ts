@@ -676,8 +676,10 @@ describe('resumeStore.getActiveResume()', () => {
   describe('cached analysis explainability payload', () => {
     const RESUME = 'resume text for cache';
     const JOB = 'job description for cache';
+    const context = () => createAssessmentContext({ resumeText: RESUME, jobDescription: JOB,
+      language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
 
-    it('round-trips categoryScores and strategicRealityCheck', () => {
+    it('round-trips categoryScores and strategicRealityCheck', async () => {
       const realityCheck = {
         riskTier: 'medium' as const,
         recommendation: 'optimize_now' as const,
@@ -689,7 +691,8 @@ describe('resumeStore.getActiveResume()', () => {
         unclearRisks: [{ type: 'skill', topic: 'K8s', reason: 'no detail', evidenceNeeded: 'a project' }],
         limits: { cannotDetermine: [], assumptions: ['Assumed fluency'] },
       };
-      useResumeStore.getState().setCachedAnalysis(RESUME, JOB, {
+      const assessment = await context();
+      useResumeStore.getState().setCachedAssessment(assessment, {
         score: 72,
         coverage: 0.7,
         similarity: 0.7,
@@ -704,16 +707,17 @@ describe('resumeStore.getActiveResume()', () => {
           soft_skills: { score: 7, max: 10 },
         },
         strategicRealityCheck: realityCheck,
-      }, false);
+      });
 
-      const cached = useResumeStore.getState().getCachedAnalysis(RESUME, JOB, false);
+      const cached = useResumeStore.getState().getCachedAssessment(assessment);
       expect(cached?.categoryScores?.hard_skills.matched).toEqual(['React']);
       expect(cached?.strategicRealityCheck?.unclearRisks).toHaveLength(1);
       expect(cached?.strategicRealityCheck?.limits.assumptions).toEqual(['Assumed fluency']);
     });
 
-    it('reads a legacy-shape entry without the new fields', () => {
-      useResumeStore.getState().setCachedAnalysis(RESUME, JOB, {
+    it('reads a minimal context-bound entry without optional explainability fields', async () => {
+      const assessment = await context();
+      useResumeStore.getState().setCachedAssessment(assessment, {
         score: 60,
         coverage: 0.6,
         similarity: 0.6,
@@ -721,25 +725,27 @@ describe('resumeStore.getActiveResume()', () => {
         strongMatches: [],
         recommendations: [],
         overallAssessment: '',
-      }, false);
+      });
 
-      const cached = useResumeStore.getState().getCachedAnalysis(RESUME, JOB, false);
+      const cached = useResumeStore.getState().getCachedAssessment(assessment);
       expect(cached?.score).toBe(60);
       expect(cached?.categoryScores).toBeUndefined();
       expect(cached?.strategicRealityCheck).toBeUndefined();
     });
 
-    it('retrieves an original analysis when resume and job text differ only by surrounding whitespace', () => {
+    it('does not reuse an analysis when text differs by surrounding whitespace', async () => {
       useResumeStore.getState().setShowOptimized(true);
-      useResumeStore.getState().setCachedAnalysis('  resume text for cache  ', '  job description for cache  ', {
+      const spaced = await createAssessmentContext({ resumeText: '  resume text for cache  ',
+        jobDescription: '  job description for cache  ', language: 'en', kind: 'match',
+        isOptimized: false, rubricVersion: 'match-v1' });
+      useResumeStore.getState().setCachedAssessment(spaced, {
         score: 64,
         matchedKeywords: ['React'],
         missingKeywords: ['Docker'],
-      }, false);
+      });
 
-      const cached = useResumeStore.getState().getCachedAnalysis('resume text for cache', 'job description for cache', false);
-      expect(cached?.score).toBe(64);
-      expect(cached?.matchedKeywords).toEqual(['React']);
+      const unspaced = await context();
+      expect(useResumeStore.getState().getCachedAssessment(unspaced)).toBeNull();
     });
   });
 
@@ -782,7 +788,7 @@ describe('resumeStore.getActiveResume()', () => {
         work: [], education: [], skills: [], projects: [],
       } satisfies ResumeSchema;
       useResumeStore.setState({ originalResume });
-      useResumeStore.getState().setCachedAnalysis(input.resumeText, input.jobDescription, analysis, false);
+      useResumeStore.setState({ analysisCache: { legacy: { ...analysis, timestamp: Date.now() } } });
       expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
       useResumeStore.setState({ analysisCache: { [context.key]: { ...analysis, timestamp: Date.now() } } });
       expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
