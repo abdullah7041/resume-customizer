@@ -57,13 +57,32 @@ vi.mock('../hooks/useUserCredits', () => ({
 
 // Mock react-i18next - handle interpolation objects
 const mockLanguage = vi.hoisted(() => ({ value: 'en' }));
+const arabicReportLabels: Record<string, string> = {
+  'sections.bulk.reportTitle': 'تقرير مقارنة السير الذاتية',
+  'sections.bulk.comparisonTitle': 'نتائج المقارنة',
+  'sections.bulk.reportGenerated': 'أُنشئ في',
+  'sections.bulk.reportHistorical': 'تقييم سابق',
+  'sections.bulk.reportJobSummary': 'ملخص الوصف الوظيفي:',
+  'sections.bulk.reportRank': 'الترتيب',
+  'sections.bulk.reportResumeName': 'اسم السيرة الذاتية',
+  'sections.bulk.estimatedAlignment': 'تقدير التوافق مع هذا الوصف الوظيفي',
+  'sections.bulk.reportKeywords': 'الكلمات المفتاحية',
+  'sections.bulk.reportRelativeRank': 'الترتيب النسبي',
+  'sections.bulk.highestScore': 'أعلى درجة في هذه المقارنة',
+  'sections.bulk.lowerScore': 'درجة أقل في هذه المقارنة',
+  'sections.bulk.hiringDisclaimer': 'هذا التقييم لا يتنبأ بقرار التوظيف.',
+  'sections.bulk.reportMissingKeywords': 'متطلبات تحتاج إلى دليل:',
+  'sections.bulk.reportRealityCheck': 'ملخص الأدلة والمخاطر:',
+};
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) => {
       if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
       return key;
     },
-    i18n: { get language() { return mockLanguage.value; }, changeLanguage: vi.fn() },
+    i18n: { get language() { return mockLanguage.value; }, changeLanguage: vi.fn(),
+      getFixedT: (language: string) => (key: string, fallback?: string) => language === 'ar'
+        ? arabicReportLabels[key] ?? fallback ?? key : fallback ?? key },
   }),
 }));
 
@@ -509,6 +528,38 @@ describe('BulkAnalysisSection', () => {
     expect(pdfText).toContain('Historical assessment');
     expect(pdfText).toContain('Historical API role');
     expect(pdfText).not.toContain('Current data role');
+  });
+
+  it('exports Arabic report labels from the saved assessment while the live language is English', async () => {
+    const resumeText = 'عملت على التقارير الداخلية';
+    const jobSnapshot = 'محلل بيانات';
+    const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+      language: 'ar', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    const analysis = { score: 20, topHits: [], missingKeywords: [],
+      strategicRealityCheck: { summary: 'تحتاج الخبرة إلى دليل إضافي.' } };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'arabic', name: 'سيرة.pdf', status: 'completed', plainText: resumeText, analysis,
+      assessment: { context, jobSnapshot, requestId: 'saved-ar',
+        createdAt: '2026-09-26T00:00:00Z', result: analysis },
+    }]));
+    render(<BulkAnalysisSection jobDescription="Live English role" />);
+    expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export Report' }));
+    await waitFor(() => expect(mockPdfSave).toHaveBeenCalledTimes(1));
+    const { default: autoTable } = await import('jspdf-autotable');
+    const table = vi.mocked(autoTable).mock.calls[0][1];
+    expect(table.head[0]).toEqual(['الترتيب', 'اسم السيرة الذاتية', 'تقدير التوافق مع هذا الوصف الوظيفي',
+      'الكلمات المفتاحية', 'الترتيب النسبي']);
+    expect(table.body[0][4]).toBe('أعلى درجة في هذه المقارنة');
+    const pdfText = mockPdfText.mock.calls.map(call => String(call[0])).join(' ');
+    expect(pdfText).toContain('تقرير مقارنة السير الذاتية');
+    expect(pdfText).toContain('أُنشئ في');
+    expect(pdfText).toContain('تقييم سابق');
+    expect(pdfText).toContain('ملخص الوصف الوظيفي:');
+    expect(pdfText).toContain('هذا التقييم لا يتنبأ بقرار التوظيف.');
+    expect(pdfText).toContain('تحتاج الخبرة إلى دليل إضافي.');
+    expect(pdfText).toContain('ملخص الأدلة والمخاطر:');
+    expect(pdfText).not.toContain('This assessment does not predict a hiring decision.');
   });
 
   it('ignores a late network response after the job changes', async () => {

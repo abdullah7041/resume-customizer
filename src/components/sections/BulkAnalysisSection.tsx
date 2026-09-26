@@ -511,7 +511,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     // Capture one historical context before loading the PDF libraries. A job
     // switch cannot replace the description while this export is in flight.
     const reportJob = reportGroup.jobSnapshot;
-    const isHistoricalReport = reportJob !== currentJob || reportGroup.language !== currentLanguage;
+    const reportLanguage = reportGroup.language;
+    const reportT = i18n.getFixedT(reportLanguage);
+    const isHistoricalReport = reportJob !== currentJob || reportLanguage !== currentLanguage;
     const sortedReportRows = [...reportGroup.rows].sort((a, b) => (b.analysis?.score ?? 0) - (a.analysis?.score ?? 0));
     const [{ jsPDF }, { default: autoTable }] = await Promise.all([
       import('jspdf'),
@@ -521,23 +523,26 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     // Create PDF document
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const textX = reportLanguage === 'ar' ? pageWidth - 14 : 14;
+    const textAlign = reportLanguage === 'ar' ? 'right' : 'left';
 
     // Title
     doc.setFontSize(20);
     doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text('Resume Comparison Report', pageWidth / 2, 20, { align: 'center' });
+    doc.text(reportT('sections.bulk.reportTitle', 'Resume Comparison Report'), pageWidth / 2, 20, { align: 'center' });
 
     // Date
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-US', {
+    doc.text(`${reportT('sections.bulk.reportGenerated', 'Generated')}: ${new Date().toLocaleDateString(reportLanguage === 'ar' ? 'ar-SA' : 'en-US', {
       year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     })}`, pageWidth / 2, 28, { align: 'center' });
 
     if (isHistoricalReport) {
       doc.setFontSize(10);
       doc.setTextColor(146, 64, 14);
-      doc.text('Historical assessment', 14, 38);
+      doc.text(reportT('sections.bulk.reportHistorical', 'Historical assessment'), textX, 38,
+        { align: textAlign });
     }
 
     // Job Description Summary
@@ -545,12 +550,13 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       const offset = isHistoricalReport ? 9 : 0;
       doc.setFontSize(12);
       doc.setTextColor(31, 41, 55);
-      doc.text('Job Description Summary:', 14, 40 + offset);
+      doc.text(reportT('sections.bulk.reportJobSummary', 'Job Description Summary:'), textX, 40 + offset,
+        { align: textAlign });
       doc.setFontSize(9);
       doc.setTextColor(75, 85, 99);
       const jdText = reportJob.substring(0, 300) + (reportJob.length > 300 ? '...' : '');
       const splitJd = doc.splitTextToSize(jdText, pageWidth - 28);
-      doc.text(splitJd, 14, 47 + offset);
+      doc.text(splitJd, textX, 47 + offset, { align: textAlign });
     }
 
     // Comparison Table
@@ -558,31 +564,44 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
     autoTable(doc, {
       startY: tableStartY,
-      head: [['Rank', 'Resume Name', 'Estimated alignment', 'Keywords', 'Relative rank']],
+      head: [[
+        reportT('sections.bulk.reportRank', 'Rank'),
+        reportT('sections.bulk.reportResumeName', 'Resume Name'),
+        reportT('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description'),
+        reportT('sections.bulk.reportKeywords', 'Keywords'),
+        reportT('sections.bulk.reportRelativeRank', 'Relative rank'),
+      ]],
       body: sortedReportRows.map((r, idx) => {
         const score = r.analysis?.score || 0;
         const keywordCount = r.analysis?.topHits?.length || r.analysis?.matchedKeywords?.length || 0;
-        const status = idx === 0 ? 'Highest score in this comparison' : 'Lower score in this comparison';
+        const status = idx === 0
+          ? reportT('sections.bulk.highestScore', 'Highest score in this comparison')
+          : reportT('sections.bulk.lowerScore', 'Lower score in this comparison');
         return [`#${idx + 1}`, r.name, `${score}%`, keywordCount.toString(), status];
       }),
       headStyles: { fillColor: [16, 185, 129], textColor: 255 },
       alternateRowStyles: { fillColor: [240, 253, 244] },
-      styles: { fontSize: 10 }
+      styles: { fontSize: 10, halign: reportLanguage === 'ar' ? 'right' : 'left' }
     });
 
     // Missing Keywords per Resume
     let currentY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || tableStartY + 50;
     doc.setFontSize(9);
     doc.setTextColor(107, 114, 128);
-    doc.text('This assessment does not predict a hiring decision.', 14, currentY + 7);
-    currentY += 10;
+    for (const line of doc.splitTextToSize(
+      reportT('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.'), pageWidth - 28)) {
+      if (currentY > 265) { doc.addPage(); currentY = 20; }
+      currentY += 5;
+      doc.text(line, textX, currentY, { align: textAlign });
+    }
 
     sortedReportRows.forEach((resume, idx) => {
       const missing = resume.analysis?.missingKeywords || [];
-      if (missing.length === 0) return;
+      const realitySummary = resume.analysis?.strategicRealityCheck?.summary;
+      if (missing.length === 0 && !realitySummary) return;
 
       // Check if we need a new page
-      if (currentY > 250) {
+      if (currentY > 240) {
         doc.addPage();
         currentY = 20;
       }
@@ -590,15 +609,25 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       currentY += 15;
       doc.setFontSize(11);
       doc.setTextColor(31, 41, 55);
-      doc.text(`#${idx + 1} ${resume.name} - Missing Keywords:`, 14, currentY);
+      doc.text(`#${idx + 1} ${resume.name}`, textX, currentY, { align: textAlign });
 
+      const writeDetail = (label: string, value: string, color: [number, number, number]) => {
+        doc.setFontSize(9);
+        doc.setTextColor(...color);
+        for (const line of doc.splitTextToSize(`${label} ${value}`, pageWidth - 28)) {
+          if (currentY > 265) {
+            doc.addPage();
+            currentY = 20;
+          }
+          doc.text(line, textX, currentY, { align: textAlign });
+          currentY += 5;
+        }
+      };
       currentY += 6;
-      doc.setFontSize(9);
-      doc.setTextColor(239, 68, 68); // Red color
-      const missingText = missing.join(', ');
-      const splitMissing = doc.splitTextToSize(missingText, pageWidth - 28);
-      doc.text(splitMissing, 14, currentY);
-      currentY += splitMissing.length * 5;
+      if (missing.length > 0) writeDetail(reportT('sections.bulk.reportMissingKeywords', 'Requirements needing evidence:'),
+        missing.join(', '), [190, 55, 55]);
+      if (realitySummary) writeDetail(reportT('sections.bulk.reportRealityCheck', 'Evidence and risk summary:'),
+        realitySummary, [75, 85, 99]);
     });
 
     // Save PDF
