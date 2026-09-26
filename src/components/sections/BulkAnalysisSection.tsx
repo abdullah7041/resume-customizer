@@ -31,6 +31,7 @@ import { createAssessmentContext } from '@/lib/match/assessmentContext';
 import type { AssessmentContext, AssessmentRecord } from '@/types/assessment';
 import type { StrategicRealityCheck } from '@/types/analysis';
 import type { CachedAnalysis } from '@/types/templates';
+import { renderBulkReportPrint } from '@/lib/export/bulkReportPrint';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -228,6 +229,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   const [pendingResumeIds, setPendingResumeIds] = useState<string[]>([]);
   const [verifiedRowIds, setVerifiedRowIds] = useState<Set<string>>(new Set());
   const [selectedReportGroup, setSelectedReportGroup] = useState('');
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const isCurrentRequest = useCallback((request: RowRequest) =>
     requests.current.get(request.rowId) === request &&
@@ -508,6 +510,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
   const exportComparison = async () => {
     if (!reportGroup || reportGroup.rows.length === 0) return;
+    setExportError(null);
     // Capture one historical context before loading the PDF libraries. A job
     // switch cannot replace the description while this export is in flight.
     const reportJob = reportGroup.jobSnapshot;
@@ -515,6 +518,51 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     const reportT = i18n.getFixedT(reportLanguage);
     const isHistoricalReport = reportJob !== currentJob || reportLanguage !== currentLanguage;
     const sortedReportRows = [...reportGroup.rows].sort((a, b) => (b.analysis?.score ?? 0) - (a.analysis?.score ?? 0));
+    if (reportLanguage === 'ar') {
+      let popup: Window | null = null;
+      try {
+        // Open during the click, before any await, so the browser keeps the
+        // user gesture needed for the print dialog.
+        popup = window.open('', '_blank', 'width=900,height=700');
+        if (!popup) throw new Error('popup_blocked');
+        popup.opener = null;
+        renderBulkReportPrint(popup.document, {
+          title: reportT('sections.bulk.reportTitle', 'Resume Comparison Report'),
+          generated: `${reportT('sections.bulk.reportGenerated', 'Generated')}: ${new Date().toLocaleString('ar-SA')}`,
+          historical: isHistoricalReport ? reportT('sections.bulk.reportHistorical', 'Historical assessment') : undefined,
+          jobSummaryLabel: reportT('sections.bulk.reportJobSummary', 'Job Description Summary:'),
+          jobSnapshot: reportJob,
+          headings: [
+            reportT('sections.bulk.reportRank', 'Rank'),
+            reportT('sections.bulk.reportResumeName', 'Resume Name'),
+            reportT('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description'),
+            reportT('sections.bulk.reportKeywords', 'Keywords'),
+            reportT('sections.bulk.reportRelativeRank', 'Relative rank'),
+          ],
+          hiringDisclaimer: reportT('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.'),
+          missingLabel: reportT('sections.bulk.reportMissingKeywords', 'Requirements needing evidence:'),
+          realityLabel: reportT('sections.bulk.reportRealityCheck', 'Evidence and risk summary:'),
+          rows: sortedReportRows.map((row, index) => ({
+            rank: `#${index + 1}`,
+            name: row.name,
+            score: `${row.analysis?.score ?? 0}%`,
+            keywordCount: String(row.analysis?.topHits?.length || row.analysis?.matchedKeywords?.length || 0),
+            relativeRank: index === 0
+              ? reportT('sections.bulk.highestScore', 'Highest score in this comparison')
+              : reportT('sections.bulk.lowerScore', 'Lower score in this comparison'),
+            missingKeywords: row.analysis?.missingKeywords ?? [],
+            realitySummary: row.analysis?.strategicRealityCheck?.summary,
+          })),
+        });
+        popup.document.close();
+        popup.focus();
+        popup.print();
+      } catch {
+        popup?.close();
+        setExportError(reportT('sections.bulk.popupBlocked', 'Could not open the print window. Allow popups and try again.'));
+      }
+      return;
+    }
     const [{ jsPDF }, { default: autoTable }] = await Promise.all([
       import('jspdf'),
       import('jspdf-autotable'),
@@ -523,8 +571,8 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     // Create PDF document
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    const textX = reportLanguage === 'ar' ? pageWidth - 14 : 14;
-    const textAlign = reportLanguage === 'ar' ? 'right' : 'left';
+    const textX = 14;
+    const textAlign = 'left';
 
     // Title
     doc.setFontSize(20);
@@ -534,7 +582,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     // Date
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128);
-    doc.text(`${reportT('sections.bulk.reportGenerated', 'Generated')}: ${new Date().toLocaleDateString(reportLanguage === 'ar' ? 'ar-SA' : 'en-US', {
+    doc.text(`${reportT('sections.bulk.reportGenerated', 'Generated')}: ${new Date().toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     })}`, pageWidth / 2, 28, { align: 'center' });
 
@@ -581,7 +629,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       }),
       headStyles: { fillColor: [16, 185, 129], textColor: 255 },
       alternateRowStyles: { fillColor: [240, 253, 244] },
-      styles: { fontSize: 10, halign: reportLanguage === 'ar' ? 'right' : 'left' }
+      styles: { fontSize: 10, halign: 'left' }
     });
 
     // Missing Keywords per Resume
@@ -672,11 +720,14 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
             )}
             <GlassButton variant="primary" onClick={exportComparison} disabled={!reportGroup} className="shadow-lg shadow-primary-500/20">
               <Download className="w-4 h-4 me-2" />
-              {t('sections.bulk.export', 'Export Report')}
+              {reportGroup?.language === 'ar'
+                ? i18n.getFixedT('ar')('sections.bulk.printOrSave', 'Print / Save as PDF')
+                : t('sections.bulk.export', 'Export Report')}
             </GlassButton>
           </div>
         )}
       </GlassCard>
+      {exportError && <p role="alert" className="text-sm text-rose-700 dark:text-rose-300">{exportError}</p>}
 
       {/* Use my uploaded resume — convenience row, skips a re-upload of the
           already-parsed resume. Parsing is free either way. */}

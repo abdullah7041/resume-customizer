@@ -28,6 +28,8 @@
       "reportRelativeRank": "Relative rank",
       "reportMissingKeywords": "Requirements needing evidence:",
       "reportRealityCheck": "Evidence and risk summary:",
+      "printOrSave": "Print / Save as PDF",
+      "popupBlocked": "Could not open the print window. Allow popups and try again.",
       "emptyTitle": "Ready to Analyze",
       "emptyDesc": "Upload multiple resume versions to see which one matches the job best.",
       "upload": {

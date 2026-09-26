@@ -73,6 +73,8 @@ const arabicReportLabels: Record<string, string> = {
   'sections.bulk.hiringDisclaimer': 'هذا التقييم لا يتنبأ بقرار التوظيف.',
   'sections.bulk.reportMissingKeywords': 'متطلبات تحتاج إلى دليل:',
   'sections.bulk.reportRealityCheck': 'ملخص الأدلة والمخاطر:',
+  'sections.bulk.printOrSave': 'طباعة / حفظ بصيغة PDF',
+  'sections.bulk.popupBlocked': 'تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة وأعد المحاولة.',
 };
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -135,6 +137,7 @@ import { BulkAnalysisSection } from '../components/sections/BulkAnalysisSection'
 import { useResumeStore } from '../lib/stores/resumeStore';
 
 describe('BulkAnalysisSection', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
   beforeEach(() => {
     vi.clearAllMocks();
     mockLanguage.value = 'en';
@@ -542,24 +545,73 @@ describe('BulkAnalysisSection', () => {
       assessment: { context, jobSnapshot, requestId: 'saved-ar',
         createdAt: '2026-09-26T00:00:00Z', result: analysis },
     }]));
+    const popupDocument = document.implementation.createHTMLDocument('');
+    const print = vi.fn();
+    vi.spyOn(window, 'open').mockReturnValue({ document: popupDocument, focus: vi.fn(), print,
+      close: vi.fn() } as unknown as Window);
     render(<BulkAnalysisSection jobDescription="Live English role" />);
     expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Export Report' }));
-    await waitFor(() => expect(mockPdfSave).toHaveBeenCalledTimes(1));
-    const { default: autoTable } = await import('jspdf-autotable');
-    const table = vi.mocked(autoTable).mock.calls[0][1];
-    expect(table.head[0]).toEqual(['الترتيب', 'اسم السيرة الذاتية', 'تقدير التوافق مع هذا الوصف الوظيفي',
-      'الكلمات المفتاحية', 'الترتيب النسبي']);
-    expect(table.body[0][4]).toBe('أعلى درجة في هذه المقارنة');
-    const pdfText = mockPdfText.mock.calls.map(call => String(call[0])).join(' ');
-    expect(pdfText).toContain('تقرير مقارنة السير الذاتية');
-    expect(pdfText).toContain('أُنشئ في');
-    expect(pdfText).toContain('تقييم سابق');
-    expect(pdfText).toContain('ملخص الوصف الوظيفي:');
-    expect(pdfText).toContain('هذا التقييم لا يتنبأ بقرار التوظيف.');
-    expect(pdfText).toContain('تحتاج الخبرة إلى دليل إضافي.');
-    expect(pdfText).toContain('ملخص الأدلة والمخاطر:');
-    expect(pdfText).not.toContain('This assessment does not predict a hiring decision.');
+    fireEvent.click(screen.getByRole('button', { name: 'طباعة / حفظ بصيغة PDF' }));
+    expect(window.open).toHaveBeenCalledTimes(1);
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(mockPdfSave).not.toHaveBeenCalled();
+    expect(popupDocument.documentElement.lang).toBe('ar');
+    expect(popupDocument.documentElement.dir).toBe('rtl');
+    expect(popupDocument.querySelector('h1')?.textContent).toBe('تقرير مقارنة السير الذاتية');
+    expect([...popupDocument.querySelectorAll('th')].map(cell => cell.textContent)).toEqual([
+      'الترتيب', 'اسم السيرة الذاتية', 'تقدير التوافق مع هذا الوصف الوظيفي',
+      'الكلمات المفتاحية', 'الترتيب النسبي',
+    ]);
+    expect(popupDocument.querySelector('tbody')?.textContent).toContain('أعلى درجة في هذه المقارنة');
+    expect(popupDocument.body.textContent).toContain('تقييم سابق');
+    expect(popupDocument.body.textContent).toContain('محلل بيانات');
+    expect(popupDocument.body.textContent).toContain('هذا التقييم لا يتنبأ بقرار التوظيف.');
+    expect(popupDocument.body.textContent).toContain('تحتاج الخبرة إلى دليل إضافي.');
+    expect(popupDocument.body.textContent).toContain('ملخص الأدلة والمخاطر:');
+    expect(popupDocument.body.textContent).not.toContain('Live English role');
+  });
+
+  it('keeps untrusted Arabic report content as text in the print window', async () => {
+    const resumeText = 'خبرة في التقارير';
+    const jobSnapshot = 'محلل <script>run()</script>';
+    const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+      language: 'ar', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    const analysis = { score: 20, missingKeywords: ['<img src=x onerror=run()>'],
+      strategicRealityCheck: { summary: '<svg onload=run()> تحتاج أدلة.' } };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'unsafe', name: '<b>سيرة</b>.pdf', status: 'completed', plainText: resumeText, analysis,
+      assessment: { context, jobSnapshot, requestId: 'saved-unsafe',
+        createdAt: '2026-09-26T00:00:00Z', result: analysis },
+    }]));
+    const popupDocument = document.implementation.createHTMLDocument('');
+    vi.spyOn(window, 'open').mockReturnValue({ document: popupDocument, focus: vi.fn(), print: vi.fn(),
+      close: vi.fn() } as unknown as Window);
+    render(<BulkAnalysisSection jobDescription="Live English role" />);
+    expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'طباعة / حفظ بصيغة PDF' }));
+    expect(popupDocument.body.textContent).toContain('<script>run()</script>');
+    expect(popupDocument.body.textContent).toContain('<img src=x onerror=run()>');
+    expect(popupDocument.body.textContent).toContain('<svg onload=run()>');
+    expect(popupDocument.querySelector('script, img, svg, b')).toBeNull();
+  });
+
+  it('shows a recoverable error when the Arabic print popup is blocked', async () => {
+    const resumeText = 'خبرة في التقارير';
+    const jobSnapshot = 'محلل بيانات';
+    const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+      language: 'ar', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    const analysis = { score: 20, missingKeywords: [] };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'blocked', name: 'سيرة.pdf', status: 'completed', plainText: resumeText, analysis,
+      assessment: { context, jobSnapshot, requestId: 'saved-blocked',
+        createdAt: '2026-09-26T00:00:00Z', result: analysis },
+    }]));
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    render(<BulkAnalysisSection jobDescription="Live English role" />);
+    expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'طباعة / حفظ بصيغة PDF' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('تعذر فتح نافذة الطباعة');
+    expect(mockPdfSave).not.toHaveBeenCalled();
   });
 
   it('ignores a late network response after the job changes', async () => {
