@@ -61,6 +61,7 @@ import type { ResumeTruthCheckResult } from "../../types/truth-check";
 import { createAssessmentContext, canAcceptAssessment } from "@/lib/match/assessmentContext";
 import type { AssessmentContext, AssessmentInput } from "@/types/assessment";
 import type { MatchResult } from "@/types/analysis";
+import type { OptimizationResult } from "@/types/templates";
 import { clearStoredMatchAnalysis, loadStoredMatchAssessment, saveMatchAssessment } from "@/lib/utils/matchAnalysisCache";
 import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
@@ -203,7 +204,9 @@ const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
 const MATCH_RUBRIC_VERSION = 'match-v1';
+const OPTIMIZE_RUBRIC_VERSION = 'optimize-v1';
 type MatchRequest = { id: string; input: AssessmentInput; context?: AssessmentContext; failed?: boolean };
+type OptimizeRequest = { id: string; input: AssessmentInput; context?: AssessmentContext; inFlight: boolean };
 
 const sameMatchInput = (left: AssessmentInput | undefined, right: AssessmentInput): boolean => {
   if (!left) return false;
@@ -621,13 +624,14 @@ export default function MainContent() {
    * nothing" actually was.
    */
   const [optimizations, setOptimizations] = useState(
-    () => (useResumeStore.getState().optimizeRun?.cards as typeof optimizations) ?? [],
+    [] as OptimizationResult[],
   );
   const [optimizationData, setOptimizationData] = useState(
-    () => useResumeStore.getState().optimizeRun?.data ?? null,
+    null as unknown,
   );
+  const [optimizeAssessmentCurrent, setOptimizeAssessmentCurrent] = useState(false);
   const [optimizationKeywords, setOptimizationKeywords] = useState(
-    () => useResumeStore.getState().optimizeRun?.keywords ?? { add: [], remove: [], neutral: [] },
+    () => ({ add: [], remove: [], neutral: [] } as { add: string[]; remove: string[]; neutral: string[] }),
   );
 
   /**
@@ -641,8 +645,14 @@ export default function MainContent() {
    * page is currently showing.
    */
   useEffect(() => {
-    const adopt = (run: OptimizeRunRecord | null) => {
-      if (run?.status !== 'succeeded') return;
+    let active = true;
+    const input: AssessmentInput = { resumeText: resumeData?.plainText || '', jobDescription,
+      language: matchLanguage, kind: 'optimize', isOptimized: false, rubricVersion: OPTIMIZE_RUBRIC_VERSION };
+    const adopt = async (run: OptimizeRunRecord | null) => {
+      if (run?.status !== 'succeeded' || !run.assessment || run.assessment.jobSnapshot !== input.jobDescription) return;
+      const context = await createAssessmentContext(input);
+      if (!active || !sameMatchInput(input, latestOptimizeInput.current) ||
+        useResumeStore.getState().optimizeRun !== run || run.assessment.context.key !== context.key) return;
       const cards = (run.cards ?? []) as typeof optimizations;
       if (cards.length === 0) return;
       setOptimizations((current) => (current.length > 0 ? current : cards));
@@ -652,18 +662,31 @@ export default function MainContent() {
           ? current
           : run.keywords ?? current,
       );
+      setOptimizeAssessmentCurrent(true);
     };
 
-    adopt(useResumeStore.getState().optimizeRun);
-    return useResumeStore.subscribe((state, previous) => {
-      if (state.optimizeRun !== previous.optimizeRun) adopt(state.optimizeRun);
+    void adopt(useResumeStore.getState().optimizeRun).catch(() => { /* No paid restoration on context failure. */ });
+    const unsubscribe = useResumeStore.subscribe((state, previous) => {
+      if (state.optimizeRun !== previous.optimizeRun) void adopt(state.optimizeRun).catch(() => {});
     });
-    // Mount-scoped by design: the setters are stable and the store is read fresh on
-    // every call, so there is nothing to re-subscribe for.
-  }, []);
+    return () => { active = false; unsubscribe(); };
+  }, [resumeData?.plainText, jobDescription, matchLanguage]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTruthChecking, setIsTruthChecking] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const optimizeRequest = useRef<OptimizeRequest | null>(null);
+  const latestOptimizeContext = useRef<AssessmentContext | null>(null);
+  const optimizeInput: AssessmentInput = { resumeText: resumeData?.plainText || '', jobDescription,
+    language: matchLanguage, kind: 'optimize', isOptimized: false, rubricVersion: OPTIMIZE_RUBRIC_VERSION };
+  const latestOptimizeInput = useRef(optimizeInput);
+  latestOptimizeInput.current = optimizeInput;
+  const previousOptimizeInput = useRef(optimizeInput);
+  const isCurrentOptimize = useCallback((request: OptimizeRequest) =>
+    optimizeRequest.current === request &&
+    sameMatchInput(request.input, latestOptimizeInput.current) &&
+    Boolean(request.context && latestOptimizeContext.current &&
+      canAcceptAssessment(optimizeRequest.current?.id ?? null, request.id,
+        request.context, latestOptimizeContext.current)), []);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
@@ -683,12 +706,28 @@ export default function MainContent() {
   const clarificationBusy = useRef(false);
   const clarificationContext = useRef('');
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{
+    request: OptimizeRequest;
     mode: string;
     workHistory?: WorkEntry[];
     persistentHardStops?: string[];
     freePreview?: boolean;
   } | null>(null);
   const pendingOptimizeContinuation = useRef<PendingOptimizeContinuation | null>(null);
+  useLayoutEffect(() => {
+    if (sameMatchInput(previousOptimizeInput.current, latestOptimizeInput.current)) return;
+    previousOptimizeInput.current = latestOptimizeInput.current;
+    optimizeRequest.current = null;
+    latestOptimizeContext.current = null;
+    setIsOptimizing(false);
+    setIsCheckingClarifications(false);
+    setFlowProgress(0);
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setOptimizeAssessmentCurrent(false);
+    pendingOptimizeContinuation.current?.resolve(null);
+    pendingOptimizeContinuation.current = null;
+  }, [optimizeInput.resumeText, optimizeInput.jobDescription, optimizeInput.language]);
   useEffect(() => {
     const context = JSON.stringify([resumeData?.plainText, jobDescription, i18n.language]);
     if (clarificationContext.current && clarificationContext.current !== context) {
@@ -1271,6 +1310,7 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setOptimizeAssessmentCurrent(false);
     // The persisted run describes results that no longer exist. Leaving it behind
     // would let a stale record be restored, or reported as interrupted.
     useResumeStore.getState().setOptimizeRun(null);
@@ -1329,6 +1369,7 @@ export default function MainContent() {
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setOptimizeAssessmentCurrent(false);
     useResumeStore.getState().setOptimizeRun(null);
 
     // Clear persisted Zustand state (survives refresh via localStorage)
@@ -1776,8 +1817,10 @@ export default function MainContent() {
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
-    async ({ mode, workHistory, userClarifications, userHardStops, freePreview, clarificationOutcome }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean; clarificationOutcome?: ClarificationOutcome }) => {
-      if (!resumeData?.plainText || !jobDescription) return null;
+    async ({ request, mode, workHistory, userClarifications, userHardStops, freePreview, clarificationOutcome }: { request: OptimizeRequest; mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean; clarificationOutcome?: ClarificationOutcome }) => {
+      if (!isCurrentOptimize(request)) return null;
+      const { resumeText, jobDescription, language } = request.input;
+      if (!resumeText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
@@ -1797,6 +1840,8 @@ export default function MainContent() {
           cards: [],
           data: null,
           keywords: { add: [], remove: [], neutral: [] },
+          assessment: { context: request.context!, jobSnapshot: jobDescription, requestId: request.id,
+            createdAt: new Date().toISOString(), result: null },
         });
         pushToast(
           {
@@ -1820,11 +1865,11 @@ export default function MainContent() {
           // Try SSE streaming endpoint first
           result = await optimizeResumeStream(
             {
-              resumeText: resumeData.plainText,
+              resumeText,
               jobDesc: jobDescription,
               mode,
               preview: !isPremium,
-              language: i18n.language,
+              language,
               workHistory,
               userClarifications,
               userHardStops,
@@ -1832,6 +1877,7 @@ export default function MainContent() {
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
+              if (!isCurrentOptimize(request)) return;
               useResumeStore.getState().setOptimizeRun({ phase });
               const message = phaseMessages[phase];
               if (message) {
@@ -1847,6 +1893,7 @@ export default function MainContent() {
             }
           );
         } catch (streamError: any) {
+          if (!isCurrentOptimize(request)) return null;
           if (streamError.isBillingStateUnknown) {
             // Stream opened (2xx) then failed — credits may have been consumed on the server.
             // Do NOT fall back to legacy: that would trigger a second paid optimization request.
@@ -1862,14 +1909,14 @@ export default function MainContent() {
           if (![404, 405].includes(streamError.status)) throw streamError;
           // Server explicitly rejected before processing (non-2xx, SSE error event) —
           // billing state is known-safe, fall back to legacy endpoint.
-          console.warn('[optimize] SSE rejected before processing, falling back to legacy:', streamError.message);
+          console.warn('[optimize] SSE rejected before processing; using legacy endpoint');
           result = await optimizeResume(
             {
-              resumeText: resumeData.plainText,
+              resumeText,
               jobDesc: jobDescription,
               mode,
               preview: !isPremium,
-              language: i18n.language,
+              language,
               workHistory,
               userClarifications,
               userHardStops,
@@ -1877,6 +1924,7 @@ export default function MainContent() {
             }
           );
         }
+        if (!isCurrentOptimize(request)) return null;
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
         // has already resolved to a single successful `result` — never inside
@@ -1932,6 +1980,7 @@ export default function MainContent() {
         setOptimizations(allCards);
         setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
+        setOptimizeAssessmentCurrent(true);
 
         // FIX: Also persist keywords to Zustand store so they survive page refresh
         if (result.keywords) {
@@ -2013,7 +2062,7 @@ export default function MainContent() {
             applyCreditsRemaining(remaining);
           } else {
             scheduleTimeout(() => {
-              refetchCredits().catch(() => { /* non-blocking */ });
+              if (isCurrentOptimize(request)) refetchCredits().catch(() => { /* non-blocking */ });
             }, 500);
           }
         }
@@ -2026,12 +2075,15 @@ export default function MainContent() {
           cards: allCards,
           data: result,
           keywords: result.keywords ?? { add: [], remove: [], neutral: [] },
+          assessment: { context: request.context!, jobSnapshot: jobDescription, requestId: request.id,
+            createdAt: new Date().toISOString(), result },
         });
 
         setFlowProgress(100);
-        scheduleTimeout(() => setFlowProgress(0), 900);
+        scheduleTimeout(() => { if (isCurrentOptimize(request)) setFlowProgress(0); }, 900);
         return result;
       } catch (error: any) {
+        if (!isCurrentOptimize(request)) return null;
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
           finishedAt: new Date().toISOString(),
@@ -2065,10 +2117,11 @@ export default function MainContent() {
 
         throw error;
       } finally {
-        setIsOptimizing(false);
+        request.inFlight = false;
+        if (isCurrentOptimize(request)) setIsOptimizing(false);
       }
     },
-    [applyCreditsRemaining, i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, resumeData, t]
+    [applyCreditsRemaining, isCurrentOptimize, isPremium, persistPreviewUsage, previewUsed, pushToast, refetchCredits, t]
   );
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual
@@ -2084,7 +2137,27 @@ export default function MainContent() {
       }
 
       // Guard against double-clicks or re-entrant calls while already processing
-      if (isOptimizing || isInterrogating || isCheckingClarifications) return null;
+      if (optimizeRequest.current?.inFlight || isOptimizing || isInterrogating || isCheckingClarifications) return null;
+
+      const input: AssessmentInput = { resumeText: resumeData.plainText, jobDescription,
+        language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'optimize',
+        isOptimized: false, rubricVersion: OPTIMIZE_RUBRIC_VERSION };
+      const request: OptimizeRequest = { id: crypto.randomUUID(), input, inFlight: true };
+      optimizeRequest.current = request;
+      latestOptimizeContext.current = null;
+      try {
+        request.context = await createAssessmentContext(input);
+      } catch {
+        request.inFlight = false;
+        if (optimizeRequest.current === request) {
+          optimizeRequest.current = null;
+          pushToast({ type: 'danger', title: t('toasts.optimizationFailed'),
+            description: t('toasts.contextUnavailable', 'Could not identify the current inputs. Please retry.') });
+        }
+        return null;
+      }
+      if (optimizeRequest.current !== request || !sameMatchInput(input, latestOptimizeInput.current)) return null;
+      latestOptimizeContext.current = request.context;
 
       /** Helper: build typed work-history from Zustand store */
       const buildWorkHistory = (): WorkEntry[] | undefined => {
@@ -2139,16 +2212,17 @@ export default function MainContent() {
             setIsCheckingClarifications(true);
             try {
               return await generateClarifications({
-                resumeText: resumeData.plainText,
-                jobDesc: jobDescription,
-                language: i18n.language,
+                resumeText: input.resumeText,
+                jobDesc: input.jobDescription,
+                language: input.language,
                 history: clarificationHistory.current,
                 round: clarificationHistory.current.length ? Math.min(10, clarificationRound + 1) : 1,
               });
             } finally {
-              setIsCheckingClarifications(false);
+              if (isCurrentOptimize(request)) setIsCheckingClarifications(false);
             }
           })();
+          if (!isCurrentOptimize(request)) return null;
 
           const unansweredQuestions = filterClarificationQuestionsByHardStops(
             clarifyResult.clarifications ?? [],
@@ -2164,6 +2238,7 @@ export default function MainContent() {
               setClarificationQuestions(unansweredQuestions);
               setClarificationDraft({});
               setPendingOptimizeArgs({
+                request,
                 mode,
                 workHistory,
                 persistentHardStops,
@@ -2176,9 +2251,10 @@ export default function MainContent() {
           }
 
           // No questions → fall through to the single optimize call below.
-        } catch (clarificationError) {
+        } catch {
+          if (!isCurrentOptimize(request)) return null;
           // Clarification is free and advisory. Losing it costs context, not the run.
-          console.warn('[handleOptimize] Clarification error, optimizing without it:', clarificationError);
+          console.warn('[handleOptimize] Clarification unavailable; continuing optimization');
         }
       }
 
@@ -2188,6 +2264,7 @@ export default function MainContent() {
       // what keeps the rejection from escaping into an un-awaited caller.
       try {
         return await handleOptimizeActual({
+          request,
           mode,
           workHistory,
           userClarifications: formatClarificationHistory(clarificationHistory.current).userClarifications,
@@ -2198,13 +2275,13 @@ export default function MainContent() {
         return null;
       }
     },
-    [clarificationRound, handleOptimizeActual, i18n.language, isCheckingClarifications, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
+    [clarificationRound, handleOptimizeActual, i18n.language, isCheckingClarifications, isCurrentOptimize, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
 
   const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers, optimizeNow = false) => {
-    if (clarificationBusy.current || !pendingOptimizeArgs) return;
+    if (clarificationBusy.current || !pendingOptimizeArgs || !isCurrentOptimize(pendingOptimizeArgs.request)) return;
     clarificationBusy.current = true;
     const requestContext = clarificationContext.current;
     setIsRegenerating(true);
@@ -2216,6 +2293,7 @@ export default function MainContent() {
       t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
     );
     const {
+      request,
       mode,
       workHistory,
       persistentHardStops = [],
@@ -2232,7 +2310,7 @@ export default function MainContent() {
           history: clarificationHistory.current,
           round: clarificationRound + 1,
         });
-        if (clarificationContext.current !== requestContext) return;
+        if (!isCurrentOptimize(request) || clarificationContext.current !== requestContext) return;
         if (next.unavailable) {
           pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
           return;
@@ -2247,12 +2325,14 @@ export default function MainContent() {
         }
       }
     } catch {
+      if (!isCurrentOptimize(request)) return;
       pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
       return;
     } finally {
-      setIsRegenerating(false);
+      if (isCurrentOptimize(request)) setIsRegenerating(false);
       clarificationBusy.current = false;
     }
+    if (!isCurrentOptimize(request)) return;
     clarificationBusy.current = true;
     setIsInterrogating(false);
     const outcome = clarificationHistory.current.length ? 'answered' : 'skipped';
@@ -2264,6 +2344,7 @@ export default function MainContent() {
     });
     try {
       const result = await handleOptimizeActual({
+        request,
         mode,
         workHistory,
         userClarifications,
@@ -2271,6 +2352,7 @@ export default function MainContent() {
         freePreview,
         clarificationOutcome: outcome,
       });
+      if (!isCurrentOptimize(request)) return;
       pendingOptimizeContinuation.current?.resolve(result);
       pendingOptimizeContinuation.current = null;
       setPendingOptimizeArgs(null);
@@ -2280,14 +2362,15 @@ export default function MainContent() {
       // original UI action as incomplete so it neither spends a preview nor
       // verifies stale cards.
       // Keep the current questions and draft available to explicitly retry.
-      if (clarificationContext.current === requestContext) setIsInterrogating(true);
+      if (isCurrentOptimize(request) && clarificationContext.current === requestContext) setIsInterrogating(true);
     } finally {
       clarificationBusy.current = false;
     }
-  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, pushToast, t]);
+  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, isCurrentOptimize, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, pushToast, t]);
 
   const handleClarificationSkip = useCallback(() => {
     if (clarificationBusy.current) return;
+    if (pendingOptimizeArgs) pendingOptimizeArgs.request.inFlight = false;
     setIsInterrogating(false);
     analytics.trackClarificationOutcome({
       outcome: 'skipped',
@@ -2299,11 +2382,13 @@ export default function MainContent() {
     setClarificationQuestions([]);
     pendingOptimizeContinuation.current?.resolve(null);
     pendingOptimizeContinuation.current = null;
-  }, [clarificationQuestions.length]);
+  }, [clarificationQuestions.length, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
-    if (!resumeData?.plainText || !jobDescription || clarificationBusy.current) return;
+    const request = pendingOptimizeArgs?.request;
+    if (!resumeData?.plainText || !jobDescription || !request ||
+      !isCurrentOptimize(request) || clarificationBusy.current) return;
     clarificationBusy.current = true;
     const requestContext = clarificationContext.current;
     const notifyRegenerateFailure = () => pushToast({
@@ -2324,7 +2409,7 @@ export default function MainContent() {
         history: clarificationHistory.current,
         round: clarificationRound,
       });
-      if (clarificationContext.current !== requestContext) return;
+      if (!isCurrentOptimize(request) || clarificationContext.current !== requestContext) return;
       const refreshedQuestions = filterClarificationQuestionsByHardStops(
         result.clarifications ?? [],
         loadPersistentHardStops(),
@@ -2334,14 +2419,16 @@ export default function MainContent() {
       } else {
         notifyRegenerateFailure();
       }
-    } catch (error) {
-      console.warn('[MainContent] Clarification regeneration failed:', error);
-      notifyRegenerateFailure();
+    } catch {
+      if (isCurrentOptimize(request)) {
+        console.warn('[MainContent] Clarification regeneration failed');
+        notifyRegenerateFailure();
+      }
     } finally {
-      setIsRegenerating(false);
+      if (isCurrentOptimize(request)) setIsRegenerating(false);
       clarificationBusy.current = false;
     }
-  }, [clarificationRound, i18n.language, jobDescription, pushToast, resumeData, t]);
+  }, [clarificationRound, i18n.language, isCurrentOptimize, jobDescription, pendingOptimizeArgs, pushToast, resumeData, t]);
 
   const handleMarkApplied = useCallback(async () => {
     if (isGuestMode) {
@@ -2812,6 +2899,9 @@ export default function MainContent() {
                   isOptimizing={isOptimizing}
                   isCheckingQuestions={isCheckingClarifications}
                   onOptimize={handleOptimize}
+                  resumeText={resumeData?.plainText || ''}
+                  jobDescription={jobDescription}
+                  assessmentCurrent={optimizeAssessmentCurrent}
                   onCopy={handleCopy}
                   previewUsed={previewUsed}
                   onUpgrade={handleUpgrade}

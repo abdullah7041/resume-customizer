@@ -1,7 +1,7 @@
 // Template system types - extends JSON Resume schema
 import type { PartialResumeSchema, ResumeSchema } from './resume';
 import type { SearchIntent } from './onboarding';
-import type { AssessmentContext } from './assessment';
+import type { AssessmentContext, AssessmentRecord } from './assessment';
 import type { StrategicRealityCheck } from './analysis';
 import type { CategoryScoresData } from '../components/ScoreBreakdown';
 
@@ -258,6 +258,8 @@ export interface OptimizationMetrics {
  * promise driving it died with the previous page.
  */
 export interface OptimizeRunRecord {
+  /** Exact inputs for this run; absent on legacy persisted records. */
+  assessment?: AssessmentRecord<unknown>;
   status: 'running' | 'succeeded' | 'failed';
   /**
    * Which page load started this run.

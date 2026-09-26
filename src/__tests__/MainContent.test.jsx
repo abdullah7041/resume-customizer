@@ -43,6 +43,7 @@ const {
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
 const matchSectionMockProps = vi.hoisted(() => ({ current: null }));
+const optimizeSectionMockProps = vi.hoisted(() => ({ current: null }));
 const pipelineMockProps = vi.hoisted(() => ({ current: null }));
 const mobileWorkflowMockProps = vi.hoisted(() => ({ current: null }));
 const landingMockProps = vi.hoisted(() => ({ current: null }));
@@ -156,6 +157,7 @@ vi.mock("../components/sections/OptimizeSection", async () => {
   return {
     __esModule: true,
     OptimizeSection: (props) => {
+      optimizeSectionMockProps.current = props;
       const scoreState = useMockResumeStore((state) => state.optimizationMetrics);
       const [optimizeStatus, setOptimizeStatus] = React.useState("idle");
       return React.createElement(
@@ -321,7 +323,8 @@ describe("MainContent resume parsing", () => {
     // Path-A inline panel gates on the store — reset so it only appears where a test
     // opts in by setting originalResume.
     useResumeStore.setState({ originalResume: null, searchIntent: null, parsedResumeText: null,
-      analysisCache: {}, baselineMatchScore: null });
+      analysisCache: {}, baselineMatchScore: null, optimizeRun: null, optimizations: [],
+      optimizationOrigin: null, variantRestoreNonce: 0 });
     Object.values(analyticsMock).forEach((mock) => mock.mockClear());
     parseResumeMock.mockResolvedValue({
       plainText: "Parsed resume",
@@ -362,6 +365,123 @@ describe("MainContent resume parsing", () => {
     render(<MainContent />);
     await screen.findByTestId('job-match-mock');
   };
+
+  const openOptimize = async (job = 'Role A') => {
+    localStorage.setItem('watheq:lastActiveTab', 'optimize');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Original resume', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', job);
+    render(<MainContent />);
+    await screen.findByTestId('optimization-mock');
+  };
+
+  const restoreJob = async (job) => {
+    localStorage.setItem('watheq:lastJobDescription', job);
+    await act(async () => {
+      useResumeStore.setState({ variantRestoreNonce: useResumeStore.getState().variantRestoreNonce + 1 });
+    });
+  };
+
+  it('Optimize ownership: ignores a late generation result after the job changes', async () => {
+    await openOptimize();
+    const pending = deferred();
+    optimizeResumeStreamMock.mockReturnValueOnce(pending.promise);
+    let run;
+    await act(async () => { run = optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    await restoreJob('Role B');
+    await act(async () => { pending.resolve({ cards: [{ section: 'Experience', exampleAfter: 'Old role card' }],
+      keywords: { add: [], remove: [], neutral: [] }, source: 'gemini' }); await run; });
+    expect(useResumeStore.getState().optimizeRun?.status).not.toBe('succeeded');
+    expect(useResumeStore.getState().optimizationOrigin).toBeNull();
+    expect(optimizeSectionMockProps.current.optimizations).toEqual([]);
+  });
+
+  it('Optimize ownership: does not present a saved result for another job as current', async () => {
+    const { createAssessmentContext } = await import('../lib/match/assessmentContext');
+    const oldContext = await createAssessmentContext({ resumeText: 'Original resume', jobDescription: 'Role A',
+      language: 'en', kind: 'optimize', isOptimized: false, rubricVersion: 'optimize-v1' });
+    useResumeStore.setState({ optimizeRun: { status: 'succeeded', startedAt: new Date().toISOString(),
+      finishedAt: new Date().toISOString(), phase: 'done', error: null,
+      cards: [{ section: 'Experience', exampleAfter: 'Role A card' }], data: { source: 'gemini' },
+      keywords: { add: [], remove: [], neutral: [] },
+      assessment: { context: oldContext, jobSnapshot: 'Role A', requestId: 'old-run',
+        createdAt: new Date().toISOString(), result: { source: 'gemini' } } } });
+    await openOptimize('Role B');
+    expect(optimizeSectionMockProps.current.optimizations).toEqual([]);
+  });
+
+  it('Optimize ownership: an older A cannot replace the newer A after visiting B', async () => {
+    await openOptimize('Role A');
+    const old = deferred(), newer = deferred();
+    optimizeResumeStreamMock.mockReturnValueOnce(old.promise).mockReturnValueOnce(newer.promise);
+    let first, second;
+    await act(async () => { first = optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    await restoreJob('Role B');
+    await restoreJob('Role A');
+    await act(async () => { second = optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(2));
+    await act(async () => { old.resolve({ cards: [{ section: 'Experience', exampleAfter: 'Old A' }],
+      keywords: { add: [], remove: [], neutral: [] }, source: 'gemini' }); await first; });
+    expect(useResumeStore.getState().optimizeRun?.status).toBe('running');
+    expect(optimizeSectionMockProps.current.isOptimizing).toBe(true);
+    await act(async () => { newer.resolve({ cards: [{ section: 'Experience', exampleAfter: 'New A' }],
+      keywords: { add: [], remove: [], neutral: [] }, source: 'gemini' }); await second; });
+    expect(useResumeStore.getState().optimizeRun?.status).toBe('succeeded');
+    expect(optimizeSectionMockProps.current.optimizations[0].exampleAfter).toBe('New A');
+  });
+
+  it('Optimize ownership: ignores clarification questions returned after a job switch', async () => {
+    await openOptimize('Role A');
+    const pending = deferred();
+    generateClarificationsMock.mockReturnValueOnce(pending.promise);
+    let run;
+    await act(async () => { run = optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    await waitFor(() => expect(generateClarificationsMock).toHaveBeenCalledTimes(1));
+    await restoreJob('Role B');
+    await act(async () => { pending.resolve({ clarifications: [{ id: 'old', question: 'Old role question?',
+      type: 'text', theme: 'skills', rationale: 'Old role', allowOther: true }] }); await run; });
+    expect(screen.queryByText('Old role question?')).not.toBeInTheDocument();
+    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+    expect(optimizeSectionMockProps.current.isCheckingQuestions).toBe(false);
+  });
+
+  it('Optimize ownership: ignores a late generation result after a resume upload', async () => {
+    await openOptimize('Role A');
+    const pending = deferred();
+    optimizeResumeStreamMock.mockReturnValueOnce(pending.promise);
+    let run;
+    await act(async () => { run = optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    parseResumeMock.mockResolvedValueOnce({ plainText: 'New resume', sections: [], bullets: [] });
+    await act(async () => { await resumeUploadMockProps.current.onParseResume({ kind: 'text', value: 'New resume' }); });
+    await act(async () => { pending.resolve({ cards: [{ section: 'Summary', exampleAfter: 'Old resume card' }],
+      keywords: { add: [], remove: [], neutral: [] }, source: 'gemini' }); await run; });
+    expect(useResumeStore.getState().optimizeRun?.status).not.toBe('succeeded');
+    expect(useResumeStore.getState().optimizationOrigin).toBeNull();
+  });
+
+  it('Optimize ownership: ignores a late generation result after a language switch', async () => {
+    const { default: i18n } = await import('../lib/i18n');
+    await i18n.changeLanguage('en');
+    try {
+      await openOptimize('Role A');
+      const pending = deferred();
+      optimizeResumeStreamMock.mockReturnValueOnce(pending.promise);
+      let run;
+      await act(async () => { run = optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+      await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+      await act(async () => { await i18n.changeLanguage('ar'); });
+      await act(async () => { pending.resolve({ cards: [{ section: 'Summary', exampleAfter: 'English card' }],
+        keywords: { add: [], remove: [], neutral: [] }, source: 'gemini' }); await run; });
+      expect(useResumeStore.getState().optimizeRun?.status).not.toBe('succeeded');
+      expect(useResumeStore.getState().optimizationOrigin).toBeNull();
+    } finally {
+      await act(async () => { await i18n.changeLanguage('en'); });
+      i18n.removeResourceBundle('en', 'translation');
+      i18n.removeResourceBundle('ar', 'translation');
+    }
+  });
 
   it.each(['success', 'failure'])('Match ownership: late A %s cannot replace newer A or finalize its loading', async (outcome) => {
     await openMatch();
@@ -1401,7 +1521,7 @@ describe("MainContent resume parsing", () => {
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
 
     expect(generateClarificationsMock).not.toHaveBeenCalled();
-    expect(optimizeResumeStreamMock).toHaveBeenCalled();
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalled());
   });
 
   it("allows guest optimization and clarifications for current onboarding plan testing", async () => {
@@ -1422,6 +1542,7 @@ describe("MainContent resume parsing", () => {
 
     await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalled());
     expect(optimizeResumeStreamMock.mock.calls[0][0]).toMatchObject({ freePreview: true });
+    await waitFor(() => expect(useResumeStore.getState().optimizationOrigin).toBe('guest_preview'));
     expect(optimizeResumeMock).not.toHaveBeenCalled();
     expect(screen.queryByText(/Sign in required Sign in to run AI analysis and save your progress/i)).not.toBeInTheDocument();
   });

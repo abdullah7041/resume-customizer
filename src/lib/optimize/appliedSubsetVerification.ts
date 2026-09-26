@@ -4,12 +4,15 @@ import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { partitionOptimizations } from '@/lib/optimize/actionability';
 import type { CachedAnalysis, OptimizationResult } from '@/types/templates';
 import type { ResumeSchema } from '@/types/resume';
+import type { AssessmentContext } from '@/types/assessment';
+import { createAssessmentContext } from '@/lib/match/assessmentContext';
 
-type CachedAnalysisLookup = (resumeText: string, jobDescription: string, forceIsOptimized?: boolean) => CachedAnalysis | null;
-type CachedAnalysisWriter = (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => void;
+type CachedAssessmentLookup = (context: AssessmentContext) => CachedAnalysis | null;
+type CachedAssessmentWriter = (context: AssessmentContext, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
 
 export type AppliedSubsetVerificationResult =
   | { status: 'idle' }
+  | { status: 'outdated' }
   | { status: 'ready'; appliedCount: number }
   | { status: 'unavailable'; reason: 'missing_job_description' | 'missing_resume' }
   | { status: 'failed'; reason: 'too_short' | 'unchanged' | 'invalid_score' | 'request_error' }
@@ -22,8 +25,9 @@ export interface AppliedSubsetVerificationInput {
   sourceResumeText: string;
   jobDescription: string;
   language: string;
-  getCachedAnalysis: CachedAnalysisLookup;
-  setCachedAnalysis: CachedAnalysisWriter;
+  getCachedAssessment: CachedAssessmentLookup;
+  setCachedAssessment: CachedAssessmentWriter;
+  isCurrent: () => boolean;
   allowNetwork: boolean;
 }
 
@@ -70,23 +74,29 @@ export async function resolveAppliedSubsetVerification(
     return { status: 'failed', reason: 'unchanged' };
   }
 
-  const cachedScore = finiteScore(input.getCachedAnalysis(appliedText, input.jobDescription, true)?.score);
+  const context = await createAssessmentContext({ resumeText: appliedText,
+    jobDescription: input.jobDescription, language: input.language === 'ar' ? 'ar' : 'en',
+    kind: 'match', isOptimized: true, rubricVersion: 'match-v1' });
+  if (!input.isCurrent()) return { status: 'outdated' };
+  const cachedScore = finiteScore(input.getCachedAssessment(context)?.score);
   if (cachedScore !== null) return { status: 'verified', score: cachedScore, appliedCount, source: 'cache' };
   if (!input.allowNetwork) return { status: 'ready', appliedCount };
 
   try {
     const result = await analyzeResumeWithAI(appliedText, input.jobDescription, input.language, { mode: 'verify', verifyKind: 'applied_subset' });
+    if (!input.isCurrent()) return { status: 'outdated' };
     const score = finiteScore(result?.score);
     if (score === null) return { status: 'failed', reason: 'invalid_score' };
 
-    input.setCachedAnalysis(appliedText, input.jobDescription, {
+    input.setCachedAssessment(context, {
       score,
       matchedKeywords: result.topHits || [],
       missingKeywords: result.missingKeywords || [],
-    }, true);
+    });
     return { status: 'verified', score, appliedCount, source: 'network', freeVerify: result.freeVerify === true };
-  } catch (error) {
-    console.warn('[AppliedSubsetVerification] request failed (non-fatal):', error);
+  } catch {
+    if (!input.isCurrent()) return { status: 'outdated' };
+    console.warn('[AppliedSubsetVerification] request failed (non-fatal)');
     return { status: 'failed', reason: 'request_error' };
   }
 }

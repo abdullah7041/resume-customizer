@@ -2,6 +2,7 @@
 // Tests for OptimizeSection component - AI optimization suggestions
 
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { webcrypto } from 'node:crypto';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import OptimizeSection, { normalizeOptimization } from '../components/sections/OptimizeSection';
@@ -45,6 +46,8 @@ const mockSetOptimizationMetrics = vi.fn();
 const mockResetOptimizationMetrics = vi.fn();
 const mockGetCachedAnalysis = vi.fn(() => null);
 const mockSetCachedAnalysis = vi.fn();
+const mockGetCachedAssessment = vi.fn(() => null);
+const mockSetCachedAssessment = vi.fn();
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
 const localStorageValues = new Map();
 
@@ -76,6 +79,8 @@ let mockStoreState = {
     resetOptimizationMetrics: mockResetOptimizationMetrics,
     getCachedAnalysis: mockGetCachedAnalysis,
     setCachedAnalysis: mockSetCachedAnalysis,
+    getCachedAssessment: mockGetCachedAssessment,
+    setCachedAssessment: mockSetCachedAssessment,
     getActiveResume: vi.fn(() => null),
     baselineMatchScore: null,
     // Job variants slice (Phase 1) — JobVariantsBar reads these
@@ -237,11 +242,13 @@ beforeAll(() => {
     Object.defineProperty(window, 'crypto', {
         value: {
             randomUUID: () => 'test-session-id-' + Math.random(),
+            subtle: webcrypto.subtle,
         },
     });
 });
 
 beforeEach(() => {
+    mockGetCachedAssessment.mockReturnValue(null);
     // Reset mock store state before each test
     mockStoreState = {
         originalResume: null,
@@ -270,6 +277,8 @@ beforeEach(() => {
         resetOptimizationMetrics: mockResetOptimizationMetrics,
         getCachedAnalysis: mockGetCachedAnalysis,
         setCachedAnalysis: mockSetCachedAnalysis,
+        getCachedAssessment: mockGetCachedAssessment,
+        setCachedAssessment: mockSetCachedAssessment,
         getActiveResume: vi.fn(() => null),
         baselineMatchScore: null,
         // Job variants slice (Phase 1) — JobVariantsBar reads these
@@ -1229,6 +1238,8 @@ describe('Optimization Card Types', () => {
             resetOptimizationMetrics: mockResetOptimizationMetrics,
             getCachedAnalysis: mockGetCachedAnalysis,
             setCachedAnalysis: mockSetCachedAnalysis,
+            getCachedAssessment: mockGetCachedAssessment,
+            setCachedAssessment: mockSetCachedAssessment,
             getActiveResume: vi.fn(() => null),
             baselineMatchScore: null,
             jobVariants: [],
@@ -1243,6 +1254,37 @@ describe('Optimization Card Types', () => {
     });
 
     describe('Auto-verified optimized score', () => {
+        it('keeps prior cards inspectable without showing their score for a changed assessment', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.optimizationMetrics = { ...mockStoreState.optimizationMetrics,
+                beforeScore: 95, improvement: 5, hasJobDescription: true };
+            mockStoreState.baselineMatchScore = 95;
+            renderWithProviders(<OptimizeSection jobDescription="New role" assessmentCurrent={false} />);
+            expect(screen.queryAllByText('95%')).toHaveLength(0);
+            expect(screen.getByRole('note')).toHaveTextContent('previous assessment');
+            fireEvent.click(screen.getByRole('button', { name: 'Applied' }));
+            expect(screen.getByText(sampleOptimization.original)).toBeInTheDocument();
+        });
+        it('restores the original score without admitting the optimized cache entry', async () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.parsedResumeText = 'Original resume for Role A';
+            mockGetCachedAssessment.mockImplementation((context) => context.isOptimized
+                ? { score: 98, timestamp: Date.now() }
+                : { score: 55, timestamp: Date.now() });
+            renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+            await waitFor(() => expect(screen.getByTestId('companion-score')).toHaveTextContent('55%'));
+            expect(screen.queryAllByText('98%')).toHaveLength(0);
+            expect(mockGetCachedAssessment).toHaveBeenCalledWith(expect.objectContaining({ isOptimized: false, kind: 'match' }));
+        });
+        it('does not show an original score from a context-free legacy cache hit', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.baselineMatchScore = null;
+            mockStoreState.optimizationMetrics.beforeScore = null;
+            mockStoreState.parsedResumeText = 'Original resume for this job';
+            mockGetCachedAnalysis.mockReturnValue({ score: 96, matchedKeywords: [], missingKeywords: [], timestamp: Date.now() });
+            renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+            expect(screen.queryAllByText('96%')).toHaveLength(0);
+        });
         it('renders a baseline score of 0 as a real current score', () => {
             mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
             mockStoreState.baselineMatchScore = 0;
@@ -1686,7 +1728,7 @@ describe('Optimization Card Types', () => {
             expect(screen.getByTestId('companion-score')).toHaveTextContent('78%');
         });
 
-        it('feeds the explainability panel from the cached original analysis', () => {
+        it('feeds the explainability panel from the cached original analysis', async () => {
             mockStoreState.parsedResumeText = 'Original resume text used as the cache key.';
             mockStoreState.optimizations = [
                 { sectionId: 's-0', sectionType: 'summary', original: 'Built apps.', optimized: 'Built React apps.', applied: true },
@@ -1698,7 +1740,7 @@ describe('Optimization Card Types', () => {
                 improvement: 10,
                 hasJobDescription: true,
             };
-            mockGetCachedAnalysis.mockReturnValue({
+            mockGetCachedAssessment.mockReturnValue({
                 score: 55,
                 matchedKeywords: ['React'],
                 missingKeywords: ['GraphQL'],
@@ -1718,8 +1760,7 @@ describe('Optimization Card Types', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('sections.explainability.title')).toBeInTheDocument();
-            mockGetCachedAnalysis.mockReturnValue(null);
+            expect(await screen.findByText('sections.explainability.title')).toBeInTheDocument();
         });
     });
 });

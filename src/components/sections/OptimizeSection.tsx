@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
@@ -43,6 +43,8 @@ import type { Work } from '../../types/resume';
 import { JobVariantsBar } from './JobVariantsBar';
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
 import { GuestValidationPrompt } from '@/components/Feedback/GuestValidationPrompt';
+import { createAssessmentContext } from '@/lib/match/assessmentContext';
+import type { CachedAnalysis } from '@/types/templates';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -116,6 +118,8 @@ interface OptimizeSectionProps {
   canExport?: boolean;
   // Optional: can pass resume text directly or use store
   resumeText?: string | null;
+  jobDescription?: string;
+  assessmentCurrent?: boolean;
   // Pipeline integration
   activeJobApplicationId?: string | null;
   pendingAttachment?: { filePath: string; fileName: string } | null;
@@ -256,6 +260,8 @@ export function OptimizeSection({
   onContinueToExport,
   canExport = false,
   resumeText: propResumeText,
+  jobDescription: propJobDescription,
+  assessmentCurrent = true,
   activeJobApplicationId,
   pendingAttachment,
   onMarkApplied,
@@ -278,17 +284,28 @@ export function OptimizeSection({
   const revertAllOptimizations = useResumeStore((state) => state.revertAllOptimizations);
   const refineOptimization = useResumeStore((state) => state.refineOptimization);
   const keywordSuggestions = useResumeStore((state) => state.keywordSuggestions);
-  const optimizationMetrics = useResumeStore((state) => state.optimizationMetrics);
+  const storedOptimizationMetrics = useResumeStore((state) => state.optimizationMetrics);
   const setOptimizationMetrics = useResumeStore((state) => state.setOptimizationMetrics);
   const resetOptimizationMetrics = useResumeStore((state) => state.resetOptimizationMetrics);
-  const getCachedAnalysis = useResumeStore((state) => state.getCachedAnalysis);
-  const setCachedAnalysis = useResumeStore((state) => state.setCachedAnalysis);
+  const getCachedAssessment = useResumeStore((state) => state.getCachedAssessment);
   const baselineMatchScore = useResumeStore((state) => state.baselineMatchScore);
   const variantRestoreNonce = useResumeStore((state) => state.variantRestoreNonce);
 
   // Use props or store
   const resumeText = propResumeText || parsedResumeText;
+  const jobDescription = propJobDescription ?? (typeof window !== 'undefined' ? getCompatibleStorageItem(LAST_JOB_KEY) || '' : '');
   const hasResume = Boolean(originalResume || resumeText);
+  const optimizationMetrics = useMemo(() => assessmentCurrent ? storedOptimizationMetrics : ({
+    ...storedOptimizationMetrics,
+    beforeScore: null, afterScore: null, improvement: null,
+    verifiedPotential: null, verifiedApplied: null,
+    jdKeywords: [], matchedKeywords: [], reasoning: null,
+    gapAnalysis: [], categoryScores: null, positionSuggestion: null,
+  }), [assessmentCurrent, storedOptimizationMetrics]);
+  const verificationInputKey = JSON.stringify([resumeText ?? '', jobDescription, i18n.language, variantRestoreNonce]);
+  const latestVerificationInputKey = useRef(verificationInputKey);
+  latestVerificationInputKey.current = verificationInputKey;
+  const fullVerifyRequest = useRef<string | null>(null);
 
   const [viewMode, setViewMode] = useState<'split' | 'diff'>('split');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
@@ -305,7 +322,7 @@ export function OptimizeSection({
   // Applied-subset re-verification lifecycle + the signature currently in flight
   // (dedupe: one stable applied set triggers at most one verify call).
   const [appliedVerifyState, setAppliedVerifyState] = useState<Exclude<AppliedVerifyStatus, 'guest'>>('idle');
-  const appliedVerifyInFlightRef = useRef<string | null>(null);
+  const appliedVerifyInFlightRef = useRef<{ signature: string; id: string } | null>(null);
   const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const [scoreHeaderExpanded, setScoreHeaderExpanded] = useState(false);
   const [expandedScoreCategories, setExpandedScoreCategories] = useState<Set<keyof CategoryScoresData>>(new Set());
@@ -318,6 +335,16 @@ export function OptimizeSection({
   const [refineLoadingId, setRefineLoadingId] = useState<string | null>(null);
   const [refineError, setRefineError] = useState<string | null>(null);
   const { credits: _credits, isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
+  const previousVerificationInputKey = useRef(verificationInputKey);
+  useLayoutEffect(() => {
+    if (previousVerificationInputKey.current === verificationInputKey) return;
+    previousVerificationInputKey.current = verificationInputKey;
+    fullVerifyRequest.current = null;
+    appliedVerifyInFlightRef.current = null;
+    setIsAutoVerifying(false);
+    setVerifyAnomaly(null);
+    setAppliedVerifyState('idle');
+  }, [verificationInputKey]);
 
   // Sync prop optimizations to store when they change
   // IMPORTANT: Merge with existing store state to preserve applied flags
@@ -364,6 +391,23 @@ export function OptimizeSection({
 
   // Always use store optimizations (props are synced to store via useEffect above)
   const optimizations = storeOptimizations;
+  const originalCacheInputKey = JSON.stringify([resumeText ?? '', jobDescription, i18n.language]);
+  const [originalCachedAssessment, setOriginalCachedAssessment] = useState<{
+    inputKey: string; analysis: CachedAnalysis | null;
+  } | null>(null);
+  const currentOriginalCache = originalCachedAssessment?.inputKey === originalCacheInputKey
+    ? originalCachedAssessment.analysis : null;
+  useEffect(() => {
+    let active = true;
+    if (!resumeText || !jobDescription) return () => { active = false; };
+    void createAssessmentContext({ resumeText, jobDescription,
+      language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'match', isOptimized: false,
+      rubricVersion: 'match-v1' }).then(context => {
+      if (active) setOriginalCachedAssessment({ inputKey: originalCacheInputKey,
+        analysis: getCachedAssessment(context) });
+    }).catch(() => { /* A failed identity check cannot admit an old score. */ });
+    return () => { active = false; };
+  }, [resumeText, jobDescription, i18n.language, originalCacheInputKey, getCachedAssessment]);
   const isOptimizing = propIsOptimizing;
   const isBusy = isOptimizing || isCheckingQuestions;
 
@@ -388,7 +432,7 @@ export function OptimizeSection({
   // Rerun Vision 2030 analysis on mount if optimizations exist but vision2030 data is missing
   // This happens when the user refreshes the page and optimizationMetrics is restored but vision2030 was calculated client-side
   useEffect(() => {
-    if (optimizations.length > 0 && !optimizationMetrics.vision2030 && (resumeText || originalResume)) {
+    if (assessmentCurrent && optimizations.length > 0 && !optimizationMetrics.vision2030 && (resumeText || originalResume)) {
       const textToAnalyze = resumeText || JSON.stringify(originalResume);
       if (textToAnalyze) {
         const vision2030Analysis = analyzeVision2030Alignment(textToAnalyze, isArabic ? 'ar' : 'en');
@@ -428,30 +472,16 @@ export function OptimizeSection({
         });
       }
     }
-  }, [optimizations.length, optimizationMetrics.vision2030, resumeText, originalResume, isArabic, setOptimizationMetrics]);
+  }, [assessmentCurrent, optimizations.length, optimizationMetrics.vision2030, resumeText, originalResume, isArabic, setOptimizationMetrics]);
 
   // Restore beforeScore from cache on mount if optimizations exist but score is missing
   // This happens when page loads with persisted optimizations but beforeScore wasn't saved
   useEffect(() => {
-    if (optimizations.length > 0 && !optimizationMetrics.beforeScore && resumeText) {
-      const jobDescription = typeof window !== 'undefined'
-        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-        : '';
-
-      if (jobDescription) {
-        // CRITICAL: Get original (non-optimized) score for beforeScore
-        // Cast to any to work around Zustand type inference limitation
-        const cachedAnalysis = (getCachedAnalysis as any)(resumeText, jobDescription, false);
-        const cachedScore = finiteScore(cachedAnalysis?.score);
-        if (cachedScore !== null) {
-          setOptimizationMetrics({
-            beforeScore: cachedScore,
-            hasJobDescription: true,
-          });
-        }
-      }
+    if (assessmentCurrent && optimizations.length > 0 && finiteScore(optimizationMetrics.beforeScore) === null) {
+      const cachedScore = finiteScore(currentOriginalCache?.score);
+      if (cachedScore !== null) setOptimizationMetrics({ beforeScore: cachedScore, hasJobDescription: true });
     }
-  }, [optimizations.length, optimizationMetrics.beforeScore, resumeText, getCachedAnalysis, setOptimizationMetrics]);
+  }, [assessmentCurrent, optimizations.length, optimizationMetrics.beforeScore, currentOriginalCache, setOptimizationMetrics]);
 
 
   // Memoize keyword buckets - use store or props
@@ -476,7 +506,8 @@ export function OptimizeSection({
   // Calculate results summary data using API-provided metrics
   const resultsSummaryData = useMemo(() => {
     // Group by section
-    const bySection = optimizations.reduce((acc, opt) => {
+    const scoreOptimizations = assessmentCurrent ? optimizations : [];
+    const bySection = scoreOptimizations.reduce((acc, opt) => {
       const section = opt.sectionType || 'general';
       if (!acc[section]) {
         acc[section] = { section, count: 0, applied: 0 };
@@ -486,39 +517,27 @@ export function OptimizeSection({
       return acc;
     }, {} as Record<string, { section: string; count: number; applied: number }>);
 
-    // Get the job description from localStorage (same as MatchSection)
-    const jobDescription = typeof window !== 'undefined'
-      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-      : '';
+    const cachedAnalysis = currentOriginalCache;
+    const currentBaseline = assessmentCurrent ? finiteScore(baselineMatchScore) : null;
 
-    // Try to get the cached match analysis score first (this is the 78% from Match section)
-    // CRITICAL: Always get the ORIGINAL (non-optimized) score for "before" comparison
-    // Pass false to override showOptimized state and get the original cached score
-    // Cast to any to work around Zustand type inference limitation
-    const cachedAnalysis = resumeText && jobDescription
-      ? (getCachedAnalysis as any)(resumeText, jobDescription, false)
-      : null;
-
-    // Priority: 1. Baseline score (true original), 2. Store metrics, 3. Current cache, 4. Resume meta, 5. Default fallback
+    // Priority: current Match baseline, current metrics, exact-context cache, placeholder.
     // Baseline score is the source of truth - it's stored on first analysis and never changes unless user uploads a new resume
-    const beforeScore = finiteScore(baselineMatchScore) ??
+    const beforeScore = currentBaseline ??
       finiteScore(optimizationMetrics.beforeScore) ??
       finiteScore(cachedAnalysis?.score) ??
-      finiteScore((originalResume?.meta as Record<string, unknown> | undefined)?.match_score) ??
       DEFAULT_FALLBACK_SCORE;
 
     // Track if we're using placeholder/fallback values (Bug Fix: Make fake scores obvious)
-    const isPlaceholderScore = finiteScore(baselineMatchScore) === null &&
+    const isPlaceholderScore = currentBaseline === null &&
       finiteScore(cachedAnalysis?.score) === null &&
-      finiteScore(optimizationMetrics.beforeScore) === null &&
-      finiteScore((originalResume?.meta as Record<string, unknown> | undefined)?.match_score) === null;
+      finiteScore(optimizationMetrics.beforeScore) === null;
 
     // One explicit score model for every consumer (ScoreHeader, ScoreDiffBreakdown,
     // companion, share card): baseline / applied-only projection / potential
     // estimate / verified all-actionable potential, with display states A-E.
     // The projection numerator and denominator count ACTIONABLE cards only.
     const presentation = buildScorePresentation({
-      optimizations,
+      optimizations: scoreOptimizations,
       baselineScore: isPlaceholderScore ? null : beforeScore,
       improvement: optimizationMetrics.improvement ?? null,
       verifiedPotential: optimizationMetrics.verifiedPotential,
@@ -541,12 +560,24 @@ export function OptimizeSection({
       // Bug Fix: Expose placeholder status to UI
       isPlaceholderScore,
     };
-  }, [optimizations, keywordBuckets, optimizationMetrics, originalResume, resumeText, getCachedAnalysis, baselineMatchScore]);
+  }, [assessmentCurrent, optimizations, keywordBuckets, optimizationMetrics, resumeText, currentOriginalCache, baselineMatchScore, jobDescription]);
 
   const presentation = resultsSummaryData.presentation;
 
   const verifyOptimizedResume = async (jobDescription: string, beforeScore: number, options?: { freePreview?: boolean }) => {
     if (!jobDescription.trim()) return;
+
+    const requestId = crypto.randomUUID();
+    fullVerifyRequest.current = requestId;
+    const inputKey = latestVerificationInputKey.current;
+    const cardSignature = verificationSignature(
+      partitionOptimizations(useResumeStore.getState().optimizations).actionable,
+      resumeText ?? '', jobDescription,
+    );
+    const isCurrent = () => fullVerifyRequest.current === requestId &&
+      latestVerificationInputKey.current === inputKey &&
+      verificationSignature(partitionOptimizations(useResumeStore.getState().optimizations).actionable,
+        resumeText ?? '', jobDescription) === cardSignature;
 
     try {
       setIsAutoVerifying(true);
@@ -601,10 +632,16 @@ export function OptimizeSection({
         return;
       }
 
+      const context = await createAssessmentContext({ resumeText: optimizedText, jobDescription,
+        language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'match', isOptimized: true,
+        rubricVersion: 'match-v1' });
+      if (!isCurrent()) return;
+
       const result = await analyzeResumeWithAI(optimizedText, jobDescription, i18n.language, {
         mode: 'verify',
         ...(options?.freePreview ? { freePreview: true } : {}),
       });
+      if (!isCurrent()) return;
 
       const verifiedResultScore = finiteScore(result?.score);
       if (verifiedResultScore !== null) {
@@ -627,27 +664,25 @@ export function OptimizeSection({
             outcome: classifyVerifiedOutcome(verifiedResultScore, beforeScore),
           },
         });
-        // Cache the verified score under the optimized key (forceIsOptimized: true)
-        setCachedAnalysis(optimizedText, jobDescription, {
+        // Cache this score only for the exact optimized-text assessment.
+        useResumeStore.getState().setCachedAssessment(context, {
           score: verifiedResultScore,
           matchedKeywords: result.topHits || [],
           missingKeywords: result.missingKeywords || [],
-        }, true);
+        });
       }
-    } catch (verifyErr) {
+    } catch {
+      if (!isCurrent()) return;
       // Auto-verify is non-fatal - optimization still succeeds
-      console.warn('[OptimizeSection] Auto-verify failed (non-fatal):', verifyErr);
+      console.warn('[OptimizeSection] Auto-verify failed (non-fatal)');
       setVerifyAnomaly({ kind: 'error', rawScore: null, textLength: 0 });
     } finally {
-      setIsAutoVerifying(false);
+      if (isCurrent()) setIsAutoVerifying(false);
     }
   };
 
   const retryVerifyOptimizedResume = async () => {
     if (verifyRetryUsed) return;
-    const jobDescription = typeof window !== 'undefined'
-      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-      : '';
     setVerifyRetryUsed(true);
     await verifyOptimizedResume(jobDescription, resultsSummaryData.beforeScore);
   };
@@ -655,14 +690,17 @@ export function OptimizeSection({
   // Cache checks are safe to run automatically. A cache miss only reaches the
   // billed verify endpoint after the user confirms the re-score action.
   const resolveAppliedSubsetScore = async (signature: string, allowNetwork: boolean) => {
-    const jobDescription = typeof window !== 'undefined'
-      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-      : '';
     const storeState = useResumeStore.getState();
     if (storeState.optimizationMetrics.verifiedApplied?.appliedSignature === signature) return;
-    if (appliedVerifyInFlightRef.current === signature) return;
+    if (appliedVerifyInFlightRef.current?.signature === signature) return;
 
-    appliedVerifyInFlightRef.current = signature;
+    const requestId = crypto.randomUUID();
+    const inputKey = latestVerificationInputKey.current;
+    appliedVerifyInFlightRef.current = { signature, id: requestId };
+    const isCurrent = () => appliedVerifyInFlightRef.current?.id === requestId &&
+      latestVerificationInputKey.current === inputKey &&
+      appliedVerificationSignature(partitionOptimizations(useResumeStore.getState().optimizations).actionable,
+        resumeText ?? '', jobDescription) === signature;
     try {
       const outcome = await resolveAppliedSubsetVerification({
         originalResume: storeState.originalResume,
@@ -671,10 +709,12 @@ export function OptimizeSection({
         sourceResumeText: resumeText ?? '',
         jobDescription,
         language: i18n.language,
-        getCachedAnalysis: storeState.getCachedAnalysis,
-        setCachedAnalysis: storeState.setCachedAnalysis,
+        getCachedAssessment: storeState.getCachedAssessment,
+        setCachedAssessment: storeState.setCachedAssessment,
+        isCurrent,
         allowNetwork,
       });
+      if (!isCurrent()) return;
 
       if (outcome.status === 'verified') {
         if (outcome.source === 'network' && typeof window !== 'undefined') {
@@ -692,22 +732,21 @@ export function OptimizeSection({
           },
         });
         setAppliedVerifyState('idle');
-      } else {
+      } else if (outcome.status !== 'outdated') {
         setAppliedVerifyState(outcome.status);
       }
-    } catch (verifyErr) {
-      console.warn('[OptimizeSection] Applied-subset verify failed (non-fatal):', verifyErr);
+    } catch {
+      if (!isCurrent()) return;
+      console.warn('[OptimizeSection] Applied-subset verify failed (non-fatal)');
       setAppliedVerifyState('failed');
     } finally {
-      if (appliedVerifyInFlightRef.current === signature) {
+      if (appliedVerifyInFlightRef.current?.id === requestId) {
         appliedVerifyInFlightRef.current = null;
       }
     }
   };
 
-  const jobDescriptionForVerify = typeof window !== 'undefined'
-    ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-    : '';
+  const jobDescriptionForVerify = jobDescription;
   const liveAppliedSignature = useMemo(() => {
     const { actionable } = partitionOptimizations(optimizations);
     return appliedVerificationSignature(actionable, resumeText ?? '', jobDescriptionForVerify);
@@ -720,6 +759,7 @@ export function OptimizeSection({
   const staleVerifiedApplied = optimizationMetrics.verifiedApplied ?? null;
 
   useEffect(() => {
+    if (!assessmentCurrent) return;
     // Guests keep the estimate display — the verify endpoint requires auth.
     if (isGuestMode) return;
     if (isAutoVerifying) return;
@@ -752,13 +792,14 @@ export function OptimizeSection({
     }, 1800);
     return () => window.clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- signature + gates fully describe when a re-score is owed
-  }, [liveAppliedSignature, appliedCountForVerify, appliedScoreResolved, fullSetOutcomeSettled, isGuestMode, isAutoVerifying, jobDescriptionForVerify, originalResume]);
+  }, [assessmentCurrent, liveAppliedSignature, appliedCountForVerify, appliedScoreResolved, fullSetOutcomeSettled, isGuestMode, isAutoVerifying, jobDescriptionForVerify, originalResume]);
 
   const appliedVerifyStatus: AppliedVerifyStatus = isGuestMode && appliedCountForVerify > 0
     ? 'guest'
     : appliedVerifyState;
 
   const requestAppliedVerification = () => {
+    if (!assessmentCurrent) return;
     const alreadyUsed = typeof window !== 'undefined'
       && Boolean(getCompatibleStorageItem(freeVerifyUsedKey(jobDescriptionForVerify)));
     setAppliedVerifyIsFree(!alreadyUsed);
@@ -766,6 +807,7 @@ export function OptimizeSection({
   };
 
   const confirmAppliedVerification = async () => {
+    if (!assessmentCurrent) return;
     setShowAppliedVerifyConfirm(false);
     setAppliedVerifyState('pending');
     await resolveAppliedSubsetScore(liveAppliedSignature, true);
@@ -776,12 +818,7 @@ export function OptimizeSection({
   // cached match analysis (survives refresh) plus optimize-side gaps. No fetch,
   // no scoring; everything here already exists in the store.
   const optimizeExplainabilitySource: AtsExplainabilitySource = useMemo(() => {
-    const jobDescription = typeof window !== 'undefined'
-      ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-      : '';
-    const cached = resumeText && jobDescription
-      ? getCachedAnalysis(resumeText, jobDescription, false)
-      : null;
+    const cached = currentOriginalCache;
     return {
       matchedKeywords: cached?.matchedKeywords ?? optimizationMetrics.matchedKeywords ?? [],
       missingKeywords: cached?.missingKeywords ?? [],
@@ -789,7 +826,7 @@ export function OptimizeSection({
       realityCheck: cached?.strategicRealityCheck ?? null,
       gapAnalysis: optimizationMetrics.gapAnalysis ?? [],
     };
-  }, [resumeText, getCachedAnalysis, optimizationMetrics]);
+  }, [currentOriginalCache, optimizationMetrics]);
 
   // Generate optimizations from API
   const handleGenerateActual = async (options?: { freePreview?: boolean }) => {
@@ -804,9 +841,6 @@ export function OptimizeSection({
 
       if (options?.freePreview) markFreePreviewUsed();
 
-      const jobDescription = typeof window !== 'undefined'
-        ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
-        : '';
       if (isGuestMode) {
         analytics.trackGuestRunCompleted({
           attempt: getFreeOptimizeRunCount(),
@@ -1130,6 +1164,13 @@ export function OptimizeSection({
 
   return (
     <div className="space-y-6">
+      {!assessmentCurrent && optimizations.length > 0 && (
+        <p role="note" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+          {isArabic
+            ? 'هذه الاقتراحات من تقييم سابق ولا تعكس السيرة الذاتية والوظيفة الحاليتين. أعد التحليل للحصول على نتيجة حديثة.'
+            : 'These suggestions are from a previous assessment and do not reflect the current resume and job. Analyze again for a current result.'}
+        </p>
+      )}
       {/* Header Section */}
       <GlassCard className="overflow-hidden relative">
         {/* Background Accents */}
