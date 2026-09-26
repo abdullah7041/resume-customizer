@@ -305,7 +305,7 @@ const baseHandler: Handler = async (event) => {
       // Match scoring for Results Summary
       matchScoring: {
         beforeScore: Math.round(beforeScore),
-        estimatedImprovement: Math.round(estimatedImprovement),
+        estimatedImprovement,
         jdKeywords: jdKeywords.slice(0, 20), // Cap at 20 for UI
         matchedKeywords: matchedKeywords.slice(0, 15),
         reasoning: null,

@@ -831,11 +831,11 @@ export function MatchSection({
               </div>
               <div className="relative z-10 flex flex-col gap-4 p-4 text-gray-900 dark:text-white sm:p-5 md:flex-row md:items-center md:justify-between">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
-                  <Tooltip content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`} position="bottom">
+                  <Tooltip content={t('sections.match.results.estimatedAlignment', 'Estimated alignment with this job description')} position="bottom">
                     <div className="grid h-20 w-20 shrink-0 cursor-help place-items-center rounded-full border border-white/50 bg-white/70 shadow-sm dark:border-white/10 dark:bg-black/15">
                       <div className="text-center">
                         <AnimatedCounter to={score} duration={1200} className="text-3xl font-black leading-none text-gray-900 dark:text-white" />
-                        <span className="mt-0.5 block text-[10px] font-bold uppercase text-gray-500 dark:text-white/50">{t('sections.match.scoreLabel', 'Score')}</span>
+                        <span className="mt-0.5 block text-[10px] font-bold uppercase text-gray-500 dark:text-white/50">{t('sections.match.scoreLabel', 'Estimated score')}</span>
                       </div>
                     </div>
                   </Tooltip>
@@ -856,6 +856,9 @@ export function MatchSection({
                     )}
                     <p className="mt-3 text-xs text-gray-500 dark:text-white/55">
                       {t('sections.match.results.optimizedCaption', 'Optimized-score verification appears here after you run Optimize.')}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-white/55">
+                      {t('sections.match.results.hiringDisclaimer', 'This assessment does not predict a hiring decision.')}
                     </p>
                   </div>
                 </div>
@@ -959,7 +962,7 @@ export function MatchSection({
                   </div>
                 ) : (
                   <p className="text-start text-sm leading-relaxed text-gray-800 dark:text-white/90">
-                    <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
+                    {t('sections.match.results.noBreakdown', 'A separate requirement coverage measure is unavailable for this assessment. Review the listed gaps and evidence.')}
                   </p>
                 )}
               </GlassCard>

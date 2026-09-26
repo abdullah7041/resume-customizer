@@ -149,6 +149,14 @@ describe('display states', () => {
     expect(present(mixedQueue(2), { improvement: MIN_MEANINGFUL_ESTIMATE }).displayState).toBe('estimated_applied');
   });
 
+  it('does not infer a projected score from the count of applied cards', () => {
+    const p = present(mixedQueue(3), { baseline: 40, improvement: null });
+    expect(p.allSuggestionsPotentialEstimate).toBeNull();
+    expect(p.currentAppliedProjection).toBeNull();
+    expect(p.arrowTarget).toBeNull();
+    expect(p.appliedVerificationPending).toBe(true);
+  });
+
   it('State C: verified improved potential stays separate from the current score', () => {
     const queue = mixedQueue(0);
     const p = present(queue, { improvement: 12, verifiedPotential: verifiedFor(queue, 25, 10) });

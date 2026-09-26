@@ -386,7 +386,7 @@ export default async function handler(request: Request): Promise<Response> {
           },
           matchScoring: {
             beforeScore: Math.round(beforeScore),
-            estimatedImprovement: Math.round(estimatedImprovement),
+            estimatedImprovement,
             jdKeywords: jdKeywords.slice(0, 20),
             matchedKeywords: matchedKeywords.slice(0, 15),
             reasoning: null,

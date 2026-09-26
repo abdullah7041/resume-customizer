@@ -15,6 +15,9 @@
       "results": {
         "title": "Match Analysis",
         "score": "Match Score",
+        "estimatedAlignment": "Estimated alignment with this job description",
+        "hiringDisclaimer": "This assessment does not predict a hiring decision.",
+        "noBreakdown": "A separate requirement coverage measure is unavailable for this assessment. Review the listed gaps and evidence.",
         "keywords": "Keywords Found",
         "missing": "Missing Keywords",
         "suggestions": "Suggestions",
@@ -81,7 +84,7 @@
         "goodStart": "Good Start",
         "needsWork": "Needs Work"
       },
-      "scoreLabel": "Score",
+      "scoreLabel": "Estimated score",
       "realityCheck": {
         "ariaLabel": "Strategic Reality Check",
         "title": "Strategic Reality Check",

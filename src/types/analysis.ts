@@ -36,7 +36,9 @@ export interface KeywordStrategy {
  */
 export interface MatchAnalysisResponse {
   score: number;
+  /** @deprecated Legacy aliases of score, not independent measurements. */
   coverage?: number;
+  /** @deprecated Legacy aliases of score, not independent measurements. */
   similarity?: number;
   reasoning?: string;
   summary_bullets?: string[];

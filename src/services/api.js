@@ -495,6 +495,8 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
       return {
         ...data,
         score: Number.isFinite(Number(data.score)) ? Math.round(Math.min(100, Math.max(0, Number(data.score)))) : 0,
+        // Deprecated compatibility aliases for existing match-response consumers.
+        // Neither value is an independent coverage or similarity measurement.
         coverage: Number.isFinite(Number(data.coverage)) ? Math.min(1, Math.max(0, Number(data.coverage))) : 0,
         similarity: Number.isFinite(Number(data.similarity)) ? Math.min(1, Math.max(0, Number(data.similarity))) : 0,
         cosine: Number.isFinite(Number(data.similarity)) ? Math.min(1, Math.max(0, Number(data.similarity))) : 0, // Legacy field

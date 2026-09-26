@@ -168,7 +168,8 @@ describe('AI contract layer', () => {
     // relative to the real re-score (47% projection vs 25% verified bug).
     expect(user).toContain('hard skills 40, experience 30, education 15, soft skills 15');
     expect(user).toContain('Never score above 90 unless every job requirement is met with quantified evidence');
-    expect(user).toContain('80+ means hireable today');
+    expect(user).toContain('80+ means strong documented alignment');
+    expect(user).toContain('This score does not predict a hiring decision.');
     expect(user).toContain('integers from 0 to 100');
     expect(user).toContain('do not assume skills, credentials, or experience the resume does not contain');
   });
@@ -183,7 +184,8 @@ describe('AI contract layer', () => {
 
     const prompt = messages.map((message) => message.content).join('\n');
     expect(prompt).toContain('hard skills 40, experience 30, education 15, soft skills 15');
-    expect(prompt).toContain('80+ means hireable today');
+    expect(prompt).toContain('80+ means strong documented alignment');
+    expect(prompt).toContain('This score does not predict a hiring decision.');
     expect(prompt).toContain('Never score above 90 unless every job requirement is met with quantified evidence');
   });
 

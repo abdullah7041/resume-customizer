@@ -43,8 +43,8 @@ Generic resume tools were built for the US market, in English, for US hiring nor
 
 Two promises hold everything together:
 
-1. **The AI never invents your career.** It rewrites what's true so it lands harder. Every improved bullet follows Action Verb + Task + Quantified Result, and any inferred number is tagged `(verify)` so you check it before it ships.
-2. **The score means something.** 80+ means hireable today. 60-79 means competitive with gaps. Below 60 means real work to do. The scoring rules are written to resist inflation, because a flattering score that gets you rejected helps nobody.
+1. **Your career facts belong to you.** Review every suggested change against your experience before applying or exporting it. A missing number should stay missing until you supply a real one.
+2. **The score is an estimate.** It describes alignment with the supplied job description and highlights gaps. It does not predict a hiring decision.
 
 ---
 
@@ -52,7 +52,7 @@ Two promises hold everything together:
 
 **Parse anything readable.** PDF and DOCX upload with client-side text extraction, automatic English/Arabic detection, and structured JSON Resume output you can edit. Scanned PDFs fall back to OCR for signed-in users. If the AI parser fails on readable text, a deterministic parser still returns your data instead of an error.
 
-**Match analysis.** Cosine similarity scoring against the job description, gap analysis for missing qualifications, and a keyword strategy that weaves missing terms into rewritten bullets rather than dumping them in a list.
+**Match analysis.** Estimated alignment with the job description, gap analysis for missing qualifications, and a keyword strategy that places relevant terms in supported context rather than dumping them in a list.
 
 **Career red-flag defense.** The optimizer detects gaps, short tenures, pivots, and job hopping in your work history, then rewrites bullets to neutralize those interview questions before they're asked.
 

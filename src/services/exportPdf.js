@@ -236,14 +236,9 @@ const buildSummary = (summary, matchAnalysis, optimizations) => {
 
   if (matchAnalysis?.score != null) {
     const details = [
-      `Match Score: ${Math.round(matchAnalysis.score)}/100`,
+      `Estimated alignment with this job description: ${Math.round(matchAnalysis.score)}/100`,
     ];
-    if (matchAnalysis.coverage != null) {
-      details.push(`Keyword coverage: ${Math.round((matchAnalysis.coverage ?? 0) * 100)}%`);
-    }
-    if (matchAnalysis.cosine != null) {
-      details.push(`Similarity index: ${(matchAnalysis.cosine ?? 0).toFixed(2)}`);
-    }
+    details.push('This assessment does not predict a hiring decision.');
     fragments.push(`<p class="muted">${escapeHtml(details.join(" • "))}</p>`);
   }
 
@@ -692,13 +687,9 @@ const buildPlainExportHtml = ({
       .slice(0, 5)
     : [];
 
-  const formatPercentValue = (value) =>
-    Number.isFinite(value) ? `${Math.round(value * 100)}%` : null;
-
   const metrics = [
-    Number.isFinite(matchAnalysis?.score) ? `Score: ${Math.round(matchAnalysis.score)}/100` : null,
-    formatPercentValue(matchAnalysis?.coverage) ? `Coverage: ${formatPercentValue(matchAnalysis.coverage)}` : null,
-    formatPercentValue(matchAnalysis?.cosine) ? `Similarity: ${formatPercentValue(matchAnalysis.cosine)}` : null,
+    Number.isFinite(matchAnalysis?.score) ? `Estimated alignment: ${Math.round(matchAnalysis.score)}/100` : null,
+    Number.isFinite(matchAnalysis?.score) ? 'This assessment does not predict a hiring decision.' : null,
   ].filter(Boolean);
 
   const renderSection = (title, lines) => {

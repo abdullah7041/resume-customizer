@@ -362,6 +362,12 @@ describe('BulkAnalysisSection', () => {
         coverage: 0.82,
         matchedKeywords: ['Product'],
         missingKeywords: [],
+        strategicRealityCheck: {
+          riskTier: 'medium', recommendation: 'review_role_fit', confidence: 'medium',
+          riskTypes: ['evidence_quality'], summary: 'Confirm product leadership evidence.',
+          strengths: [], confirmedRisks: [], unclearRisks: [],
+          limits: { cannotDetermine: ['Hiring decision'], assumptions: [] },
+        },
       });
 
       render(<BulkAnalysisSection jobDescription={jobDescription} />);
@@ -380,6 +386,7 @@ describe('BulkAnalysisSection', () => {
       }, { timeout: 5000 });
 
       expect(screen.getAllByText('82%').length).toBeGreaterThan(0);
+      expect(screen.getByText('Confirm product leadership evidence.')).toBeInTheDocument();
       expect(globalThis.fetch).not.toHaveBeenCalled();
     });
 
@@ -451,6 +458,28 @@ describe('BulkAnalysisSection', () => {
         expect(screen.queryByText('Use my uploaded resume')).not.toBeInTheDocument();
       });
     });
+  });
+
+  it('labels a low highest score as relative and does not show duplicate coverage', async () => {
+    mockParseResume.mockResolvedValue({ plainText: 'Limited relevant experience' });
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200,
+      json: () => Promise.resolve({ score: 20, coverage: 0.2, similarity: 0.2,
+        strongMatches: [], missingKeywords: ['Required skill'] }) });
+    const { container } = render(<BulkAnalysisSection jobDescription="Senior API engineer" />);
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(['resume'], 'candidate.pdf')] },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(screen.getByText('Highest score in this comparison')).toBeInTheDocument());
+    expect(screen.queryByText('Best Match')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coverage')).not.toBeInTheDocument();
+    expect(screen.getAllByText('This assessment does not predict a hiring decision.').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Export Report' }));
+    await waitFor(() => expect(mockPdfSave).toHaveBeenCalledTimes(1));
+    const { default: autoTable } = await import('jspdf-autotable');
+    expect(vi.mocked(autoTable).mock.calls[0][1].body[0][4]).toBe('Highest score in this comparison');
+    expect(mockPdfText.mock.calls.map(call => String(call[0])).join(' '))
+      .toContain('This assessment does not predict a hiring decision.');
   });
 
   it('requires a historical context selection and prints its saved JD rather than the live JD', async () => {

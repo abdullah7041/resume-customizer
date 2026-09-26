@@ -13,6 +13,11 @@
       "useUploadedResume": "Use my uploaded resume",
       "myResumeLabel": "My resume",
       "comparisonTitle": "Detailed Comparison",
+      "estimatedAlignment": "Estimated alignment with this job description",
+      "highestScore": "Highest score in this comparison",
+      "lowerScore": "Lower score in this comparison",
+      "gaps": "Requirements needing evidence",
+      "hiringDisclaimer": "This assessment does not predict a hiring decision.",
       "emptyTitle": "Ready to Analyze",
       "emptyDesc": "Upload multiple resume versions to see which one matches the job best.",
       "upload": {

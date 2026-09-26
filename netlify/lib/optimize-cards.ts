@@ -153,8 +153,8 @@ export function buildOptimizationCards(
 
 export function calculateScores(
   optimization: OptimizationInput,
-  { cards, logPrefix }: CalculateScoresOptions,
-): { beforeScore: number; estimatedImprovement: number } {
+  { logPrefix }: CalculateScoresOptions,
+): { beforeScore: number; estimatedImprovement: number | null } {
   let beforeScore: number | null = null;
   if (optimization?.match_score != null) {
     beforeScore = normalizeScore(optimization.match_score, 'match_score');
@@ -169,12 +169,10 @@ export function calculateScores(
     throw new Error('AI optimization failed to calculate match score');
   }
 
-  const fallbackImprovement = Math.min(cards.length * 2, 15);
-  const estimatedImprovement = normalizeEstimatedImprovement(
-    beforeScore,
-    optimization?.after_score,
-    fallbackImprovement,
-  );
+  // Card count is not evidence of a score increase. Missing projected scores
+  // stay unavailable until the optimized resume is actually re-scored.
+  const estimatedImprovement = optimization?.after_score == null
+    ? null : normalizeEstimatedImprovement(beforeScore, optimization.after_score);
 
   return { beforeScore, estimatedImprovement };
 }

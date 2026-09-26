@@ -99,7 +99,9 @@ export interface OptimizedWork {
  */
 export interface CachedAnalysis {
   score: number;
+  /** @deprecated Repeats overall score; retained for legacy cache shape. */
   coverage?: number;
+  /** @deprecated Repeats overall score; retained for legacy cache shape. */
   similarity?: number;
   missingKeywords: string[];
   matchedKeywords?: string[];

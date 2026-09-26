@@ -1549,7 +1549,7 @@ describe('Optimization Card Types', () => {
 
             // A negative estimate is not a meaningful projection — the header shows
             // the honest current score alone, never "78% -> Estimated ~75%".
-            expect(screen.getByText('Current match')).toBeInTheDocument();
+            expect(screen.getByText('Estimated alignment with this job description')).toBeInTheDocument();
             expect(screen.getAllByText('78%').length).toBeGreaterThan(0);
             expect(screen.queryByText('Estimated ~75%')).not.toBeInTheDocument();
             expect(screen.queryByText('-3%')).not.toBeInTheDocument();

@@ -29,6 +29,8 @@ import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
 import { createAssessmentContext } from '@/lib/match/assessmentContext';
 import type { AssessmentContext, AssessmentRecord } from '@/types/assessment';
+import type { StrategicRealityCheck } from '@/types/analysis';
+import type { CachedAnalysis } from '@/types/templates';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -40,7 +42,13 @@ interface ResumeAnalysis {
   topHits?: string[];
   matchedKeywords?: string[];
   missingKeywords?: string[];
-  coverage?: number;
+  strategicRealityCheck?: StrategicRealityCheck | null;
+  categoryScores?: CachedAnalysis['categoryScores'];
+  reasoning?: string;
+  overallAssessment?: string;
+  recommendations?: string[];
+  suggestions?: string[];
+  strongMatches?: string[];
   localAnalysis?: {
     matchedKeywords: string[];
     jobKeywords: string[];
@@ -93,6 +101,7 @@ const ScoreBadge = ({ score }: { score: number }) => {
 const ResumeCard = ({ resume, onRemove, contextStatus }: { resume: Resume; onRemove: () => void;
   contextStatus: 'current' | 'historical' | 'legacy' }) => {
   const { name, status, error, analysis } = resume;
+  const { t } = useTranslation();
 
   return (
     <div className="group relative">
@@ -162,23 +171,28 @@ const ResumeCard = ({ resume, onRemove, contextStatus }: { resume: Resume; onRem
         {status === 'completed' && analysis && (
           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">Match</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description')}</span>
               <ScoreBadge score={analysis.score || 0} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-2 text-center">
                 <span className="block text-lg font-semibold text-gray-900 dark:text-white">
                   {analysis.topHits?.length || analysis.matchedKeywords?.length || 0}
                 </span>
                 <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Keywords</span>
               </div>
-              <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-2 text-center">
-                <span className="block text-lg font-semibold text-gray-900 dark:text-white">
-                  {Math.round((analysis.coverage || 0) * 100)}%
-                </span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coverage</span>
-              </div>
             </div>
+            {analysis.missingKeywords && analysis.missingKeywords.length > 0 && (
+              <p className="text-xs text-rose-700 dark:text-rose-300">
+                {t('sections.bulk.gaps', 'Requirements needing evidence')}: {analysis.missingKeywords.join(', ')}
+              </p>
+            )}
+            {analysis.strategicRealityCheck?.summary && (
+              <p className="text-xs text-gray-600 dark:text-gray-300">{analysis.strategicRealityCheck.summary}</p>
+            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.')}
+            </p>
           </div>
         )}
       </GlassCard>
@@ -286,7 +300,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     if (!request.context || !request.plainText || !isCurrentRequest(request)) return false;
     const cached = useResumeStore.getState().getCachedAssessment(request.context);
     if (!cached) return false;
-    const analysis: ResumeAnalysis = { score: cached.score, coverage: cached.coverage ?? cached.score / 100,
+    const analysis: ResumeAnalysis = { score: cached.score, strategicRealityCheck: cached.strategicRealityCheck,
+      categoryScores: cached.categoryScores, reasoning: cached.reasoning,
+      overallAssessment: cached.overallAssessment, recommendations: cached.recommendations,
+      suggestions: cached.suggestions, strongMatches: cached.strongMatches,
       topHits: cached.matchedKeywords || cached.strongMatches || [],
       matchedKeywords: cached.matchedKeywords || cached.strongMatches || [],
       missingKeywords: cached.missingKeywords || [] };
@@ -349,8 +366,12 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       const analysis: ResumeAnalysis = { ...raw, topHits: raw.topHits || raw.strongMatches || raw.matched_keywords || [],
         matchedKeywords: raw.matchedKeywords || raw.strongMatches || raw.matched_keywords || [] };
       useResumeStore.getState().setCachedAssessment(request.context, {
-        score: raw.score, coverage: analysis.coverage, matchedKeywords: analysis.matchedKeywords,
-        missingKeywords: analysis.missingKeywords });
+        score: raw.score, matchedKeywords: analysis.matchedKeywords,
+        missingKeywords: analysis.missingKeywords,
+        strategicRealityCheck: analysis.strategicRealityCheck,
+        categoryScores: analysis.categoryScores, reasoning: analysis.reasoning,
+        overallAssessment: analysis.overallAssessment, recommendations: analysis.recommendations,
+        suggestions: analysis.suggestions, strongMatches: analysis.strongMatches });
       setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, analysis, status: 'completed',
         assessment: { context: request.context!, jobSnapshot: request.jobSnapshot,
           requestId: request.id, createdAt: request.createdAt, result: analysis } } : row));
@@ -537,11 +558,11 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
     autoTable(doc, {
       startY: tableStartY,
-      head: [['Rank', 'Resume Name', 'Match Score', 'Keywords', 'Status']],
+      head: [['Rank', 'Resume Name', 'Estimated alignment', 'Keywords', 'Relative rank']],
       body: sortedReportRows.map((r, idx) => {
         const score = r.analysis?.score || 0;
         const keywordCount = r.analysis?.topHits?.length || r.analysis?.matchedKeywords?.length || 0;
-        const status = idx === 0 ? '[#1] Best Match' : score >= 70 ? '[OK] Good' : score >= 50 ? '[!] Needs Work' : '[X] Revise';
+        const status = idx === 0 ? 'Highest score in this comparison' : 'Lower score in this comparison';
         return [`#${idx + 1}`, r.name, `${score}%`, keywordCount.toString(), status];
       }),
       headStyles: { fillColor: [16, 185, 129], textColor: 255 },
@@ -551,6 +572,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
 
     // Missing Keywords per Resume
     let currentY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || tableStartY + 50;
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    doc.text('This assessment does not predict a hiring decision.', 14, currentY + 7);
+    currentY += 10;
 
     sortedReportRows.forEach((resume, idx) => {
       const missing = resume.analysis?.missingKeywords || [];
@@ -750,7 +775,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                 <tr className="bg-gray-100/50 dark:bg-white/5 backdrop-blur-sm">
                   <th className="text-left py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
                   <th className="text-left py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
-                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Match Score</th>
+                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description')}</th>
                   <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key Matches</th>
                   <th className="text-right py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 </tr>
@@ -797,19 +822,11 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                       <td className="py-4 px-6 text-right">
                         {rank === 1 ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                            Best Match
-                          </span>
-                        ) : score >= 70 ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/5 text-emerald-500 border border-emerald-500/10">
-                            Strong
-                          </span>
-                        ) : score >= 50 ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                            Moderate
+                            {t('sections.bulk.highestScore', 'Highest score in this comparison')}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
-                            Review
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+                            {t('sections.bulk.lowerScore', 'Lower score in this comparison')}
                           </span>
                         )}
                       </td>
@@ -819,6 +836,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               </tbody>
             </table>
           </div>
+          <p className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+            {t('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.')}
+          </p>
         </GlassCard>
       )}
 

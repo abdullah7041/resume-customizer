@@ -54,7 +54,9 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("Summary");
     expect(html).toContain("Skills");
     expect(html).toContain("Riyadh digital bank");
-    expect(html).toContain("Match Score");
+    expect(html).toContain("Estimated alignment with this job description");
+    expect(html).not.toContain("Keyword coverage:");
+    expect(html).not.toContain("Similarity index:");
   });
 
   it("preserves utf-8 characters in export html", () => {

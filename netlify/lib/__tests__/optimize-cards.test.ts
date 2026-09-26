@@ -87,6 +87,6 @@ describe('optimize-cards', () => {
         },
         { cards, logPrefix },
       ),
-    ).toEqual({ beforeScore: 65, estimatedImprovement: 2 });
+    ).toEqual({ beforeScore: 65, estimatedImprovement: null });
   });
 });
