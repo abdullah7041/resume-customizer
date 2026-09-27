@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildEvidenceBackedOptimizationCards } from '../optimize-cards.js';
+import { fingerprintEvidenceText } from '../optimization-evidence.js';
 
 const { callOpenRouterMock } = vi.hoisted(() => ({
   callOpenRouterMock: vi.fn(),
@@ -24,7 +26,7 @@ const {
 } = await import('../ai-contracts/index.js');
 
 describe('AI contract layer', () => {
-  it('requires structured references in fresh editing contracts while parsing legacy records', () => {
+  it('requests structured references while parsing missing metadata for per-item validation', async () => {
     const score = { score: 0, max: 0, reasoning: '' };
     const legacy = {
       match_score: 0, after_score: 0,
@@ -42,7 +44,7 @@ describe('AI contract layer', () => {
       }
       expect(contract.jsonSchema.properties.position_name_suggestion.required).toContain('evidence_references');
       expect(contract.legacyOutputSchema.safeParse(legacy).success).toBe(true);
-      expect(contract.outputSchema.safeParse(legacy).success).toBe(false);
+      expect(contract.outputSchema.safeParse(legacy).success).toBe(true);
       expect(contract.outputSchema.safeParse({
         ...legacy,
         headline_target_id: 'basics:label', summary_target_id: 'basics:summary',
@@ -58,13 +60,29 @@ describe('AI contract layer', () => {
         position_name_suggestion: { ...legacy.position_name_suggestion, evidence_references: [] },
       };
       expect(contract.outputSchema.safeParse(emptyEdits).success).toBe(true);
-      expect(contract.outputSchema.safeParse({ ...emptyEdits, original_headline: 'Analyst', suggested_headline: 'Data analyst' }).success).toBe(false);
+      expect(contract.outputSchema.safeParse({ ...emptyEdits, original_headline: 'Analyst', suggested_headline: 'Data analyst' }).success).toBe(true);
     }
     expect(aiContracts.refine_bullet.jsonSchema.required).toContain('evidence_references');
     expect(aiContracts.refine_bullet.jsonSchema.required).toContain('target_id');
     expect(aiContracts.refine_bullet.legacyOutputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(true);
-    expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(false);
+    expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(true);
     expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', target_id: 'work-a', evidence_references: [] }).success).toBe(true);
+
+    const parsed = aiContracts.optimize.outputSchema.parse({
+      ...legacy,
+      bullet_improvements: [
+        { ...legacy.bullet_improvements[0], original: 'Built reports', improved: 'Built clear reports', target_id: 'work-a', evidence_references: [{ sourceId: 'source-a', quote: 'Built reports' }] },
+        { ...legacy.bullet_improvements[0], original: 'Built reports', improved: 'Claimed 40% growth' },
+      ],
+    });
+    const sourceText = 'Built reports';
+    const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(parsed, {
+      logPrefix: '[ai-contracts:test]',
+      sources: [{ id: 'source-a', kind: 'resume', targetId: 'work-a', text: sourceText, fingerprint: fingerprintEvidenceText(sourceText) }],
+    });
+    expect(cards).toHaveLength(1);
+    expect(cards[0].evidence.targetId).toBe('work-a');
+    expect(diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' }]);
   });
   it('requires target identities for fresh edits and supplies stable source IDs to both prompts', () => {
     for (const id of ['optimize', 'optimize_stream']) {
@@ -75,10 +93,15 @@ describe('AI contract layer', () => {
       expect(messages[1].content).toContain('source-1');
       expect(messages[1].content).toContain('work-a');
       expect(messages[0].content).not.toContain('(verify)');
+      expect(messages[1].content).toContain('Reduced API latency by 40% through caching and query optimization.');
+      expect(messages[1].content).not.toMatch(/Redis|N\+1|customer-facing/);
     }
     const refine = getAiContract('refine_bullet').buildMessages({ original: 'Built reports', currentImproved: 'Built reports', userInstruction: '', resumeText: 'Built reports', evidenceSources: [{ id: 'source-1', targetId: 'work-a', kind: 'resume', text: 'Built reports' }] }, { retrievedContext: { documents: [] } });
     expect(refine[1].content).toContain('source-1');
     expect(refine[0].content).not.toContain('(verify)');
+    expect(refine[1].content).toContain('candidate-confirmed clarifications');
+    expect(refine[1].content).toContain('<user_instruction> alone is not evidence');
+    expect(refine[1].content).not.toContain('<resume_text> is the ONLY source of truth');
   });
   it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {
     for (const id of ['optimize', 'optimize_stream']) {
