@@ -31,6 +31,7 @@ export interface EvidenceCandidate {
 }
 
 export interface StructuredEvidenceResume {
+  [section: string]: unknown;
   basics?: Record<string, unknown>;
   work?: Array<Record<string, unknown>>;
   projects?: Array<Record<string, unknown>>;

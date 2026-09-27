@@ -45,6 +45,16 @@ describe('optimization evidence', () => {
     expect((await validateEditEvidence({ targetId: 'work-a', original: 'Built 12 reports', proposed: 'Created 12 reports', references: refs }, sources)).reasons).toContain('semantic_review');
   });
 
+  it('does not let an unsourced original supply a fabricated number', async () => {
+    const result = await validateEditEvidence({
+      targetId: 'work-a', original: 'Cut cost 40%', proposed: 'Cut cost 40%',
+      references: [{ sourceId: 'a', quote: 'Managed team' }],
+    }, [source('a', 'work-a', 'Managed team')]);
+    expect(result.status).toBe('needs_review');
+    expect(result.reasons).toContain('new_number');
+    expect(result.reasons).toContain('semantic_review');
+  });
+
   it('treats Arabic-Indic and Western digits as the same number', async () => {
     const result = await validateEditEvidence({ targetId: 'work-a', original: 'خفضت التكلفة ٢٠٪', proposed: 'خفضت التكلفة 20%', references: [{ sourceId: 'a', quote: 'خفضت التكلفة ٢٠٪' }] }, [source('a', 'work-a', 'خفضت التكلفة ٢٠٪')]);
     expect(result.reasons).not.toContain('new_number');
@@ -73,5 +83,22 @@ describe('optimization evidence', () => {
     expect(sources.filter(item => item.kind === 'resume' && item.text === 'Built reports')).toHaveLength(2);
     expect(sources.filter(item => item.kind === 'resume' && item.text === 'Built reports').map(item => item.targetId)[0]).not.toBe(sources.filter(item => item.kind === 'resume' && item.text === 'Built reports').map(item => item.targetId)[1]);
     expect(sources).toContainEqual(expect.objectContaining({ id: 'c', kind: 'clarification', targetId: 'work-a', text: 'I used SQL', createdAt: '2026-09-24T12:00:00Z' }));
+  });
+
+  it('includes nested education, skill, certificate, and other supplied resume facts', async () => {
+    const sources = await buildEvidenceSources({ resume: {
+      basics: { location: { city: 'Riyadh' } },
+      education: [{ institution: 'University A', courses: ['Statistics 101'] }],
+      skills: [{ name: 'Data analysis', keywords: ['SQL'] }],
+      certificates: [{ name: 'Certificate A', issuer: 'Institute A' }],
+      languages: [{ language: 'Arabic', fluency: 'Native' }],
+      customSections: [{ title: 'Community', details: { outcome: 'Mentored analysts' } }],
+      meta: { ai_suggestions: ['Invented result'] },
+    } });
+    for (const fact of ['Riyadh', 'Statistics 101', 'SQL', 'Institute A', 'Native', 'Mentored analysts']) {
+      expect(sources.find(item => item.text === fact)).toBeDefined();
+    }
+    expect(sources.some(item => item.text === 'Invented result')).toBe(false);
+    expect(sources.find(item => item.text === 'SQL')?.targetId).toMatch(/^skills:/);
   });
 });

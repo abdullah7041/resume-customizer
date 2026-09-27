@@ -20,17 +20,24 @@ function addSource(sources: EvidenceSource[], targetId: string, path: string, te
   });
 }
 
-function addStructuredEntries(sources: EvidenceSource[], kind: 'work' | 'projects', entries: Array<Record<string, unknown>>): void {
+function addNestedSources(sources: EvidenceSource[], targetId: string, path: string, value: unknown): void {
+  if (typeof value === 'string' || typeof value === 'number') {
+    addSource(sources, targetId, path, String(value));
+  } else if (Array.isArray(value)) {
+    value.forEach((item, index) => addNestedSources(sources, targetId, `${path}.${index}`, item));
+  } else if (value && typeof value === 'object') {
+    for (const [field, item] of Object.entries(value)) {
+      addNestedSources(sources, targetId, `${path}.${field}`, item);
+    }
+  }
+}
+
+function addStructuredEntries(sources: EvidenceSource[], kind: string, entries: unknown[]): void {
   for (const entry of entries) {
     // Content identity survives array reordering. Identical entries deliberately
     // share an identity and remain ambiguous to the validator.
     const targetId = `${kind}:${fingerprintEvidenceText(JSON.stringify(entry))}`;
-    for (const [field, value] of Object.entries(entry)) {
-      if (typeof value === 'string') addSource(sources, targetId, field, value);
-      if (Array.isArray(value)) {
-        for (const item of value) addSource(sources, targetId, field, item);
-      }
-    }
+    addNestedSources(sources, targetId, kind, entry);
   }
 }
 
@@ -40,10 +47,14 @@ export async function buildEvidenceSources(input: {
 }): Promise<EvidenceSource[]> {
   const sources: EvidenceSource[] = [];
   for (const [field, value] of Object.entries(input.resume.basics ?? {})) {
-    addSource(sources, `basics:${field}`, field, value);
+    addNestedSources(sources, `basics:${field}`, `basics.${field}`, value);
   }
-  addStructuredEntries(sources, 'work', input.resume.work ?? []);
-  addStructuredEntries(sources, 'projects', input.resume.projects ?? []);
+  for (const [section, value] of Object.entries(input.resume)) {
+    // Resume metadata may include earlier AI suggestions, not candidate facts.
+    if (section === 'basics' || section === 'meta') continue;
+    if (Array.isArray(value)) addStructuredEntries(sources, section, value);
+    else addNestedSources(sources, section, section, value);
+  }
   for (const item of input.clarifications ?? []) {
     if (!item.id || !item.targetId || !item.text.trim() || !item.createdAt) continue;
     sources.push({
@@ -73,6 +84,14 @@ export async function validateEditEvidence(candidate: EvidenceCandidate, sources
   const citedText: string[] = [];
   let ambiguous = false;
 
+  const normalizedOriginal = candidate.original.replace(/\s+/g, ' ').trim();
+  const originalSources = normalizedOriginal ? sources.filter(source =>
+    source.kind === 'resume'
+    && source.targetId === candidate.targetId
+    && source.fingerprint === fingerprintEvidenceText(source.text)
+    && source.text.replace(/\s+/g, ' ').includes(normalizedOriginal)
+  ) : [];
+
   if (!candidate.references.length) reasons.push('missing_source');
   for (const reference of candidate.references) {
     const matches = sources.filter(source => source.id === reference.sourceId);
@@ -90,9 +109,9 @@ export async function validateEditEvidence(candidate: EvidenceCandidate, sources
   }
 
   if (reasons.length === 0) {
-    const supportedNumbers = new Set(numbers([candidate.original, ...citedText].join(' ')));
+    const supportedNumbers = new Set(numbers([...(originalSources.length ? [candidate.original] : []), ...citedText].join(' ')));
     if (numbers(candidate.proposed).some(number => !supportedNumbers.has(number))) reasons.push('new_number');
-    if (ambiguous || candidate.original.replace(/\s+/g, ' ').trim() !== candidate.proposed.replace(/\s+/g, ' ').trim()) reasons.push('semantic_review');
+    if (ambiguous || originalSources.length !== 1 || normalizedOriginal !== candidate.proposed.replace(/\s+/g, ' ').trim()) reasons.push('semantic_review');
   }
 
   const rejected = reasons.includes('missing_source') || reasons.includes('wrong_target');
