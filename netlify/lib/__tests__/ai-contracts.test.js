@@ -45,15 +45,40 @@ describe('AI contract layer', () => {
       expect(contract.outputSchema.safeParse(legacy).success).toBe(false);
       expect(contract.outputSchema.safeParse({
         ...legacy,
+        headline_target_id: 'basics:label', summary_target_id: 'basics:summary',
         headline_evidence_references: [], summary_evidence_references: [],
-        bullet_improvements: [{ ...legacy.bullet_improvements[0], evidence_references: [] }],
+        bullet_improvements: [{ ...legacy.bullet_improvements[0], target_id: 'work-a', evidence_references: [] }],
         position_name_suggestion: { ...legacy.position_name_suggestion, evidence_references: [] },
       }).success).toBe(true);
+      const emptyEdits = {
+        ...legacy,
+        headline_target_id: '', summary_target_id: '',
+        headline_evidence_references: [], summary_evidence_references: [],
+        bullet_improvements: [],
+        position_name_suggestion: { ...legacy.position_name_suggestion, evidence_references: [] },
+      };
+      expect(contract.outputSchema.safeParse(emptyEdits).success).toBe(true);
+      expect(contract.outputSchema.safeParse({ ...emptyEdits, original_headline: 'Analyst', suggested_headline: 'Data analyst' }).success).toBe(false);
     }
     expect(aiContracts.refine_bullet.jsonSchema.required).toContain('evidence_references');
+    expect(aiContracts.refine_bullet.jsonSchema.required).toContain('target_id');
     expect(aiContracts.refine_bullet.legacyOutputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(true);
     expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(false);
-    expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', evidence_references: [] }).success).toBe(true);
+    expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', target_id: 'work-a', evidence_references: [] }).success).toBe(true);
+  });
+  it('requires target identities for fresh edits and supplies stable source IDs to both prompts', () => {
+    for (const id of ['optimize', 'optimize_stream']) {
+      const contract = getAiContract(id);
+      expect(contract.jsonSchema.required).toEqual(expect.arrayContaining(['headline_target_id', 'summary_target_id']));
+      expect(contract.jsonSchema.properties.bullet_improvements.items.required).toContain('target_id');
+      const messages = contract.buildMessages({ resumeText: 'Built reports', jobDescription: 'Analyst', evidenceSources: [{ id: 'source-1', targetId: 'work-a', kind: 'resume', text: 'Built reports' }] }, { retrievedContext: { documents: [] } });
+      expect(messages[1].content).toContain('source-1');
+      expect(messages[1].content).toContain('work-a');
+      expect(messages[0].content).not.toContain('(verify)');
+    }
+    const refine = getAiContract('refine_bullet').buildMessages({ original: 'Built reports', currentImproved: 'Built reports', userInstruction: '', resumeText: 'Built reports', evidenceSources: [{ id: 'source-1', targetId: 'work-a', kind: 'resume', text: 'Built reports' }] }, { retrievedContext: { documents: [] } });
+    expect(refine[1].content).toContain('source-1');
+    expect(refine[0].content).not.toContain('(verify)');
   });
   it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {
     for (const id of ['optimize', 'optimize_stream']) {
@@ -736,7 +761,7 @@ describe('AI contract layer', () => {
       // Both contracts carry the same anti-fabrication core.
       expect(refineMessages[0].content).toContain('Do not add facts, skills, credentials, employers, dates, or metrics');
       expect(optimizeMessages[0].content).toContain('Do not add facts, skills, credentials, employers, dates, or metrics');
-      expect(refineMessages[0].content).toContain('Every improved bullet must use an action, task, and quantified result');
+      expect(refineMessages[0].content).toContain('include a quantified result only when supplied');
       expect(optimizeMessages[0].content).toContain('EVIDENCE PROTOCOL');
       expect(optimizeMessages[1].content).toContain('source_span');
       expect(refineMessages[0].content).not.toContain('source_span');
@@ -755,7 +780,7 @@ describe('AI contract layer', () => {
       expect(user).toContain(REFINE_INPUT.resumeText);
       // The diligence guardrail: unsupported additions return the bullet unchanged + issue.
       expect(user).toMatch(/return the current bullet verbatim in "improved"/i);
-      expect(user).toMatch(/STAR|action verb/i);
+      expect(user).toMatch(/action and a concrete task/i);
     });
 
     it('passes the no-fabrication response through unchanged with an explanatory issue', async () => {
@@ -764,6 +789,7 @@ describe('AI contract layer', () => {
         improved: REFINE_INPUT.currentImproved,
         issue: 'The resume contains no evidence of an AWS certification, so it was not added.',
         rationale: 'Kept the bullet as-is because the requested credential is unsupported by the resume.',
+        target_id: 'work-a',
         evidence_references: [],
       }));
 

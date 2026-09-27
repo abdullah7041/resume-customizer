@@ -3,6 +3,8 @@ import {
   normalizeScore,
   scoreFromCategoryScores,
 } from './score-utils.js';
+import { validateEditEvidence } from './optimization-evidence.js';
+import type { EditEvidence, EvidenceReference, EvidenceSource } from '../../src/types/optimization-evidence.js';
 
 export interface OptimizationCard {
   section: string;
@@ -10,6 +12,7 @@ export interface OptimizationCard {
   suggestion: string;
   exampleBefore: string;
   exampleAfter: string;
+  evidence?: EditEvidence;
 }
 
 interface BulletImprovement {
@@ -18,13 +21,19 @@ interface BulletImprovement {
   suggestion?: string;
   issue?: string;
   rationale?: string;
+  target_id?: string;
+  evidence_references?: EvidenceReference[];
 }
 
 type OptimizationInput = {
   suggested_headline?: unknown;
   original_headline?: unknown;
+  headline_target_id?: string;
+  headline_evidence_references?: EvidenceReference[];
   summary_rewrite?: unknown;
   original_summary?: unknown;
+  summary_target_id?: string;
+  summary_evidence_references?: EvidenceReference[];
   bullet_improvements?: BulletImprovement[];
   missing_keywords?: unknown[];
   match_score?: unknown;
@@ -149,6 +158,47 @@ export function buildOptimizationCards(
   }
 
   return cards;
+}
+
+export interface EvidenceDiagnostic {
+  status: 422;
+  code: 'EVIDENCE_INVALID';
+  message: string;
+}
+
+/** Build only source-bound edit cards from a fresh provider result. */
+export async function buildEvidenceBackedOptimizationCards(
+  optimization: OptimizationInput,
+  { logPrefix, sources }: CardBuilderOptions & { sources: EvidenceSource[] },
+): Promise<{ cards: OptimizationCard[]; diagnostics: EvidenceDiagnostic[] }> {
+  const cards: OptimizationCard[] = [];
+  const diagnostics: EvidenceDiagnostic[] = [];
+  const add = async (targetId: string | undefined, original: unknown, proposed: unknown, references: EvidenceReference[] | undefined, input: OptimizationInput) => {
+    if (!hasContent(original) || !hasContent(proposed)) return;
+    if (!targetId || !references) {
+      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
+      return;
+    }
+    const evidence = await validateEditEvidence({ targetId, original: String(original), proposed: String(proposed), references }, sources);
+    if (evidence.status === 'rejected' || evidence.reasons.includes('new_number')) {
+      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
+      return;
+    }
+    const built = buildOptimizationCards(input, { logPrefix });
+    for (const card of built) {
+      if (card.section !== 'General' && card.section !== 'Skills') cards.push({ ...card, evidence });
+    }
+  };
+  await add(optimization?.headline_target_id, optimization?.original_headline, optimization?.suggested_headline, optimization?.headline_evidence_references, {
+    original_headline: optimization?.original_headline, suggested_headline: optimization?.suggested_headline,
+  });
+  await add(optimization?.summary_target_id, optimization?.original_summary, optimization?.summary_rewrite, optimization?.summary_evidence_references, {
+    original_summary: optimization?.original_summary, summary_rewrite: optimization?.summary_rewrite,
+  });
+  for (const item of optimization?.bullet_improvements ?? []) {
+    await add(item.target_id, item.original, item.improved ?? item.suggestion, item.evidence_references, { bullet_improvements: [item] });
+  }
+  return { cards, diagnostics };
 }
 
 export function calculateScores(
