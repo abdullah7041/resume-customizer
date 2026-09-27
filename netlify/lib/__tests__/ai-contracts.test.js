@@ -68,21 +68,29 @@ describe('AI contract layer', () => {
     expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(true);
     expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', target_id: 'work-a', evidence_references: [] }).success).toBe(true);
 
-    const parsed = aiContracts.optimize.outputSchema.parse({
+    const mixedOutput = {
       ...legacy,
       bullet_improvements: [
         { ...legacy.bullet_improvements[0], original: 'Built reports', improved: 'Built clear reports', target_id: 'work-a', evidence_references: [{ sourceId: 'source-a', quote: 'Built reports' }] },
-        { ...legacy.bullet_improvements[0], original: 'Built reports', improved: 'Claimed 40% growth' },
+        { ...legacy.bullet_improvements[0], original: 'Built reports', improved: 'Claimed 40% growth', target_id: 'work-a', evidence_references: [{ sourceId: 'source-a' }] },
       ],
-    });
+    };
     const sourceText = 'Built reports';
-    const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(parsed, {
-      logPrefix: '[ai-contracts:test]',
-      sources: [{ id: 'source-a', kind: 'resume', targetId: 'work-a', text: sourceText, fingerprint: fingerprintEvidenceText(sourceText) }],
-    });
-    expect(cards).toHaveLength(1);
-    expect(cards[0].evidence.targetId).toBe('work-a');
-    expect(diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' }]);
+    for (const id of ['optimize', 'optimize_stream']) {
+      expect(aiContracts[id].legacyOutputSchema.safeParse(mixedOutput).success).toBe(false);
+      callOpenRouterMock.mockResolvedValueOnce(JSON.stringify(mixedOutput));
+      const parsed = await executeAiContract(id, { resumeText: sourceText, jobDescription: 'Analyst' });
+      expect(parsed.bullet_improvements[1].evidence_references).toBeUndefined();
+      const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(parsed, {
+        logPrefix: '[ai-contracts:test]',
+        sources: [{ id: 'source-a', kind: 'resume', targetId: 'work-a', text: sourceText, fingerprint: fingerprintEvidenceText(sourceText) }],
+      });
+      expect(cards).toHaveLength(1);
+      expect(cards[0].evidence.targetId).toBe('work-a');
+      expect(diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' }]);
+    }
+    expect(aiContracts.refine_bullet.legacyOutputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', evidence_references: [{ sourceId: 'source-a' }] }).success).toBe(false);
+    expect(aiContracts.refine_bullet.outputSchema.parse({ improved: 'x', issue: 'z', rationale: 'r', evidence_references: [{ sourceId: 'source-a' }] }).evidence_references).toBeUndefined();
   });
   it('requires target identities for fresh edits and supplies stable source IDs to both prompts', () => {
     for (const id of ['optimize', 'optimize_stream']) {

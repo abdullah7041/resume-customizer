@@ -302,7 +302,7 @@ const optimizeJsonSchema = {
   required: ['match_score', 'after_score', 'category_scores', 'gap_analysis', 'original_headline', 'suggested_headline', 'headline_target_id', 'headline_evidence_references', 'original_summary', 'summary_rewrite', 'summary_target_id', 'summary_evidence_references', 'bullet_improvements', 'project_improvements', 'certification_recommendations', 'missing_keywords', 'keywords_to_keep', 'keywords_to_avoid', 'position_name_suggestion'],
 };
 
-const optimizeOutput = z.object({
+const createOptimizeOutput = (referencesSchema) => z.object({
   match_score: z.number(),
   after_score: z.number(),
   category_scores: categoryScoresZod,
@@ -315,19 +315,19 @@ const optimizeOutput = z.object({
   original_headline: z.string(),
   suggested_headline: z.string(),
   headline_target_id: z.string().optional(),
-  // Optional only when reading a cached response created before evidence IDs.
-  headline_evidence_references: evidenceReferencesOutput.optional(),
+  // Missing or malformed citations are rejected per edit after shape parsing.
+  headline_evidence_references: referencesSchema,
   original_summary: z.string(),
   summary_rewrite: z.string(),
   summary_target_id: z.string().optional(),
-  summary_evidence_references: evidenceReferencesOutput.optional(),
+  summary_evidence_references: referencesSchema,
   bullet_improvements: z.array(z.object({
     original: z.string(),
     improved: z.string(),
     issue: z.string(),
     rationale: z.string(),
     target_id: z.string().optional(),
-    evidence_references: evidenceReferencesOutput.optional(),
+    evidence_references: referencesSchema,
     // Optional so previously cached optimize results (no source_span) still validate.
     source_span: z.string().optional(),
   })).default([]),
@@ -337,7 +337,7 @@ const optimizeOutput = z.object({
     improved: z.string(),
     issue: z.string(),
     rationale: z.string(),
-    evidence_references: evidenceReferencesOutput.optional(),
+    evidence_references: referencesSchema,
   })).default([]),
   certification_recommendations: z.array(z.object({
     name: z.string(),
@@ -352,7 +352,7 @@ const optimizeOutput = z.object({
     suggested: z.string(),
     reason: z.string(),
     is_necessary: z.boolean(),
-    evidence_references: evidenceReferencesOutput.optional(),
+    evidence_references: referencesSchema,
     position_changes: z.array(z.object({
       original: z.string(),
       suggested: z.string(),
@@ -361,8 +361,10 @@ const optimizeOutput = z.object({
   }),
 });
 
-// Parse the response shape here. Evidence is checked per edit when building
-// cards, so one bad item cannot erase valid edits in the same response.
+// Parse the response shape here. A malformed citation is dropped on that edit;
+// the card builder rejects it without losing valid sibling edits.
+const optimizeOutput = createOptimizeOutput(evidenceReferencesOutput.catch(undefined).optional());
+const optimizeLegacyOutput = createOptimizeOutput(evidenceReferencesOutput.optional());
 
 const refineBulletJsonSchema = {
   type: 'object',
@@ -376,15 +378,17 @@ const refineBulletJsonSchema = {
   required: ['improved', 'issue', 'rationale', 'target_id', 'evidence_references'],
 };
 
-const refineBulletOutput = z.object({
+const createRefineBulletOutput = (referencesSchema) => z.object({
   improved: z.string(),
   issue: z.string(),
   rationale: z.string(),
   target_id: z.string().optional(),
-  evidence_references: evidenceReferencesOutput.optional(),
+  evidence_references: referencesSchema,
 });
 
 // The refinement endpoint validates this single edit against its cited sources.
+const refineBulletOutput = createRefineBulletOutput(evidenceReferencesOutput.catch(undefined).optional());
+const refineBulletLegacyOutput = createRefineBulletOutput(evidenceReferencesOutput.optional());
 
 const matchJsonSchema = {
   type: 'object',
@@ -1363,7 +1367,7 @@ export const aiContracts = {
     modelType: 'flash',
     jsonSchema: optimizeJsonSchema,
     outputSchema: optimizeOutput,
-    legacyOutputSchema: optimizeOutput,
+    legacyOutputSchema: optimizeLegacyOutput,
     schemaName: 'optimize_resume',
     featureName: 'optimize_resume',
     // 24576 (was 16384): the source_span evidence field adds per-bullet output; on
@@ -1384,7 +1388,7 @@ export const aiContracts = {
     modelType: 'flash',
     jsonSchema: optimizeJsonSchema,
     outputSchema: optimizeOutput,
-    legacyOutputSchema: optimizeOutput,
+    legacyOutputSchema: optimizeLegacyOutput,
     schemaName: 'optimize_resume',
     featureName: 'optimize_stream',
     // 24576 (was 16384): headroom for the source_span evidence field. See optimize.
@@ -1400,7 +1404,7 @@ export const aiContracts = {
     modelType: 'flash',
     jsonSchema: refineBulletJsonSchema,
     outputSchema: refineBulletOutput,
-    legacyOutputSchema: refineBulletOutput,
+    legacyOutputSchema: refineBulletLegacyOutput,
     schemaName: 'refine_bullet',
     featureName: 'refine_bullet',
     maxTokens: 1536,
