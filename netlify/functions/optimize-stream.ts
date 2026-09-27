@@ -28,7 +28,8 @@ import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
-import { buildOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
+import { buildEvidenceBackedOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
+import { buildRequestEvidenceSources } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
@@ -293,6 +294,7 @@ export default async function handler(request: Request): Promise<Response> {
   // --- Stream the optimization ---
   const encoder = new TextEncoder();
   const startTime = Date.now();
+  const evidenceSources = buildRequestEvidenceSources(resumeText, userClarifications);
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -320,6 +322,7 @@ export default async function handler(request: Request): Promise<Response> {
           featureName: "optimize_stream",
           userRef: user?.id || null,
           jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
+          evidenceSources,
         });
 
         const aiDuration = Date.now() - startTime;
@@ -341,7 +344,8 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 4: Build response (reuses the same card-mapping logic as optimize.ts)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "building_response" })));
 
-        const cards = buildOptimizationCards(optimization, { logPrefix: "[optimize-stream]" });
+        const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: "[optimize-stream]", sources: evidenceSources });
+        if (cards.length === 0) throw new Error('AI optimization produced no usable evidence-backed edits');
         const { beforeScore, estimatedImprovement } = calculateScores(optimization, {
           cards,
           logPrefix: "[optimize-stream]",
@@ -379,6 +383,8 @@ export default async function handler(request: Request): Promise<Response> {
 
         const resultPayload = {
           cards,
+          evidenceSources,
+          evidenceDiagnostics: diagnostics,
           keywords: {
             add: addKeywords,
             neutral: optimization?.keywords_to_keep || [],

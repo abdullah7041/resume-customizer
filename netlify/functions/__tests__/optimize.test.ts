@@ -6,6 +6,15 @@ vi.mock('../../lib/gemini-client', () => ({
     optimizeResume: vi.fn()
 }));
 
+// Legacy endpoint fixtures focus on billing/cache behavior; evidence behavior
+// is exercised with real card validation in optimize-evidence-flow.test.ts.
+vi.mock('../../lib/optimize-cards.js', async (importOriginal) => {
+    const original = await importOriginal<typeof import('../../lib/optimize-cards.js')>();
+    return { ...original, buildEvidenceBackedOptimizationCards: async (value: Parameters<typeof original.buildOptimizationCards>[0], options: { logPrefix: string }) => ({
+        cards: original.buildOptimizationCards(value, options), diagnostics: [],
+    }) };
+});
+
 vi.mock('../../lib/rate-limiter', () => ({
     withRateLimit: (_name: string, handler: Function) => handler
 }));
@@ -193,10 +202,11 @@ describe('optimize function', () => {
             [],
             undefined,
             ['Excel'],
-            {
+            expect.objectContaining({
                 userRef: '11111111-1111-4111-8111-111111111111',
                 jdFingerprint: '425d6a527a609f1d',
-            },
+                evidenceSources: expect.any(Array),
+            }),
         );
     });
 

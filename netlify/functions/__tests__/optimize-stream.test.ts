@@ -44,6 +44,14 @@ const mockRateLimiter = {
 };
 
 vi.mock('../../lib/gemini-client.js', () => mockGeminiClient);
+// Existing stream cases cover transport, cache, and billing; the evidence
+// path is covered with the real builder in optimize-evidence-flow.test.ts.
+vi.mock('../../lib/optimize-cards.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../lib/optimize-cards.js')>();
+  return { ...original, buildEvidenceBackedOptimizationCards: async (value: Parameters<typeof original.buildOptimizationCards>[0], options: { logPrefix: string }) => ({
+    cards: original.buildOptimizationCards(value, options), diagnostics: [],
+  }) };
+});
 vi.mock('../../lib/sentry.js', () => mockSentry);
 vi.mock('../../lib/credit-manager.js', () => mockCreditManager);
 vi.mock('../../lib/vulnerability-detector.js', () => mockVulnerabilityDetector);
@@ -294,11 +302,12 @@ describe('optimize-stream function', () => {
       [],
       undefined,
       undefined,
-      {
+      expect.objectContaining({
         featureName: 'optimize_stream',
         userRef: '11111111-1111-4111-8111-111111111111',
         jdFingerprint: '4199a1957ebd4e07',
-      }
+        evidenceSources: expect.any(Array),
+      })
     );
     const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
     expect(options).not.toHaveProperty('resumeText');

@@ -66,6 +66,24 @@ export async function buildEvidenceSources(input: {
   return sources;
 }
 
+/** Rendered text has no role identity; changed edits remain subject to semantic review. */
+export function buildRequestEvidenceSources(resumeText: string, userClarifications = ''): EvidenceSource[] {
+  const sources: EvidenceSource[] = [];
+  const add = (text: string, kind: EvidenceSource['kind']) => {
+    const value = text;
+    if (!value.trim()) return;
+    const targetId = `${kind}:${fingerprintEvidenceText(value)}`;
+    sources.push({ id: fingerprintEvidenceText(JSON.stringify([kind, value])), kind, text: value,
+      targetId, fingerprint: fingerprintEvidenceText(value) });
+  };
+  for (const line of resumeText.split(/\r?\n/)) add(line, 'resume');
+  for (const block of userClarifications.split(/\r?\n\s*\r?\n/)) {
+    const answer = block.match(/(?:^|\n)A:\s*([^\n]+)/)?.[1];
+    if (answer) add(answer, 'clarification');
+  }
+  return sources;
+}
+
 function normalizeDigits(text: string): string {
   return text.replace(/[٠-٩۰-۹]/g, digit => {
     const point = digit.codePointAt(0) ?? 0;
