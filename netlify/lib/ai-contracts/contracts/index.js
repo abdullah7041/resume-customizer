@@ -183,6 +183,20 @@ const looseResumeOutput = z.looseObject({
   meta: z.record(z.string(), z.unknown()).optional().default({}),
 });
 
+const evidenceReferencesJsonSchema = {
+  type: 'array',
+  items: {
+    type: 'object',
+    properties: { sourceId: { type: 'string' }, quote: { type: 'string' } },
+    required: ['sourceId', 'quote'],
+  },
+};
+
+const evidenceReferencesOutput = z.array(z.object({
+  sourceId: z.string(),
+  quote: z.string(),
+}));
+
 const optimizeJsonSchema = {
   type: 'object',
   properties: {
@@ -204,8 +218,10 @@ const optimizeJsonSchema = {
     },
     original_headline: { type: 'string' },
     suggested_headline: { type: 'string' },
+    headline_evidence_references: evidenceReferencesJsonSchema,
     original_summary: { type: 'string' },
     summary_rewrite: { type: 'string' },
+    summary_evidence_references: evidenceReferencesJsonSchema,
     bullet_improvements: {
       type: 'array',
       items: {
@@ -215,6 +231,7 @@ const optimizeJsonSchema = {
           improved: { type: 'string' },
           issue: { type: 'string' },
           rationale: { type: 'string' },
+          evidence_references: evidenceReferencesJsonSchema,
           // Verbatim resume substring that grounds the rewrite. REQUIRED in the
           // structured-output JSON schema: forcing the field keeps the model's
           // output bounded (without it, flash can run away into a giant unterminated
@@ -222,7 +239,7 @@ const optimizeJsonSchema = {
           // cached results (no source_span) still validate.
           source_span: { type: 'string' },
         },
-        required: ['original', 'improved', 'issue', 'rationale', 'source_span'],
+        required: ['original', 'improved', 'issue', 'rationale', 'source_span', 'evidence_references'],
       },
     },
     project_improvements: {
@@ -235,8 +252,9 @@ const optimizeJsonSchema = {
           improved: { type: 'string' },
           issue: { type: 'string' },
           rationale: { type: 'string' },
+          evidence_references: evidenceReferencesJsonSchema,
         },
-        required: ['project_name', 'original', 'improved', 'issue', 'rationale'],
+        required: ['project_name', 'original', 'improved', 'issue', 'rationale', 'evidence_references'],
       },
     },
     certification_recommendations: {
@@ -261,6 +279,7 @@ const optimizeJsonSchema = {
         suggested: { type: 'string' },
         reason: { type: 'string' },
         is_necessary: { type: 'boolean' },
+        evidence_references: evidenceReferencesJsonSchema,
         position_changes: {
           type: 'array',
           items: {
@@ -274,10 +293,10 @@ const optimizeJsonSchema = {
           },
         },
       },
-      required: ['original', 'suggested', 'reason', 'is_necessary', 'position_changes'],
+      required: ['original', 'suggested', 'reason', 'is_necessary', 'position_changes', 'evidence_references'],
     },
   },
-  required: ['match_score', 'after_score', 'category_scores', 'gap_analysis', 'original_headline', 'suggested_headline', 'original_summary', 'summary_rewrite', 'bullet_improvements', 'project_improvements', 'certification_recommendations', 'missing_keywords', 'keywords_to_keep', 'keywords_to_avoid', 'position_name_suggestion'],
+  required: ['match_score', 'after_score', 'category_scores', 'gap_analysis', 'original_headline', 'suggested_headline', 'headline_evidence_references', 'original_summary', 'summary_rewrite', 'summary_evidence_references', 'bullet_improvements', 'project_improvements', 'certification_recommendations', 'missing_keywords', 'keywords_to_keep', 'keywords_to_avoid', 'position_name_suggestion'],
 };
 
 const optimizeOutput = z.object({
@@ -292,13 +311,17 @@ const optimizeOutput = z.object({
   })).default([]),
   original_headline: z.string(),
   suggested_headline: z.string(),
+  // Optional only when reading a cached response created before evidence IDs.
+  headline_evidence_references: evidenceReferencesOutput.optional(),
   original_summary: z.string(),
   summary_rewrite: z.string(),
+  summary_evidence_references: evidenceReferencesOutput.optional(),
   bullet_improvements: z.array(z.object({
     original: z.string(),
     improved: z.string(),
     issue: z.string(),
     rationale: z.string(),
+    evidence_references: evidenceReferencesOutput.optional(),
     // Optional so previously cached optimize results (no source_span) still validate.
     source_span: z.string().optional(),
   })).default([]),
@@ -308,6 +331,7 @@ const optimizeOutput = z.object({
     improved: z.string(),
     issue: z.string(),
     rationale: z.string(),
+    evidence_references: evidenceReferencesOutput.optional(),
   })).default([]),
   certification_recommendations: z.array(z.object({
     name: z.string(),
@@ -322,6 +346,7 @@ const optimizeOutput = z.object({
     suggested: z.string(),
     reason: z.string(),
     is_necessary: z.boolean(),
+    evidence_references: evidenceReferencesOutput.optional(),
     position_changes: z.array(z.object({
       original: z.string(),
       suggested: z.string(),
@@ -330,21 +355,44 @@ const optimizeOutput = z.object({
   }),
 });
 
+// Legacy records use optimizeOutput. Fresh provider responses must include
+// references even when a field has no supporting source (an empty array).
+const optimizeFreshOutput = optimizeOutput.superRefine((data, context) => {
+  for (const field of ['headline_evidence_references', 'summary_evidence_references']) {
+    if (data[field] === undefined) context.addIssue({ code: 'custom', path: [field], message: 'Evidence references are required.' });
+  }
+  for (const field of ['bullet_improvements', 'project_improvements']) {
+    data[field].forEach((item, index) => {
+      if (item.evidence_references === undefined) context.addIssue({ code: 'custom', path: [field, index, 'evidence_references'], message: 'Evidence references are required.' });
+    });
+  }
+  if (data.position_name_suggestion.evidence_references === undefined) {
+    context.addIssue({ code: 'custom', path: ['position_name_suggestion', 'evidence_references'], message: 'Evidence references are required.' });
+  }
+});
+
 const refineBulletJsonSchema = {
   type: 'object',
   properties: {
     improved: { type: 'string' },
     issue: { type: 'string' },
     rationale: { type: 'string' },
+    evidence_references: evidenceReferencesJsonSchema,
   },
-  required: ['improved', 'issue', 'rationale'],
+  required: ['improved', 'issue', 'rationale', 'evidence_references'],
 };
 
 const refineBulletOutput = z.object({
   improved: z.string(),
   issue: z.string(),
   rationale: z.string(),
+  evidence_references: evidenceReferencesOutput.optional(),
 });
+
+const refineBulletFreshOutput = refineBulletOutput.refine(
+  data => data.evidence_references !== undefined,
+  { path: ['evidence_references'], message: 'Evidence references are required.' },
+);
 
 const matchJsonSchema = {
   type: 'object',
@@ -1315,7 +1363,8 @@ export const aiContracts = {
     id: 'optimize',
     modelType: 'flash',
     jsonSchema: optimizeJsonSchema,
-    outputSchema: optimizeOutput,
+    outputSchema: optimizeFreshOutput,
+    legacyOutputSchema: optimizeOutput,
     schemaName: 'optimize_resume',
     featureName: 'optimize_resume',
     // 24576 (was 16384): the source_span evidence field adds per-bullet output; on
@@ -1335,7 +1384,8 @@ export const aiContracts = {
     id: 'optimize_stream',
     modelType: 'flash',
     jsonSchema: optimizeJsonSchema,
-    outputSchema: optimizeOutput,
+    outputSchema: optimizeFreshOutput,
+    legacyOutputSchema: optimizeOutput,
     schemaName: 'optimize_resume',
     featureName: 'optimize_stream',
     // 24576 (was 16384): headroom for the source_span evidence field. See optimize.
@@ -1350,7 +1400,8 @@ export const aiContracts = {
     id: 'refine_bullet',
     modelType: 'flash',
     jsonSchema: refineBulletJsonSchema,
-    outputSchema: refineBulletOutput,
+    outputSchema: refineBulletFreshOutput,
+    legacyOutputSchema: refineBulletOutput,
     schemaName: 'refine_bullet',
     featureName: 'refine_bullet',
     maxTokens: 1536,

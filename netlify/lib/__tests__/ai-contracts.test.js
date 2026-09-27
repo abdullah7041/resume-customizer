@@ -24,6 +24,37 @@ const {
 } = await import('../ai-contracts/index.js');
 
 describe('AI contract layer', () => {
+  it('requires structured references in fresh editing contracts while parsing legacy records', () => {
+    const score = { score: 0, max: 0, reasoning: '' };
+    const legacy = {
+      match_score: 0, after_score: 0,
+      category_scores: { hard_skills: score, experience: score, education: score, soft_skills: score },
+      original_headline: '', suggested_headline: '', original_summary: '', summary_rewrite: '',
+      bullet_improvements: [{ original: 'x', improved: 'y', issue: 'z', rationale: 'r' }],
+      project_improvements: [],
+      position_name_suggestion: { original: '', suggested: '', reason: '', is_necessary: false },
+    };
+    for (const id of ['optimize', 'optimize_stream']) {
+      const contract = aiContracts[id];
+      expect(contract.jsonSchema.required).toEqual(expect.arrayContaining(['headline_evidence_references', 'summary_evidence_references']));
+      for (const field of ['bullet_improvements', 'project_improvements']) {
+        expect(contract.jsonSchema.properties[field].items.required).toContain('evidence_references');
+      }
+      expect(contract.jsonSchema.properties.position_name_suggestion.required).toContain('evidence_references');
+      expect(contract.legacyOutputSchema.safeParse(legacy).success).toBe(true);
+      expect(contract.outputSchema.safeParse(legacy).success).toBe(false);
+      expect(contract.outputSchema.safeParse({
+        ...legacy,
+        headline_evidence_references: [], summary_evidence_references: [],
+        bullet_improvements: [{ ...legacy.bullet_improvements[0], evidence_references: [] }],
+        position_name_suggestion: { ...legacy.position_name_suggestion, evidence_references: [] },
+      }).success).toBe(true);
+    }
+    expect(aiContracts.refine_bullet.jsonSchema.required).toContain('evidence_references');
+    expect(aiContracts.refine_bullet.legacyOutputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(true);
+    expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r' }).success).toBe(false);
+    expect(aiContracts.refine_bullet.outputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', evidence_references: [] }).success).toBe(true);
+  });
   it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {
     for (const id of ['optimize', 'optimize_stream']) {
       expect(aiContracts[id].timeoutMs).toBeLessThanOrEqual(40000);
@@ -733,6 +764,7 @@ describe('AI contract layer', () => {
         improved: REFINE_INPUT.currentImproved,
         issue: 'The resume contains no evidence of an AWS certification, so it was not added.',
         rationale: 'Kept the bullet as-is because the requested credential is unsupported by the resume.',
+        evidence_references: [],
       }));
 
       const result = await executeAiContract('refine_bullet', REFINE_INPUT);
