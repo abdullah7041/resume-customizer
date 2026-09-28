@@ -9,19 +9,13 @@ import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
-import { buildEvidenceBackedOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
+import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
 import { buildRequestEvidenceSources } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
 
 const OPTIMIZE_CACHE_TTL_SECONDS = 600;
-
-function hasRenderableCards(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const cards = (value as { cards?: unknown }).cards;
-  return Array.isArray(cards) && cards.length > 0;
-}
 
 async function attachLiveCredits<T extends Record<string, unknown>>(
   payload: T,
@@ -163,7 +157,7 @@ const baseHandler: Handler = async (event) => {
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-    if (hasRenderableCards(cachedResponse)) {
+    if (hasCurrentEvidenceCards(cachedResponse)) {
       console.log('[optimize] Cache HIT — returning cached result, skipping Gemini call.');
       const responsePayload = await attachLiveCredits(cachedResponse, userEmail, freePreview);
       return {
@@ -300,6 +294,7 @@ const baseHandler: Handler = async (event) => {
     }
 
     const responsePayload = {
+      evidenceVersion: 1,
       cards: cards,
       evidenceSources,
       evidenceDiagnostics: diagnostics,

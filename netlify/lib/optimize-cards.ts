@@ -15,6 +15,22 @@ export interface OptimizationCard {
   evidence?: EditEvidence;
 }
 
+export function hasCurrentEvidenceCards(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const result = value as { evidenceVersion?: unknown; evidenceSources?: unknown; cards?: unknown };
+  const sources = result.evidenceSources;
+  return result.evidenceVersion === 1 && Array.isArray(sources)
+    && sources.length > 0 && Array.isArray(result.cards) && result.cards.length > 0
+    && result.cards.every((card: unknown) => {
+      if (!card || typeof card !== 'object') return false;
+      const evidence = (card as OptimizationCard).evidence;
+      return evidence?.version === 1 && (evidence.status === 'source_matched' || evidence.status === 'needs_review')
+        && Array.isArray(evidence.references) && evidence.references.length > 0
+        && evidence.references.every(reference => sources.some((source: unknown) =>
+          source && typeof source === 'object' && (source as EvidenceSource).id === reference.sourceId));
+    });
+}
+
 interface BulletImprovement {
   original?: string;
   improved?: string;

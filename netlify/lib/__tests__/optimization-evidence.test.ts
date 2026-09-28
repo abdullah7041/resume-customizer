@@ -31,11 +31,11 @@ describe('optimization evidence', () => {
     expect(result.reasons).toContain('wrong_target');
   });
 
-  it('marks duplicate source identities ambiguous instead of selecting the first', async () => {
+  it('rejects duplicate source identities instead of selecting a role', async () => {
     const repeated = [source('a', 'work-a', 'Built reports'), source('a', 'work-a', 'Built reports')];
     const result = await validateEditEvidence({ targetId: 'work-a', original: 'Built reports', proposed: 'Built reports', references: [{ sourceId: 'a', quote: 'Built reports' }] }, repeated);
-    expect(result.status).toBe('needs_review');
-    expect(result.reasons).toContain('semantic_review');
+    expect(result.status).toBe('rejected');
+    expect(result.reasons).toContain('wrong_target');
   });
 
   it('accepts unchanged sourced text but reviews a paraphrase', async () => {
@@ -50,9 +50,8 @@ describe('optimization evidence', () => {
       targetId: 'work-a', original: 'Cut cost 40%', proposed: 'Cut cost 40%',
       references: [{ sourceId: 'a', quote: 'Managed team' }],
     }, [source('a', 'work-a', 'Managed team')]);
-    expect(result.status).toBe('needs_review');
-    expect(result.reasons).toContain('new_number');
-    expect(result.reasons).toContain('semantic_review');
+    expect(result.status).toBe('rejected');
+    expect(result.reasons).toContain('wrong_target');
   });
 
   it('treats Arabic-Indic and Western digits as the same number', async () => {
@@ -69,10 +68,15 @@ describe('optimization evidence', () => {
 
   it('links a candidate clarification to its target without granting independent verification', async () => {
     const clarification = source('c', 'work-a', 'I reduced latency by 25%', 'clarification');
-    const result = await validateEditEvidence({ targetId: 'work-a', original: 'Improved latency', proposed: 'Reduced latency by 25%', references: [{ sourceId: 'c', quote: 'reduced latency by 25%' }] }, [clarification]);
+    const result = await validateEditEvidence({ targetId: 'work-a', original: 'Improved latency', proposed: 'Reduced latency by 25%', references: [{ sourceId: 'c', quote: 'reduced latency by 25%' }] }, [source('a', 'work-a', 'Improved latency'), clarification]);
     expect(result.status).toBe('needs_review');
     expect(result.reasons).toContain('semantic_review');
     expect(result.reasons).not.toContain('new_number');
+  });
+
+  it('rejects a clarification without a resume source for the original target', async () => {
+    const result = await validateEditEvidence({ targetId: 'work-a', original: 'Improved latency', proposed: 'Reduced latency by 25%', references: [{ sourceId: 'c', quote: '25%' }] }, [source('c', 'work-a', 'Reduced latency by 25%', 'clarification')]);
+    expect(result).toMatchObject({ status: 'rejected', reasons: ['wrong_target'] });
   });
 
   it('builds target-bound sources from structured resume and clarification text', async () => {

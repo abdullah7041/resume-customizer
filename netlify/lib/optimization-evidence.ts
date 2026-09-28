@@ -69,14 +69,19 @@ export async function buildEvidenceSources(input: {
 /** Rendered text has no role identity; changed edits remain subject to semantic review. */
 export function buildRequestEvidenceSources(resumeText: string, userClarifications = ''): EvidenceSource[] {
   const sources: EvidenceSource[] = [];
+  let sourceBlockLength = 2; // JSON array brackets; keep the prompt source block bounded.
   const add = (text: string, kind: EvidenceSource['kind']) => {
     const value = text;
     if (!value.trim()) return;
     const targetId = `${kind}:${fingerprintEvidenceText(value)}`;
-    sources.push({ id: fingerprintEvidenceText(JSON.stringify([kind, value])), kind, text: value,
-      targetId, fingerprint: fingerprintEvidenceText(value) });
+    const source = { id: fingerprintEvidenceText(JSON.stringify([kind, value])), kind, text: value,
+      targetId, fingerprint: fingerprintEvidenceText(value) };
+    const entryLength = JSON.stringify({ id: source.id, targetId, kind, text: value }).length + (sources.length ? 1 : 0);
+    if (sourceBlockLength + entryLength > 15000) return;
+    sourceBlockLength += entryLength;
+    sources.push(source);
   };
-  for (const line of resumeText.split(/\r?\n/)) add(line, 'resume');
+  for (const line of resumeText.slice(0, 15000).split(/\r?\n/)) add(line, 'resume');
   for (const block of userClarifications.split(/\r?\n\s*\r?\n/)) {
     const answer = block.match(/(?:^|\n)A:\s*([^\n]+)/)?.[1];
     if (answer) add(answer, 'clarification');
@@ -109,6 +114,9 @@ export async function validateEditEvidence(candidate: EvidenceCandidate, sources
     && source.fingerprint === fingerprintEvidenceText(source.text)
     && source.text.replace(/\s+/g, ' ').includes(normalizedOriginal)
   ) : [];
+
+  // A cited fact cannot establish which role's original text is being edited.
+  if (originalSources.length !== 1) reasons.push('wrong_target');
 
   if (!candidate.references.length) reasons.push('missing_source');
   for (const reference of candidate.references) {

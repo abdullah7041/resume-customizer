@@ -91,6 +91,34 @@ describe('evidence at editing endpoints', () => {
     expect(mocks.setCached).not.toHaveBeenCalled();
   });
 
+  it('regenerates a legacy cache without evidence before charging', async () => {
+    mocks.getCached.mockResolvedValue({ cards: [{ section: 'Experience', exampleAfter: 'Old edit' }] });
+    const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number; body: string; headers: Record<string, string> };
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['X-Cache']).not.toBe('HIT');
+    expect(JSON.parse(response.body)).toMatchObject({ evidenceVersion: 1 });
+    expect(mocks.optimizeResume).toHaveBeenCalledTimes(1);
+    expect(mocks.consumeCredits).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns a versioned evidence cache without generation or billing', async () => {
+    mocks.getCached.mockResolvedValue({ evidenceVersion: 1, evidenceSources: [source], cards: [{ evidence: {
+      version: 1, status: 'needs_review', references: [{ sourceId: source.id, quote: source.text }],
+    } }] });
+    const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number; headers: Record<string, string> };
+    expect(response.headers['X-Cache']).toBe('HIT');
+    expect(mocks.optimizeResume).not.toHaveBeenCalled();
+    expect(mocks.consumeCredits).not.toHaveBeenCalled();
+  });
+
+  it('keeps evidence outside the provider-visible resume window out of the request', () => {
+    const sources = buildRequestEvidenceSources(`${'A'.repeat(15000)}\nHidden employer achievement`);
+    expect(sources.some(item => item.text.includes('Hidden employer'))).toBe(false);
+    expect(JSON.stringify(sources.map(({ id, targetId, kind, text }) => ({ id, targetId, kind, text }))).length).toBeLessThanOrEqual(15000);
+  });
+
   it('keeps clarification answers separate and duplicate resume lines ambiguous', () => {
     const repeated = buildRequestEvidenceSources(`${source.text}\n${source.text}`, '[Impact]\nQ: What did you do?\nA: Built Excel dashboards');
     expect(repeated[0]).toEqual(repeated[1]);
@@ -98,9 +126,9 @@ describe('evidence at editing endpoints', () => {
     expect(repeated[2].targetId).not.toBe(source.targetId);
   });
 
-  it('keeps candidate clarification provenance on an accepted edit', async () => {
+  it('rejects a raw clarification without an explicit resume target binding', async () => {
     const userClarifications = '[Impact]\nQ: Which tools did you use?\nA: Built Excel dashboards';
-    const clarification = buildRequestEvidenceSources(resumeText, userClarifications).at(-1)!;
+    const clarification = buildRequestEvidenceSources(resumeText, userClarifications).slice(-1)[0];
     mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [{ ...valid,
       improved: 'Maintained customer reports and built Excel dashboards.', target_id: clarification.targetId,
       evidence_references: [{ sourceId: clarification.id, quote: clarification.text }],
@@ -108,8 +136,8 @@ describe('evidence at editing endpoints', () => {
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
       body: JSON.stringify({ resumeText, jobText, userClarifications }) } as never, {} as never) as { statusCode: number; body: string };
     const body = JSON.parse(response.body);
-    expect(response.statusCode).toBe(200);
-    expect(body.cards[0].evidence).toMatchObject({ status: 'needs_review', targetId: clarification.targetId });
-    expect(body.evidenceSources.at(-1)).toEqual(clarification);
+    expect(response.statusCode).toBe(500);
+    expect(mocks.consumeCredits).not.toHaveBeenCalled();
+    expect(body.cards).toBeUndefined();
   });
 });

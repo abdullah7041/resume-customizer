@@ -28,7 +28,7 @@ vi.mock('../../lib/sentry.js', () => ({
 const { handler } = await import('../refine-bullet.js');
 
 const validBody = {
-  original: 'Led a team.',
+  original: 'Led a team',
   currentImproved: 'Led a cross-functional team.',
   userInstruction: 'Make the impact clearer.',
   resumeText: 'Led a team that shipped a customer portal.',

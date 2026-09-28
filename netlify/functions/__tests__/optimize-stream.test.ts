@@ -95,12 +95,15 @@ describe('optimize-stream function', () => {
       available: 10,
     });
     mockRedisCache.getCached.mockResolvedValue({
+      evidenceVersion: 1,
+      evidenceSources: [{ id: 'source', targetId: 'target', kind: 'resume', text: 'Before', fingerprint: 'fingerprint' }],
       cards: [{
         section: 'General',
         issue: 'Cached issue',
         suggestion: 'Cached suggestion',
         exampleBefore: 'Before',
         exampleAfter: 'After',
+        evidence: { version: 1, status: 'needs_review', references: [{ sourceId: 'source', quote: 'Before' }] },
       }],
       source: 'cache',
     });
@@ -148,6 +151,13 @@ describe('optimize-stream function', () => {
     // Cache hit returns before pre-charge enforcement but still attaches live balance.
     expect(mockCreditManager.checkCredits).toHaveBeenCalledWith('user@example.com', 'optimize');
     expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+  });
+
+  it('does not return a legacy cached card without evidence', async () => {
+    mockRedisCache.getCached.mockResolvedValue({ cards: [{ section: 'Experience', exampleAfter: 'Old edit' }] });
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    expect(response.headers.get('X-Cache')).not.toBe('HIT');
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledTimes(1);
   });
 
   it('does not return a cached empty card payload as a successful optimization', async () => {

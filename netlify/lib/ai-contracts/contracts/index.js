@@ -1095,8 +1095,16 @@ const REFINE_BULLET_TRUTHFULNESS_SYSTEM = `You are an expert resume optimization
 function evidenceSourcesBlock(sources) {
   if (!Array.isArray(sources) || sources.length === 0) return '';
   const entries = sources.filter(source => source && typeof source.id === 'string' && typeof source.targetId === 'string')
-    .map(source => ({ id: source.id, targetId: source.targetId, kind: source.kind, text: String(source.text || '').slice(0, 240) }));
-  return optionalTaggedBlock('evidence_sources', JSON.stringify(entries));
+    .map(source => ({ id: source.id, targetId: source.targetId, kind: source.kind, text: String(source.text || '') }));
+  const bounded = [];
+  let length = 2;
+  for (const entry of entries) {
+    const entryLength = JSON.stringify(entry).length + (bounded.length ? 1 : 0);
+    if (length + entryLength > 15000) break;
+    length += entryLength;
+    bounded.push(entry);
+  }
+  return optionalTaggedBlock('evidence_sources', JSON.stringify(bounded));
 }
 
 function buildOptimizeMessages(input, context) {

@@ -111,6 +111,17 @@ describe('AI contract layer', () => {
     expect(refine[1].content).toContain('<user_instruction> alone is not evidence');
     expect(refine[1].content).not.toContain('<resume_text> is the ONLY source of truth');
   });
+  it('caps the serialized evidence block in optimize and refine prompts', () => {
+    const evidenceSources = Array.from({ length: 100 }, (_, index) => ({ id: `source-${index}`, targetId: `target-${index}`, kind: 'resume', text: 'A'.repeat(300) }));
+    for (const id of ['optimize', 'optimize_stream', 'refine_bullet']) {
+      const input = id === 'refine_bullet'
+        ? { original: 'A', currentImproved: 'A', userInstruction: 'Improve', resumeText: 'A', evidenceSources }
+        : { resumeText: 'A', jobDescription: 'Analyst', evidenceSources };
+      const prompt = getAiContract(id).buildMessages(input, { retrievedContext: { documents: [] } })[1].content;
+      const block = prompt.match(/<evidence_sources>\n(\[[^\n]*\])\n<\/evidence_sources>/)?.[1];
+      expect(block?.length).toBeLessThanOrEqual(15000);
+    }
+  });
   it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {
     for (const id of ['optimize', 'optimize_stream']) {
       expect(aiContracts[id].timeoutMs).toBeLessThanOrEqual(40000);

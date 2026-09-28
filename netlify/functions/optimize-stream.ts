@@ -28,7 +28,7 @@ import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
-import { buildEvidenceBackedOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
+import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
 import { buildRequestEvidenceSources } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
@@ -70,12 +70,6 @@ function getClientIPFromRequest(request: Request): string | null {
     }
   }
   return null;
-}
-
-function hasRenderableCards(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const cards = (value as { cards?: unknown }).cards;
-  return Array.isArray(cards) && cards.length > 0;
 }
 
 async function attachLiveCredits<T extends Record<string, unknown>>(
@@ -239,7 +233,7 @@ export default async function handler(request: Request): Promise<Response> {
   });
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-  if (hasRenderableCards(cachedResponse)) {
+  if (hasCurrentEvidenceCards(cachedResponse)) {
     console.log('[optimize-stream] Cache HIT — returning cached JSON (no credit deduction).');
     const responsePayload = await attachLiveCredits(cachedResponse, userEmail, freePreview);
     return new Response(JSON.stringify(responsePayload), {
@@ -382,6 +376,7 @@ export default async function handler(request: Request): Promise<Response> {
         }
 
         const resultPayload = {
+          evidenceVersion: 1,
           cards,
           evidenceSources,
           evidenceDiagnostics: diagnostics,
