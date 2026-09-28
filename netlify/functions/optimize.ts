@@ -10,7 +10,7 @@ import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
-import { buildRequestEvidenceSources } from "../lib/optimization-evidence.js";
+import { buildRequestEvidenceSources, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
@@ -203,7 +203,7 @@ const baseHandler: Handler = async (event) => {
 
     // Use dedicated optimizeResume function for faster, focused optimization
     const optimization = await optimizeResume(
-      resumeText,
+      requestEvidenceResumeText(evidenceSources),
       jobText,
       language,
       vulnerabilities,

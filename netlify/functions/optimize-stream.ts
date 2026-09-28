@@ -29,7 +29,7 @@ import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
 import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
-import { buildRequestEvidenceSources } from "../lib/optimization-evidence.js";
+import { buildRequestEvidenceSources, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
@@ -312,7 +312,7 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 3: AI Processing (this is the long step)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "ai_processing" })));
 
-        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
+        const optimization = await optimizeResume(requestEvidenceResumeText(evidenceSources), jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
           userRef: user?.id || null,
           jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),

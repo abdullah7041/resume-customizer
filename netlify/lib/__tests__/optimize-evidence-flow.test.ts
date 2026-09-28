@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildRequestEvidenceSources } from '../optimization-evidence.js';
+import { buildRequestEvidenceSources, requestEvidenceResumeText } from '../optimization-evidence.js';
 
 const mocks = vi.hoisted(() => ({
   optimizeResume: vi.fn(), executeAiContract: vi.fn(), getCached: vi.fn(), setCached: vi.fn(),
@@ -117,6 +117,22 @@ describe('evidence at editing endpoints', () => {
     const sources = buildRequestEvidenceSources(`${'A'.repeat(15000)}\nHidden employer achievement`);
     expect(sources.some(item => item.text.includes('Hidden employer'))).toBe(false);
     expect(JSON.stringify(sources.map(({ id, targetId, kind, text }) => ({ id, targetId, kind, text }))).length).toBeLessThanOrEqual(15000);
+    expect(sources.length).toBeGreaterThan(0);
+    for (const line of requestEvidenceResumeText(sources).split('\n')) {
+      expect(sources.some(source => source.kind === 'resume' && source.text === line)).toBe(true);
+    }
+  });
+
+  it('sends only source-covered resume text to the provider for a long line', async () => {
+    const longResume = `Unique achievement ${'A'.repeat(14000)}\nTrailing role`;
+    mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [invalid] });
+    await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ resumeText: longResume, jobText }) } as never, {} as never);
+    const sent = mocks.optimizeResume.mock.calls[0][0] as string;
+    const sentSources = mocks.optimizeResume.mock.calls[0][6].evidenceSources;
+    expect(sentSources.length).toBeGreaterThan(0);
+    expect(sent).toBe(requestEvidenceResumeText(sentSources));
+    for (const line of sent.split('\n')) expect(sentSources.some((item: { text: string }) => item.text === line)).toBe(true);
   });
 
   it('keeps clarification answers separate and duplicate resume lines ambiguous', () => {
@@ -126,18 +142,19 @@ describe('evidence at editing endpoints', () => {
     expect(repeated[2].targetId).not.toBe(source.targetId);
   });
 
-  it('rejects a raw clarification without an explicit resume target binding', async () => {
+  it('keeps a string clarification with a unique original target for review', async () => {
     const userClarifications = '[Impact]\nQ: Which tools did you use?\nA: Built Excel dashboards';
     const clarification = buildRequestEvidenceSources(resumeText, userClarifications).slice(-1)[0];
     mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [{ ...valid,
-      improved: 'Maintained customer reports and built Excel dashboards.', target_id: clarification.targetId,
+      improved: 'Maintained customer reports and built Excel dashboards.', target_id: source.targetId,
       evidence_references: [{ sourceId: clarification.id, quote: clarification.text }],
     }] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
       body: JSON.stringify({ resumeText, jobText, userClarifications }) } as never, {} as never) as { statusCode: number; body: string };
     const body = JSON.parse(response.body);
-    expect(response.statusCode).toBe(500);
-    expect(mocks.consumeCredits).not.toHaveBeenCalled();
-    expect(body.cards).toBeUndefined();
+    expect(response.statusCode).toBe(200);
+    expect(body.cards[0].evidence).toMatchObject({ status: 'needs_review', targetId: source.targetId, reasons: ['semantic_review'] });
+    expect(body.evidenceSources.slice(-1)[0]).toEqual(clarification);
+    expect(mocks.consumeCredits).toHaveBeenCalledTimes(1);
   });
 });

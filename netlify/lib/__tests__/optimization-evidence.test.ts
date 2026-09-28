@@ -79,6 +79,15 @@ describe('optimization evidence', () => {
     expect(result).toMatchObject({ status: 'rejected', reasons: ['wrong_target'] });
   });
 
+  it('reviews an unbound clarification only with a unique original, and rejects wrong-role or repeated originals', async () => {
+    const original = source('a', 'work-a', 'Improved service');
+    const clarification = source('c', 'clarification:answer', 'Reduced cost by 25%', 'clarification');
+    const candidate = { targetId: 'work-a', original: 'Improved service', proposed: 'Reduced cost by 25%', references: [{ sourceId: 'c', quote: '25%' }] };
+    expect(await validateEditEvidence(candidate, [original, clarification])).toMatchObject({ status: 'needs_review', reasons: ['semantic_review'] });
+    expect((await validateEditEvidence(candidate, [original, source('b', 'work-b', 'Improved service'), clarification])).status).toBe('rejected');
+    expect((await validateEditEvidence(candidate, [original, source('c', 'work-b', 'Reduced cost by 25%', 'clarification')])).reasons).toContain('wrong_target');
+  });
+
   it('builds target-bound sources from structured resume and clarification text', async () => {
     const sources = await buildEvidenceSources({
       resume: { basics: { summary: 'Analyst' }, work: [{ name: 'A', position: 'Analyst', highlights: ['Built reports'] }, { name: 'B', position: 'Analyst', highlights: ['Built reports'] }] },

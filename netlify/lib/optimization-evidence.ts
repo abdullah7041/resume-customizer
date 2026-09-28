@@ -81,12 +81,18 @@ export function buildRequestEvidenceSources(resumeText: string, userClarificatio
     sourceBlockLength += entryLength;
     sources.push(source);
   };
-  for (const line of resumeText.slice(0, 15000).split(/\r?\n/)) add(line, 'resume');
+  for (const line of resumeText.slice(0, 15000).split(/\r?\n/)) {
+    for (let offset = 0; offset < line.length; offset += 1000) add(line.slice(offset, offset + 1000), 'resume');
+  }
   for (const block of userClarifications.split(/\r?\n\s*\r?\n/)) {
     const answer = block.match(/(?:^|\n)A:\s*([^\n]+)/)?.[1];
     if (answer) add(answer, 'clarification');
   }
   return sources;
+}
+
+export function requestEvidenceResumeText(sources: EvidenceSource[]): string {
+  return sources.filter(source => source.kind === 'resume').map(source => source.text).join('\n');
 }
 
 function normalizeDigits(text: string): string {
@@ -110,13 +116,12 @@ export async function validateEditEvidence(candidate: EvidenceCandidate, sources
   const normalizedOriginal = candidate.original.replace(/\s+/g, ' ').trim();
   const originalSources = normalizedOriginal ? sources.filter(source =>
     source.kind === 'resume'
-    && source.targetId === candidate.targetId
     && source.fingerprint === fingerprintEvidenceText(source.text)
     && source.text.replace(/\s+/g, ' ').includes(normalizedOriginal)
   ) : [];
 
   // A cited fact cannot establish which role's original text is being edited.
-  if (originalSources.length !== 1) reasons.push('wrong_target');
+  if (originalSources.length !== 1 || originalSources[0].targetId !== candidate.targetId) reasons.push('wrong_target');
 
   if (!candidate.references.length) reasons.push('missing_source');
   for (const reference of candidate.references) {
@@ -125,10 +130,12 @@ export async function validateEditEvidence(candidate: EvidenceCandidate, sources
       if (!reasons.includes('missing_source')) reasons.push('missing_source');
       continue;
     }
-    if (matches.some(source => source.targetId !== candidate.targetId)) {
+    if (matches.some(source => source.targetId !== candidate.targetId
+      && !(source.kind === 'clarification' && source.targetId.startsWith('clarification:')))) {
       if (!reasons.includes('wrong_target')) reasons.push('wrong_target');
       continue;
     }
+    if (matches.some(source => source.kind === 'clarification' && source.targetId.startsWith('clarification:'))) ambiguous = true;
     if (matches.length > 1) ambiguous = true;
     sourceFingerprints[reference.sourceId] = matches[0].fingerprint;
     citedText.push(reference.quote);
