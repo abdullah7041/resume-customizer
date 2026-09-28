@@ -29,7 +29,7 @@ import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
 import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
-import { buildRequestEvidenceSources, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
@@ -376,9 +376,10 @@ export default async function handler(request: Request): Promise<Response> {
         }
 
         const resultPayload = {
-          evidenceVersion: 1,
+          evidenceVersion: 2,
           cards,
           evidenceSources,
+          evidenceInputOmissions: evidenceInputOmissions(resumeText, userClarifications || '', evidenceSources),
           evidenceDiagnostics: diagnostics,
           keywords: {
             add: addKeywords,

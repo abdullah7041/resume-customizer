@@ -239,12 +239,15 @@ describe('optimize function', () => {
 
     it('returns cached optimize results before enforcing the live credit check', async () => {
         vi.mocked(getCached).mockResolvedValue({
+            evidenceVersion: 2,
+            evidenceSources: [{ id: 'source', targetId: 'target', kind: 'resume', text: 'Before', fingerprint: 'fingerprint' }],
             cards: [{
                 section: 'General',
                 issue: 'Cached issue',
                 suggestion: 'Cached suggestion',
                 exampleBefore: 'Before',
                 exampleAfter: 'After',
+                evidence: { version: 1, status: 'needs_review', references: [{ sourceId: 'source', quote: 'Before' }] },
             }],
             creditsRemaining: 99,
             source: 'gemini',

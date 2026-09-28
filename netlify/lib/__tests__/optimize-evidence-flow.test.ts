@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildRequestEvidenceSources, requestEvidenceResumeText } from '../optimization-evidence.js';
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText } from '../optimization-evidence.js';
 
 const mocks = vi.hoisted(() => ({
   optimizeResume: vi.fn(), executeAiContract: vi.fn(), getCached: vi.fn(), setCached: vi.fn(),
@@ -60,6 +60,7 @@ describe('evidence at editing endpoints', () => {
     expect(result.cards).toHaveLength(1);
     expect(result.cards[0].evidence.status).toBe('needs_review');
     expect(result.evidenceDiagnostics).toMatchObject([{ status: 422, code: 'EVIDENCE_INVALID' }]);
+    expect(result.evidenceInputOmissions).toEqual({ resumeCharacters: 0, clarificationCharacters: 0 });
     expect(mocks.consumeCredits).toHaveBeenCalledTimes(1);
   });
 
@@ -79,6 +80,7 @@ describe('evidence at editing endpoints', () => {
       body: JSON.stringify({ original: source.text, currentImproved: source.text, userInstruction: 'Clarify task', resumeText }) } as never, {} as never) as { statusCode: number; body: string };
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body)).toMatchObject({ evidence: { status: 'needs_review', targetId: source.targetId }, evidenceSources: buildRequestEvidenceSources(resumeText) });
+    expect(JSON.parse(response.body).evidenceInputOmissions).toEqual({ resumeCharacters: 0, clarificationCharacters: 0 });
     expect(mocks.executeAiContract.mock.calls[0][1].evidenceSources).toEqual(buildRequestEvidenceSources(resumeText));
   });
 
@@ -97,13 +99,13 @@ describe('evidence at editing endpoints', () => {
       body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number; body: string; headers: Record<string, string> };
     expect(response.statusCode).toBe(200);
     expect(response.headers['X-Cache']).not.toBe('HIT');
-    expect(JSON.parse(response.body)).toMatchObject({ evidenceVersion: 1 });
+    expect(JSON.parse(response.body)).toMatchObject({ evidenceVersion: 2 });
     expect(mocks.optimizeResume).toHaveBeenCalledTimes(1);
     expect(mocks.consumeCredits).toHaveBeenCalledTimes(1);
   });
 
   it('returns a versioned evidence cache without generation or billing', async () => {
-    mocks.getCached.mockResolvedValue({ evidenceVersion: 1, evidenceSources: [source], cards: [{ evidence: {
+    mocks.getCached.mockResolvedValue({ evidenceVersion: 2, evidenceSources: [source], cards: [{ evidence: {
       version: 1, status: 'needs_review', references: [{ sourceId: source.id, quote: source.text }],
     } }] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
@@ -116,11 +118,35 @@ describe('evidence at editing endpoints', () => {
   it('keeps evidence outside the provider-visible resume window out of the request', () => {
     const sources = buildRequestEvidenceSources(`${'A'.repeat(15000)}\nHidden employer achievement`);
     expect(sources.some(item => item.text.includes('Hidden employer'))).toBe(false);
-    expect(JSON.stringify(sources.map(({ id, targetId, kind, text }) => ({ id, targetId, kind, text }))).length).toBeLessThanOrEqual(15000);
+    expect(JSON.stringify(sources.map(({ id, targetId, kind, text }) => ({ id, targetId, kind, text }))).length).toBeLessThanOrEqual(40000);
     expect(sources.length).toBeGreaterThan(0);
     for (const line of requestEvidenceResumeText(sources).split('\n')) {
       expect(sources.some(source => source.kind === 'resume' && source.text === line)).toBe(true);
     }
+  });
+
+  it('keeps later roles and candidate answers in a normal resume', async () => {
+    const normalResume = Array.from({ length: 100 }, (_, i) => `Role ${i}: ${'A'.repeat(99)}`).join('\n');
+    const userClarifications = 'Q: What was the outcome?\nA: Increased revenue by 25%';
+    const sources = buildRequestEvidenceSources(normalResume, userClarifications);
+    expect(normalResume.length).toBe(10889);
+    expect(sources.some(item => item.text.includes('Role 99:'))).toBe(true);
+    expect(sources).toContainEqual(expect.objectContaining({ kind: 'clarification', text: 'Increased revenue by 25%' }));
+    expect(evidenceInputOmissions(normalResume, userClarifications, sources)).toEqual({ resumeCharacters: 0, clarificationCharacters: 0 });
+    mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [invalid] });
+    await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ resumeText: normalResume, jobText, userClarifications }) } as never, {} as never);
+    expect(mocks.optimizeResume.mock.calls[0][0]).toContain('Role 99:');
+    expect(mocks.optimizeResume.mock.calls[0][6].evidenceSources).toEqual(sources);
+  });
+
+  it('discloses input omitted beyond the provider limit', async () => {
+    const longResume = `${source.text}\n${'A'.repeat(40000)}`;
+    const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
+      body: JSON.stringify({ resumeText: longResume, jobText }) } as never, {} as never) as { statusCode: number; body: string };
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body).evidenceInputOmissions).toMatchObject({ clarificationCharacters: 0 });
+    expect(JSON.parse(response.body).evidenceInputOmissions.resumeCharacters).toBeGreaterThan(25000);
   });
 
   it('sends only source-covered resume text to the provider for a long line', async () => {

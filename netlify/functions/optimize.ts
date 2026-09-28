@@ -10,7 +10,7 @@ import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
-import { buildRequestEvidenceSources, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
@@ -294,9 +294,10 @@ const baseHandler: Handler = async (event) => {
     }
 
     const responsePayload = {
-      evidenceVersion: 1,
+      evidenceVersion: 2,
       cards: cards,
       evidenceSources,
+      evidenceInputOmissions: evidenceInputOmissions(resumeText, userClarifications || '', evidenceSources),
       evidenceDiagnostics: diagnostics,
       keywords: {
         add: addKeywords,

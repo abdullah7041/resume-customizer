@@ -4,7 +4,7 @@ import { getSupabaseClient } from '../lib/supabase-client.js';
 import { executeAiContract } from '../lib/ai-contracts/executor.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 import { z } from 'zod';
-import { buildRequestEvidenceSources, requestEvidenceResumeText, validateEditEvidence } from '../lib/optimization-evidence.js';
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText, validateEditEvidence } from '../lib/optimization-evidence.js';
 
 initSentry();
 
@@ -95,6 +95,7 @@ const baseHandler: Handler = async (event) => {
         rationale: result.rationale,
         evidence,
         evidenceSources,
+        evidenceInputOmissions: evidenceInputOmissions(resumeText, '', evidenceSources),
       }),
     };
   } catch (error) {

@@ -69,6 +69,7 @@ export async function buildEvidenceSources(input: {
 /** Rendered text has no role identity; changed edits remain subject to semantic review. */
 export function buildRequestEvidenceSources(resumeText: string, userClarifications = ''): EvidenceSource[] {
   const sources: EvidenceSource[] = [];
+  const hasClarifications = /(?:^|\n)A:\s*[^\n\s]/.test(userClarifications);
   let sourceBlockLength = 2; // JSON array brackets; keep the prompt source block bounded.
   const add = (text: string, kind: EvidenceSource['kind']) => {
     const value = text;
@@ -77,7 +78,7 @@ export function buildRequestEvidenceSources(resumeText: string, userClarificatio
     const source = { id: fingerprintEvidenceText(JSON.stringify([kind, value])), kind, text: value,
       targetId, fingerprint: fingerprintEvidenceText(value) };
     const entryLength = JSON.stringify({ id: source.id, targetId, kind, text: value }).length + (sources.length ? 1 : 0);
-    if (sourceBlockLength + entryLength > 15000) return;
+    if (sourceBlockLength + entryLength > (kind === 'resume' && hasClarifications ? 35000 : 40000)) return;
     sourceBlockLength += entryLength;
     sources.push(source);
   };
@@ -86,9 +87,18 @@ export function buildRequestEvidenceSources(resumeText: string, userClarificatio
   }
   for (const block of userClarifications.split(/\r?\n\s*\r?\n/)) {
     const answer = block.match(/(?:^|\n)A:\s*([^\n]+)/)?.[1];
-    if (answer) add(answer, 'clarification');
+    if (answer) for (let offset = 0; offset < answer.length; offset += 1000) add(answer.slice(offset, offset + 1000), 'clarification');
   }
   return sources;
+}
+
+export function evidenceInputOmissions(resumeText: string, userClarifications: string, sources: EvidenceSource[]) {
+  const resumeCharacters = resumeText.split(/\r?\n/).reduce((sum, line) => sum + (line.trim() ? line.length : 0), 0)
+    - sources.filter(source => source.kind === 'resume').reduce((sum, source) => sum + source.text.length, 0);
+  const clarificationCharacters = userClarifications.split(/\r?\n\s*\r?\n/)
+    .reduce((sum, block) => sum + (block.match(/(?:^|\n)A:\s*([^\n]+)/)?.[1]?.length ?? 0), 0)
+    - sources.filter(source => source.kind === 'clarification').reduce((sum, source) => sum + source.text.length, 0);
+  return { resumeCharacters, clarificationCharacters };
 }
 
 export function requestEvidenceResumeText(sources: EvidenceSource[]): string {

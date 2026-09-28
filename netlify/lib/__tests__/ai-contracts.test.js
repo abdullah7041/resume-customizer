@@ -119,7 +119,8 @@ describe('AI contract layer', () => {
         : { resumeText: 'A', jobDescription: 'Analyst', evidenceSources };
       const prompt = getAiContract(id).buildMessages(input, { retrievedContext: { documents: [] } })[1].content;
       const block = prompt.match(/<evidence_sources>\n(\[[^\n]*\])\n<\/evidence_sources>/)?.[1];
-      expect(block?.length).toBeLessThanOrEqual(15000);
+      expect(block?.length).toBeLessThanOrEqual(40000);
+      expect(prompt).not.toMatch(/<resume_text>\n/);
     }
   });
   it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {

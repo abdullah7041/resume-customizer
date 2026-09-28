@@ -95,7 +95,7 @@ describe('optimize-stream function', () => {
       available: 10,
     });
     mockRedisCache.getCached.mockResolvedValue({
-      evidenceVersion: 1,
+      evidenceVersion: 2,
       evidenceSources: [{ id: 'source', targetId: 'target', kind: 'resume', text: 'Before', fingerprint: 'fingerprint' }],
       cards: [{
         section: 'General',

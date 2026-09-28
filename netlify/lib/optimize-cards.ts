@@ -19,7 +19,7 @@ export function hasCurrentEvidenceCards(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const result = value as { evidenceVersion?: unknown; evidenceSources?: unknown; cards?: unknown };
   const sources = result.evidenceSources;
-  return result.evidenceVersion === 1 && Array.isArray(sources)
+  return result.evidenceVersion === 2 && Array.isArray(sources)
     && sources.length > 0 && Array.isArray(result.cards) && result.cards.length > 0
     && result.cards.every((card: unknown) => {
       if (!card || typeof card !== 'object') return false;
