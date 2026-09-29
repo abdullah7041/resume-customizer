@@ -686,6 +686,21 @@ describe('TemplatesSection', () => {
         const unresolved = { sectionId: 'summary-1', sectionType: 'summary', original: 'Original summary',
             optimized: 'Unsupported claim', applied: true, evidence: { status: 'needs_review' } };
 
+        it('exports the same reviewed composition to PDF and DOCX despite legacy suggestion metadata', async () => {
+            const withLegacySuggestion = { ...resume,
+                meta: { aiAnalysisResult: { summary_rewrite: 'Unreviewed legacy suggestion' } } };
+            useResumeStore.__setMockState({ originalResume: withLegacySuggestion, getActiveResume: () => withLegacySuggestion });
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalled());
+            const body = JSON.parse(globalThis.fetch.mock.calls.find(([url]) => url === '/.netlify/functions/generate-pdf')[1].body);
+            expect(body.html).toContain('Original summary');
+            expect(body.html).not.toContain('Unreviewed legacy suggestion');
+            expect(exportResumeAsDocx.mock.calls[0][0].basics.summary).toBe('Original summary');
+        });
+
         it.each(['pdf', 'docx'])('blocks an included unresolved edit before %s generation and opens that section', async (format) => {
             useResumeStore.__setMockState({ originalResume: resume, showOptimized: true, optimizations: [unresolved],
                 getActiveResume: () => ({ ...resume, basics: { ...resume.basics, summary: unresolved.optimized } }) });

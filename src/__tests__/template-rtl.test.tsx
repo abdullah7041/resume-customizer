@@ -23,6 +23,16 @@ vi.mock('../lib/stores/resumeStore', () => ({
 }));
 
 describe('template RTL rendering', () => {
+  it('renders only the supplied composed document when legacy metadata has suggestions', () => {
+    render(<TemplateRenderer template={{ id: 'modern-professional', structure: {} }} userData={{
+      basics: { name: 'Sara Ahmed', summary: 'Reviewed original' },
+      work: [], education: [], skills: [], projects: [],
+      meta: { aiAnalysisResult: { summary_rewrite: 'Unreviewed legacy suggestion' } },
+    }} />);
+    expect(screen.getByText('Reviewed original')).toBeInTheDocument();
+    expect(screen.queryByText('Unreviewed legacy suggestion')).not.toBeInTheDocument();
+  });
+
   it('renders Arabic resume previews with rtl direction on the wrapper and template root', () => {
     render(
       <TemplateRenderer
