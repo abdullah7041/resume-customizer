@@ -137,4 +137,13 @@ describe('mergeOptimizedResume', () => {
     expect(diagnostics.appliedCount).toBe(1);
     expect(diagnostics.failedCount).toBe(1);
   });
+
+  it('reports only the exact cards whose edits reached the composed document', () => {
+    const merged = card({ sectionId: 'merged', optimized: 'Delivered payment services for merchants' });
+    const failed = card({ sectionId: 'failed', original: 'No matching original text' });
+    const unapplied = card({ sectionId: 'unapplied', applied: false });
+    const recommendation = card({ sectionId: 'recommendation', sectionType: 'skills' });
+    const result = mergeOptimizedResume(baseResume(), [merged, failed, unapplied, recommendation], { isSaudiNational: false });
+    expect(result.includedEdits).toEqual([merged]);
+  });
 });

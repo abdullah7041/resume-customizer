@@ -156,6 +156,7 @@ export interface MergeOptions {
 export interface MergeResult {
   resume: ResumeSchema;
   diagnostics: MergeDiagnostics;
+  includedEdits: OptimizationResult[];
 }
 
 /**
@@ -174,6 +175,7 @@ export function mergeOptimizedResume(
   options: MergeOptions,
 ): MergeResult {
   const merged = structuredClone(original) as ResumeSchema;
+  const includedEdits: OptimizationResult[] = [];
 
   const diagnostics: MergeDiagnostics = {
     appliedCount: 0,
@@ -207,6 +209,7 @@ export function mergeOptimizedResume(
     if (target) {
       writeMergeTarget(merged, target, optimizedValue);
       diagnostics.appliedCount++;
+      includedEdits.push(opt);
     } else if (opt.sectionType === 'summary' || opt.sectionType === 'headline') {
       // basics missing — historical behavior was a silent skip (no failure record).
     } else {
@@ -225,5 +228,5 @@ export function mergeOptimizedResume(
     }
   }
 
-  return { resume: merged, diagnostics };
+  return { resume: merged, diagnostics, includedEdits };
 }
