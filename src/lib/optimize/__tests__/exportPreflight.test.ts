@@ -80,4 +80,16 @@ describe('export snapshot', () => {
     expect(reviewExport({ documentFingerprint: snapshot.documentFingerprint,
       includedEdits: snapshot.includedEdits, missingBaseline: false }).allowed).toBe(true);
   });
+
+  it('reviews only the final claim when a later card overwrites the same field', async () => {
+    const first = card({ sectionId: 'first', optimized: 'Unresolved first claim' });
+    const second = card({ sectionId: 'second', optimized: 'Candidate-confirmed final claim',
+      confirmation: { targetId: 'basics:summary', proposedFingerprint: 'new',
+        statement: 'Candidate-confirmed final claim', confirmedAt: '2026-09-24' } });
+    const snapshot = await createExportSnapshot(resume(), [first, second], { isSaudiNational: false });
+    expect(snapshot.resume.basics!.summary).toBe('Candidate-confirmed final claim');
+    expect(snapshot.includedEdits.map(edit => edit.sectionId)).toEqual(['second']);
+    expect(reviewExport({ documentFingerprint: snapshot.documentFingerprint,
+      includedEdits: snapshot.includedEdits, missingBaseline: false }).allowed).toBe(true);
+  });
 });

@@ -113,9 +113,10 @@ describe('mergeOptimizedResume', () => {
       card({ sectionId: 'summary-0', sectionType: 'summary', original: 'old', optimized: 'Sharper professional summary.' }),
       card({ sectionId: 'headline-0', sectionType: 'headline', original: 'old', optimized: 'Senior Backend Engineer' }),
     ];
-    const { resume } = mergeOptimizedResume(baseResume(), cards, { isSaudiNational: false });
+    const { resume, includedEdits } = mergeOptimizedResume(baseResume(), cards, { isSaudiNational: false });
     expect(resume.basics!.summary).toBe('Sharper professional summary.');
     expect(resume.basics!.label).toBe('Senior Backend Engineer');
+    expect(includedEdits.map(edit => edit.sectionId)).toEqual(['summary-0', 'headline-0']);
   });
 
   it('prepends Saudi to the summary for Saudi nationals (idempotently)', () => {
