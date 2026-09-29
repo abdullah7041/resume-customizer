@@ -43,4 +43,13 @@ describe('OptimizationCard source_span evidence disclosure', () => {
 
     expect(screen.queryByText('Grounded in your resume')).not.toBeInTheDocument();
   });
+
+  it('renders structured clarification quotes as literal text and marks semantic review', () => {
+    const quote = '<img src=x onerror=alert(1)>';
+    const evidence = { version: 1, status: 'needs_review', references: [{ sourceId: 'answer-1', quote }] };
+    render(<OptimizationCard card={{ ...baseCard, evidence, evidenceSources: [{ id: 'answer-1', kind: 'clarification' }] }} onCopy={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Needs your review/ }));
+    expect(screen.getByRole('note')).toHaveTextContent(`Your answer: ${quote}`);
+    expect(document.querySelector('img[src="x"]')).toBeNull();
+  });
 });

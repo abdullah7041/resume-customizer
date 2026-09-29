@@ -1061,6 +1061,39 @@ describe("MainContent resume parsing", () => {
     expect(screen.getByText(/Request ID: optimize-debug-1/i)).toBeInTheDocument();
   });
 
+  it("warns when a cached optimization omits supplied input", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [{ section: 'Summary', exampleBefore: 'Before', exampleAfter: 'After' }],
+      keywords: { add: [], neutral: [], remove: [] },
+      source: 'cache',
+      evidenceInputOmissions: { resumeCharacters: 17, clarificationCharacters: 4 },
+    });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+
+    await waitFor(() => expect(screen.getByTestId("toast-mock")).toHaveAttribute("data-toast-type", "warning"));
+    expect(screen.getByTestId("toast-mock")).toHaveTextContent(/did not evaluate that omitted text/);
+    expect(useResumeStore.getState().optimizeRun.data.evidenceInputOmissions).toEqual({ resumeCharacters: 17, clarificationCharacters: 4 });
+  });
+
+  it("does not turn unvalidated raw project rewrites into actionable cards", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini',
+      projectImprovements: [{ original: 'Built dashboard', improved: 'Built dashboard for 10,000 users', evidence: { status: 'source_matched' } }],
+    });
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    await waitFor(() => expect(screen.getByTestId('optimization-handler-status')).toHaveTextContent('completed'));
+    expect(useResumeStore.getState().optimizeRun.cards).toEqual([]);
+  });
+
   it("passes structured hard-stop answers to optimization without positive clarification text", async () => {
     localStorage.setItem("watheq:lastActiveTab", "optimize");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));

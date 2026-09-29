@@ -4,6 +4,7 @@ import type { SearchIntent } from './onboarding';
 import type { AssessmentContext, AssessmentRecord } from './assessment';
 import type { StrategicRealityCheck } from './analysis';
 import type { CategoryScoresData } from '../components/ScoreBreakdown';
+import type { EditEvidence, EvidenceInputOmissions, EvidenceSource } from './optimization-evidence';
 
 /**
  * Available template identifiers
@@ -50,6 +51,8 @@ export interface OptimizationResult {
   // `rationale` explains what changed so the user can judge the edit.
   rationale?: string;
   issue?: string;
+  /** Absent on cards saved before evidence validation. */
+  evidence?: EditEvidence;
   /**
    * Merge integrity, set at apply time by the dry-run content match:
    * 'mergeable' = the card's original text was located in the resume;
@@ -393,7 +396,7 @@ export interface ResumeState {
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
-  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string }) => void;
+  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string; evidence?: EditEvidence; evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions }) => void;
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
   setOptimizationOrigin: (origin: 'guest_preview' | 'paid' | null) => void;

@@ -5,6 +5,7 @@ import type { PartialResumeSchema, ResumeSchema } from '../../types/resume';
 import type { AiSuggestionEntry } from '../../types/analysis';
 import type { SearchIntent } from '../../types/onboarding';
 import type { AssessmentContext } from '@/types/assessment';
+import type { EvidenceInputOmissions, EvidenceSource } from '@/types/optimization-evidence';
 import type {
   ResumeState,
   OptimizationResult,
@@ -339,6 +340,7 @@ export const useResumeStore = create<ResumeState>()(
                 optimized: refinement.improved,
                 rationale: refinement.rationale,
                 issue: refinement.issue,
+                evidence: refinement.evidence,
                 // Refined text may match differently — clear the stale verdict so
                 // the next apply re-validates.
                 mergeStatus: undefined,
@@ -363,7 +365,25 @@ export const useResumeStore = create<ResumeState>()(
             };
           }
 
-          return { optimizations, originalResume, hasDownloaded: false };
+          const runData = state.optimizeRun?.data;
+          const data = runData && typeof runData === 'object' ? runData as {
+            evidenceSources?: EvidenceSource[];
+            evidenceInputOmissions?: EvidenceInputOmissions;
+          } : null;
+          const optimizeRun = data && (refinement.evidenceSources || refinement.evidenceInputOmissions)
+            ? { ...state.optimizeRun!, data: {
+              ...data,
+              evidenceSources: [...new Map([
+                ...(Array.isArray(data.evidenceSources) ? data.evidenceSources : []),
+                ...(Array.isArray(refinement.evidenceSources) ? refinement.evidenceSources : []),
+              ].map((source) => [source.id, source])).values()],
+              evidenceInputOmissions: {
+                resumeCharacters: Math.max(data.evidenceInputOmissions?.resumeCharacters ?? 0, refinement.evidenceInputOmissions?.resumeCharacters ?? 0),
+                clarificationCharacters: Math.max(data.evidenceInputOmissions?.clarificationCharacters ?? 0, refinement.evidenceInputOmissions?.clarificationCharacters ?? 0),
+              },
+            } }
+            : state.optimizeRun;
+          return { optimizations, originalResume, optimizeRun, hasDownloaded: false };
         });
       },
 

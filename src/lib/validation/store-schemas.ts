@@ -160,6 +160,16 @@ export const OptimizationResultSchema = z.object({
     optimized: z.union([z.string(), z.array(z.string())]),
     applied: z.boolean(),
     timestamp: z.string().optional(),
+    evidence: z.object({
+        version: z.literal(1),
+        targetId: z.string(),
+        originalFingerprint: z.string(),
+        proposedFingerprint: z.string(),
+        references: z.array(z.object({ sourceId: z.string(), quote: z.string() })),
+        sourceFingerprints: z.record(z.string(), z.string()),
+        status: z.enum(['source_matched', 'needs_review', 'rejected', 'legacy']),
+        reasons: z.array(z.enum(['missing_source', 'wrong_target', 'new_number', 'semantic_review', 'legacy'])),
+    }).optional(),
 });
 
 /**

@@ -45,6 +45,7 @@ import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsC
 import { GuestValidationPrompt } from '@/components/Feedback/GuestValidationPrompt';
 import { createAssessmentContext } from '@/lib/match/assessmentContext';
 import type { CachedAnalysis } from '@/types/templates';
+import type { EditEvidence, EvidenceInputOmissions, EvidenceSource } from '@/types/optimization-evidence';
 
 // Key for job description in localStorage (shared with MatchSection)
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
@@ -93,6 +94,7 @@ interface OptimizationCard {
   suggestion?: string;
   rationale?: string;
   issue?: string;
+  evidence?: EditEvidence;
 }
 
 interface Keywords {
@@ -241,6 +243,7 @@ export const normalizeOptimization = (opt: OptimizationCard, index: number): Opt
     timestamp: new Date().toISOString(),
     rationale: opt.rationale ?? opt.suggestion,
     issue: opt.issue,
+    evidence: opt.evidence,
   };
 };
 
@@ -292,6 +295,12 @@ export function OptimizeSection({
   const getCachedAssessment = useResumeStore((state) => state.getCachedAssessment);
   const baselineMatchScore = useResumeStore((state) => state.baselineMatchScore);
   const variantRestoreNonce = useResumeStore((state) => state.variantRestoreNonce);
+  const optimizeRun = useResumeStore((state) => state.optimizeRun);
+  const evidenceData = assessmentCurrent && optimizeRun && assessmentKey && optimizeRun.assessment?.context.key === assessmentKey
+    ? optimizeRun.data as { evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions } | null
+    : null;
+  const evidenceSources = evidenceData?.evidenceSources ?? [];
+  const omissions = evidenceData?.evidenceInputOmissions;
 
   // Use props or store
   const resumeText = propResumeText || parsedResumeText;
@@ -397,7 +406,8 @@ export function OptimizeSection({
           opt.original !== existing.original ||
           opt.optimized !== existing.optimized ||
           opt.assessmentKey !== existing.assessmentKey ||
-          opt.applied !== existing.applied;
+          opt.applied !== existing.applied ||
+          JSON.stringify(opt.evidence) !== JSON.stringify(existing.evidence);
       }) || normalized.length !== existingOptimizations.length;
 
       if (hasChanges) {
@@ -1182,6 +1192,14 @@ export function OptimizeSection({
 
   return (
     <div className="space-y-6">
+      {omissions && (omissions.resumeCharacters !== 0 || omissions.clarificationCharacters !== 0) && (
+        <p role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+          {t('optimization.inputOmitted', { defaultValue: 'Some supplied input was omitted before analysis: {{resume}} resume characters and {{clarifications}} answer characters. The suggestions did not evaluate that omitted text.',
+            resume: omissions.resumeCharacters,
+            clarifications: omissions.clarificationCharacters,
+          })}
+        </p>
+      )}
       {!assessmentCurrent && optimizations.length > 0 && (
         <p role="note" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
           {isArabic
@@ -1557,6 +1575,7 @@ export function OptimizeSection({
                 <JobGroupCard
                   key={group.id}
                   group={group}
+                  evidenceSources={evidenceSources}
                   viewMode={viewMode}
                   expandedCards={expandedCards}
                   compareMode={compareMode}

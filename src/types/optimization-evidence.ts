@@ -7,6 +7,11 @@ export interface EvidenceSource {
   createdAt?: string;
 }
 
+export interface EvidenceInputOmissions {
+  resumeCharacters: number;
+  clarificationCharacters: number;
+}
+
 export interface EvidenceReference {
   sourceId: string;
   quote: string;

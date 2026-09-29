@@ -27,7 +27,7 @@ vi.mock('../lib/utils/resumeText', () => ({
   inferMimeType: vi.fn(),
 }));
 
-const { optimizeResumeStream } = await import('../services/api.js');
+const { optimizeResumeStream, refineBullet } = await import('../services/api.js');
 
 const sseResponse = (bodyText) =>
   new Response(
@@ -214,4 +214,14 @@ describe('optimizeResumeStream billing-state errors', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls.slice(1).every(([, init]) => JSON.parse(init.body).cacheOnly)).toBe(true);
   });
+});
+
+it('preserves refinement evidence and omission counts from the API', async () => {
+  getSessionMock.mockResolvedValue({ data: { session: { access_token: 'test-token' } }, error: null });
+  const evidence = { version: 1, status: 'needs_review', references: [{ sourceId: 'resume:1', quote: 'Original' }] };
+  const evidenceSources = [{ id: 'resume:1', kind: 'resume', text: 'Original' }];
+  const evidenceInputOmissions = { resumeCharacters: 12, clarificationCharacters: 0 };
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ improved: 'Revised', evidence, evidenceSources, evidenceInputOmissions }), { status: 200, headers: { 'Content-Type': 'application/json' } })));
+  await expect(refineBullet({ original: 'Original', currentImproved: 'Current', userInstruction: 'Shorten', resumeText: 'Original' })).resolves.toMatchObject({ evidence, evidenceSources, evidenceInputOmissions });
+  vi.unstubAllGlobals();
 });

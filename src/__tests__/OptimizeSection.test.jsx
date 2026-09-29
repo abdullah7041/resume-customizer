@@ -1293,6 +1293,22 @@ describe('Optimization Card Types', () => {
             fireEvent.click(screen.getByRole('button', { name: 'Applied' }));
             expect(screen.getByText(sampleOptimization.original)).toBeInTheDocument();
         });
+
+        it('keeps structured evidence on headline and summary cards', () => {
+            const evidence = { version: 1, status: 'needs_review', targetId: 'resume:1', originalFingerprint: 'a', proposedFingerprint: 'b', references: [{ sourceId: 'resume:1', quote: '<script>alert(1)</script>' }], sourceFingerprints: { 'resume:1': 'a' }, reasons: ['semantic_review'] };
+            for (const section of ['Headline', 'Summary']) {
+                expect(normalizeOptimization({ section, exampleBefore: 'Before', exampleAfter: 'After', evidence }, 0).evidence).toEqual(evidence);
+            }
+        });
+
+        it('discloses omitted input from the saved current run', () => {
+            mockStoreState.optimizeRun = {
+                assessment: { context: { key: 'current' } },
+                data: { evidenceInputOmissions: { resumeCharacters: 12, clarificationCharacters: 3 } },
+            };
+            renderWithProviders(<OptimizeSection assessmentKey="current" />);
+            expect(screen.getByRole('alert')).toHaveTextContent('12 resume characters and 3 answer characters');
+        });
         it('restores the original score without admitting the optimized cache entry', async () => {
             mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
             mockStoreState.parsedResumeText = 'Original resume for Role A';

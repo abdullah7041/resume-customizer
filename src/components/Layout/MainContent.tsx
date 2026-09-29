@@ -1952,21 +1952,6 @@ export default function MainContent() {
         // Build full cards array including projects and certifications
         const allCards = [...(result.cards ?? [])];
 
-        // Add projectImprovements as cards (if any)
-        if (result.projectImprovements && Array.isArray(result.projectImprovements)) {
-          result.projectImprovements.forEach((proj: { project_name?: string; original?: string; improved?: string; issue?: string; rationale?: string }, index: number) => {
-            if (proj.improved || proj.original) {
-              allCards.push({
-                section: 'Projects',
-                issue: proj.issue || 'Project description could be more impactful',
-                suggestion: proj.rationale || 'Reframe project to highlight relevant skills',
-                exampleBefore: proj.original || '',
-                exampleAfter: proj.improved || '',
-              });
-            }
-          });
-        }
-
         // Add certificationRecommendations as display-only cards (if any)
         if (result.certificationRecommendations && Array.isArray(result.certificationRecommendations)) {
           result.certificationRecommendations.forEach((cert: { name?: string; issuer?: string; relevance?: string }, index: number) => {
@@ -2038,12 +2023,15 @@ export default function MainContent() {
                 : null
             ),
         });
+        const omissions = result.evidenceInputOmissions;
+        const hasOmissions = (omissions?.resumeCharacters ?? 0) !== 0 || (omissions?.clarificationCharacters ?? 0) !== 0;
         pushToast(
           {
-            type: result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",
-            title: t("toasts.optimizationReady"),
-            description:
-              result.source === "gemini" && result.cards?.length > 0
+            type: hasOmissions ? "warning" : result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",
+            title: hasOmissions ? t('optimization.inputOmittedTitle', 'Some input was not analyzed') : t("toasts.optimizationReady"),
+            description: hasOmissions
+              ? t('optimization.inputOmitted', { defaultValue: 'Some supplied input was omitted before analysis: {{resume}} resume characters and {{clarifications}} answer characters. The suggestions did not evaluate that omitted text.', resume: omissions.resumeCharacters ?? 0, clarifications: omissions.clarificationCharacters ?? 0 })
+              : result.source === "gemini" && result.cards?.length > 0
                 ? "Review AI-crafted rewrites and keywords."
                 : "No optimizations were generated. Please try again with more context.",
           },

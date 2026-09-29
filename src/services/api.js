@@ -655,7 +655,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
  * @param {string} [params.jobContext] - job description for keyword grounding
  * @param {string} params.resumeText - the ONLY grounding source
  * @param {string} [params.language='en']
- * @returns {Promise<{ improved: string, issue: string, rationale: string }>}
+ * @returns {Promise<{ improved: string, issue: string, rationale: string, evidence?: object, evidenceSources?: object[], evidenceInputOmissions?: object }>}
  */
 export const refineBullet = async ({ original, currentImproved, userInstruction, jobContext = '', resumeText, language = 'en' }) => {
   if (isCircuitOpen('openrouter-ai')) {
@@ -677,6 +677,9 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
         improved: typeof data.improved === 'string' ? data.improved : currentImproved,
         issue: typeof data.issue === 'string' ? data.issue : '',
         rationale: typeof data.rationale === 'string' ? data.rationale : '',
+        evidence: data.evidence,
+        evidenceSources: data.evidenceSources,
+        evidenceInputOmissions: data.evidenceInputOmissions,
       };
     } catch (error) {
       console.error('[RefineBullet] Refine failed:', summarizeErrorForConsole(error));

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { cn } from '@/lib/utils/cn';
 import type { OptimizationResult } from '@/lib/stores/resumeStore';
+import type { EvidenceSource } from '@/types/optimization-evidence';
 
 export interface QueueGroup {
   id: string;
@@ -21,6 +22,7 @@ export interface QueueGroup {
 
 interface JobGroupCardProps {
   group: QueueGroup;
+  evidenceSources?: EvidenceSource[];
   viewMode: 'split' | 'diff';
   expandedCards: Set<string>;
   compareMode: string | null;
@@ -54,6 +56,7 @@ const firstWords = (value: string | string[] | undefined) => {
 // Keep every object/function prop referentially stable so memoization remains effective.
 export const JobGroupCard = memo(function JobGroupCard({
   group,
+  evidenceSources = [],
   viewMode,
   expandedCards,
   compareMode,
@@ -253,6 +256,31 @@ export const JobGroupCard = memo(function JobGroupCard({
                         label={t('sections.optimize.scoreDiff.mergeFailed', "Couldn't locate in resume")}
                         text={t('sections.optimize.status.notInResume', "Couldn't locate this text in your resume — refine the suggestion or edit manually.")}
                       />
+                    </div>
+                  )}
+
+                  {!isRecommendationGroup && !opt.evidence && (
+                    <p className="mt-4 text-xs text-amber-800 dark:text-amber-300">
+                      {t('optimization.evidenceUnavailable', 'Source evidence is unavailable for this saved suggestion. Check every detail before applying.')}
+                    </p>
+                  )}
+                  {opt.evidence && (
+                    <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-gray-700 dark:text-gray-200">
+                      <p className="font-semibold text-amber-800 dark:text-amber-300">
+                        {opt.evidence.status === 'source_matched'
+                          ? t('optimization.evidenceSourceMatched', 'Matched to supplied source text; check the wording before applying.')
+                          : t('optimization.evidenceNeedsReview', 'Needs your review — source text does not verify every detail.')}
+                      </p>
+                      {opt.evidence.references.map((reference, index) => {
+                        const source = evidenceSources.find((item) => item.id === reference.sourceId);
+                        return source ? (
+                          <p key={`${reference.sourceId}-${index}`} className="mt-2 whitespace-pre-wrap break-words">
+                            <span className="font-semibold">{source.kind === 'clarification'
+                              ? t('optimization.clarificationSource', 'Your answer')
+                              : t('optimization.resumeSource', 'Resume text')}:</span>{' '}{reference.quote}
+                          </p>
+                        ) : null;
+                      })}
                     </div>
                   )}
 
