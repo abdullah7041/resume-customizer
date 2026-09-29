@@ -53,6 +53,7 @@ export interface OptimizationResult {
   issue?: string;
   /** Absent on cards saved before evidence validation. */
   evidence?: EditEvidence;
+  confirmation?: CandidateConfirmation;
   /**
    * Merge integrity, set at apply time by the dry-run content match:
    * 'mergeable' = the card's original text was located in the resume;
@@ -61,6 +62,13 @@ export interface OptimizationResult {
    * Cleared when the card is refined (new text may match differently).
    */
   mergeStatus?: 'mergeable' | 'failed';
+}
+
+export interface CandidateConfirmation {
+  proposedFingerprint: string;
+  targetId: string;
+  confirmedAt: string;
+  statement: string;
 }
 
 /**
@@ -288,6 +296,7 @@ export interface OptimizeRunRecord {
 
 export interface JobVariantSnapshot {
   optimizations: OptimizationResult[];
+  evidenceSources: EvidenceSource[];
   keywordSuggestions: KeywordSuggestion[];
   optimizationMetrics: OptimizationMetrics;
   baselineMatchScore: number | null;
@@ -346,6 +355,7 @@ export interface ResumeState {
   originalResume: ResumeSchema | null;
   parsedResumeText: string | null;
   optimizations: OptimizationResult[];
+  evidenceSources: EvidenceSource[];
   keywordSuggestions: KeywordSuggestion[];
 
   // Analysis caching for consistent results
@@ -397,6 +407,9 @@ export interface ResumeState {
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
   refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string; evidence?: EditEvidence; evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions }) => void;
+  confirmOptimization: (id: string, confirmation: CandidateConfirmation) => boolean;
+  editOptimization: (id: string, value: string | string[], proposedFingerprint: string) => boolean;
+  setEvidenceSources: (sources: EvidenceSource[]) => void;
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
   setOptimizationOrigin: (origin: 'guest_preview' | 'paid' | null) => void;

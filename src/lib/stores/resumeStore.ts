@@ -18,20 +18,26 @@ import {
   validateResume,
   validateParsedText,
   validateOptimization,
+  OptimizationResultSchema,
   validateSearchIntent,
 } from '../validation/store-schemas';
 import { deduplicateByName } from '../utils/resumeUtils';
 import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { isRecommendationOnly } from '@/lib/optimize/actionability';
+import { isConfirmationCurrent, proposalStatement } from '@/lib/optimize/evidenceReview';
 
 const MAX_JOB_VARIANTS = 10;
+// ponytail: localStorage writes are synchronous; use per-write receipts if persistence becomes async.
+let lastStorageWriteFailed = false;
 
 const resumeStorage = {
   getItem: (name: string) => localStorage.getItem(name),
   setItem: (name: string, value: string) => {
+    lastStorageWriteFailed = false;
     try {
       localStorage.setItem(name, value);
     } catch (error) {
+      lastStorageWriteFailed = true;
       if (import.meta.env.DEV) console.warn('[ResumeStore] Failed to persist resume state:', error);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('watheq:storage-error', {
@@ -139,10 +145,20 @@ const generateVariantId = (): string =>
  */
 const snapshotWorkingSet = (state: ResumeState): JobVariantSnapshot => ({
   optimizations: structuredClone(state.optimizations),
+  evidenceSources: structuredClone(state.evidenceSources),
   keywordSuggestions: structuredClone(state.keywordSuggestions),
   optimizationMetrics: structuredClone(state.optimizationMetrics),
   baselineMatchScore: state.baselineMatchScore,
   selectedTemplate: state.selectedTemplate,
+});
+
+const migrateLegacyCard = (card: OptimizationResult): OptimizationResult => ({
+  ...card,
+  confirmation: undefined,
+  evidence: card.evidence && OptimizationResultSchema.safeParse(card).success
+    ? card.evidence
+    : { version: 1, targetId: card.sectionId, originalFingerprint: '', proposedFingerprint: '',
+      references: [], sourceFingerprints: {}, status: 'legacy', reasons: ['legacy'] },
 });
 
 /**
@@ -156,6 +172,7 @@ export const useResumeStore = create<ResumeState>()(
       originalResume: null,
       parsedResumeText: null,
       optimizations: [],
+      evidenceSources: [],
       keywordSuggestions: [],
       analysisCache: {},
       optimizationMetrics: {
@@ -341,6 +358,7 @@ export const useResumeStore = create<ResumeState>()(
                 rationale: refinement.rationale,
                 issue: refinement.issue,
                 evidence: refinement.evidence,
+                confirmation: undefined,
                 // Refined text may match differently — clear the stale verdict so
                 // the next apply re-validates.
                 mergeStatus: undefined,
@@ -386,7 +404,10 @@ export const useResumeStore = create<ResumeState>()(
               },
             } : currentRun.data }
             : state.optimizeRun;
-          return { optimizations, originalResume, optimizeRun, hasDownloaded: false };
+          return { optimizations, originalResume, optimizeRun,
+            evidenceSources: [...new Map([
+              ...state.evidenceSources, ...(refinement.evidenceSources ?? []),
+            ].map((source) => [source.id, source])).values()], hasDownloaded: false };
         });
       },
 
@@ -484,6 +505,41 @@ export const useResumeStore = create<ResumeState>()(
         return Date.now() - cached.timestamp > CACHE_TTL_MS ? null : cached;
       },
 
+      setEvidenceSources: (sources) => set({ evidenceSources: sources }),
+      confirmOptimization: (sectionId, confirmation) => {
+        const card = get().optimizations.find((item) => item.sectionId === sectionId);
+        if (!card || !isConfirmationCurrent(card.evidence, confirmation, proposalStatement(card.optimized))) return false;
+        const previous = get().optimizations;
+        set((state) => ({
+          optimizations: state.optimizations.map((item) => item.sectionId === sectionId
+            ? { ...item, confirmation } : item),
+        }));
+        if (lastStorageWriteFailed) {
+          set({ optimizations: previous });
+          return false;
+        }
+        return true;
+      },
+      editOptimization: (sectionId, value, proposedFingerprint) => {
+        const previous = get();
+        if (!previous.optimizations.some((item) => item.sectionId === sectionId)) return false;
+        set((state) => {
+          const optimizations = state.optimizations.map((item) => item.sectionId === sectionId
+            ? { ...item, optimized: value, confirmation: undefined, mergeStatus: undefined,
+              evidence: item.evidence && { ...item.evidence, proposedFingerprint, status: 'needs_review' as const,
+                reasons: ['semantic_review' as const] } } : item);
+          return { optimizations, hasDownloaded: false,
+            optimizeRun: state.optimizeRun?.status === 'succeeded'
+              ? { ...state.optimizeRun, cards: optimizations } : state.optimizeRun };
+        });
+        if (lastStorageWriteFailed) {
+          set({ optimizations: previous.optimizations, optimizeRun: previous.optimizeRun,
+            hasDownloaded: previous.hasDownloaded });
+          return false;
+        }
+        return true;
+      },
+
       setCachedAssessment: (context, analysis) => {
         set((state) => {
           const newCache = {
@@ -515,6 +571,9 @@ export const useResumeStore = create<ResumeState>()(
        */
       setOptimizeRun: (run) =>
         set((state) => ({
+          evidenceSources: run?.status === 'succeeded' && run.data && typeof run.data === 'object'
+            && 'evidenceSources' in run.data && Array.isArray(run.data.evidenceSources)
+            ? run.data.evidenceSources as EvidenceSource[] : state.evidenceSources,
           optimizeRun: run === null
             ? null
             : {
@@ -681,6 +740,7 @@ export const useResumeStore = create<ResumeState>()(
         const snap = variant.snapshot;
         set({
           optimizations: structuredClone(snap.optimizations),
+          evidenceSources: structuredClone(snap.evidenceSources ?? []),
           keywordSuggestions: structuredClone(snap.keywordSuggestions),
           optimizationMetrics: structuredClone(snap.optimizationMetrics),
           baselineMatchScore: snap.baselineMatchScore,
@@ -705,6 +765,7 @@ export const useResumeStore = create<ResumeState>()(
           parsedResumeText: null,
           hasDownloaded: false,
           optimizations: [],
+          evidenceSources: [],
           keywordSuggestions: [],
           analysisCache: {},
           optimizationMetrics: {
@@ -744,6 +805,7 @@ export const useResumeStore = create<ResumeState>()(
           parsedResumeText: null,
           hasDownloaded: false,
           optimizations: [],
+          evidenceSources: [],
           keywordSuggestions: [],
           analysisCache: {},
           optimizationMetrics: {
@@ -783,7 +845,7 @@ export const useResumeStore = create<ResumeState>()(
       // v3: added optimizationOrigin (guest-preview export/save gating). No
       //     migration needed — merge() below preserves the initial `null`
       //     default for state persisted before this field existed.
-      version: 3,
+      version: 4,
       migrate: (persistedState, fromVersion) => {
         let state = (persistedState ?? {}) as Partial<ResumeState>;
         if (fromVersion < 1) {
@@ -799,12 +861,31 @@ export const useResumeStore = create<ResumeState>()(
             ),
           };
         }
+        if (fromVersion < 4) {
+          const runData = state.optimizeRun?.data;
+          const sources = runData && typeof runData === 'object' && 'evidenceSources' in runData
+            && Array.isArray(runData.evidenceSources) ? runData.evidenceSources.filter((source): source is EvidenceSource =>
+              !!source && typeof source === 'object' && typeof source.id === 'string'
+              && typeof source.text === 'string' && typeof source.fingerprint === 'string'
+              && typeof source.targetId === 'string' && (source.kind === 'resume' || source.kind === 'clarification')) : [];
+          state = {
+            ...state,
+            evidenceSources: sources,
+            optimizations: Array.isArray(state.optimizations) ? state.optimizations.map(migrateLegacyCard) : [],
+            jobVariants: (state.jobVariants ?? []).map((variant) => ({
+              ...variant,
+              snapshot: { ...variant.snapshot, evidenceSources: [],
+                optimizations: (variant.snapshot?.optimizations ?? []).map(migrateLegacyCard) },
+            })),
+          };
+        }
         return state;
       },
       partialize: (state) => ({
         originalResume: state.originalResume,
         parsedResumeText: state.parsedResumeText,
         optimizations: state.optimizations,
+        evidenceSources: state.evidenceSources,
         selectedTemplate: state.selectedTemplate,
         showOptimized: state.showOptimized,
         keywordSuggestions: state.keywordSuggestions,

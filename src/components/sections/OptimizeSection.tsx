@@ -288,6 +288,9 @@ export function OptimizeSection({
   const revertOptimization = useResumeStore((state) => state.revertOptimization);
   const revertAllOptimizations = useResumeStore((state) => state.revertAllOptimizations);
   const refineOptimization = useResumeStore((state) => state.refineOptimization);
+  const confirmOptimization = useResumeStore((state) => state.confirmOptimization);
+  const editOptimization = useResumeStore((state) => state.editOptimization);
+  const storedEvidenceSources = useResumeStore((state) => state.evidenceSources);
   const keywordSuggestions = useResumeStore((state) => state.keywordSuggestions);
   const storedOptimizationMetrics = useResumeStore((state) => state.optimizationMetrics);
   const setOptimizationMetrics = useResumeStore((state) => state.setOptimizationMetrics);
@@ -299,7 +302,7 @@ export function OptimizeSection({
   const evidenceData = assessmentCurrent && optimizeRun && assessmentKey && optimizeRun.assessment?.context.key === assessmentKey
     ? optimizeRun.data as { evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions } | null
     : null;
-  const evidenceSources = evidenceData?.evidenceSources ?? [];
+  const evidenceSources = storedEvidenceSources;
   const omissions = evidenceData?.evidenceInputOmissions;
 
   // Use props or store
@@ -392,6 +395,7 @@ export function OptimizeSection({
             ...normalizedOpt,
             assessmentKey,
             applied: existingOpt.applied,
+            confirmation: existingOpt.confirmation,
           };
         }
 
@@ -1589,6 +1593,8 @@ export function OptimizeSection({
                   onToggleCompare={handleToggleCompare}
                   onApply={handleApplyOptimization}
                   onRevert={revertOptimization}
+                  onConfirm={confirmOptimization}
+                  onEdit={editOptimization}
                   onApplyGroup={handleApplyQueueGroup}
                   onRevertGroup={handleRevertQueueGroup}
                   onCopy={onCopy}

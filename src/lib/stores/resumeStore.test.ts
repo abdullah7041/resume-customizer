@@ -5,6 +5,7 @@ import type { OptimizationResult } from '../../types/templates';
 import { buildScorePresentation, verificationSignature } from '@/lib/optimize/scoreModel';
 import { createAssessmentContext } from '@/lib/match/assessmentContext';
 import type { AssessmentInput } from '@/types/assessment';
+import { fingerprintText } from '@/lib/match/assessmentContext';
 
 describe('resumeStore', () => {
     afterEach(() => vi.useRealTimers());
@@ -779,6 +780,86 @@ describe('resumeStore.getActiveResume()', () => {
         expect(useResumeStore.getState().getCachedAssessment(changed)).toBeNull();
       }
       expect(useResumeStore.getState().getCachedAssessment({ ...base, language: 'ar' })).toBeNull();
+    });
+
+    it('confirms only the exact current proposal and preserves it across variants', async () => {
+        const statement = 'Led delivery';
+        const proposedFingerprint = await fingerprintText(statement);
+        const evidence = { version: 1 as const, targetId: 'work:a', originalFingerprint: 'old', proposedFingerprint,
+            references: [], sourceFingerprints: {}, status: 'needs_review' as const, reasons: ['semantic_review' as const] };
+        const card = { sectionId: 'bullet-a', sectionType: 'experience' as const, original: 'Delivered', optimized: statement,
+            applied: false, evidence };
+        useResumeStore.getState().setOptimizations([card]);
+        const source = { id: 'source-a', kind: 'resume' as const, targetId: 'work:a', text: 'Delivered', fingerprint: 'old' };
+        useResumeStore.getState().setEvidenceSources([source]);
+        const confirmation = { targetId: 'work:a', proposedFingerprint, statement, confirmedAt: '2026-09-24T12:00:00Z' };
+        expect(useResumeStore.getState().confirmOptimization('bullet-a', { ...confirmation, statement: 'Other' })).toBe(false);
+        expect(useResumeStore.getState().confirmOptimization('bullet-a', confirmation)).toBe(true);
+        const variant = useResumeStore.getState().saveCurrentAsVariant('One', 'Job');
+        useResumeStore.getState().setEvidenceSources([]);
+        useResumeStore.getState().refineOptimization('bullet-a', { improved: 'Led another project', instruction: 'change' });
+        expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
+        useResumeStore.getState().openVariant(variant);
+        expect(useResumeStore.getState().optimizations[0].confirmation).toEqual(confirmation);
+        expect(useResumeStore.getState().evidenceSources).toEqual([source]);
+    });
+
+    it('keeps old visible content while migrating versions 0–3 to unconfirmed legacy review', async () => {
+        const migrate = useResumeStore.persist.getOptions().migrate;
+        if (!migrate) throw new Error('Migration unavailable');
+        for (const version of [0, 1, 2, 3]) {
+            const restored = await migrate({ originalResume: buildFixture(), optimizations: [{
+                sectionId: 'legacy', sectionType: 'summary', original: 'Old', optimized: 'Visible', applied: true,
+                evidence: { status: 'source_matched' },
+            }], jobVariants: [] }, version) as ReturnType<typeof useResumeStore.getState>;
+            expect(restored.originalResume?.basics.name).toBe('Jane Doe');
+            expect(restored.optimizations[0]).toMatchObject({ optimized: 'Visible', evidence: { status: 'legacy' } });
+            expect(restored.optimizations[0].confirmation).toBeUndefined();
+            expect(restored.evidenceSources).toEqual([]);
+        }
+        const missingBaseline = await migrate({ originalResume: null, parsedResumeText: 'Visible old resume',
+            optimizations: [{ sectionId: 'old', sectionType: 'summary', original: '', optimized: 'Visible old claim', applied: true }],
+            jobVariants: [] }, 3) as ReturnType<typeof useResumeStore.getState>;
+        expect(missingBaseline.parsedResumeText).toBe('Visible old resume');
+        expect(missingBaseline.optimizations[0].optimized).toBe('Visible old claim');
+        expect(missingBaseline.optimizations[0].evidence?.status).toBe('legacy');
+        const source = { id: 'source', kind: 'resume', text: 'Old', fingerprint: 'fingerprint', targetId: 'summary' };
+        const withSources = await migrate({ optimizations: [], jobVariants: [],
+            optimizeRun: { data: { evidenceSources: [source, { id: 1 }] } } }, 3) as ReturnType<typeof useResumeStore.getState>;
+        expect(withSources.evidenceSources).toEqual([source]);
+    });
+
+    it('clears approval when candidate wording changes and keeps unrelated cards approved', async () => {
+        const proposedFingerprint = await fingerprintText('Same claim');
+        const evidence = { version: 1 as const, targetId: 'work:a', originalFingerprint: 'old', proposedFingerprint,
+            references: [], sourceFingerprints: {}, status: 'needs_review' as const, reasons: ['semantic_review' as const] };
+        useResumeStore.getState().setOptimizations([
+            { sectionId: 'a', sectionType: 'experience', original: 'Old', optimized: 'Same claim', applied: false, evidence },
+            { sectionId: 'b', sectionType: 'experience', original: 'Old', optimized: 'Same claim', applied: false,
+                evidence: { ...evidence, targetId: 'work:b' } },
+        ]);
+        const confirmation = { proposedFingerprint, targetId: 'work:a', statement: 'Same claim', confirmedAt: '2026-09-24T12:00:00Z' };
+        useResumeStore.getState().confirmOptimization('a', confirmation);
+        useResumeStore.getState().confirmOptimization('b', { ...confirmation, targetId: 'work:b' });
+        useResumeStore.getState().editOptimization('a', 'Corrected claim', await fingerprintText('Corrected claim'));
+        expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
+        expect(useResumeStore.getState().optimizations[0].evidence?.proposedFingerprint).toBe(await fingerprintText('Corrected claim'));
+        expect(useResumeStore.getState().optimizations[1].confirmation?.targetId).toBe('work:b');
+    });
+
+    it('does not report a saved confirmation when local storage rejects the write', async () => {
+        const statement = 'Claim';
+        const proposedFingerprint = await fingerprintText(statement);
+        useResumeStore.getState().setOptimizations([{ sectionId: 'claim', sectionType: 'summary', original: 'Old',
+            optimized: statement, applied: false, evidence: { version: 1, targetId: 'summary:1',
+                originalFingerprint: 'old', proposedFingerprint, references: [], sourceFingerprints: {},
+                status: 'needs_review', reasons: ['semantic_review'] } }]);
+        const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('full'); });
+        try {
+            expect(useResumeStore.getState().confirmOptimization('claim', { targetId: 'summary:1',
+                proposedFingerprint, statement, confirmedAt: '2026-09-24T12:00:00Z' })).toBe(false);
+            expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
+        } finally { setItem.mockRestore(); }
     });
 
     it('replaces refinement evidence while keeping source records out of public resume metadata', async () => {

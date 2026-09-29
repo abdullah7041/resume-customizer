@@ -627,7 +627,7 @@ describe('OptimizeSection', () => {
 
             // After expansion, content should be visible
             expect(screen.getAllByText('Original summary text').length).toBeGreaterThan(0);
-            expect(screen.getByText('Optimized summary text')).toBeInTheDocument();
+            expect(screen.getAllByText('Optimized summary text').length).toBeGreaterThan(0);
         });
 
         it('shows applied badge when optimization is applied', () => {

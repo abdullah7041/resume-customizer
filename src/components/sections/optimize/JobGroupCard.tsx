@@ -5,6 +5,7 @@ import { GlassButton } from '@/components/ui/GlassButton';
 import { cn } from '@/lib/utils/cn';
 import type { OptimizationResult } from '@/lib/stores/resumeStore';
 import type { EvidenceSource } from '@/types/optimization-evidence';
+import { EvidenceReview } from './EvidenceReview';
 
 export interface QueueGroup {
   id: string;
@@ -36,6 +37,8 @@ interface JobGroupCardProps {
   onToggleCompare: (sectionId: string) => void;
   onApply: (opt: OptimizationResult) => void;
   onRevert: (sectionId: string) => void;
+  onConfirm: (id: string, confirmation: NonNullable<OptimizationResult['confirmation']>) => boolean;
+  onEdit: (id: string, value: string | string[], fingerprint: string) => boolean;
   onApplyGroup: (ids: string[]) => void;
   onRevertGroup: (ids: string[]) => void;
   onCopy?: (value: string) => Promise<void>;
@@ -70,6 +73,8 @@ export const JobGroupCard = memo(function JobGroupCard({
   onToggleCompare,
   onApply,
   onRevert,
+  onConfirm,
+  onEdit,
   onApplyGroup,
   onRevertGroup,
   onCopy,
@@ -259,30 +264,8 @@ export const JobGroupCard = memo(function JobGroupCard({
                     </div>
                   )}
 
-                  {!isRecommendationGroup && !opt.evidence && (
-                    <p className="mt-4 text-xs text-amber-800 dark:text-amber-300">
-                      {t('optimization.evidenceUnavailable', 'Source evidence is unavailable for this saved suggestion. Check every detail before applying.')}
-                    </p>
-                  )}
-                  {opt.evidence && (
-                    <div className="mt-4 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-gray-700 dark:text-gray-200">
-                      <p className="font-semibold text-amber-800 dark:text-amber-300">
-                        {opt.evidence.status === 'source_matched'
-                          ? t('optimization.evidenceSourceMatched', 'Matched to supplied source text; check the wording before applying.')
-                          : t('optimization.evidenceNeedsReview', 'Needs your review — source text does not verify every detail.')}
-                      </p>
-                      {opt.evidence.references.map((reference, index) => {
-                        const source = evidenceSources.find((item) => item.id === reference.sourceId);
-                        return source ? (
-                          <p key={`${reference.sourceId}-${index}`} className="mt-2 whitespace-pre-wrap break-words">
-                            <span className="font-semibold">{source.kind === 'clarification'
-                              ? t('optimization.clarificationSource', 'Your answer')
-                              : t('optimization.resumeSource', 'Resume text')}:</span>{' '}{reference.quote}
-                          </p>
-                        ) : null;
-                      })}
-                    </div>
-                  )}
+                  {!isRecommendationGroup && <EvidenceReview card={opt} sources={evidenceSources}
+                    onConfirm={onConfirm} onEdit={onEdit} onRevert={onRevert} />}
 
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     {isRecommendationGroup ? null : opt.applied ? (

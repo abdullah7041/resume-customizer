@@ -170,6 +170,9 @@ export const OptimizationResultSchema = z.object({
         status: z.enum(['source_matched', 'needs_review', 'rejected', 'legacy']),
         reasons: z.array(z.enum(['missing_source', 'wrong_target', 'new_number', 'semantic_review', 'legacy'])),
     }).optional(),
+    confirmation: z.object({
+        proposedFingerprint: z.string(), targetId: z.string(), confirmedAt: z.string(), statement: z.string(),
+    }).optional(),
 });
 
 /**
