@@ -7,6 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import TemplateGallery from '../components/sections/TemplatesSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { exportResumeAsDocx } from '../services/exportDocx';
+import { saveAs } from 'file-saver';
 import { analytics } from '../services/analytics';
 import { toCanvas } from 'html-to-image';
 import { jsPDF } from 'jspdf';
@@ -95,9 +96,9 @@ vi.mock('../components/Credits/ConfirmActionModal', () => ({
 
 // Mock TemplateRenderer to avoid heavy rendering
 vi.mock('../components/templates/TemplateRenderer', () => ({
-    default: ({ template, contentDirection }) => (
+    default: ({ template, contentDirection, userData }) => (
         <div data-testid="template-renderer" data-resume-preview data-template-id={template.id} data-direction={contentDirection}>
-            Template: {template.name}
+            Template: {template.name} {userData?.basics?.name !== 'Your Name' && userData?.basics?.name} {userData?.basics?.name !== 'Your Name' && userData?.basics?.summary}
         </div>
     ),
 }));
@@ -160,7 +161,7 @@ beforeEach(() => {
         blob: () => Promise.resolve(new Blob(['pdf content'], { type: 'application/pdf' })),
     });
     exportResumeAsDocx.mockClear();
-    useResumeStore.__setMockState({ optimizations: [], optimizationOrigin: null, getActiveResume: () => null });
+    useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
 });
 
 afterEach(() => {
@@ -391,7 +392,7 @@ describe('TemplatesSection', () => {
                 expect(source).toContain("color: '#111827'");
                 expect(source).toContain("colorScheme: 'light'");
             });
-            expect(exportSource).toContain('const fallbackClone = previewElement.cloneNode(true)');
+            expect(exportSource).toContain('const fallbackClone = previewSnapshot.cloneNode(true)');
             expect(exportSource).toContain('forceLightThemeForPdf(fallbackClone)');
             expect(exportSource).toContain("backgroundColor: '#ffffff'");
             expect(cssSource).toMatch(/\[data-resume-preview\]\s*\{[\s\S]*color-scheme:\s*light/);
@@ -603,11 +604,13 @@ describe('TemplatesSection', () => {
 
         it('exports directly when applied optimizations came from a paid run', async () => {
             useResumeStore.__setMockState({
-                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
+                originalResume: resumeData,
+                showOptimized: true,
+                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true, evidence: { status: 'source_matched' } }],
                 optimizationOrigin: 'paid',
                 // hasAppliedOptimizations=true routes TemplatesSection to store data —
                 // give it something so hasRealResume/export can proceed.
-                getActiveResume: () => resumeData,
+                getActiveResume: () => ({ ...resumeData, basics: { ...resumeData.basics, summary: 'b' } }),
             });
             renderWithProviders(<TemplateGallery resumeData={resumeData} />);
 
@@ -623,7 +626,7 @@ describe('TemplatesSection', () => {
             useResumeStore.__setMockState({
                 optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
                 optimizationOrigin: 'guest_preview',
-                getActiveResume: () => resumeData,
+                getActiveResume: () => ({ ...resumeData, basics: { ...resumeData.basics, summary: 'b' } }),
             });
             renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={vi.fn()} />);
 
@@ -635,11 +638,17 @@ describe('TemplatesSection', () => {
 
         it('runs the paid re-optimize on confirm, then proceeds with the export', async () => {
             useResumeStore.__setMockState({
-                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true }],
+                originalResume: resumeData,
+                showOptimized: true,
+                optimizations: [{ sectionId: 's1', sectionType: 'summary', original: 'a', optimized: 'b', applied: true, evidence: { status: 'source_matched' } }],
                 optimizationOrigin: 'guest_preview',
-                getActiveResume: () => resumeData,
+                getActiveResume: () => ({ ...resumeData, basics: { ...resumeData.basics, summary: 'b' } }),
             });
-            const onRequirePaidReoptimize = vi.fn().mockResolvedValue({ score: 80 });
+            const paidResume = { ...resumeData, basics: { ...resumeData.basics, summary: 'Paid run summary' } };
+            const onRequirePaidReoptimize = vi.fn().mockImplementation(() => {
+                useResumeStore.__setMockState({ originalResume: paidResume, optimizations: [], getActiveResume: () => paidResume });
+                return Promise.resolve({ score: 80 });
+            });
             renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={onRequirePaidReoptimize} />);
 
             fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
@@ -649,6 +658,8 @@ describe('TemplatesSection', () => {
                 expect(onRequirePaidReoptimize).toHaveBeenCalledTimes(1);
                 expect(globalThis.fetch).toHaveBeenCalled();
             });
+            const body = JSON.parse(globalThis.fetch.mock.calls.find(([url]) => url === '/.netlify/functions/generate-pdf')[1].body);
+            expect(body.html).toContain('Paid run summary');
         });
 
         it('does not export when the paid re-optimize fails or is aborted', async () => {
@@ -667,6 +678,103 @@ describe('TemplatesSection', () => {
                 expect(onRequirePaidReoptimize).toHaveBeenCalledTimes(1);
             });
             expect(globalThis.fetch).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('composed document review', () => {
+        const resume = { basics: { name: 'Sara Ahmed', summary: 'Original summary' }, work: [], education: [], skills: [], projects: [] };
+        const unresolved = { sectionId: 'summary-1', sectionType: 'summary', original: 'Original summary',
+            optimized: 'Unsupported claim', applied: true, evidence: { status: 'needs_review' } };
+
+        it.each(['pdf', 'docx'])('blocks an included unresolved edit before %s generation and opens that section', async (format) => {
+            useResumeStore.__setMockState({ originalResume: resume, showOptimized: true, optimizations: [unresolved],
+                getActiveResume: () => ({ ...resume, basics: { ...resume.basics, summary: unresolved.optimized } }) });
+            const onReviewSections = vi.fn();
+            renderWithProviders(<TemplateGallery onReviewSections={onReviewSections} />);
+            fireEvent.click(screen.getByRole('button', { name: format === 'pdf' ? /download pdf/i : /download docx/i }));
+            await waitFor(() => expect(onReviewSections).toHaveBeenCalledWith(['summary-1']));
+            expect(globalThis.fetch).not.toHaveBeenCalled();
+            expect(exportResumeAsDocx).not.toHaveBeenCalled();
+        });
+
+        it('keeps export blocked when review navigation is unavailable', async () => {
+            useResumeStore.__setMockState({ originalResume: resume, showOptimized: true, optimizations: [unresolved],
+                getActiveResume: () => ({ ...resume, basics: { ...resume.basics, summary: unresolved.optimized } }) });
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Review the highlighted changes before downloading.'));
+            expect(exportResumeAsDocx).not.toHaveBeenCalled();
+        });
+
+        it.each(['pdf', 'docx'])('allows original, unapplied, and failed-merge cards for %s', async (format) => {
+            useResumeStore.__setMockState({ originalResume: resume, showOptimized: true,
+                optimizations: [{ ...unresolved, applied: false }, { ...unresolved, sectionId: 'missing-work', sectionType: 'experience', original: 'Absent bullet' }] });
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: format === 'pdf' ? /download pdf/i : /download docx/i }));
+            await waitFor(() => expect(format === 'pdf' ? globalThis.fetch : exportResumeAsDocx).toHaveBeenCalled());
+        });
+
+        it.each(['pdf', 'docx'])('requires fingerprint-bound legacy document confirmation for %s', async (format) => {
+            useResumeStore.__setMockState({ optimizations: [unresolved] });
+            renderWithProviders(<TemplateGallery resumeData={resume} />);
+            fireEvent.click(screen.getByRole('button', { name: format === 'pdf' ? /download pdf/i : /download docx/i }));
+            expect(await screen.findByRole('dialog', { name: /review current document/i })).toBeInTheDocument();
+            expect(globalThis.fetch).not.toHaveBeenCalled();
+            expect(exportResumeAsDocx).not.toHaveBeenCalled();
+            fireEvent.click(screen.getByRole('button', { name: /i reviewed this document/i }));
+            await waitFor(() => expect(format === 'pdf' ? globalThis.fetch : exportResumeAsDocx).toHaveBeenCalled());
+        });
+
+        it('invalidates legacy review when the displayed document changes', async () => {
+            let visibleResume = resume;
+            useResumeStore.__setMockState({ optimizations: [unresolved], getActiveResume: () => visibleResume });
+            const view = renderWithProviders(<TemplateGallery resumeData={resume} />);
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            fireEvent.click(await screen.findByRole('button', { name: /i reviewed this document/i }));
+            await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalledTimes(1));
+            visibleResume = { ...resume, basics: { ...resume.basics, summary: 'Later summary' } };
+            useResumeStore.__setMockState({ getActiveResume: () => visibleResume });
+            view.rerender(<DirectionProvider><TemplateGallery resumeData={resume} /></DirectionProvider>);
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            expect(await screen.findByRole('dialog', { name: /review current document/i })).toBeInTheDocument();
+            expect(exportResumeAsDocx).toHaveBeenCalledTimes(1);
+        });
+
+        it('blocks a stale preview that differs from the composed document', async () => {
+            useResumeStore.__setMockState({ originalResume: resume, showOptimized: true, optimizations: [
+                { ...unresolved, evidence: { status: 'source_matched' } }], getActiveResume: () => resume });
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+            expect(globalThis.fetch).not.toHaveBeenCalled();
+        });
+
+        it('uses the captured PDF preview after the resume changes during generation', async () => {
+            useResumeStore.__setMockState({ originalResume: resume });
+            let release;
+            globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+            useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
+            release({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) });
+            await waitFor(() => expect(saveAs).toHaveBeenCalled());
+            const body = JSON.parse(globalThis.fetch.mock.calls.find(([url]) => url === '/.netlify/functions/generate-pdf')[1].body);
+            expect(body.html).toContain('Original summary');
+            expect(body.html).not.toContain('Later summary');
+        });
+
+        it('uses the captured DOCX document after the resume changes during generation', async () => {
+            useResumeStore.__setMockState({ originalResume: resume });
+            let release;
+            exportResumeAsDocx.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalled());
+            useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
+            release(new Blob(['docx']));
+            await waitFor(() => expect(saveAs).toHaveBeenCalled());
+            expect(exportResumeAsDocx.mock.calls[0][0].basics.summary).toBe('Original summary');
         });
     });
 

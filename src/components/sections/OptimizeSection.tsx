@@ -132,6 +132,7 @@ interface OptimizeSectionProps {
   isGuestMode?: boolean;
   onRequireSignIn?: () => void;
   protectedActionMessage?: string;
+  reviewSectionIds?: string[];
 }
 
 const emptyKeywords = { add: [], remove: [], neutral: [] };
@@ -273,6 +274,7 @@ export function OptimizeSection({
   onAttachExport,
   hasExportedForActiveJob = false,
   isGuestMode = false,
+  reviewSectionIds = [],
 }: OptimizeSectionProps) {
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
@@ -351,6 +353,11 @@ export function OptimizeSection({
   const [expandedScoreCategories, setExpandedScoreCategories] = useState<Set<keyof CategoryScoresData>>(new Set());
   const [strategyExpanded, setStrategyExpanded] = useState(false);
   const [queueFilter, setQueueFilter] = useState<'all' | 'pending' | 'applied'>('all');
+  useEffect(() => {
+    if (!reviewSectionIds.length) return;
+    setQueueFilter('applied');
+    setExpandedCards((current) => new Set([...current, ...reviewSectionIds]));
+  }, [reviewSectionIds]);
   // Single-bullet correction loop: which card has its refine input open, the
   // instruction text, which card is mid-request, and any per-refine error.
   const [refiningCardId, setRefiningCardId] = useState<string | null>(null);

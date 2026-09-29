@@ -421,6 +421,7 @@ export default function MainContent() {
   );
 
   const [activeTab, setActiveTab] = useState("resume");
+  const [exportReviewSectionIds, setExportReviewSectionIds] = useState<string[]>([]);
   const [flowProgress, setFlowProgress] = useState(0);
   // Path-A intent capture: after a successful parse, auto-show the inline role/comp/
   // location prompt. The mount gate must NOT depend on searchIntent being empty —
@@ -2913,6 +2914,7 @@ export default function MainContent() {
                   isGuestMode={isGuestMode}
                   onRequireSignIn={requireSignInForGuestAction}
                   protectedActionMessage={guestProtectedActionDescription}
+                  reviewSectionIds={exportReviewSectionIds}
                 />
               </Suspense>
             </LazyErrorBoundary>
@@ -2925,6 +2927,10 @@ export default function MainContent() {
                   resumeData={resumeData}
                   optimizationData={optimizationData}
                   onRequirePaidReoptimize={() => handleOptimize('auto', { freePreview: false })}
+                  onReviewSections={(sectionIds) => {
+                    setExportReviewSectionIds(sectionIds);
+                    setActiveTab('optimize');
+                  }}
                 />
               </Suspense>
             </LazyErrorBoundary>

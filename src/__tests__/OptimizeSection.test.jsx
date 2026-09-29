@@ -318,6 +318,16 @@ afterEach(() => {
 });
 
 describe('OptimizeSection', () => {
+    it('opens only export-blocking applied review cards', async () => {
+        mockStoreState.optimizations = [
+            { sectionId: 's-0', sectionType: 'summary', original: 'First original', optimized: 'First proposal', applied: true },
+            { sectionId: 's-1', sectionType: 'summary', original: 'Second original', optimized: 'Second proposal', applied: true },
+        ];
+        renderWithProviders(<OptimizeSection reviewSectionIds={['s-1']} />);
+        const cardButton = (text) => screen.getAllByText(text).map((node) => node.closest('button')).find(Boolean);
+        await waitFor(() => expect(cardButton('Second original')?.nextElementSibling).toHaveTextContent('Second proposal'));
+        expect(cardButton('First original')?.nextElementSibling).toBeNull();
+    });
     describe('Rendering', () => {
         it('renders the section title', () => {
             renderWithProviders(<OptimizeSection />);
