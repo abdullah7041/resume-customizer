@@ -1577,7 +1577,7 @@ export function OptimizeSection({
 
               return (
                 <JobGroupCard
-                  key={group.id}
+                  key={`${variantRestoreNonce}:${group.id}`}
                   group={group}
                   evidenceSources={evidenceSources}
                   viewMode={viewMode}

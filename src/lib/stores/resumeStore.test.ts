@@ -827,6 +827,18 @@ describe('resumeStore.getActiveResume()', () => {
         const withSources = await migrate({ optimizations: [], jobVariants: [],
             optimizeRun: { data: { evidenceSources: [source, { id: 1 }] } } }, 3) as ReturnType<typeof useResumeStore.getState>;
         expect(withSources.evidenceSources).toEqual([source]);
+        const sourcedEvidence = { version: 1 as const, targetId: 'summary', originalFingerprint: 'old',
+            proposedFingerprint: 'new', references: [{ sourceId: 'source', quote: 'Old' }],
+            sourceFingerprints: { source: 'fingerprint' }, status: 'source_matched' as const, reasons: [] };
+        const variantCard = { sectionId: 'same-id', sectionType: 'summary' as const, original: 'Old',
+            optimized: 'New', applied: false, evidence: sourcedEvidence };
+        const migratedVariant = await migrate({ optimizations: [variantCard], jobVariants: [{ id: 'legacy-variant',
+            name: 'Legacy', jobDescription: 'Job', createdAt: '2026-09-24T12:00:00Z',
+            updatedAt: '2026-09-24T12:00:00Z', snapshot: { optimizations: [variantCard] } }],
+            optimizeRun: { data: { evidenceSources: [source] } } }, 3) as ReturnType<typeof useResumeStore.getState>;
+        expect(migratedVariant.optimizations[0].evidence?.status).toBe('source_matched');
+        expect(migratedVariant.jobVariants[0].snapshot.evidenceSources).toEqual([]);
+        expect(migratedVariant.jobVariants[0].snapshot.optimizations[0].evidence?.status).toBe('legacy');
     });
 
     it('clears approval when candidate wording changes and keeps unrelated cards approved', async () => {
@@ -841,10 +853,25 @@ describe('resumeStore.getActiveResume()', () => {
         const confirmation = { proposedFingerprint, targetId: 'work:a', statement: 'Same claim', confirmedAt: '2026-09-24T12:00:00Z' };
         useResumeStore.getState().confirmOptimization('a', confirmation);
         useResumeStore.getState().confirmOptimization('b', { ...confirmation, targetId: 'work:b' });
-        useResumeStore.getState().editOptimization('a', 'Corrected claim', await fingerprintText('Corrected claim'));
+        useResumeStore.getState().editOptimization('a', 'Corrected claim', await fingerprintText('Corrected claim'),
+            useResumeStore.getState().optimizations[0]);
         expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
         expect(useResumeStore.getState().optimizations[0].evidence?.proposedFingerprint).toBe(await fingerprintText('Corrected claim'));
         expect(useResumeStore.getState().optimizations[1].confirmation?.targetId).toBe('work:b');
+    });
+
+    it('refuses an edit completed after another variant reuses the section ID', async () => {
+        useResumeStore.getState().setOptimizations([{ sectionId: 'same-id', sectionType: 'summary',
+            original: 'Before A', optimized: 'Proposal A', applied: false }]);
+        const staleCard = useResumeStore.getState().optimizations[0];
+        useResumeStore.getState().saveCurrentAsVariant('A', 'Job A');
+        useResumeStore.getState().setOptimizations([{ sectionId: 'same-id', sectionType: 'summary',
+            original: 'Before B', optimized: 'Proposal B', applied: false }]);
+        const variant = useResumeStore.getState().saveCurrentAsVariant('B', 'Job B');
+        useResumeStore.getState().openVariant(variant);
+        expect(useResumeStore.getState().editOptimization('same-id', 'Unsaved A',
+            await fingerprintText('Unsaved A'), staleCard)).toBe(false);
+        expect(useResumeStore.getState().optimizations[0].optimized).toBe('Proposal B');
     });
 
     it('does not report a saved confirmation when local storage rejects the write', async () => {

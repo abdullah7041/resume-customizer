@@ -1,3 +1,6 @@
+export const proposalStatement = (value: string | string[]): string =>
+  typeof value === 'string' ? value : JSON.stringify(value);
+
 export interface EvidenceSource {
   id: string;
   kind: 'resume' | 'clarification';

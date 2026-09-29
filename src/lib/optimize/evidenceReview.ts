@@ -1,8 +1,7 @@
 import type { EditEvidence } from '@/types/optimization-evidence';
 import type { CandidateConfirmation } from '@/types/templates';
 
-export const proposalStatement = (value: string | string[]): string =>
-  typeof value === 'string' ? value : JSON.stringify(value);
+export { proposalStatement } from '@/types/optimization-evidence';
 
 export function isConfirmationCurrent(
   evidence: EditEvidence | undefined,

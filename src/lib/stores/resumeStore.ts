@@ -152,10 +152,14 @@ const snapshotWorkingSet = (state: ResumeState): JobVariantSnapshot => ({
   selectedTemplate: state.selectedTemplate,
 });
 
-const migrateLegacyCard = (card: OptimizationResult): OptimizationResult => ({
+const migrateLegacyCard = (card: OptimizationResult, sources: EvidenceSource[]): OptimizationResult => ({
   ...card,
   confirmation: undefined,
   evidence: card.evidence && OptimizationResultSchema.safeParse(card).success
+    && card.evidence.references.length > 0
+    && card.evidence.references.every((reference) => sources.some((source) => source.id === reference.sourceId
+      && source.fingerprint === card.evidence?.sourceFingerprints[reference.sourceId]
+      && source.text.includes(reference.quote)))
     ? card.evidence
     : { version: 1, targetId: card.sectionId, originalFingerprint: '', proposedFingerprint: '',
       references: [], sourceFingerprints: {}, status: 'legacy', reasons: ['legacy'] },
@@ -520,9 +524,9 @@ export const useResumeStore = create<ResumeState>()(
         }
         return true;
       },
-      editOptimization: (sectionId, value, proposedFingerprint) => {
+      editOptimization: (sectionId, value, proposedFingerprint, expectedCard) => {
         const previous = get();
-        if (!previous.optimizations.some((item) => item.sectionId === sectionId)) return false;
+        if (!previous.optimizations.some((item) => item.sectionId === sectionId && item === expectedCard)) return false;
         set((state) => {
           const optimizations = state.optimizations.map((item) => item.sectionId === sectionId
             ? { ...item, optimized: value, confirmation: undefined, mergeStatus: undefined,
@@ -871,11 +875,11 @@ export const useResumeStore = create<ResumeState>()(
           state = {
             ...state,
             evidenceSources: sources,
-            optimizations: Array.isArray(state.optimizations) ? state.optimizations.map(migrateLegacyCard) : [],
+            optimizations: Array.isArray(state.optimizations) ? state.optimizations.map((card) => migrateLegacyCard(card, sources)) : [],
             jobVariants: (state.jobVariants ?? []).map((variant) => ({
               ...variant,
               snapshot: { ...variant.snapshot, evidenceSources: [],
-                optimizations: (variant.snapshot?.optimizations ?? []).map(migrateLegacyCard) },
+                optimizations: (variant.snapshot?.optimizations ?? []).map((card) => migrateLegacyCard(card, [])) },
             })),
           };
         }

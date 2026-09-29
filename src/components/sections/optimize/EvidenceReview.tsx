@@ -9,7 +9,7 @@ export function EvidenceReview({ card, sources, onConfirm, onEdit, onRevert }: {
   card: OptimizationResult;
   sources: EvidenceSource[];
   onConfirm: (id: string, confirmation: NonNullable<OptimizationResult['confirmation']>) => boolean;
-  onEdit: (id: string, value: string | string[], fingerprint: string) => boolean;
+  onEdit: (id: string, value: string | string[], fingerprint: string, expectedCard: OptimizationResult) => boolean;
   onRevert: (id: string) => void;
 }) {
   const { t } = useTranslation();
@@ -43,7 +43,7 @@ export function EvidenceReview({ card, sources, onConfirm, onEdit, onRevert }: {
       }
     }
     if (!proposalStatement(value).trim()) return;
-    if (!onEdit(card.sectionId, value, await fingerprintText(proposalStatement(value)))) {
+    if (!onEdit(card.sectionId, value, await fingerprintText(proposalStatement(value)), card)) {
       setMessage(t('optimization.reviewSaveFailed', 'Review could not be saved. Check browser storage and try again.'));
       return;
     }

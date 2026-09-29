@@ -408,7 +408,7 @@ export interface ResumeState {
   revertOptimization: (id: string) => void;
   refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string; evidence?: EditEvidence; evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions }) => void;
   confirmOptimization: (id: string, confirmation: CandidateConfirmation) => boolean;
-  editOptimization: (id: string, value: string | string[], proposedFingerprint: string) => boolean;
+  editOptimization: (id: string, value: string | string[], proposedFingerprint: string, expectedCard: OptimizationResult) => boolean;
   setEvidenceSources: (sources: EvidenceSource[]) => void;
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;

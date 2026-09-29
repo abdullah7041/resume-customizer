@@ -38,7 +38,7 @@ interface JobGroupCardProps {
   onApply: (opt: OptimizationResult) => void;
   onRevert: (sectionId: string) => void;
   onConfirm: (id: string, confirmation: NonNullable<OptimizationResult['confirmation']>) => boolean;
-  onEdit: (id: string, value: string | string[], fingerprint: string) => boolean;
+  onEdit: (id: string, value: string | string[], fingerprint: string, expectedCard: OptimizationResult) => boolean;
   onApplyGroup: (ids: string[]) => void;
   onRevertGroup: (ids: string[]) => void;
   onCopy?: (value: string) => Promise<void>;
@@ -264,7 +264,7 @@ export const JobGroupCard = memo(function JobGroupCard({
                     </div>
                   )}
 
-                  {!isRecommendationGroup && <EvidenceReview card={opt} sources={evidenceSources}
+                  {!isRecommendationGroup && <EvidenceReview key={JSON.stringify([opt.evidence?.targetId, opt.optimized])} card={opt} sources={evidenceSources}
                     onConfirm={onConfirm} onEdit={onEdit} onRevert={onRevert} />}
 
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">

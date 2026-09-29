@@ -1,19 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { buildOptimizationCards, buildEvidenceBackedOptimizationCards, calculateScores } from '../optimize-cards.js';
 import { fingerprintEvidenceText } from '../optimization-evidence.js';
+import { proposalStatement } from '../../../src/types/optimization-evidence.js';
 
 const logPrefix = '[optimize-cards:test]';
 
 describe('optimize-cards', () => {
-  it('keeps valid cards and rejects a mismatched repeated bullet without leaking its text', async () => {
+  it('keeps valid cards and rejects a mismatched target without leaking its text', async () => {
     const sources = [
       { id: 'a', kind: 'resume' as const, targetId: 'work-a', text: 'Built reports', fingerprint: fingerprintEvidenceText('Built reports') },
-      { id: 'b', kind: 'resume' as const, targetId: 'work-b', text: 'Built reports', fingerprint: fingerprintEvidenceText('Built reports') },
+      { id: 'b', kind: 'resume' as const, targetId: 'work-b', text: 'Reviewed reports', fingerprint: fingerprintEvidenceText('Reviewed reports') },
     ];
     const result = await buildEvidenceBackedOptimizationCards({
       bullet_improvements: [
         { target_id: 'work-a', original: 'Built reports', improved: 'Built clearer reports', evidence_references: [{ sourceId: 'a', quote: 'Built reports' }] },
-        { target_id: 'work-b', original: 'Built reports', improved: 'Cut costs 40%', evidence_references: [{ sourceId: 'a', quote: 'Built reports' }] },
+        { target_id: 'work-b', original: 'Reviewed reports', improved: 'Cut costs 40%', evidence_references: [{ sourceId: 'a', quote: 'Built reports' }] },
       ],
     }, { logPrefix, sources });
     expect(result.cards).toHaveLength(1);
@@ -47,6 +48,18 @@ describe('optimize-cards', () => {
     expect(result.cards.map(card => card.section)).toEqual(['Headline', 'Summary']);
     expect(result.cards.every(card => card.evidence?.status === 'needs_review')).toBe(true);
     expect(result.diagnostics).toEqual([]);
+  });
+  it('fingerprints array claims exactly as they are displayed for review', async () => {
+    const proposed = ['a,b', 'c'];
+    const source = { id: 'summary', kind: 'resume' as const, targetId: 'basics:summary',
+      text: 'Built reports', fingerprint: fingerprintEvidenceText('Built reports') };
+    const result = await buildEvidenceBackedOptimizationCards({
+      original_summary: 'Built reports', summary_rewrite: proposed,
+      summary_target_id: 'basics:summary', summary_evidence_references: [{ sourceId: source.id, quote: source.text }],
+    }, { logPrefix, sources: [source] });
+    expect(result.cards[0].exampleAfter).toBe(proposalStatement(proposed));
+    expect(result.cards[0].evidence?.proposedFingerprint).toBe(fingerprintEvidenceText(proposalStatement(proposed)));
+    expect(result.cards[0].evidence?.proposedFingerprint).not.toBe(fingerprintEvidenceText(proposalStatement(['a', 'b,c'])));
   });
   it('accepts an exact candidate clarification as evidence for a new number on the same target', async () => {
     const sources = [

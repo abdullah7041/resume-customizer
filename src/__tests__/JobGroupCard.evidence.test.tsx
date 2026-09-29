@@ -29,3 +29,24 @@ it('shows literal source text and refuses confirmation when the displayed claim 
   expect(await screen.findByText('This claim changed. Edit or regenerate it before confirming.')).toBeInTheDocument();
   expect(confirm).not.toHaveBeenCalled();
 });
+
+it('discards an unsaved review draft when a reused card ID receives another proposal', () => {
+  const noop = vi.fn();
+  const card = (optimized: string) => ({ sectionId: 'same-id', sectionType: 'summary' as const,
+    original: 'Before', optimized, applied: false });
+  const renderCard = (optimized: string) => <JobGroupCard
+    group={{ id: 'summary', title: 'Summary', type: 'summary', kind: 'actionable', items: [card(optimized)] }}
+    viewMode="split" expandedCards={new Set(['same-id'])} compareMode={null}
+    refiningCardId={null} refineInstruction="" refineLoadingId={null} refineError={null}
+    refinableSections={new Set()} isArabic={false} onToggleCard={noop} onToggleCompare={noop}
+    onApply={noop} onRevert={noop} onConfirm={noop} onEdit={noop} onApplyGroup={noop} onRevertGroup={noop}
+    onStartRefine={noop} onRefineInstructionChange={noop} onSubmitRefine={noop}
+  />;
+  const view = render(renderCard('Variant A'));
+  fireEvent.click(screen.getByRole('button', { name: 'Edit wording' }));
+  fireEvent.change(screen.getByRole('textbox', { name: 'Edit claim wording' }), { target: { value: 'Unsaved A' } });
+  view.rerender(renderCard('Variant B'));
+  expect(screen.queryByRole('textbox', { name: 'Edit claim wording' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Edit wording' }));
+  expect(screen.getByRole('textbox', { name: 'Edit claim wording' })).toHaveValue('Variant B');
+});

@@ -4,6 +4,7 @@ import {
   scoreFromCategoryScores,
 } from './score-utils.js';
 import { validateEditEvidence } from './optimization-evidence.js';
+import { proposalStatement } from '../../src/types/optimization-evidence.js';
 import type { EditEvidence, EvidenceReference, EvidenceSource } from '../../src/types/optimization-evidence.js';
 
 export interface OptimizationCard {
@@ -73,6 +74,7 @@ function hasContent(value: unknown): boolean {
 
 function getString(value: unknown, fallback: string): string {
   if (typeof value === 'string' && value.trim().length > 0) return value;
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) return proposalStatement(value);
   return fallback;
 }
 
@@ -195,7 +197,10 @@ export async function buildEvidenceBackedOptimizationCards(
       diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
       return;
     }
-    const evidence = await validateEditEvidence({ targetId, original: String(original), proposed: String(proposed), references }, sources);
+    const statement = (value: unknown) => Array.isArray(value) && value.every((item) => typeof item === 'string')
+      ? proposalStatement(value) : String(value);
+    const evidence = await validateEditEvidence({ targetId,
+      original: statement(original), proposed: statement(proposed), references }, sources);
     if (evidence.status === 'rejected' || evidence.reasons.includes('new_number')) {
       diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
       return;
