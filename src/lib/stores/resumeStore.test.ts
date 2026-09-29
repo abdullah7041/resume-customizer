@@ -781,19 +781,25 @@ describe('resumeStore.getActiveResume()', () => {
       expect(useResumeStore.getState().getCachedAssessment({ ...base, language: 'ar' })).toBeNull();
     });
 
-    it('replaces refinement evidence while keeping source records out of public resume metadata', () => {
+    it('replaces refinement evidence while keeping source records out of public resume metadata', async () => {
+      const context = await createAssessmentContext(input);
       const evidence = { version: 1 as const, targetId: 'resume:1', originalFingerprint: 'a', proposedFingerprint: 'b',
         references: [{ sourceId: 'resume:1', quote: '<script>literal</script>' }], sourceFingerprints: { 'resume:1': 'a' },
         status: 'needs_review' as const, reasons: ['semantic_review' as const] };
       const source = { id: 'resume:1', kind: 'resume' as const, targetId: 'resume:1', text: '<script>literal</script>', fingerprint: 'a' };
-      useResumeStore.getState().addOptimization(buildOpt({ sectionId: 'summary-evidence', sectionType: 'summary', optimized: 'Initial', applied: false }));
-      useResumeStore.getState().setOptimizeRun({ status: 'succeeded', data: { evidenceSources: [] } });
+      useResumeStore.getState().addOptimization(buildOpt({ sectionId: 'summary-evidence', assessmentKey: context.key, sectionType: 'summary', optimized: 'Initial', applied: false }));
+      useResumeStore.getState().addOptimization(buildOpt({ sectionId: 'legacy-authored', assessmentKey: context.key, sectionType: 'summary', optimized: 'Candidate wording', applied: false }));
+      useResumeStore.getState().setOptimizeRun({ status: 'succeeded', cards: useResumeStore.getState().optimizations,
+        assessment: { context, jobSnapshot: input.jobDescription, requestId: 'test', createdAt: new Date().toISOString(), result: null },
+        data: { evidenceSources: [] } });
       useResumeStore.getState().refineOptimization('summary-evidence', {
         improved: 'Revised', instruction: 'shorten', evidence, evidenceSources: [source],
         evidenceInputOmissions: { resumeCharacters: 5, clarificationCharacters: 0 },
       });
       const state = useResumeStore.getState();
       expect(state.optimizations[0].evidence).toEqual(evidence);
+      expect(state.optimizeRun?.cards).toContainEqual(expect.objectContaining({ sectionId: 'summary-evidence', optimized: 'Revised', evidence }));
+      expect(state.optimizeRun?.cards).toContainEqual(expect.objectContaining({ sectionId: 'legacy-authored', optimized: 'Candidate wording' }));
       expect(state.optimizeRun?.data).toMatchObject({ evidenceSources: [source], evidenceInputOmissions: { resumeCharacters: 5, clarificationCharacters: 0 } });
       expect(JSON.stringify(state.originalResume?.meta)).not.toContain(source.text);
     });

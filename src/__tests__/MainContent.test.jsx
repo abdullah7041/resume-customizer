@@ -1080,6 +1080,40 @@ describe("MainContent resume parsing", () => {
     expect(useResumeStore.getState().optimizeRun.data.evidenceInputOmissions).toEqual({ resumeCharacters: 17, clarificationCharacters: 4 });
   });
 
+  it("restores a refined card and its replacement evidence after remount", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Target job description");
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [{ section: 'Summary', exampleBefore: 'Original', exampleAfter: 'First rewrite' }],
+      evidenceSources: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini',
+    });
+    const firstPage = render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    await waitFor(() => expect(useResumeStore.getState().optimizeRun?.status).toBe('succeeded'));
+    const key = useResumeStore.getState().optimizeRun.assessment.context.key;
+    useResumeStore.getState().setOptimizations([{
+      sectionId: 'summary -0 ', assessmentKey: key, sectionType: 'summary', original: 'Original',
+      optimized: 'First rewrite', applied: false,
+    }]);
+    const evidence = { version: 1, targetId: 'resume:1', originalFingerprint: 'a', proposedFingerprint: 'b',
+      references: [{ sourceId: 'resume:1', quote: 'Original' }], sourceFingerprints: { 'resume:1': 'a' },
+      status: 'needs_review', reasons: ['semantic_review'] };
+    const source = { id: 'resume:1', kind: 'resume', targetId: 'resume:1', text: 'Original', fingerprint: 'a' };
+    act(() => useResumeStore.getState().refineOptimization('summary -0 ', {
+      improved: 'Revised rewrite', rationale: 'Clearer', instruction: 'shorten', evidence,
+      evidenceSources: [source], evidenceInputOmissions: { resumeCharacters: 0, clarificationCharacters: 0 },
+    }));
+    firstPage.unmount();
+    const persistedRun = JSON.parse(JSON.stringify(useResumeStore.getState().optimizeRun));
+    useResumeStore.setState({ optimizations: [], optimizeRun: persistedRun });
+    render(<MainContent />);
+    await waitFor(() => expect(optimizeSectionMockProps.current.optimizations[0]).toMatchObject({
+      optimized: 'Revised rewrite', evidence,
+    }));
+    expect(useResumeStore.getState().optimizeRun.data.evidenceSources).toContainEqual(source);
+  });
+
   it("does not turn unvalidated raw project rewrites into actionable cards", async () => {
     localStorage.setItem("watheq:lastActiveTab", "optimize");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));

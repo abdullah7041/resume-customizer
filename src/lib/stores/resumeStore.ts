@@ -370,8 +370,11 @@ export const useResumeStore = create<ResumeState>()(
             evidenceSources?: EvidenceSource[];
             evidenceInputOmissions?: EvidenceInputOmissions;
           } : null;
-          const optimizeRun = data && (refinement.evidenceSources || refinement.evidenceInputOmissions)
-            ? { ...state.optimizeRun!, data: {
+          const target = state.optimizations.find((o) => o.sectionId === sectionId);
+          const currentRun = state.optimizeRun?.status === 'succeeded' && target?.assessmentKey
+            && state.optimizeRun.assessment?.context.key === target.assessmentKey ? state.optimizeRun : null;
+          const optimizeRun = currentRun
+            ? { ...currentRun, cards: optimizations, data: data && (refinement.evidenceSources || refinement.evidenceInputOmissions) ? {
               ...data,
               evidenceSources: [...new Map([
                 ...(Array.isArray(data.evidenceSources) ? data.evidenceSources : []),
@@ -381,7 +384,7 @@ export const useResumeStore = create<ResumeState>()(
                 resumeCharacters: Math.max(data.evidenceInputOmissions?.resumeCharacters ?? 0, refinement.evidenceInputOmissions?.resumeCharacters ?? 0),
                 clarificationCharacters: Math.max(data.evidenceInputOmissions?.clarificationCharacters ?? 0, refinement.evidenceInputOmissions?.clarificationCharacters ?? 0),
               },
-            } }
+            } : currentRun.data }
             : state.optimizeRun;
           return { optimizations, originalResume, optimizeRun, hasDownloaded: false };
         });
