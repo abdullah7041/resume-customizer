@@ -224,6 +224,13 @@ const escapeHtml = (value) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
+const joinDetails = (...parts) => parts.flat().filter(Boolean).join(' • ');
+const formatEducation = (edu) => typeof edu === 'string' ? edu : joinDetails(
+  edu.institution, [edu.studyType, edu.area].filter(Boolean).join(' in '),
+  [edu.startDate, edu.endDate].filter(Boolean).join(' – '),
+  edu.score && `GPA: ${edu.score}`, edu.courses?.join(', '), edu.highlights, edu.url,
+);
+
 const buildSummary = (summary, matchAnalysis, optimizations) => {
   const fragments = [];
   if (summary.length > 0) {
@@ -290,30 +297,9 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
         const bullets = Array.isArray(exp.description) ? exp.description.join(" ") : exp.description;
         return `${exp.position || ""} at ${exp.company || ""} - ${bullets}`;
       }) : [],
-      education: resumeDocument.education ? resumeDocument.education.map(edu => {
-        if (typeof edu === 'string') return edu;
-
-        // Build education entry with all fields
-        let entry = `${edu.institution || ""}`;
-        if (edu.studyType || edu.area) {
-          entry += ` - ${edu.studyType || ""}${edu.area ? ` in ${edu.area}` : ""}`;
-        }
-        if (edu.score) {
-          entry += ` | GPA: ${edu.score}`;
-        }
-        if (edu.date || edu.endDate) {
-          entry += ` (${edu.date || edu.endDate})`;
-        }
-        if (edu.courses && edu.courses.length > 0) {
-          entry += `\nCoursework: ${edu.courses.join(', ')}`;
-        }
-        if (edu.highlights && edu.highlights.length > 0) {
-          entry += `\n• ${edu.highlights.join('\n• ')}`;
-        }
-
-        return entry;
-      }) : [],
+      education: resumeDocument.education?.map(formatEducation) || [],
       projects: resumeDocument.projects || [],
+      extraSections: resumeDocument.extraSections || [],
       contactLines: [] // We'll build contact manually
     };
 
@@ -613,6 +599,12 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
           ${sections.projects.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
         </ul>
       </section>` : ''}
+
+      ${sections.extraSections?.map(({ title, entries }) => entries.length ? `
+      <section class="resume-section">
+        <div class="section-header"><div class="section-rule"></div><h2 class="section-title">${escapeHtml(title)}</h2></div>
+        <ul class="content-list">${entries.map(entry => `<li>${escapeHtml(entry)}</li>`).join('')}</ul>
+      </section>` : '').join('') || ''}
       
       ${fallbackContent}
     </div>
@@ -642,11 +634,9 @@ const buildPlainExportHtml = ({
         const desc = Array.isArray(exp.description) ? exp.description.join(". ") : exp.description;
         return `${exp.position || "Role"} at ${exp.company || "Company"} | ${desc}`;
       }) : [],
-      education: resumeDocument.education ? resumeDocument.education.map(edu => {
-        if (typeof edu === 'string') return edu;
-        return `${edu.institution || ""} ${edu.degree || ""}`;
-      }) : [],
-      projects: resumeDocument.projects || []
+      education: resumeDocument.education?.map(formatEducation) || [],
+      projects: resumeDocument.projects || [],
+      extraSections: resumeDocument.extraSections || [],
     };
 
     contact = {
@@ -747,6 +737,7 @@ const buildPlainExportHtml = ({
       ${renderSection("Skills", skillsLines)}
       ${renderSection("Education", educationLines)}
       ${renderSection("Projects", projectsLines)}
+      ${sections.extraSections?.map(({ title, entries }) => renderSection(title, entries)).join('') || ''}
       ${optimizationsSection}
       ${jdPreview}
     </main>
@@ -772,13 +763,25 @@ const printableResume = (resume) => {
       location: [resume.basics.location?.city, resume.basics.location?.region].filter(Boolean).join(', '),
       linkedin: resume.basics.profiles?.find(profile => /linkedin/i.test(profile.network))?.url },
     summary: [resume.basics.label, resume.basics.summary].filter(Boolean),
-    skills: (resume.skills || []).flatMap(skill => skill.keywords?.length ? skill.keywords : [skill.name]).filter(Boolean),
+    skills: (resume.skills || []).map(skill => joinDetails(skill.name, skill.level, skill.keywords?.join(', '))).filter(Boolean),
     experience: (resume.work || []).map(work => ({ position: work.position, company: work.name,
       description: [work.startDate && [work.startDate, work.endDate].filter(Boolean).join(' – '),
-        work.description, work.summary, ...(work.highlights || [])].filter(Boolean).join(' • ') })),
+        work.location, work.description, work.summary, ...(work.highlights || []), work.url].filter(Boolean).join(' • ') })),
     education: resume.education || [],
-    projects: (resume.projects || []).map(project => [project.name, project.description,
-      ...(project.highlights || [])].filter(Boolean).join(' • ')),
+    projects: (resume.projects || []).map(project => joinDetails(project.name, project.entity,
+      project.type, project.roles, [project.startDate, project.endDate].filter(Boolean).join(' – '),
+      project.description, project.highlights, project.keywords, project.url)),
+    extraSections: [
+      { title: 'Certificates', entries: resume.certificates?.map(item => joinDetails(item.name, item.issuer, item.date, item.url)) || [] },
+      { title: 'Languages', entries: resume.languages?.map(item => joinDetails(item.language, item.fluency)) || [] },
+      { title: 'Volunteer', entries: resume.volunteer?.map(item => joinDetails(item.organization, item.position,
+        [item.startDate, item.endDate].filter(Boolean).join(' – '), item.summary, item.highlights, item.url)) || [] },
+      { title: 'Awards', entries: resume.awards?.map(item => joinDetails(item.title, item.awarder, item.date, item.summary)) || [] },
+      { title: 'Publications', entries: resume.publications?.map(item => joinDetails(item.name, item.publisher,
+        item.releaseDate, item.summary, item.url)) || [] },
+      { title: 'Interests', entries: resume.interests?.map(item => joinDetails(item.name, item.keywords)) || [] },
+      { title: 'References', entries: resume.references?.map(item => joinDetails(item.name, item.reference)) || [] },
+    ],
   };
 };
 

@@ -33,6 +33,31 @@ describe("exportPdf", () => {
     }, skipPrint: true });
     expect(html).toContain("Sara");
   });
+  it("keeps every canonical section in both reviewed HTML variants", async () => {
+    const resumeDocument = {
+      basics: { name: "Sara", summary: "Original summary", location: { city: "Riyadh" }, profiles: [] },
+      work: [],
+      education: [{ institution: "University A", studyType: "Master", area: "Data Science", startDate: "2020", endDate: "2022", score: "4.0", courses: ["Statistics"], highlights: ["Research distinction"] }],
+      skills: [], projects: [],
+      certificates: [{ name: "Security Certificate", issuer: "Issuer A", date: "2023" }],
+      languages: [{ language: "Arabic", fluency: "Native" }],
+      volunteer: [{ organization: "Community A", position: "Mentor", summary: "Mentored graduates", startDate: "2021", endDate: "2022", highlights: ["Coached 20 students"] }],
+      awards: [{ title: "Leadership Award", awarder: "Association A", date: "2024", summary: "For service" }],
+      publications: [{ name: "Research Paper", publisher: "Journal A", releaseDate: "2025", summary: "Study abstract" }],
+      interests: [{ name: "Robotics", keywords: ["Open source"] }],
+      references: [{ name: "Reference A", reference: "Available on request" }],
+    };
+    for (const variant of ["styled", "ats-plain"]) {
+      const html = await exportResumeToPdf({ resumeDocument, variant, skipPrint: true,
+        optimizations: [{ suggestion: "Unreviewed claim" }] });
+      for (const text of ["Master", "Data Science", "Statistics", "Research distinction",
+        "Security Certificate", "Arabic", "Native", "Community A", "Coached 20 students",
+        "Leadership Award", "Research Paper", "Robotics", "Reference A"]) {
+        expect(html).toContain(text);
+      }
+      expect(html).not.toContain("Unreviewed claim");
+    }
+  });
   const sampleResume = `John Doe
 Riyadh, Saudi Arabia | john@example.com | +966 555 555 555
 
