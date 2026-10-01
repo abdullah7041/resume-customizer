@@ -67,7 +67,9 @@ import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
-import { mergeResumeData } from "../../lib/utils/resumeUtils";
+import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
+import { formatResumeToText } from '@/lib/utils/resumeUtils';
+import type { ResumeSchema } from '@/types/resume';
 import { emitHRSuperSaudEvent } from "@/features/hr-super-saud/events";
 import { useHRSuperSaud } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useUserCredits } from "../../hooks/useUserCredits";
@@ -422,6 +424,8 @@ export default function MainContent() {
 
   const [activeTab, setActiveTab] = useState("resume");
   const [exportReviewSectionIds, setExportReviewSectionIds] = useState<string[]>([]);
+  const [legacyExportConfirmation, setLegacyExportConfirmation] = useState<{ documentFingerprint: string; confirmedAt: string }>();
+  const [pendingLegacyExport, setPendingLegacyExport] = useState<{ variant: string; exportMethod: string; documentFingerprint: string; documentText: string } | null>(null);
   const [flowProgress, setFlowProgress] = useState(0);
   // Path-A intent capture: after a successful parse, auto-show the inline role/comp/
   // location prompt. The mount gate must NOT depend on searchIntent being empty —
@@ -2511,7 +2515,7 @@ export default function MainContent() {
   }, []);
 
   const handleExportPdf = useCallback(
-    async (variant, exportMethod = "supabase") => {
+    async (variant, exportMethod = "supabase", confirmation = legacyExportConfirmation) => {
       if (!resumeData?.plainText) {
         pushToast({
           type: "warning",
@@ -2529,25 +2533,44 @@ export default function MainContent() {
           return;
         }
 
+        const state = useResumeStore.getState();
+        if (state.optimizationOrigin === 'guest_preview' && state.optimizations.some(edit => edit.applied)) {
+          handleTabChange('templates');
+          return;
+        }
+
+        const missingBaseline = !state.originalResume && state.optimizations.some(edit => edit.applied);
+        const snapshot = await createExportSnapshot(
+          (state.originalResume ?? resumeData) as ResumeSchema,
+          state.showOptimized && !!state.originalResume ? state.optimizations : [],
+          { isSaudiNational: state.isSaudiNational },
+        );
+        const decision = reviewExport({ documentFingerprint: snapshot.documentFingerprint,
+          includedEdits: snapshot.includedEdits, missingBaseline, legacyDocumentConfirmation: confirmation });
+        if (decision.allowed === false) {
+          if (decision.reason === 'legacy_review') {
+            setPendingLegacyExport({ variant, exportMethod, documentFingerprint: decision.documentFingerprint,
+              documentText: 'plainText' in snapshot.resume && typeof snapshot.resume.plainText === 'string'
+                ? snapshot.resume.plainText : formatResumeToText(snapshot.resume) });
+          } else {
+            setExportReviewSectionIds(decision.sectionIds);
+            setActiveTab('optimize');
+            pushToast({ type: 'warning', title: t('sections.templates.export.reviewRequired',
+              'Review the highlighted changes before downloading.') });
+          }
+          return;
+        }
+        setPendingLegacyExport(null);
+
         // Load export services on demand — keeps exportPdf + supabaseExport out of the entry chunk.
         const [{ exportResumeToPdf }, { exportToSupabase, isSupabaseExportAvailable }] = await Promise.all([
           import("../../services/exportPdf.js"),
           import("../../services/supabaseExport.js"),
         ]);
 
-        // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
-        const mergedResume = mergeResumeData(resumeData, {
-          optimization: optimizationData,
-          candidateProfile: null, // Add if available
-        });
-
         // Get the HTML content from exportPdf (without triggering print)
         const htmlContent = await exportResumeToPdf({
-          resumeDocument: mergedResume || resumeData, // Fallback to original if merge fails
-          jobDescription,
-          matchAnalysis,
-          optimizations,
-          keywords: optimizationKeywords,
+          resumeDocument: snapshot.resume,
           variant: normalizedVariant,
           skipPrint: true, // Don't trigger print, just return HTML
         });
@@ -2571,8 +2594,7 @@ export default function MainContent() {
             metadata: {
               variant: normalizedVariant,
               hasJobDescription: Boolean(jobDescription),
-              hasOptimizations: optimizations.length > 0,
-              matchScore: matchAnalysis?.score,
+              hasOptimizations: snapshot.includedEdits.length > 0,
             },
           });
 
@@ -2602,11 +2624,7 @@ export default function MainContent() {
         } else {
           // Fallback to print dialog if Supabase is not available or user not signed in
           await exportResumeToPdf({
-            resumeDocument: mergedResume || resumeData,
-            jobDescription,
-            matchAnalysis,
-            optimizations,
-            keywords: optimizationKeywords,
+            resumeDocument: snapshot.resume,
             variant: normalizedVariant,
           });
 
@@ -2626,7 +2644,7 @@ export default function MainContent() {
         });
       }
     },
-    [activeJobApplicationId, isGuestMode, jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, requireSignInForGuestAction, resumeData, user, t]
+    [activeJobApplicationId, handleTabChange, isGuestMode, jobDescription, legacyExportConfirmation, pushToast, requireSignInForGuestAction, resumeData, user, t]
   );
 
   const renderedToasts = useMemo(
@@ -3060,6 +3078,31 @@ export default function MainContent() {
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
       />
+      {pendingLegacyExport && (
+        <div role="dialog" aria-modal="true" aria-label={t('sections.templates.export.legacyTitle', 'Review current document')}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+          <div className="max-w-md rounded-xl bg-white p-6 text-gray-900 shadow-xl dark:bg-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold">{t('sections.templates.export.legacyTitle', 'Review current document')}</h2>
+            <p className="mt-2 text-sm">{t('sections.templates.export.legacyBody',
+              'The original resume is unavailable. Check the entire visible document before downloading.')}</p>
+            <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border p-3 text-xs">{pendingLegacyExport.documentText}</pre>
+            <div className="mt-5 flex gap-3">
+              <button type="button" onClick={() => setPendingLegacyExport(null)} className="rounded-lg border px-4 py-2">
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button type="button" onClick={() => {
+                const confirmation = { documentFingerprint: pendingLegacyExport.documentFingerprint, confirmedAt: new Date().toISOString() };
+                setLegacyExportConfirmation(confirmation);
+                const { variant, exportMethod } = pendingLegacyExport;
+                setPendingLegacyExport(null);
+                void handleExportPdf(variant, exportMethod, confirmation);
+              }} className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
+                {t('sections.templates.export.legacyConfirm', 'I reviewed this document')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Clarification Modal — pre-optimization gap interrogation (lazy: optimize flow only) */}
       {isInterrogating && (

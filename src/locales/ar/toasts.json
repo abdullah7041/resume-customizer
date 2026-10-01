@@ -38,7 +38,7 @@
     "savedToAccount": "تم الحفظ في حسابك",
     "resumeSavedSecurely": "تم حفظ سيرتك \"{{fileName}}\" بأمان.",
     "printDialogOpened": "تم فتح نافذة الطباعة",
-    "printDialogOpenedDesc": "استخدم نافذة الطباعة للحفظ كـ PDF أو طباعة سيرتك الذاتية.",
+    "printDialogOpenedDesc": "استخدم نافذة الطباعة للحفظ كـ PDF أو طباعة سيرتك الذاتية. لم يتم التحقق من الملف الناتج.",
     "exportFailed": "تعذر التصدير",
     "templateSelected": "تم اختيار القالب",
     "analyzingGaps": "نحلل فجوات سيرتك…",

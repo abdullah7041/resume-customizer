@@ -9,6 +9,30 @@ import {
 
 
 describe("exportPdf", () => {
+  it("renders the reviewed structured resume without raw suggestions or job-only facts", async () => {
+    const resumeDocument = {
+      basics: { name: "Sara", summary: "Confirmed summary", email: "sara@example.com", phone: "", location: { city: "Riyadh" }, profiles: [] },
+      work: [{ name: "Acme", position: "Engineer", startDate: "2020", endDate: "2024", highlights: ["Built the platform"] }],
+      education: [], skills: [], projects: [],
+    };
+    for (const variant of ["styled", "ats-plain"]) {
+      const html = await exportResumeToPdf({ resumeDocument, variant,
+        optimizations: [{ suggestion: "Unreviewed claim" }], keywords: { add: ["Unsupported skill"] },
+        jobDescription: "Private job description", skipPrint: true });
+      expect(html).toContain("Confirmed summary");
+      expect(html).toContain("Built the platform");
+      expect(html).toContain("Acme");
+      expect(html).not.toContain("Unreviewed claim");
+      expect(html).not.toContain("Unsupported skill");
+      expect(html).not.toContain("Private job description");
+    }
+  });
+  it("renders a sparse reviewed resume", async () => {
+    const html = await exportResumeToPdf({ resumeDocument: {
+      basics: { name: "Sara", summary: "", location: {} }, work: [], education: [], skills: [],
+    }, skipPrint: true });
+    expect(html).toContain("Sara");
+  });
   const sampleResume = `John Doe
 Riyadh, Saudi Arabia | john@example.com | +966 555 555 555
 

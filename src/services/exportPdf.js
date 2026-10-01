@@ -374,14 +374,14 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
     summaryHtml;
 
   // Fallback: if no sections parsed, show raw resume text
-  const fallbackContent = !hasStructuredContent && document.plainText ? `
+  const fallbackContent = !hasStructuredContent && resumeDocument?.plainText ? `
     <section class="resume-section">
       <div class="section-header">
         <div class="section-rule"></div>
         <h2 class="section-title">Resume Content</h2>
       </div>
       <div class="section-content">
-        <p style="white-space: pre-wrap;">${escapeHtml(document.plainText)}</p>
+        <p style="white-space: pre-wrap;">${escapeHtml(resumeDocument.plainText)}</p>
       </div>
     </section>
   ` : '';
@@ -765,13 +765,30 @@ const normalizeVariant = (variant = "styled") => {
   return "styled";
 };
 
+const printableResume = (resume) => {
+  if (!resume?.basics || typeof resume.plainText === 'string') return resume;
+  return {
+    header: { name: resume.basics.name, email: resume.basics.email, phone: resume.basics.phone,
+      location: [resume.basics.location?.city, resume.basics.location?.region].filter(Boolean).join(', '),
+      linkedin: resume.basics.profiles?.find(profile => /linkedin/i.test(profile.network))?.url },
+    summary: [resume.basics.label, resume.basics.summary].filter(Boolean),
+    skills: (resume.skills || []).flatMap(skill => skill.keywords?.length ? skill.keywords : [skill.name]).filter(Boolean),
+    experience: (resume.work || []).map(work => ({ position: work.position, company: work.name,
+      description: [work.startDate && [work.startDate, work.endDate].filter(Boolean).join(' – '),
+        work.description, work.summary, ...(work.highlights || [])].filter(Boolean).join(' • ') })),
+    education: resume.education || [],
+    projects: (resume.projects || []).map(project => [project.name, project.description,
+      ...(project.highlights || [])].filter(Boolean).join(' • ')),
+  };
+};
+
 export const exportResumeToPdf = async ({
   resumeDocument,
   resumeText = "",
   jobDescription = "",
-  matchAnalysis,
-  optimizations,
-  keywords,
+  matchAnalysis = null,
+  optimizations = [],
+  keywords = undefined,
   variant = "styled",
   skipPrint = false,
 }) => {
@@ -780,7 +797,12 @@ export const exportResumeToPdf = async ({
     throw new Error('PDF export is only available in browser environments');
   }
 
-  const payload = { resumeDocument, resumeText, jobDescription, matchAnalysis, optimizations, keywords };
+  const reviewedDocument = Boolean(resumeDocument?.basics && typeof resumeDocument.plainText !== 'string');
+  const payload = { resumeDocument: printableResume(resumeDocument), resumeText,
+    jobDescription: reviewedDocument ? '' : jobDescription,
+    matchAnalysis: reviewedDocument ? null : matchAnalysis,
+    optimizations: reviewedDocument ? [] : optimizations,
+    keywords: reviewedDocument ? undefined : keywords };
   const normalizedVariant = normalizeVariant(variant);
   const html = normalizedVariant === "ats-plain" ? buildPlainExportHtml(payload) : buildExportHtml(payload);
 

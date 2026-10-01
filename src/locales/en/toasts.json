@@ -38,7 +38,7 @@
     "savedToAccount": "Saved to your account",
     "resumeSavedSecurely": "Your resume \"{{fileName}}\" has been saved securely.",
     "printDialogOpened": "Print dialog opened",
-    "printDialogOpenedDesc": "Use the print dialog to save as PDF or print your resume.",
+    "printDialogOpenedDesc": "Use the print dialog to save as PDF or print your resume. The resulting file has not been checked.",
     "exportFailed": "Export failed",
     "templateSelected": "Template Selected",
     "analyzingGaps": "Analyzing resume gaps…",

@@ -14,6 +14,9 @@ const {
   createJobApplicationMock,
   onboardExtractMock,
   analyticsMock,
+  exportPdfMock,
+  exportToSupabaseMock,
+  supabaseAvailableMock,
 } = vi.hoisted(() => ({
   parseResumeMock: vi.fn(),
   analyzeResumeMock: vi.fn(),
@@ -25,6 +28,9 @@ const {
   generateClarificationsMock: vi.fn().mockResolvedValue({ clarifications: [] }),
   extractJobMetadataMock: vi.fn(() => Promise.resolve(null)),
   createJobApplicationMock: vi.fn(),
+  exportPdfMock: vi.fn(),
+  exportToSupabaseMock: vi.fn(),
+  supabaseAvailableMock: vi.fn(() => false),
   analyticsMock: {
     trackGuestPreviewStarted: vi.fn(),
     trackGuestPreviewLimitHit: vi.fn(),
@@ -265,9 +271,11 @@ vi.mock("../services/pipeline", () => ({
 vi.mock("../services/supabaseExport.js", () => ({
   saveResumeToSupabase: vi.fn(),
   saveOptimizationToSupabase: vi.fn(),
-  exportToSupabase: vi.fn(),
-  isSupabaseExportAvailable: vi.fn(() => false),
+  exportToSupabase: exportToSupabaseMock,
+  isSupabaseExportAvailable: supabaseAvailableMock,
 }));
+
+vi.mock("../services/exportPdf.js", () => ({ exportResumeToPdf: exportPdfMock }));
 
 vi.mock("../services/api.js", () => ({
   parseResume: parseResumeMock,
@@ -2160,4 +2168,96 @@ describe("reaching tools before a resume exists", () => {
 
     expect(await screen.findByTestId("job-feed-mock")).toBeInTheDocument();
   });
+});
+
+describe("MainContent final export review", () => {
+  const resume = () => ({ basics: { name: "Sara", label: "", email: "", phone: "", summary: "Original summary",
+    location: { city: "", countryCode: "", region: "" }, profiles: [] }, work: [], education: [], skills: [] });
+  const edit = () => ({ sectionId: "summary-1", sectionType: "summary", original: "Original summary",
+    optimized: "Proposed summary", applied: true,
+    evidence: { version: 1, targetId: "basics:summary", originalFingerprint: "old", proposedFingerprint: "new",
+      references: [], sourceFingerprints: {}, status: "needs_review", reasons: ["semantic_review"] } });
+  const openExport = async (state) => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Original resume", sections: [] }));
+    useResumeStore.setState({ originalResume: resume(), optimizations: [], showOptimized: true,
+      isSaudiNational: false, optimizationOrigin: null, ...state });
+    render(<MainContent />);
+    await screen.findByTestId("optimization-mock");
+  };
+
+  beforeEach(() => {
+    const storage = { "watheq:beta_access": "WATHEQ01" };
+    global.localStorage = { getItem: vi.fn((key) => storage[key] ?? null),
+      setItem: vi.fn((key, value) => { storage[key] = value; }), removeItem: vi.fn(), clear: vi.fn() };
+    authMockState.user = { id: "user-123", user_metadata: {}, app_metadata: {} };
+    exportPdfMock.mockReset().mockResolvedValue("<html>reviewed</html>");
+    exportToSupabaseMock.mockReset().mockResolvedValue({ fileName: "resume.html" });
+    supabaseAvailableMock.mockReset().mockReturnValue(false);
+  });
+
+  it("blocks print and cloud when an included claim still needs review", async () => {
+    await openExport({ optimizations: [edit()] });
+    await act(async () => { await optimizeSectionMockProps.current.onExport("styled", "print"); });
+    await act(async () => { await optimizeSectionMockProps.current.onExport("styled", "supabase"); });
+    expect(exportPdfMock).not.toHaveBeenCalled();
+    expect(exportToSupabaseMock).not.toHaveBeenCalled();
+    expect(optimizeSectionMockProps.current.reviewSectionIds).toEqual(["summary-1"]);
+  });
+
+  it("exports the captured composition when the store changes during review hashing", async () => {
+    const confirmed = { ...edit(), confirmation: { targetId: "basics:summary", proposedFingerprint: "new",
+      statement: "Proposed summary", confirmedAt: "2026-09-24" } };
+    await openExport({ optimizations: [confirmed] });
+    const originalDigest = crypto.subtle.digest.bind(crypto.subtle);
+    let resumeDigest;
+    const pendingDigest = new Promise((resolve) => { resumeDigest = resolve; });
+    const digestSpy = vi.spyOn(crypto.subtle, "digest").mockImplementationOnce(() => pendingDigest);
+    try {
+      let run;
+      await act(async () => { run = optimizeSectionMockProps.current.onExport("styled", "print"); });
+      useResumeStore.setState({ originalResume: { ...resume(), basics: { ...resume().basics, summary: "Changed later" } } });
+      resumeDigest(await originalDigest("SHA-256", new TextEncoder().encode("captured")));
+      await act(async () => { await run; });
+      expect(exportPdfMock).toHaveBeenCalledWith(expect.objectContaining({
+        resumeDocument: expect.objectContaining({ basics: expect.objectContaining({ summary: "Proposed summary" }) }),
+      }));
+      expect(exportPdfMock.mock.calls[0][0]).not.toHaveProperty("optimizations");
+    } finally { digestSpy.mockRestore(); }
+  });
+
+  it("uploads only rendered HTML from the reviewed snapshot", async () => {
+    supabaseAvailableMock.mockReturnValue(true);
+    const confirmed = { ...edit(), confirmation: { targetId: "basics:summary", proposedFingerprint: "new",
+      statement: "Proposed summary", confirmedAt: "2026-09-24" } };
+    await openExport({ optimizations: [confirmed] });
+    await act(async () => { await optimizeSectionMockProps.current.onExport("ats-plain", "supabase"); });
+    expect(exportPdfMock).toHaveBeenCalledWith(expect.objectContaining({
+      resumeDocument: expect.objectContaining({ basics: expect.objectContaining({ summary: "Proposed summary" }) }),
+      variant: "ats-plain", skipPrint: true,
+    }));
+    expect(exportToSupabaseMock).toHaveBeenCalledWith(expect.objectContaining({ htmlContent: "<html>reviewed</html>" }));
+    expect(exportToSupabaseMock.mock.calls[0][0].metadata).not.toHaveProperty("evidence");
+  });
+
+  it("falls back to reviewed print when cloud storage is unavailable", async () => {
+    await openExport({ optimizations: [] });
+    await act(async () => { await optimizeSectionMockProps.current.onExport("styled", "supabase"); });
+    expect(exportToSupabaseMock).not.toHaveBeenCalled();
+    expect(exportPdfMock).toHaveBeenCalledWith(expect.objectContaining({
+      resumeDocument: expect.objectContaining({ basics: expect.objectContaining({ summary: "Original summary" }) }),
+      variant: "styled",
+    }));
+    expect(exportPdfMock.mock.calls.at(-1)[0].skipPrint).toBeUndefined();
+  });
+
+  it("requires fingerprint-bound review when the original baseline is absent", async () => {
+    await openExport({ originalResume: null, optimizations: [edit()] });
+    await act(async () => { await optimizeSectionMockProps.current.onExport("styled", "print"); });
+    expect(exportPdfMock).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: "Review current document" })).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByText("I reviewed this document")); });
+    expect(exportPdfMock).toHaveBeenCalled();
+  });
+
 });
