@@ -40,10 +40,12 @@ import { PageBreakOverlay, A4_PAGE_HEIGHT_PX } from "../ui/PageBreakIndicator";
 import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 import { directionFromLanguage } from "../../lib/utils/resumeDirection";
 import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
+import { checkPdfBlob, expectedPdfText } from '@/lib/utils/pdfTextCheck';
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
 const DRAG_HANDLE_KEYBOARD_STEP_PX = 12;
+const RECOVERY_BUTTON_CLASS = 'rounded-md border border-current px-3 py-2 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:hover:bg-white/10';
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -234,6 +236,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [pdfRecovery, setPdfRecovery] = useState<{ resume: ResumeSchema; preview: HTMLElement; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
+  const [pdfStatus, setPdfStatus] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
   const [showAdvancedFormatting, setShowAdvancedFormatting] = useState(false);
@@ -440,17 +444,18 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Download PDF — Server-side Puppeteer rendering
-  const performDownloadPdf = async (exportResume: ResumeSchema, previewSnapshot: HTMLElement) => {
+  const performDownloadPdf = async (attempt: NonNullable<typeof pdfRecovery>) => {
+    const { resume: exportResume, preview: previewSnapshot } = attempt;
     if (isDownloading) return;
     setIsDownloading(true);
     setExportError(null);
-    analytics.trackExportClicked(selectedTemplate.id, 'pdf');
+    analytics.trackExportClicked(attempt.templateId, 'pdf');
+    const clone = previewSnapshot.cloneNode(true) as HTMLElement;
 
     try {
-      const filename = getSmartFilename(exportResume, selectedTemplate.id, 'pdf');
+      const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
 
       // 1. Clone DOM off-screen
-      const clone = previewSnapshot.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
       clone.style.top = '0';
@@ -532,7 +537,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       const styles = inlineStyles + '\n' + externalStyles.join('\n');
 
-      document.body.removeChild(clone);
+      clone.remove();
 
       // 5. Send to Server (Netlify Function)
       const { getAuthHeaders } = await import('../../services/api');
@@ -540,7 +545,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, styles, templateId: selectedTemplate.id, filename: filename.replace('.pdf', ''), direction: contentDirection }),
+        body: JSON.stringify({ html, styles, templateId: attempt.templateId, filename: filename.replace('.pdf', ''), direction: attempt.direction }),
         // Without this the client waits out the gateway's own kill, then starts a
         // second slow path on top of it.
         signal: AbortSignal.timeout(SERVER_PDF_TIMEOUT_MS),
@@ -552,8 +557,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         // spend 20 more seconds to produce a worse PDF for a problem that fixes
         // itself, so these say so and stop.
         if (response.status === 429 || response.status === 503) {
-          analytics.trackExportFailed(selectedTemplate.id, 'pdf', `server_${response.status}`);
+          analytics.trackExportFailed(attempt.templateId, 'pdf', `server_${response.status}`);
           setExportError(exportBusyMessage);
+          setPdfRecovery(attempt);
           return;
         }
         throw new Error(`[PDFDownload] Server error: ${response.status}`);
@@ -561,6 +567,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       const blob = await response.blob();
       if (!blob || blob.size === 0) throw new Error('[PDFDownload] Server returned an empty PDF');
+      const quality = await checkPdfBlob(blob, expectedPdfText(exportResume, previewSnapshot));
+      if (quality.state === 'unverified') {
+        setPdfRecovery({ ...attempt, blob });
+        setExportError(t('sections.templates.export.unverified', 'Selectable text could not be verified. Review this PDF before using it.'));
+        analytics.trackExportFailed(attempt.templateId, 'pdf_unverified', 'text_check');
+        return;
+      }
 
       // 6. Mobile-safe Download
       // iOS Safari frequently blocks navigator.share or blob URLs after async fetch delays.
@@ -583,14 +596,28 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         saveAs(blob, typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
       }
 
-      analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
+      analytics.trackExportSuccess(attempt.templateId, 'pdf_text_checked');
+      setPdfRecovery(null);
+      setPdfStatus(t('sections.templates.export.textChecked', 'Selectable text checked'));
       requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
 
     } catch (err) {
-      console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', summarizeErrorForConsole(err));
-      analytics.trackExportFailed(selectedTemplate.id, 'pdf', 'server_error');
+      console.error('[PDFDownload] Server-side generation failed:', summarizeErrorForConsole(err));
+      analytics.trackExportFailed(attempt.templateId, 'pdf', 'server_error');
+      setPdfRecovery(attempt);
+      setExportError(exportFailureMessage);
+    } finally {
+      clone.remove();
+      setIsDownloading(false);
+    }
+  };
 
+  const downloadImageOnlyPdf = async (attempt: NonNullable<typeof pdfRecovery>) => {
+    const { resume: exportResume, preview: previewSnapshot } = attempt;
+    if (isDownloading) return;
+    setIsDownloading(true);
+    setExportError(null);
       try {
         // Dynamic import to keep bundle size small
         const [{ toCanvas }, { jsPDF }] = await Promise.all([
@@ -675,9 +702,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const a4Height = pdf.internal.pageSize.getHeight();
         
         // Use the user's selected margins, defaulting to 0.75in (19.05mm)
-        const displayOpts = useResumeStore.getState().displayOptions;
-        const mt = displayOpts?.marginTop ? displayOpts.marginTop * 25.4 : 19.05;
-        const mb = displayOpts?.marginBottom ? displayOpts.marginBottom * 25.4 : 19.05;
+        const mt = attempt.marginTop ? attempt.marginTop * 25.4 : 19.05;
+        const mb = attempt.marginBottom ? attempt.marginBottom * 25.4 : 19.05;
         
         // Printable area height
         const printableHeight = a4Height - mt - mb;
@@ -758,11 +784,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           isFirstPage = false;
         }
         
-        const filename = getSmartFilename(exportResume, selectedTemplate.id, 'pdf');
+        const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
         const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
         pdf.save(finalFilename);
 
-        analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
+        analytics.trackExportSuccess(attempt.templateId, 'pdf_image');
+        setPdfRecovery(null);
+        setPdfStatus(null);
         requestValueMomentFeedbackPrompt('export_success');
         useResumeStore.getState().setHasDownloaded(true);
 
@@ -771,48 +799,48 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const isBlankCanvas = clientErr instanceof Error && clientErr.message.includes('blank canvas');
         const isTimeout = clientErr instanceof Error && clientErr.message === 'CLIENT_FALLBACK_TIMEOUT';
         analytics.trackExportFailed(
-          selectedTemplate.id,
-          'pdf',
+          attempt.templateId,
+          'pdf_image',
           isTimeout ? 'fallback_timeout' : isBlankCanvas ? 'fallback_blank' : 'client_fallback_error'
         );
         setExportError(isTimeout ? exportTimeoutMessage : exportFailureMessage);
-      }
-    } finally {
+      } finally {
       setIsDownloading(false);
-    }
+      }
   };
 
 
   // Download DOCX using docx library (client-side)
-  const performDownloadDocx = async (exportResume: ResumeSchema) => {
+  const performDownloadDocx = async (exportResume: ResumeSchema, attempt?: NonNullable<typeof pdfRecovery>) => {
     if (isDownloadingDocx) return;
 
     setIsDownloadingDocx(true);
     setExportError(null);
-    analytics.trackExportClicked(selectedTemplate.id, 'docx');
+    analytics.trackExportClicked(attempt?.templateId ?? selectedTemplate.id, 'docx');
     try {
       // Get keywords and bold preference from store
       const store = useResumeStore.getState();
-      const keywords = store.optimizationMetrics?.jdKeywords || [];
-      const boldKeywords = store.displayOptions?.boldKeywords ?? true;
+      const keywords = attempt?.keywords ?? store.optimizationMetrics?.jdKeywords ?? [];
+      const boldKeywords = attempt?.boldKeywords ?? store.displayOptions?.boldKeywords ?? true;
 
       const { exportResumeAsDocx } = await import('../../services/exportDocx');
       const blob = await exportResumeAsDocx(exportResume, {
         keywords,
         boldKeywords,
-        templateId: selectedTemplate.id as TemplateId,
-        direction: contentDirection,
+        templateId: attempt?.templateId ?? selectedTemplate.id as TemplateId,
+        direction: attempt?.direction ?? contentDirection,
       });
       if (!blob || blob.size === 0) throw new Error('DOCX export returned an empty file');
-      const filename = getSmartFilename(exportResume, selectedTemplate.id, 'docx');
+      const filename = getSmartFilename(exportResume, attempt?.templateId ?? selectedTemplate.id, 'docx');
       saveAs(blob, filename);
 
-      analytics.trackExportSuccess(selectedTemplate.id, 'docx');
+      analytics.trackExportSuccess(attempt?.templateId ?? selectedTemplate.id, 'docx');
+      setPdfRecovery(null);
       requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
       console.error('DOCX Download failed:', summarizeErrorForConsole(err));
-      analytics.trackExportFailed(selectedTemplate.id, 'docx', 'client_error');
+      analytics.trackExportFailed(attempt?.templateId ?? selectedTemplate.id, 'docx', 'client_error');
       setExportError(exportFailureMessage);
     } finally {
       setIsDownloadingDocx(false);
@@ -859,7 +887,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         setExportError(exportFailureMessage);
         return;
       }
-      await performDownloadPdf(snapshot.resume, previewSnapshot);
+      await performDownloadPdf({ resume: snapshot.resume, preview: previewSnapshot, templateId: selectedTemplate.id as TemplateId,
+        direction: contentDirection, marginTop: state.displayOptions?.marginTop, marginBottom: state.displayOptions?.marginBottom,
+        keywords: [...(state.optimizationMetrics?.jdKeywords ?? [])], boldKeywords: state.displayOptions?.boldKeywords ?? true });
     } else {
       await performDownloadDocx(snapshot.resume);
     }
@@ -877,6 +907,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   // Public entry points — gate a guest-preview-origin export behind one
   // charged re-optimize before the real download runs.
   const handleDownloadPdf = async () => {
+    setPdfRecovery(null);
+    setPdfStatus(null);
     if (isGuestPreviewExport) {
       setPendingExportAction('pdf');
       return;
@@ -885,6 +917,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   };
 
   const handleDownloadDocx = async () => {
+    setPdfRecovery(null);
+    setPdfStatus(null);
     if (isGuestPreviewExport) {
       setPendingExportAction('docx');
       return;
@@ -1085,6 +1119,23 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-300" />
               <p>{exportError}</p>
+            </div>
+          )}
+          {pdfStatus && <p role="status" className="text-sm text-green-700 dark:text-green-300">{pdfStatus}</p>}
+          {pdfRecovery && (
+            <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadPdf(pdfRecovery)}>{t('sections.templates.export.retry', 'Retry PDF')}</button>
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadDocx(pdfRecovery.resume, pdfRecovery)}>{t('sections.templates.export.downloadDocx', 'Download DOCX')}</button>
+                {pdfRecovery.blob && <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => {
+                  saveAs(pdfRecovery.blob!, getSmartFilename(pdfRecovery.resume, pdfRecovery.templateId, 'pdf'));
+                  analytics.trackExportSuccess(pdfRecovery.templateId, 'pdf_unverified');
+                  setPdfRecovery(null);
+                  useResumeStore.getState().setHasDownloaded(true);
+                }}>{t('sections.templates.export.downloadUnverified', 'Download unverified PDF')}</button>}
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void downloadImageOnlyPdf(pdfRecovery)}>{t('sections.templates.export.imageOnly', 'Choose image-only PDF')}</button>
+              </div>
+              <p>{t('sections.templates.export.imageWarning', 'Image-only PDF — text cannot be selected; some systems may need OCR.')}</p>
             </div>
           )}
         </div>

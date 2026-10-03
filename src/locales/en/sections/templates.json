@@ -41,7 +41,15 @@
         "reviewRequired": "Review the highlighted changes before downloading.",
         "legacyTitle": "Review current document",
         "legacyBody": "The original resume is unavailable. Check the entire visible document before downloading.",
-        "legacyConfirm": "I reviewed this document"
+        "legacyConfirm": "I reviewed this document",
+        "textChecked": "Selectable text checked",
+        "unverified": "Selectable text could not be verified. Review this PDF before using it.",
+        "recovery": "PDF export options",
+        "retry": "Retry PDF",
+        "downloadDocx": "Download DOCX",
+        "downloadUnverified": "Download unverified PDF",
+        "imageOnly": "Choose image-only PDF",
+        "imageWarning": "Image-only PDF — text cannot be selected; some systems may need OCR."
       },
       "pageBreak": "Page Break",
       "showPageBreaks": "Show Page Breaks",

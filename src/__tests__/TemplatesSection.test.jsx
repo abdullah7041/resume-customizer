@@ -12,6 +12,7 @@ import { analytics } from '../services/analytics';
 import { toCanvas } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { useResumeStore } from '../lib/stores/resumeStore';
+import { checkPdfBlob } from '../lib/utils/pdfTextCheck';
 
 let mockContentLanguage = null;
 
@@ -72,6 +73,11 @@ vi.mock('html-to-image', () => ({
 
 vi.mock('jspdf', () => ({
     jsPDF: vi.fn(() => ({})),
+}));
+
+vi.mock('../lib/utils/pdfTextCheck', () => ({
+    checkPdfBlob: vi.fn(() => Promise.resolve({ state: 'text_checked', missingFieldIds: [] })),
+    expectedPdfText: vi.fn(() => ({ fields: [{ id: 'name', text: 'Sara Ahmed' }] })),
 }));
 
 vi.mock('../services/api', () => ({
@@ -161,6 +167,7 @@ beforeEach(() => {
         blob: () => Promise.resolve(new Blob(['pdf content'], { type: 'application/pdf' })),
     });
     exportResumeAsDocx.mockClear();
+    checkPdfBlob.mockResolvedValue({ state: 'text_checked', missingFieldIds: [] });
     useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
 });
 
@@ -421,7 +428,7 @@ describe('TemplatesSection', () => {
             });
         });
 
-        it('shows a localized error when server PDF and client fallback export both fail', async () => {
+        it('shows explicit choices without rasterizing on server failure', async () => {
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             globalThis.fetch.mockResolvedValueOnce({
                 ok: false,
@@ -445,6 +452,9 @@ describe('TemplatesSection', () => {
                         'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
                     );
                 });
+                expect(screen.getByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
+                expect(screen.getByRole('group', { name: 'PDF export options' })).toHaveTextContent('Download DOCX');
+                expect(toCanvas).not.toHaveBeenCalled();
                 expect(screen.queryByText(/canvas failed/i)).not.toBeInTheDocument();
             } finally {
                 consoleError.mockRestore();
@@ -482,6 +492,8 @@ describe('TemplatesSection', () => {
 
                 fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
 
+                fireEvent.click(await screen.findByRole('button', { name: 'Choose image-only PDF' }));
+
                 await waitFor(() => {
                     expect(screen.getByRole('alert')).toHaveTextContent(
                         'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
@@ -489,7 +501,7 @@ describe('TemplatesSection', () => {
                 });
                 expect(analytics.trackExportFailed).toHaveBeenCalledWith(
                     expect.any(String),
-                    'pdf',
+                    'pdf_image',
                     'fallback_blank'
                 );
             } finally {
@@ -544,11 +556,13 @@ describe('TemplatesSection', () => {
 
                 fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
 
+                fireEvent.click(await screen.findByRole('button', { name: 'Choose image-only PDF' }));
+
                 await waitFor(() => expect(pdf.save).toHaveBeenCalled());
                 expect(captureHost).toHaveAttribute('data-pdf-capture-host', 'true');
                 expect(capturedClone.style.left).not.toBe('-9999px');
                 expect(captureHost).not.toBeInTheDocument();
-                expect(analytics.trackExportSuccess).toHaveBeenCalledWith(expect.any(String), 'pdf');
+                expect(analytics.trackExportSuccess).toHaveBeenCalledWith(expect.any(String), 'pdf_image');
             } finally {
                 consoleError.mockRestore();
             }
@@ -699,6 +713,61 @@ describe('TemplatesSection', () => {
             expect(body.html).toContain('Original summary');
             expect(body.html).not.toContain('Unreviewed legacy suggestion');
             expect(exportResumeAsDocx.mock.calls[0][0].basics.summary).toBe('Original summary');
+        });
+
+        it.each([429, 503])('keeps busy response %s retryable without rasterizing', async (status) => {
+            globalThis.fetch.mockResolvedValueOnce({ ok: false, status });
+            renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            expect(await screen.findByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
+            expect(screen.getByRole('alert')).toHaveTextContent('The PDF renderer was busy');
+            expect(toCanvas).not.toHaveBeenCalled();
+        });
+
+        it('keeps a timed-out server attempt retryable', async () => {
+            globalThis.fetch.mockRejectedValueOnce(new DOMException('Timed out', 'TimeoutError'));
+            renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            expect(await screen.findByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
+            expect(toCanvas).not.toHaveBeenCalled();
+        });
+
+        it('does not download a blank server file', async () => {
+            globalThis.fetch.mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(new Blob()) });
+            renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            expect(await screen.findByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
+            expect(saveAs).not.toHaveBeenCalled();
+            expect(toCanvas).not.toHaveBeenCalled();
+        });
+
+        it('retains an unverified server PDF for an explicit decision', async () => {
+            checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
+            renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            expect(await screen.findByRole('button', { name: 'Download unverified PDF' })).toBeInTheDocument();
+            expect(saveAs).not.toHaveBeenCalled();
+            expect(toCanvas).not.toHaveBeenCalled();
+            fireEvent.click(screen.getByRole('button', { name: 'Download unverified PDF' }));
+            expect(saveAs).toHaveBeenCalled();
+            expect(analytics.trackExportSuccess).toHaveBeenCalledWith(expect.any(String), 'pdf_unverified');
+        });
+
+        it('retries the reviewed snapshot after the current resume changes', async () => {
+            const original = { basics: { name: 'Sara Ahmed', summary: 'Reviewed summary' }, work: [] };
+            useResumeStore.__setMockState({ originalResume: original });
+            globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
+            const view = renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await screen.findByRole('button', { name: 'Retry PDF' });
+            const later = { basics: { name: 'Sara Ahmed', summary: 'Later summary' }, work: [] };
+            useResumeStore.__setMockState({ originalResume: later });
+            view.rerender(<DirectionProvider><TemplateGallery /></DirectionProvider>);
+            fireEvent.click(screen.getByRole('button', { name: 'Retry PDF' }));
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
+            const body = JSON.parse(globalThis.fetch.mock.calls[1][1].body);
+            expect(body.html).toContain('Reviewed summary');
+            expect(body.html).not.toContain('Later summary');
         });
 
         it.each(['pdf', 'docx'])('blocks an included unresolved edit before %s generation and opens that section', async (format) => {
