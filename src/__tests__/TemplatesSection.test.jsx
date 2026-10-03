@@ -1,7 +1,7 @@
 // src/__tests__/TemplatesSection.test.jsx
 // Tests for TemplatesSection component - template gallery with floating selector
 
-import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TemplateGallery from '../components/sections/TemplatesSection';
@@ -846,6 +846,56 @@ describe('TemplatesSection', () => {
             const body = JSON.parse(globalThis.fetch.mock.calls.find(([url]) => url === '/.netlify/functions/generate-pdf')[1].body);
             expect(body.html).toContain('Original summary');
             expect(body.html).not.toContain('Later summary');
+        });
+
+        it.each(['success', 'failure'])('ignores a late PDF %s after a new DOCX request', async (outcome) => {
+            useResumeStore.__setMockState({ originalResume: resume });
+            let releasePdf;
+            globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { releasePdf = resolve; }));
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalledTimes(1));
+            await waitFor(() => expect(saveAs).toHaveBeenCalledTimes(1));
+
+            await act(async () => {
+                releasePdf(outcome === 'success'
+                    ? { ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) }
+                    : { ok: false, status: 500 });
+            });
+            expect(saveAs).toHaveBeenCalledTimes(1);
+            expect(checkPdfBlob).not.toHaveBeenCalled();
+            expect(screen.queryByRole('group', { name: 'PDF export options' })).not.toBeInTheDocument();
+            expect(screen.queryByText('Selectable text checked')).not.toBeInTheDocument();
+        });
+
+        it('ignores a text check that finishes after a new DOCX request', async () => {
+            useResumeStore.__setMockState({ originalResume: resume });
+            let releaseCheck;
+            checkPdfBlob.mockImplementationOnce(() => new Promise((resolve) => { releaseCheck = resolve; }));
+            renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await waitFor(() => expect(checkPdfBlob).toHaveBeenCalledTimes(1));
+            fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+            await waitFor(() => expect(saveAs).toHaveBeenCalledTimes(1));
+            await act(async () => releaseCheck({ state: 'text_checked', missingFieldIds: [] }));
+            expect(saveAs).toHaveBeenCalledTimes(1);
+            expect(screen.queryByText('Selectable text checked')).not.toBeInTheDocument();
+        });
+
+        it('does not download when the PDF request finishes after unmount', async () => {
+            useResumeStore.__setMockState({ originalResume: resume });
+            let releasePdf;
+            globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { releasePdf = resolve; }));
+            const view = renderWithProviders(<TemplateGallery />);
+            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+            view.unmount();
+            await act(async () => releasePdf({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) }));
+            expect(saveAs).not.toHaveBeenCalled();
+            expect(checkPdfBlob).not.toHaveBeenCalled();
         });
 
         it('uses the captured DOCX document after the resume changes during generation', async () => {
