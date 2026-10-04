@@ -444,7 +444,7 @@ export default function MainContent() {
     markIntentPrompted();
     setIntentPrompted(true);
   }, []);
-  const [resumeData, setResumeData] = useState(() => {
+  const [storedResumeData, setResumeData] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
       const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
@@ -476,6 +476,14 @@ export default function MainContent() {
       return "";
     }
   });
+  const parsedResumeText = useResumeStore(state => state.parsedResumeText);
+  const originalResume = useResumeStore(state => state.originalResume);
+  const resumeData = useMemo(() =>
+    storedResumeData && typeof storedResumeData === 'object'
+      ? { ...storedResumeData, plainText: parsedResumeText === '' && !originalResume
+          ? storedResumeData.plainText : parsedResumeText ?? storedResumeData.plainText }
+      : storedResumeData,
+  [storedResumeData, parsedResumeText, originalResume]);
   const hasResume = Boolean(resumeData?.plainText);
   const { setWorkflowState: setHRSuperSaudWorkflowState } = useHRSuperSaud();
   const resumeGateReason = t(
@@ -560,7 +568,7 @@ export default function MainContent() {
   const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(null);
   const [historicalMatch, setHistoricalMatch] = useState<{ status: 'legacy' | 'outdated'; result: MatchResult } | null>(null);
   const matchRequest = useRef<MatchRequest | null>(null);
-  const matchResumeText = useResumeStore(state => state.parsedResumeText) || resumeData?.plainText || '';
+  const matchResumeText = resumeData?.plainText ?? '';
   const matchLanguage = i18n.language === 'ar' ? 'ar' : 'en';
   const latestMatchInput = useRef<AssessmentInput>({ resumeText: matchResumeText, jobDescription,
     language: matchLanguage, kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false });

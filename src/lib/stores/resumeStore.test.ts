@@ -6,6 +6,7 @@ import { buildScorePresentation, verificationSignature } from '@/lib/optimize/sc
 import { createAssessmentContext } from '@/lib/match/assessmentContext';
 import type { AssessmentInput } from '@/types/assessment';
 import { fingerprintText } from '@/lib/match/assessmentContext';
+import { formatResumeToText } from '@/lib/utils/resumeUtils';
 
 describe('resumeStore', () => {
     afterEach(() => vi.useRealTimers());
@@ -780,6 +781,54 @@ describe('resumeStore.getActiveResume()', () => {
         expect(useResumeStore.getState().getCachedAssessment(changed)).toBeNull();
       }
       expect(useResumeStore.getState().getCachedAssessment({ ...base, language: 'ar' })).toBeNull();
+    });
+
+    it('keeps exact upload text until a real baseline edit and invalidates old resume evidence', () => {
+        const original = buildFixture();
+        const store = useResumeStore.getState();
+        store.setOriginalResume(original);
+        store.setParsedResumeText('Exact extracted text with a fact the parser omitted');
+        store.setOriginalResume(structuredClone(original));
+        store.patchProfile({ basics: { ...original.basics } });
+        expect(useResumeStore.getState().parsedResumeText).toBe('Exact extracted text with a fact the parser omitted');
+
+        useResumeStore.setState({ evidenceSources: [{ id: 'old-source', kind: 'resume', text: 'Old fact',
+            fingerprint: 'old-fingerprint', targetId: 'basics:summary' }],
+        optimizations: [{ sectionId: 'summary-1', sectionType: 'summary', original: 'Old fact',
+            optimized: 'Rewritten fact', applied: true,
+            evidence: { version: 1, targetId: 'basics:summary', originalFingerprint: 'old',
+                proposedFingerprint: 'new', references: [{ sourceId: 'old-source', quote: 'Old fact' }],
+                sourceFingerprints: { 'old-source': 'old-fingerprint' }, status: 'source_matched', reasons: [] },
+            confirmation: { targetId: 'basics:summary', proposedFingerprint: 'new',
+                statement: 'Rewritten fact', confirmedAt: '2026-09-24' } }] });
+        const variantId = store.saveCurrentAsVariant('Saved role', 'Target job');
+        useResumeStore.setState({ optimizeRun: { status: 'succeeded', startedAt: '2026-09-24',
+            finishedAt: '2026-09-24', phase: null, error: null,
+            cards: structuredClone(useResumeStore.getState().optimizations), data: null,
+            keywords: { add: [], remove: [], neutral: [] } } });
+        store.setOriginalResume({ ...original, basics: { ...original.basics, summary: 'Candidate edited summary' } });
+
+        const state = useResumeStore.getState();
+        expect(state.parsedResumeText).toContain('Candidate edited summary');
+        expect(state.parsedResumeText).not.toContain('Exact extracted text');
+        expect(state.optimizations[0].evidence?.status).toBe('needs_review');
+        expect(state.optimizations[0].confirmation).toBeUndefined();
+        expect((state.optimizeRun?.cards[0] as OptimizationResult).evidence?.status).toBe('needs_review');
+        expect(state.jobVariants.find(variant => variant.id === variantId)?.snapshot.optimizations[0].evidence?.status)
+            .toBe('needs_review');
+    });
+
+    it('serializes substantive structured facts without private metadata', () => {
+        const resume = buildFixture();
+        resume.work[0].name = 'Actual Employer';
+        resume.skills = [{ name: 'Data', keywords: ['Power BI'], level: 'Advanced' }];
+        resume.languages = [{ language: 'Arabic', fluency: 'Native' }];
+        resume.meta = { ai_suggestions: [{ type: 'onboarding', sectionId: 'private-marker', timestamp: '2026-09-24' }] };
+        const text = formatResumeToText(resume);
+        expect(text).toContain('Actual Employer');
+        expect(text).toContain('Power BI');
+        expect(text).toContain('Arabic - Native');
+        expect(text).not.toContain('private-marker');
     });
 
     it('confirms only the exact current proposal and preserves it across variants', async () => {

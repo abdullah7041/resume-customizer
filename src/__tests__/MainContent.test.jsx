@@ -549,6 +549,87 @@ describe("MainContent resume parsing", () => {
     expect(matchSectionMockProps.current.matchAnalysis.score).toBe(79);
   });
 
+  it('invalidates Match and sends only candidate-edited baseline facts', async () => {
+    const baseline = { basics: { name: 'Sara', label: '', email: '', phone: '', summary: '',
+      location: { city: '', countryCode: '', region: '' }, profiles: [] },
+      work: [{ name: 'Old Employer', position: 'Analyst', startDate: '2021', endDate: '2023',
+        summary: '', highlights: ['Removed achievement'] }], education: [], skills: [] };
+    localStorage.setItem('watheq:lastActiveTab', 'match');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Old Employer Removed achievement', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', 'Target job description');
+    useResumeStore.getState().setOriginalResume(baseline);
+    useResumeStore.getState().setParsedResumeText('Old Employer Removed achievement');
+    render(<MainContent />);
+    await screen.findByTestId('job-match-mock');
+    analyzeResumeMock.mockResolvedValue({ score: 72 });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Target job description'); });
+    expect(matchSectionMockProps.current.matchAnalysis.score).toBe(72);
+
+    await act(async () => { useResumeStore.getState().setOriginalResume({ ...baseline,
+      work: [{ ...baseline.work[0], name: 'New Employer', highlights: ['Current achievement'] }] }); });
+    expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Target job description'); });
+    const matchText = analyzeResumeMock.mock.calls.at(-1)[0];
+    expect(matchText).toContain('New Employer');
+    expect(matchText).toContain('Current achievement');
+    expect(matchText).not.toContain('Old Employer');
+    expect(matchText).not.toContain('Removed achievement');
+
+  });
+
+  it('sends edited baseline facts to Optimize instead of its stored upload text', async () => {
+    const baseline = { basics: { name: 'Sara', label: '', email: '', phone: '', summary: '',
+      location: { city: '', countryCode: '', region: '' }, profiles: [] },
+      work: [{ name: 'Old Employer', position: 'Analyst', startDate: '2021', endDate: '2023',
+        summary: '', highlights: ['Removed achievement'] }], education: [], skills: [] };
+    useResumeStore.getState().setOriginalResume(baseline);
+    useResumeStore.getState().setParsedResumeText('Old Employer Removed achievement');
+    await openOptimize();
+    await act(async () => { useResumeStore.getState().setOriginalResume({ ...baseline,
+      work: [{ ...baseline.work[0], name: 'New Employer', highlights: ['Current achievement'] }] }); });
+    optimizeResumeStreamMock.mockResolvedValue({ cards: [], keywords: { add: [], remove: [], neutral: [] } });
+    await act(async () => { await optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    const request = optimizeResumeStreamMock.mock.calls.at(-1)[0];
+    expect(JSON.stringify(request)).toContain('New Employer');
+    expect(JSON.stringify(request)).not.toContain('Old Employer');
+    expect(JSON.stringify(request)).not.toContain('Removed achievement');
+  });
+
+  it('does not revive upload text after the candidate empties a structured baseline', async () => {
+    const baseline = { basics: { name: 'Sara', label: '', email: '', phone: '', summary: '',
+      location: { city: '', countryCode: '', region: '' }, profiles: [] },
+      work: [], education: [], skills: [] };
+    useResumeStore.getState().setOriginalResume(baseline);
+    useResumeStore.getState().setParsedResumeText('Old raw resume fact');
+    await openOptimize();
+    await act(async () => { useResumeStore.getState().setOriginalResume({ ...baseline,
+      basics: { ...baseline.basics, name: '' } }); });
+    expect(useResumeStore.getState().parsedResumeText).toBe('');
+    expect(screen.queryByTestId('optimization-mock')).not.toBeInTheDocument();
+    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a Match response started before a candidate baseline edit', async () => {
+    const baseline = { basics: { name: 'Sara', label: '', email: '', phone: '', summary: 'Old fact',
+      location: { city: '', countryCode: '', region: '' }, profiles: [] },
+      work: [], education: [], skills: [] };
+    useResumeStore.getState().setOriginalResume(baseline);
+    useResumeStore.getState().setParsedResumeText('Sara Old fact');
+    localStorage.setItem('watheq:lastActiveTab', 'match');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Sara Old fact', sections: [] }));
+    render(<MainContent />);
+    await screen.findByTestId('job-match-mock');
+    const pending = deferred();
+    analyzeResumeMock.mockReturnValueOnce(pending.promise);
+    let run;
+    await act(async () => { run = matchSectionMockProps.current.onAnalyzeMatchAI('Role A'); });
+    await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalledTimes(1));
+    await act(async () => { useResumeStore.getState().setOriginalResume({ ...baseline,
+      basics: { ...baseline.basics, summary: 'New fact' } }); });
+    await act(async () => { pending.resolve({ score: 83 }); await run; });
+    expect(matchSectionMockProps.current.matchAnalysis).toBeNull();
+  });
+
   it('Match ownership: metadata completing after a job edit cannot populate the new job', async () => {
     await openMatch();
     const metadata = deferred();

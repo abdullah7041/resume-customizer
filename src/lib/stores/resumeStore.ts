@@ -21,7 +21,7 @@ import {
   OptimizationResultSchema,
   validateSearchIntent,
 } from '../validation/store-schemas';
-import { deduplicateByName } from '../utils/resumeUtils';
+import { deduplicateByName, formatResumeToText } from '../utils/resumeUtils';
 import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { isRecommendationOnly } from '@/lib/optimize/actionability';
 import { isConfirmationCurrent, proposalStatement } from '@/lib/optimize/evidenceReview';
@@ -123,6 +123,20 @@ const sameAssessmentContext = (left: AssessmentContext, right: AssessmentContext
   left.kind === right.kind &&
   left.isOptimized === right.isOptimized &&
   left.rubricVersion === right.rubricVersion;
+
+const invalidateResumeEvidence = (cards: OptimizationResult[], sources: EvidenceSource[]): OptimizationResult[] => {
+  const sourceById = new Map(sources.map(source => [source.id, source]));
+  return cards.map(card => {
+    const fromResume = card.evidence?.references.some(reference => sourceById.get(reference.sourceId)?.kind !== 'clarification')
+      || (card.evidence?.status === 'source_matched' && card.evidence.references.length === 0);
+    return fromResume ? { ...card, confirmation: undefined,
+      evidence: { ...card.evidence!, status: 'needs_review' as const,
+        reasons: ['missing_source' as const] } } : card;
+  });
+};
+
+const changedBaseline = (previous: ResumeSchema | null, next: ResumeSchema): boolean =>
+  previous !== null && JSON.stringify({ ...previous, meta: undefined }) !== JSON.stringify({ ...next, meta: undefined });
 
 // --- Job variant helpers (module-level, pure) -----------------------------
 // JD stored truncated for retention hygiene (ADR §5); variants are local-only.
@@ -246,9 +260,21 @@ export const useResumeStore = create<ResumeState>()(
           validatedResume.work = deduplicateByName(validatedResume.work);
         }
 
-        set({
-          originalResume: validatedResume,
-          hasDownloaded: false // Reset download status on content change
+        set((state) => {
+          if (!changedBaseline(state.originalResume, validatedResume)) {
+            return { originalResume: validatedResume, hasDownloaded: false };
+          }
+          const optimizations = invalidateResumeEvidence(state.optimizations, state.evidenceSources);
+          return {
+            originalResume: validatedResume,
+            parsedResumeText: formatResumeToText(validatedResume),
+            optimizations,
+            optimizeRun: state.optimizeRun?.cards ? { ...state.optimizeRun,
+              cards: invalidateResumeEvidence(state.optimizeRun.cards as OptimizationResult[], state.evidenceSources) } : state.optimizeRun,
+            jobVariants: state.jobVariants.map(variant => ({ ...variant, snapshot: { ...variant.snapshot,
+              optimizations: invalidateResumeEvidence(variant.snapshot.optimizations, variant.snapshot.evidenceSources ?? []) } })),
+            hasDownloaded: false,
+          };
         });
       },
 
@@ -693,7 +719,15 @@ export const useResumeStore = create<ResumeState>()(
             if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ patchProfile validation issues:', validation.error);
           }
 
-          return { originalResume: merged, hasDownloaded: false };
+          const changed = state.originalResume === null || changedBaseline(state.originalResume, merged);
+          if (!changed) return { originalResume: merged, hasDownloaded: false };
+          const optimizations = invalidateResumeEvidence(state.optimizations, state.evidenceSources);
+          return { originalResume: merged, parsedResumeText: formatResumeToText(merged), optimizations,
+            optimizeRun: state.optimizeRun?.cards ? { ...state.optimizeRun,
+              cards: invalidateResumeEvidence(state.optimizeRun.cards as OptimizationResult[], state.evidenceSources) } : state.optimizeRun,
+            jobVariants: state.jobVariants.map(variant => ({ ...variant, snapshot: { ...variant.snapshot,
+              optimizations: invalidateResumeEvidence(variant.snapshot.optimizations, variant.snapshot.evidenceSources ?? []) } })),
+            hasDownloaded: false };
         });
       },
 
