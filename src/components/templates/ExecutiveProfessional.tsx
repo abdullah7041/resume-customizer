@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
-import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
+import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -152,7 +152,7 @@ export function ExecutiveProfessional({
             <>
               <span style={{ color: '#999', margin: '0 6px' }}>|</span>
               {linkedInUrl ? (
-                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>LinkedIn Account</a>
+                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>{linkedInUrl}</a>
               ) : (
                 <span>{linkedInLabel}</span>
               )}
@@ -162,12 +162,13 @@ export function ExecutiveProfessional({
             <>
               <span style={{ color: '#999', margin: '0 6px' }}>|</span>
               {portfolioUrl ? (
-                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>Portfolio</a>
+                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>{portfolioUrl}</a>
               ) : (
                 <span>{portfolioLabel}</span>
               )}
             </>
           )}
+          {otherProfileUrls(basics.profiles).map(url => <span key={url}><span style={{ color: '#999', margin: '0 6px' }}>|</span><a href={url} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT_COLOR, textDecoration: 'underline' }}>{url}</a></span>)}
         </p>
       </header>
 

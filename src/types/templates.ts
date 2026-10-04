@@ -406,7 +406,7 @@ export interface ResumeState {
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
-  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string; evidence?: EditEvidence; evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions }) => void;
+  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string; evidence?: EditEvidence; evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions }, expectedCard?: OptimizationResult) => void;
   confirmOptimization: (id: string, confirmation: CandidateConfirmation) => boolean;
   editOptimization: (id: string, value: string | string[], proposedFingerprint: string, expectedCard: OptimizationResult) => boolean;
   setEvidenceSources: (sources: EvidenceSource[]) => void;

@@ -1,7 +1,7 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
-import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
+import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -139,7 +139,7 @@ export function ATSOptimized({
                             <Sep />
                             {linkedInUrl ? (
                                 <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
-                                    LinkedIn Account
+                                    {linkedInUrl}
                                 </a>
                             ) : (
                                 <span>{linkedInLabel}</span>
@@ -151,13 +151,14 @@ export function ATSOptimized({
                             <Sep />
                             {portfolioUrl ? (
                                 <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
-                                    Portfolio
+                                    {portfolioUrl}
                                 </a>
                             ) : (
                                 <span>{portfolioLabel}</span>
                             )}
                         </>
                     )}
+                    {otherProfileUrls(basics.profiles).map(url => <span key={url}><Sep /><a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{url}</a></span>)}
                 </p>
             </header>
 

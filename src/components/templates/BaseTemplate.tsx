@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import type { ResumeSchema } from '../../types/resume';
 import type { DisplayOptions } from '../../types/templates';
 import type { ResumeDirection } from '../../lib/utils/resumeDirection';
+import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '../../lib/utils/profileUrl';
 
 /**
  * Props interface for all template components
@@ -143,7 +144,12 @@ export function formatContactLine(basics: ResumeSchema['basics']): string {
   const linkedin = basics.profiles?.find(
     (p) => p.network?.toLowerCase() === 'linkedin'
   );
-  if (linkedin?.url) parts.push(linkedin.url);
+  const linkedInUrl = resolveProfileUrl(linkedin);
+  if (linkedInUrl) parts.push(linkedInUrl);
+  const portfolio = basics.profiles?.find(p => ['portfolio', 'website'].includes(p.network?.toLowerCase() ?? ''));
+  const portfolioUrl = normalizeUrl(basics.url) || resolveProfileUrl(portfolio);
+  if (portfolioUrl) parts.push(portfolioUrl);
+  parts.push(...otherProfileUrls(basics.profiles));
 
   return parts.join(' | ');
 }

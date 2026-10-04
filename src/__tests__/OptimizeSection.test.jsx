@@ -934,7 +934,7 @@ describe('OptimizeSection', () => {
                 issue: '',
                 rationale: 'Preserved the existing web application evidence and tightened the impact wording.',
                 instruction: 'Use active voice',
-            });
+            }, sampleOptimization);
             expect(mockApplyOptimization).not.toHaveBeenCalled();
             expect(mockAnalyticsTrack).toHaveBeenCalledWith('bullet_refined', { section_type: 'summary' });
         });

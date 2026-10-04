@@ -49,3 +49,9 @@ export const resolveProfileUrl = (profile?: { url?: string; username?: string; n
   if (fromUsername) return fromUsername;
   return null;
 };
+
+export const otherProfileUrls = (profiles?: Array<{ url?: string; username?: string; network?: string }>): string[] =>
+  [...new Set((profiles ?? [])
+    .filter(profile => !['linkedin', 'portfolio', 'website'].includes(profile.network?.toLowerCase() ?? ''))
+    .map(resolveProfileUrl)
+    .filter((url): url is string => !!url))];

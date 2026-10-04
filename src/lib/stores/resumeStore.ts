@@ -352,8 +352,9 @@ export const useResumeStore = create<ResumeState>()(
       // content-based merge picks up the refined text automatically — even when the
       // bullet is already applied. Records only metadata on meta.ai_suggestions
       // to preserve schema integrity without persisting raw instructions or AI text.
-      refineOptimization: (sectionId, refinement) => {
+      refineOptimization: (sectionId, refinement, expectedCard) => {
         set((state) => {
+          if (expectedCard && state.optimizations.find((card) => card.sectionId === sectionId) !== expectedCard) return state;
           const optimizations = state.optimizations.map((o) =>
             o.sectionId === sectionId
               ? {

@@ -160,62 +160,6 @@ const markFreePreviewUsed = () => {
   window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, String(getFreeOptimizeRunCount() + 1));
 };
 
-// Apply position suggestion: update only matching work positions per AI's positionChanges map
-const handleApplyPositionSuggestion = (suggested: string) => {
-  const state = useResumeStore.getState();
-  if (!state.originalResume?.work?.length) return;
-
-  const updated = structuredClone(state.originalResume);
-  const positionChanges = state.optimizationMetrics?.positionSuggestion?.positionChanges;
-
-  // Save originals for revert before mutating
-  const originalPositions = updated.work!.map((w: { position?: string }) => w.position || '');
-
-  if (positionChanges?.length) {
-    // Per-position granular update: only change entries where change_needed=true
-    updated.work!.forEach((w: { position?: string }) => {
-      const match = positionChanges.find(
-        (c) => c.change_needed && c.original.trim().toLowerCase() === (w.position || '').trim().toLowerCase()
-      );
-      if (match) w.position = match.suggested;
-    });
-  } else {
-    // Fallback: rename all (legacy behaviour for old AI responses)
-    updated.work!.forEach((w: { position?: string }) => { w.position = suggested; });
-  }
-
-  state.setOriginalResume(updated);
-
-  const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
-  if (currentSuggestion) {
-    state.setOptimizationMetrics({
-      positionSuggestion: { ...currentSuggestion, applied: true, originalPositions },
-    });
-  }
-};
-
-// Revert position suggestion: restore each work[].position from saved array
-const handleRevertPositionSuggestion = () => {
-  const state = useResumeStore.getState();
-  const saved = state.optimizationMetrics?.positionSuggestion?.originalPositions;
-
-  if (state.originalResume?.work?.length && saved?.length) {
-    const updated = structuredClone(state.originalResume);
-    updated.work!.forEach((w: { position?: string }, i: number) => {
-      w.position = saved[i] ?? w.position;
-    });
-    state.setOriginalResume(updated);
-  }
-
-  // Clear applied flag — banner goes back to "apply" state
-  const currentSuggestion = state.optimizationMetrics?.positionSuggestion;
-  if (currentSuggestion) {
-    state.setOptimizationMetrics({
-      positionSuggestion: { ...currentSuggestion, applied: false, originalPositions: undefined },
-    });
-  }
-};
-
 const finiteScore = (value: unknown): number | null => {
   if (value === null || value === undefined || value === '') return null;
   const score = Number(value);
@@ -348,7 +292,6 @@ export function OptimizeSection({
   // (dedupe: one stable applied set triggers at most one verify call).
   const [appliedVerifyState, setAppliedVerifyState] = useState<Exclude<AppliedVerifyStatus, 'guest'>>('idle');
   const appliedVerifyInFlightRef = useRef<{ signature: string; id: string } | null>(null);
-  const [positionBannerDismissed, setPositionBannerDismissed] = useState(false);
   const [scoreHeaderExpanded, setScoreHeaderExpanded] = useState(false);
   const [expandedScoreCategories, setExpandedScoreCategories] = useState<Set<keyof CategoryScoresData>>(new Set());
   const [strategyExpanded, setStrategyExpanded] = useState(false);
@@ -936,7 +879,6 @@ export function OptimizeSection({
     } else {
       setOptimizations([]);
     }
-    setPositionBannerDismissed(false);
     // Also reset all optimization metrics to clear stale data (this includes the
     // verified potential, which lives in optimizationMetrics.verifiedPotential).
     resetOptimizationMetrics();
@@ -971,7 +913,8 @@ export function OptimizeSection({
         language: i18n.language,
       });
 
-      refineOptimization(opt.sectionId, { ...result, instruction });
+      if (useResumeStore.getState().optimizations.find(card => card.sectionId === opt.sectionId) !== opt) return;
+      refineOptimization(opt.sectionId, { ...result, instruction }, opt);
       analytics.track('bullet_refined', { section_type: opt.sectionType });
       setRefiningCardId(null);
       setRefineInstruction('');
@@ -1408,13 +1351,8 @@ export function OptimizeSection({
           hiddenMatches={hiddenMatches}
           mirroredPhrases={mirroredPhrases}
           structuralChanges={structuralChanges}
-          positionSuggestion={optimizationMetrics.positionSuggestion ?? null}
-          positionBannerDismissed={positionBannerDismissed}
           isArabic={isArabic}
           onToggle={() => setStrategyExpanded((value) => !value)}
-          onApplyPositionSuggestion={handleApplyPositionSuggestion}
-          onRevertPositionSuggestion={handleRevertPositionSuggestion}
-          onDismissPositionSuggestion={() => setPositionBannerDismissed(true)}
         />
       )}
 

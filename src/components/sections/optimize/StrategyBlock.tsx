@@ -2,7 +2,6 @@ import { AlertCircle, Check, ChevronDown, Info, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { HiddenMatchesCard } from '@/components/HiddenMatchesCard';
 import { MirroredKeywordsCard } from '@/components/MirroredKeywordsCard';
-import { PositionSuggestionBanner } from '@/components/PositionSuggestionBanner';
 import type { GapAnalysisItem as GapItem, HiddenMatch } from '@/types/analysis';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { cn } from '@/lib/utils/cn';
@@ -13,16 +12,6 @@ interface KeywordBuckets {
   remove: string[];
 }
 
-interface PositionSuggestion {
-  original: string;
-  suggested: string;
-  reason: string;
-  is_necessary: boolean;
-  applied?: boolean;
-  originalPositions?: string[];
-  positionChanges?: Array<{ original: string; suggested: string; change_needed: boolean }>;
-}
-
 interface StrategyBlockProps {
   expanded: boolean;
   hasKeywordData: boolean;
@@ -31,13 +20,8 @@ interface StrategyBlockProps {
   hiddenMatches?: HiddenMatch[];
   mirroredPhrases?: string[];
   structuralChanges?: string[];
-  positionSuggestion?: PositionSuggestion | null;
-  positionBannerDismissed: boolean;
   isArabic: boolean;
   onToggle: () => void;
-  onApplyPositionSuggestion: (suggested: string) => void;
-  onRevertPositionSuggestion: () => void;
-  onDismissPositionSuggestion: () => void;
 }
 
 const bucketStyles = {
@@ -69,25 +53,15 @@ export function StrategyBlock({
   hiddenMatches = EMPTY_HIDDEN_MATCHES,
   mirroredPhrases = EMPTY_STRINGS,
   structuralChanges = EMPTY_STRINGS,
-  positionSuggestion,
-  positionBannerDismissed,
   isArabic,
   onToggle,
-  onApplyPositionSuggestion,
-  onRevertPositionSuggestion,
-  onDismissPositionSuggestion,
 }: StrategyBlockProps) {
   const { t } = useTranslation();
-  const hasPositionSuggestion = Boolean(
-    positionSuggestion &&
-    !positionBannerDismissed &&
-    (positionSuggestion.is_necessary === true || positionSuggestion.applied === true)
-  );
   const hasGaps = Array.isArray(gapAnalysis) && gapAnalysis.length > 0;
   const hasHiddenMatches = hiddenMatches.length > 0;
   const hasMirrorData = mirroredPhrases.length > 0 || structuralChanges.length > 0;
 
-  if (!hasKeywordData && !hasGaps && !hasPositionSuggestion && !hasHiddenMatches && !hasMirrorData) {
+  if (!hasKeywordData && !hasGaps && !hasHiddenMatches && !hasMirrorData) {
     return null;
   }
 
@@ -149,15 +123,6 @@ export function StrategyBlock({
                 );
               })}
             </div>
-          )}
-
-          {hasPositionSuggestion && positionSuggestion && (
-            <PositionSuggestionBanner
-              suggestion={positionSuggestion}
-              onApply={onApplyPositionSuggestion}
-              onRevert={onRevertPositionSuggestion}
-              onDismiss={onDismissPositionSuggestion}
-            />
           )}
 
           {hasGaps ? (

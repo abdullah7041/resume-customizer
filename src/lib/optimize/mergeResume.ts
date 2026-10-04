@@ -54,18 +54,20 @@ export function findMergeTarget(opt: OptimizationResult, resume: ResumeSchema): 
 
     case 'experience': {
       const work = resume.work ?? [];
+      const matches: MergeTarget[] = [];
       for (let workIdx = 0; workIdx < work.length; workIdx++) {
         const highlights = work[workIdx].highlights || [];
         for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
           if (fuzzyTextMatch(originalValue, highlights[hlIdx]).matched) {
-            return { kind: 'work.highlight', workIdx, hlIdx };
+            matches.push({ kind: 'work.highlight', workIdx, hlIdx });
           }
         }
         if (work[workIdx].summary && fuzzyTextMatch(originalValue, work[workIdx].summary!).matched) {
-          return { kind: 'work.summary', workIdx };
+          matches.push({ kind: 'work.summary', workIdx });
         }
       }
-      return null;
+      // Text-only cards cannot identify an employer when the same fragment appears twice.
+      return matches.length === 1 ? matches[0] : null;
     }
 
     case 'education': {
