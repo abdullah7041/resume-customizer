@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import puppeteer from 'puppeteer-core';
 import JSZip from 'jszip';
 import { trustResume } from './fixtures/candidate-trust';
 import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
@@ -14,12 +13,17 @@ import { EvidenceReview } from '@/components/sections/optimize/EvidenceReview';
 import { useResumeStore } from '@/lib/stores/resumeStore';
 import { buildEvidenceSources, validateEditEvidence } from '../../netlify/lib/optimization-evidence';
 import { getTemplate } from '@/components/templates/registry';
+import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { exportResumeAsDocx } from '@/services/exportDocx';
 import { comparePdfText } from '@/lib/utils/pdfTextCheck';
 import type { OptimizationResult } from '@/types/templates';
 import type { StructuredEvidenceResume } from '@/types/optimization-evidence';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }) }));
+vi.mock('../../netlify/lib/rate-limiter.js', () => ({ withRateLimit: (_name: string, handler: unknown) => handler }));
+vi.mock('../../netlify/lib/supabase-client.js', () => ({ getSupabaseClient: () => ({ auth: {
+  getUser: async () => ({ data: { user: { id: 'fictional-test' } }, error: null }),
+} }) }));
 
 beforeEach(() => useResumeStore.getState().clearAll());
 
@@ -43,10 +47,10 @@ describe('candidate trust acceptance harness', () => {
     expect(merged.resume.work.map(work => work.highlights[0])).toEqual(original.work.map(work => work.highlights[0]));
   });
 
-  it('assesses, inspects, confirms, edits, reverts, saves, reloads, and exports the reviewed claim', async () => {
-    const original = trustResume('en');
+  it.each(['en', 'ar'] as const)('%s assesses, inspects, confirms, edits, reverts, saves, reloads, and exports the reviewed claim', async language => {
+    const original = trustResume(language);
     const metric = original.work[0].highlights[1];
-    const proposal = 'Improved API latency by 20%.';
+    const proposal = language === 'ar' ? 'حسنت زمن استجابة الواجهة بنسبة ٢٠٪.' : 'Improved API latency by 20%.';
     const sources = await buildEvidenceSources({ resume: original as unknown as StructuredEvidenceResume });
     const source = sources.find(item => item.text === metric)!;
     const evidence = await validateEditEvidence({ targetId: source.targetId, original: metric,
@@ -54,7 +58,7 @@ describe('candidate trust acceptance harness', () => {
     expect(evidence).toMatchObject({ status: 'needs_review', reasons: ['semantic_review'] });
 
     const input = { resumeText: JSON.stringify(original), jobDescription: 'Build reliable APIs',
-      language: 'en' as const, kind: 'optimize' as const, isOptimized: false, rubricVersion: 'optimize-v1' };
+      language, kind: 'optimize' as const, isOptimized: false, rubricVersion: 'optimize-v1' };
     const assessedContext = await createAssessmentContext(input);
     const switchedContext = await createAssessmentContext({ ...input, jobDescription: 'Build dashboards' });
     expect(switchedContext.key).not.toBe(assessedContext.key);
@@ -79,7 +83,7 @@ describe('candidate trust acceptance harness', () => {
     view.rerender(<EvidenceReview card={useResumeStore.getState().optimizations[0]} sources={sources} {...callbacks} />);
     fireEvent.click(screen.getByRole('button', { name: 'Edit wording' }));
     fireEvent.change(screen.getByRole('textbox', { name: 'Edit claim wording' }),
-      { target: { value: 'Reduced API latency by 20% through caching.' } });
+      { target: { value: language === 'ar' ? 'خفضت زمن استجابة الواجهة بنسبة ٢٠٪ عبر التخزين المؤقت.' : 'Reduced API latency by 20% through caching.' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save wording' }));
     await waitFor(() => expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined());
     const edited = useResumeStore.getState().optimizations[0];
@@ -164,6 +168,8 @@ describe('candidate trust acceptance harness', () => {
 });
 
 const edgePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const assetDir = join(process.cwd(), 'dist/assets');
+const builtCssPath = existsSync(assetDir) ? readdirSync(assetDir).find(name => name.endsWith('.css')) : undefined;
 const pdfExtractor = `
 import { readFileSync } from 'node:fs';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -176,10 +182,10 @@ for (let index = 1; index <= doc.numPages; index++) {
 process.stdout.write(JSON.stringify(pages));
 await doc.destroy();
 `;
-describe.skipIf(!existsSync(edgePath))('real candidate export artifacts', () => {
+describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export artifacts', () => {
   it('keeps substantive facts and reading order in English, Arabic, mixed, and multi-page PDFs and DOCX', async () => {
-    const browser = await puppeteer.launch({ executablePath: edgePath, headless: true, args: ['--no-sandbox'] });
-    const Template = getTemplate('modern-professional');
+    const { handler } = await import('../../netlify/functions/generate-pdf');
+    const styles = readFileSync(join(assetDir, builtCssPath!), 'utf8');
     const mixed = trustResume('mixed');
     const shortMixed = structuredClone(mixed);
     shortMixed.work[0].highlights = shortMixed.work[0].highlights.slice(0, 2);
@@ -189,17 +195,37 @@ describe.skipIf(!existsSync(edgePath))('real candidate export artifacts', () => 
     ] as const;
     const artifactDir = join(process.cwd(), '.superpowers/sdd/2026-09-24-candidate-trust-foundations/task-9-artifacts');
     if (process.env.WRITE_TRUST_ARTIFACTS === '1') mkdirSync(artifactDir, { recursive: true });
-    try {
-      for (const [label, resume] of cases) {
+    for (const [label, resume] of cases) {
         const direction = label === 'english' ? 'ltr' : 'rtl';
-        const html = renderToStaticMarkup(<Template resume={resume} contentDirection={direction} />);
+        const markup = renderToStaticMarkup(<TemplateRenderer template={{ id: 'modern-professional', structure: {} }}
+          userData={resume as unknown as Parameters<typeof TemplateRenderer>[0]['userData']} contentDirection={direction} />);
+        const container = document.createElement('div');
+        container.innerHTML = markup;
+        const preview = container.querySelector<HTMLElement>('[data-resume-preview]');
+        if (!preview) throw new Error('Production preview wrapper missing');
+        preview.style.transform = 'none';
+        preview.style.width = '210mm';
+        preview.style.overflow = 'visible';
+        preview.style.boxSizing = 'border-box';
+        preview.querySelectorAll<HTMLElement>('[style*="transform"]').forEach(element => {
+          element.style.transform = 'none';
+          element.style.width = '210mm';
+          element.style.maxWidth = '100%';
+          element.style.height = 'auto';
+          element.style.minHeight = 'auto';
+        });
+        preview.querySelectorAll('[data-no-print]').forEach(element => element.remove());
+        const html = preview.outerHTML;
         if (process.env.WRITE_TRUST_ARTIFACTS === '1') writeFileSync(join(artifactDir, `${label}.html`), html);
-        const page = await browser.newPage();
-        try {
-          await page.setContent(`<html lang="${label === 'arabic' ? 'ar' : 'en'}" dir="${direction}"><meta charset="utf-8"><body style="margin:0">${html}</body></html>`);
-          expect(await page.evaluate(() => document.body.innerText)).toContain(resume.basics.name);
-          await page.emulateMediaType('print');
-          const pdf = await page.pdf({ format: 'A4', printBackground: true });
+        expect(preview.textContent).toContain(resume.basics.name);
+        const response = await handler(({ httpMethod: 'POST', headers: { authorization: 'Bearer fictional-test' },
+          body: JSON.stringify({ html, styles, templateId: 'modern-professional', direction }) }
+        ) as unknown as Parameters<typeof handler>[0], {} as Parameters<typeof handler>[1]);
+        if (!response) throw new Error(`${label} production PDF handler returned no response`);
+        if (response.statusCode !== 200 || !response.body) {
+          throw new Error(`${label} production PDF handler failed: ${response.statusCode}`);
+        }
+        const pdf = Buffer.from(response.body, 'base64');
           if (process.env.WRITE_TRUST_ARTIFACTS === '1') writeFileSync(join(artifactDir, `${label}.pdf`), pdf);
           const pages = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', pdfExtractor],
             { input: Buffer.from(pdf), cwd: process.cwd(), maxBuffer: 4 * 1024 * 1024 }).toString()) as string[];
@@ -212,6 +238,7 @@ describe.skipIf(!existsSync(edgePath))('real candidate export artifacts', () => 
           const pdfCheck = comparePdfText(extracted, { fields: facts.map((text, index) => ({ id: String(index), text })) });
           expect(extracted).toContain(resume.basics.email);
           expect(extracted).toContain(resume.basics.phone);
+          expect(extracted).not.toMatch(/40%|٤٠٪/);
           if (label === 'english') {
             expect(pdfCheck).toEqual({ state: 'text_checked', missingFieldIds: [] });
           } else {
@@ -219,9 +246,19 @@ describe.skipIf(!existsSync(edgePath))('real candidate export artifacts', () => 
             expect(pdfCheck.state).toBe('unverified');
             expect(pdfCheck.missingFieldIds.length).toBeGreaterThan(0);
           }
-          if (label === 'english') {
+          if (label !== 'arabic') {
             expect(extracted.indexOf(resume.basics.name)).toBeLessThan(extracted.indexOf(resume.work[0].name));
+          }
+          if (label === 'english') {
             expect(extracted.indexOf(resume.work[0].name)).toBeLessThan(extracted.indexOf(resume.work[1].name));
+          }
+          if (label === 'multipage') {
+            const first = extracted.indexOf('Project detail 1:');
+            const middle = extracted.indexOf('Project detail 10:');
+            const last = extracted.indexOf('Project detail 45:');
+            expect(first).toBeGreaterThan(0);
+            expect(first).toBeLessThan(middle);
+            expect(middle).toBeLessThan(last);
           }
           expect(pages.length).toBeGreaterThanOrEqual(label === 'multipage' ? 2 : 1);
           const docx = await exportResumeAsDocx(resume, { templateId: 'modern-professional',
@@ -237,8 +274,6 @@ describe.skipIf(!existsSync(edgePath))('real candidate export artifacts', () => 
             writeFileSync(join(artifactDir, `${label}.docx`), Buffer.from(await docx.arrayBuffer()));
             writeFileSync(join(artifactDir, `${label}.txt`), pages.join('\n\n--- PAGE ---\n\n'));
           }
-        } finally { await page.close(); }
-      }
-    } finally { await browser.close(); }
+    }
   }, 120_000);
 });

@@ -188,7 +188,10 @@ export const formatResumeToText = (resume: ResumeSchema | null): string => {
     basics.profiles?.forEach(profile => add([profile.network, profile.username, profile.url].filter(Boolean).join(' | ')));
 
     section('SKILLS', resume.skills);
-    resume.skills?.forEach(skill => add([skill.name, skill.level, ...(skill.keywords ?? [])].filter(Boolean).join(', ')));
+    resume.skills?.forEach(skill => {
+        if (typeof skill === 'string') add(skill);
+        else add([skill.name, skill.level, ...(skill.keywords ?? [])].filter(Boolean).join(', '));
+    });
     section('EXPERIENCE', resume.work);
     resume.work?.forEach(work => {
         add([work.position, work.name].filter(Boolean).join(' at '), work.location, work.url);

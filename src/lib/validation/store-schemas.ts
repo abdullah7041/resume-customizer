@@ -84,6 +84,11 @@ export const ProjectSchema = z.object({
     highlights: z.array(z.string()).nullish().transform(val => val ?? []),
     keywords: z.array(z.string()).nullish().transform(val => val ?? []),
     url: z.string().nullish().transform(val => val ?? ''),
+    entity: z.string().optional(),
+    type: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    roles: z.array(z.string()).optional(),
 });
 
 export const CertificateSchema = z.object({

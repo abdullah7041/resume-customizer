@@ -831,6 +831,32 @@ describe('resumeStore.getActiveResume()', () => {
         expect(text).not.toContain('private-marker');
     });
 
+    it('keeps legacy string skills in the assessment text after a candidate edit', () => {
+        const resume = { ...buildFixture(), skills: ['Power BI', 'SQL'] } as unknown as ResumeSchema;
+        useResumeStore.getState().setOriginalResume(resume);
+        useResumeStore.getState().setParsedResumeText('Exact uploaded text');
+        useResumeStore.getState().setOriginalResume({ ...resume, basics: { ...resume.basics, summary: 'Candidate edited summary' } });
+        const text = useResumeStore.getState().parsedResumeText;
+        expect(text).toContain('Candidate edited summary');
+        expect(text).toContain('Power BI');
+        expect(text).toContain('SQL');
+    });
+
+    it('keeps project context through validation and baseline refresh', () => {
+        const resume = buildFixture();
+        resume.projects = [{ name: 'Client portal', description: 'Built a portal', entity: 'Example Client',
+            type: 'application', startDate: '2023-01', endDate: '2023-06', roles: ['Lead developer'] }];
+        useResumeStore.getState().setOriginalResume(resume);
+        useResumeStore.getState().setParsedResumeText('Exact uploaded text');
+        useResumeStore.getState().setOriginalResume({ ...resume, basics: { ...resume.basics, summary: 'Candidate edited summary' } });
+        const state = useResumeStore.getState();
+        expect(state.originalResume?.projects?.[0]).toMatchObject({ entity: 'Example Client', type: 'application',
+            startDate: '2023-01', endDate: '2023-06', roles: ['Lead developer'] });
+        for (const fact of ['Example Client', 'application', '2023-01', '2023-06', 'Lead developer']) {
+            expect(state.parsedResumeText).toContain(fact);
+        }
+    });
+
     it('confirms only the exact current proposal and preserves it across variants', async () => {
         const statement = 'Led delivery';
         const proposedFingerprint = await fingerprintText(statement);

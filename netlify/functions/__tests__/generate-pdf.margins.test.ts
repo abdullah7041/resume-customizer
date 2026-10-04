@@ -15,10 +15,11 @@ const sourcePath = resolve(process.cwd(), 'netlify/functions/generate-pdf.ts');
 
 describe('extractPageMarginsMm', () => {
   it('reads --margin-top/--margin-bottom in inches and converts to millimeters', () => {
-    const html = '<div style="--margin-top: 0.5in; --margin-bottom: 0.75in;"></div>';
+    const html = '<div style="--margin-top: 0.5in; --margin-bottom: 0.75in; --margin-side: 0.6in;"></div>';
     const result = extractPageMarginsMm(html);
     expect(result.topMm).toBeCloseTo(12.7, 1);
     expect(result.bottomMm).toBeCloseTo(19.05, 1);
+    expect(result.sideMm).toBeCloseTo(15.24, 1);
   });
 
   it('reads --margin-top/--margin-bottom already expressed in millimeters', () => {
@@ -32,6 +33,7 @@ describe('extractPageMarginsMm', () => {
     const result = extractPageMarginsMm('<div style="color: red;"></div>');
     expect(result.topMm).toBeCloseTo(19.05, 1);
     expect(result.bottomMm).toBeCloseTo(19.05, 1);
+    expect(result.sideMm).toBeCloseTo(15.24, 1);
   });
 
   it('falls back to the default when the value is not a finite number', () => {
@@ -55,7 +57,9 @@ describe('generate-pdf margin handling does not rely on page.evaluate()', () => 
   });
 
   it('injects the @page margin rule directly into the setContent HTML string', () => {
-    expect(source).toMatch(/@page\s*\{\s*margin:\s*\$\{topMm\}mm\s*0\s*\$\{bottomMm\}mm\s*0\s*!important;\s*\}/);
+    expect(source).toMatch(/@page\s*\{\s*margin:\s*\$\{topMm\}mm\s*\$\{sideMm\}mm\s*\$\{bottomMm\}mm\s*\$\{sideMm\}mm\s*!important;\s*\}/);
+    expect(source).toMatch(/\[data-resume-preview\]\s*>\s*div\s*\{\s*padding:\s*0\s*!important;/);
+    expect(source).toContain('width: calc(210mm - ${sideMm * 2}mm) !important');
   });
 
   it('does not call page.evaluate() to read or mutate template margins after setContent', () => {
