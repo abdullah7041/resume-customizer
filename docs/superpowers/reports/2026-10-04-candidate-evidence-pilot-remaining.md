@@ -55,3 +55,14 @@ Independent integrated review found one final duplicate-source provenance issue.
 Two implementation decisions: isolate work to avoid concurrent writes to the prior active checkout, at the cost of an extra checkout and later integration; use native JSON with candidate-declared associations, at the cost of candidate review and no automatic qualification mapping.
 
 No new dependency/tool installation, paid model evaluation, database migration application, cloud write, participant contact/data collection or external publication occurred. Existing installed dependencies were reused through a local junction. CodeGraph, RTK.md and referenced context/CODING_STANDARDS.md are absent in this checkout; scoped RTK plus direct PowerShell reads were used. React Doctor is unavailable locally and was not installed. Native `pdftotext` is unavailable; installed pypdf/PDFium supplied independent extraction.
+
+## Current main integration — 2026-10-05
+
+Local merge `e86f5e4` reconciles main `211f60f`; reviewed correction `05f23b6` restores live job-description wiring for Optimize, Interview, Bulk and Cover Letter. Independent scoped re-review passes specification and quality. Current lint, frontend/Netlify types and production build have exit-0 receipts. Locales and fictional pilot recheck also pass. Full serial Vitest exited 1: 223 files (222 passed / one failed), 2,337 passed / two skipped / one failed in 690.57s. The JobFeedSection initial wait failed before clock advancement; unchanged focused whole-file recovery passed all 64 tests in 9.85s. Startup timing is plausible but exact cause unproven. The original broad run remains failed; clean CI is required before merge. Do not infer current-head success from the historical table above.
+
+- [x] Local current-main reconciliation and independent correction review.
+- [x] Run the current integrated-head gate and scoped recovery, retaining the failed broad-run caveat.
+- [x] Independent gate assessment and final docs/index verification. No actionable runtime/test defect established; PR review readiness is conditional on clean CI, merge readiness is not established.
+- [ ] Obtain/preserve push/PR authorization; require CI and approval before merge into main. No push, PR, main merge or deployment has occurred.
+
+See [current readiness and full task coverage](2026-10-05-main-readiness.md). Arabic/mixed PDF, deployed/manual/ATS and real consented candidate/HR study gates above remain open. Offline preparation and fictional calculations are complete local work, not participant results.
