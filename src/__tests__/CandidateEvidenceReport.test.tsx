@@ -26,6 +26,24 @@ async function props(): Promise<Omit<EvidenceReportInput, 'requirements' | 'incl
 }
 
 describe('candidate controlled report panel', () => {
+  it.each(['context', 'request'] as const)('resets rows and private opt-ins on a new %s identity, preserving same-assessment edits', async identity => {
+    const input = await props();
+    const messages = english.export.evidenceReport;
+    const { rerender } = render(<CandidateEvidenceReport {...input} />);
+    fireEvent.click(screen.getByText(messages.title));
+    fireEvent.click(screen.getByRole('button', { name: messages.add }));
+    fireEvent.change(screen.getByRole('textbox', { name: messages.requirement }), { target: { value: 'Build APIs.' } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    rerender(<CandidateEvidenceReport {...input} cards={[...input.cards]} />);
+    expect(screen.getByRole('textbox', { name: messages.requirement })).toHaveValue('Build APIs.');
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    const jobDescription = identity === 'context' ? 'Build APIs. Lead teams.' : input.jobDescription;
+    const context = await createAssessmentContext({ resumeText: input.resumeText, jobDescription, language: 'en', kind: 'optimize', isOptimized: false, rubricVersion: 'optimize-v1' });
+    const run = { ...input.run!, assessment: { ...input.run!.assessment!, context, requestId: identity === 'request' ? 'next-request' : input.run!.assessment!.requestId } };
+    rerender(<CandidateEvidenceReport {...input} jobDescription={jobDescription} run={run} />);
+    expect(screen.queryByRole('textbox', { name: messages.requirement })).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+  });
   it.each(['en', 'ar'] as const)('offers accessible %s controls with private sources excluded by default', async locale => {
     language = locale;
     const messages = locale === 'ar' ? arabic.export.evidenceReport : english.export.evidenceReport;

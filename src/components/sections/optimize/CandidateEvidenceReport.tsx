@@ -10,6 +10,15 @@ export function CandidateEvidenceReport(props: Omit<EvidenceReportInput, 'requir
   const [preview, setPreview] = useState<{ key: string; text: string } | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const assessmentIdentity = JSON.stringify([props.run?.assessment?.context.key, props.run?.assessment?.requestId]);
+  const [selectionIdentity, setSelectionIdentity] = useState(assessmentIdentity);
+  if (selectionIdentity !== assessmentIdentity) {
+    setSelectionIdentity(assessmentIdentity);
+    setRequirements([]);
+    setIncluded([]);
+    setPreview(null);
+    setMessage('');
+  }
   const allSources = Array.isArray(props.sources) ? props.sources.filter(isEvidenceSource) : [];
   const input = { ...props, requirements, includedClarificationIds };
   const key = JSON.stringify(input);

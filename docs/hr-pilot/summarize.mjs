@@ -59,9 +59,12 @@ export function summarize(study) {
     require(nonempty(reviewer.id) && reviewer.consent === true, 'Reviewer ID/consent required');
     require(Array.isArray(reviewer.languages) && reviewer.languages.every((l) => languages.includes(l)), 'Invalid reviewer languages');
   }
+  if (errors.length) return { status: 'invalid', kind: study.kind, errors, metrics: null };
   if (study.kind === 'participant') {
     require(study.collectionAuthorized === true, 'Participant collection lacks explicit authorization record');
     require(nonempty(study.authorizationReference) && nonempty(study.privateStorage) && nonempty(study.deletionDue), 'Authorization, private storage and deletion date required');
+    const date = typeof study.deletionDue === 'string' ? study.deletionDue.slice(0, 10) : '';
+    require(/^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(study.deletionDue)) && new Date(date).toISOString().slice(0, 10) === date, 'Valid participant deletion date required');
   }
   for (const c of cases) {
     const at = `Case ${c.id}`;
@@ -107,6 +110,7 @@ export function summarize(study) {
       const reviewer = reviewers.find((r) => r.id === review.reviewerId);
       require(['baseline', 'packet'].includes(review.condition) && reviewer?.languages?.includes(c.language) && review.roleFamiliar === true, `${at}: incompatible reviewer or condition`);
       const material = review.materials;
+      if (!material || typeof material !== 'object' || Array.isArray(material)) { errors.push(`${at}: review materials must be an object`); continue; }
       require(allocation.some((a) => a.condition === review.condition && a.reviewerId === review.reviewerId && a.order === review.order), `${at}: review differs from locked allocation`);
       require(material?.resumeSnapshotId === snapshots?.resume?.id && material?.resumeSha256 === snapshots?.resume?.sha256 && material?.jobSnapshotId === snapshots?.job?.id && material?.jobSha256 === snapshots?.job?.sha256 && (review.condition === 'packet' ? material.packetVersion === packet?.version && material.packetSha256 === packet?.sha256 && material.manifestSha256 === manifest : !('packetVersion' in (material ?? {})) && !('packetSha256' in (material ?? {})) && !('manifestSha256' in (material ?? {}))), `${at}: review materials differ from approved input/packet`);
       require(nonempty(review.submittedAt) && Date.parse(review.submittedAt) > Date.parse(approval?.approvedAt) && Date.parse(review.submittedAt) > Date.parse(study.allocationLockedAt), `${at}: review submission must follow approval and locked allocation`);

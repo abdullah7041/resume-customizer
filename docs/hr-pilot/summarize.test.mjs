@@ -41,6 +41,27 @@ assert.equal(result.metrics.all.conditions.packet.missedQualifications.value, 0)
 assert.ok(Math.abs(result.metrics.all.timeReduction - 0.3) < 0.00001);
 assert.equal(result.metrics.ar.cases, 4);
 const mutate = (change) => { const copy = structuredClone(study); change(copy); return summarize(copy); };
+for (const languages of [null, 'en', {}, 1]) {
+  const invalid = mutate(s => { s.reviewers[0].languages = languages; });
+  assert.equal(invalid.status, 'invalid');
+  assert.equal(invalid.metrics, null);
+}
+for (const materials of [null, undefined, 'bad', 1, []]) {
+  for (const reviewIndex of [0, 1]) {
+    const invalid = mutate(s => { s.cases[0].snapshots = {}; s.cases[0].reviews[reviewIndex].materials = materials; });
+    assert.equal(invalid.status, 'invalid');
+    assert.equal(invalid.metrics, null);
+  }
+}
+for (const deletionDue of ['later', '2026-02-30', '2026-13-01']) {
+  const invalid = mutate(s => { Object.assign(s, { kind: 'participant', collectionAuthorized: true, authorizationReference: 'authorized-test', privateStorage: 'private-test', deletionDue }); });
+  assert.equal(invalid.status, 'invalid');
+  assert.equal(invalid.metrics, null);
+}
+for (const deletionDue of ['2026-11-04', '2028-02-29', '2026-11-04T09:00:00+03:00']) {
+  const valid = mutate(s => { Object.assign(s, { kind: 'participant', collectionAuthorized: true, authorizationReference: 'authorized-test', privateStorage: 'private-test', deletionDue }); });
+  assert.equal(valid.status, 'exploratory_targets_met');
+}
 assert.equal(mutate((s) => { s.cases[0].approval.contextKey = 'b'.repeat(64); }).status, 'invalid');
 assert.equal(mutate((s) => { s.cases[0].sources[0].sha256 = 'b'.repeat(64); }).status, 'invalid');
 assert.equal(mutate((s) => { s.cases[0].sources.push({ id: 'new', kind: 'clarification', targetId: 'clarification:answer', sha256: 'b'.repeat(64), included: true, approval: s.cases[0].sources[0].approval }); }).status, 'invalid');

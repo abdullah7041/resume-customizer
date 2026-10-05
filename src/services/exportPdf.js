@@ -766,7 +766,7 @@ const printableResume = (resume) => {
       linkedin: resume.basics.profiles?.find(profile => /linkedin/i.test(profile.network))?.url,
       urls: [resume.basics.url, ...(resume.basics.profiles || []).map(profile => profile.url)].filter(Boolean) },
     summary: [resume.basics.label, resume.basics.summary].filter(Boolean),
-    skills: (resume.skills || []).map(skill => joinDetails(skill.name, skill.level, skill.keywords?.join(', '))).filter(Boolean),
+    skills: (resume.skills || []).map(skill => typeof skill === 'string' ? skill : joinDetails(skill.name, skill.level, skill.keywords?.join(', '))).filter(Boolean),
     experience: (resume.work || []).map(work => ({ position: work.position, company: work.name,
       description: [work.startDate && [work.startDate, work.endDate].filter(Boolean).join(' – '),
         work.location, work.description, work.summary, ...(work.highlights || []), work.url].filter(Boolean).join(' • ') })),

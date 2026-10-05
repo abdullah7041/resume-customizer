@@ -9,6 +9,14 @@ import {
 
 
 describe("exportPdf", () => {
+  it.each(["styled", "ats-plain"])("preserves legacy string and structured skills in %s reviewed print", async variant => {
+    const html = await exportResumeToPdf({ resumeDocument: {
+      basics: { name: "Sara", location: {} },
+      skills: ["Legacy SQL", { name: "Reporting", level: "Advanced", keywords: ["Power BI"] }],
+    }, variant, skipPrint: true });
+    const text = new DOMParser().parseFromString(html, "text/html").body.textContent;
+    for (const skill of ["Legacy SQL", "Reporting", "Advanced", "Power BI"]) expect(text).toContain(skill);
+  });
   it.each(["styled", "ats-plain"])("keeps supplied contact URLs as visible escaped text in %s print export", async variant => {
     const urls = ["https://sara.example.test/?a=1&b=2", "https://github.com/sara-example", "https://linkedin.com/in/sara-example"];
     const resumeDocument = {
