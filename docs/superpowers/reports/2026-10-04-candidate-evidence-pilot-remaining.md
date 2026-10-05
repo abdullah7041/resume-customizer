@@ -1,0 +1,54 @@
+# Candidate trust continuation — remaining plan
+
+Started: 2026-10-04; final local verification: 2026-10-05 (Asia/Riyadh). Branch: `codex/candidate-evidence-pilot`, isolated from Phase 1 commit `4c422ab`. This checklist distinguishes local implementation from participant evidence and release.
+
+## Phase 1 and PDF fidelity
+
+- [x] Preserve completed Phase 1 Tasks 1–10; original and prior trust checkouts remain untouched.
+- [x] Diagnose fresh fictional English, Arabic, mixed and multipage PDFs through the actual handler/TemplateRenderer/current stylesheet; inspect actual Unicode mappings, text directions and independent extractors.
+- [x] Retain honest `unverified` Arabic/mixed text state; no string reversal or checker weakening.
+- [x] Preserve personal/profile URLs in both browser-print HTML variants with scoped regression coverage.
+- [ ] Resolve portable logical Arabic text extraction/search/copy and complete mixed reading order. The tested native PDFs retain legible pixels but fail these text-fidelity checks.
+- [ ] Verify deployed Linux Chromium, actual manual reader copy/search, native print dialog, additional templates and downstream readers/ATS. Local fixtures do not qualify those environments.
+
+See [PDF diagnosis and fresh evidence](2026-10-04-arabic-pdf-fidelity.md). DOCX is an existing recovery choice; XML fixture checks do not establish every consumer's behavior.
+
+## Phase 2: candidate-controlled report
+
+- [x] Complete local report implementation and independent final review; final verification is recorded below.
+- [ ] Verify the actual candidate workflow with real consenting candidates under a separately authorized study.
+
+The minimum report is a local JSON download from Optimize. Candidates select exact job requirement quotations and supplied evidence, choose clarification inclusion, inspect the exact preview and download those bytes. Associations remain candidate-declared and not independently verified. Edit provenance does not establish job requirement support. No scores, model narrative or proposal/confirmation wording is exported. The list is candidate-selected and may omit requirements; repeated rows can associate additional sources. Stale/legacy contexts cannot borrow current snapshots or associations. There is no recruiter workspace, automatic semantic matching, cloud sharing or report persistence.
+
+## Phase 3: offline pilot preparation
+
+- [x] Complete protocol/harness review, including exact source-approval and per-review material identity corrections and malformed-manifest regression.
+- [ ] Obtain explicit authorization for the actual collection/contact plan, final preregistration and randomized allocation, private storage/access/deletion and delivery process.
+- [ ] Enroll consenting candidates and reviewers: proposed feasibility target 12 complete case pairs, four active reviewers, four English/four Arabic/four mixed cases.
+- [ ] Prepare candidate-approved exact packets; establish independent supplied-evidence reference annotations and claim audits before recruiter review.
+- [ ] Collect the 24 baseline/packet reviews, actual corrections, disagreements, judgments, comprehension and active time; preserve actual denominators and negative/inconclusive outcomes.
+- [ ] Audit participant records and assess predefined thresholds. No actual participant records or empirical findings exist.
+
+The [offline kit](../../hr-pilot/README.md) and [protocol](../specs/2026-10-04-hr-pilot-validation-protocol.md) are preparation. Fictional rehearsals and automated tests are simulation. Supplied-source agreement does not verify credentials, hiring reliability, causality, fairness, employer demand or willingness to pay. Interview progression alone cannot establish accuracy or causality.
+
+## Verification and release
+
+Independent integrated review found one final duplicate-source provenance issue. The builder now counts IDs in raw source records before filtering; malformed duplicate records cannot establish support. Independent scoped re-review closed that finding with no new Critical or Important issue. Detailed local logs are kept in `.superpowers/sdd/2026-10-04-candidate-evidence-pilot/`.
+
+- [x] Independent integrated review and scoped fix re-review.
+- [x] Broad lint; frontend/Netlify type checks; full serial Vitest; build; locale validation; diff whitespace checks, with the snapshot distinction below.
+- [ ] Explicitly authorized integration/push/PR/merge/deployment and post-deployment verification. None performed in this continuation.
+
+| Check | Result and scope |
+| --- | --- |
+| Full serial Vitest | 217 files, 2,288 passed, two skipped; exit 0, 708.31 seconds. This run precedes the final duplicate-ID guard. |
+| Final guard | Both new regressions failed before the fix. Implementer and independent reviewer each passed all 46 tests in the two focused files after the fix. |
+| Final lint and types | Broad ESLint and frontend plus Netlify TypeScript checks passed after the guard. |
+| Final build and locales | Production build and locale validation passed after the guard. Existing CSS/browser-externalization and mixed static/dynamic-import build warnings remain. |
+| PDF fixtures | 100 scoped export/MainContent tests and seven real trust fixture tests passed. Arabic/mixed logical extraction remains unverified; passing fixtures do not qualify that gate. |
+| Offline pilot calculator | Native fictional self-check passed; no participant validation performed. |
+| Whitespace | `git diff --check` passed; staged paths are verified before local commit. |
+
+Two implementation decisions: isolate work to avoid concurrent writes to the prior active checkout, at the cost of an extra checkout and later integration; use native JSON with candidate-declared associations, at the cost of candidate review and no automatic qualification mapping.
+
+No new dependency/tool installation, paid model evaluation, database migration application, cloud write, participant contact/data collection or external publication occurred. Existing installed dependencies were reused through a local junction. CodeGraph, RTK.md and referenced context/CODING_STANDARDS.md are absent in this checkout; scoped RTK plus direct PowerShell reads were used. React Doctor is unavailable locally and was not installed. Native `pdftotext` is unavailable; installed pypdf/PDFium supplied independent extraction.

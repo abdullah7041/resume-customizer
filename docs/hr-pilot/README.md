@@ -1,0 +1,35 @@
+# Local HR pilot preparation
+
+Prepared 2026-10-04. No participants enrolled, no actual results, no contact or sharing authorization. The [protocol](../superpowers/specs/2026-10-04-hr-pilot-validation-protocol.md) defines targets before the fictional calculator rehearsal. Source statements and candidate confirmations are not independent qualification verification.
+
+## Run locally
+
+```sh
+node docs/hr-pilot/summarize.test.mjs
+node docs/hr-pilot/summarize.mjs docs/hr-pilot/study-template.json
+# After explicit collection approval, copy the template to an agreed private location:
+node docs/hr-pilot/summarize.mjs PRIVATE_STUDY.json
+```
+
+The blank template returns unavailable ratios and insufficient sample, never passing results. Simulation can never pass empirical readiness. Invalid/missing records return `invalid`, no metrics, and CLI exit code 1. A target failure is a valid calculation, not a CLI error. Output contains case IDs and aggregates only; keep input/output outside Git for actual participants. The calculator does not upload, recruit, randomize or authenticate consent; humans must verify the supplied records and actual timestamps.
+
+## Authoritative JSON record
+
+Use the JSON template as the single calculator input, not parallel CSV summaries. The fictional test provides a complete runnable structural example; its statements, hashes and dates are invented. Never copy rehearsal attestations into actual records.
+
+- Study: `kind` simulation/participant, `caseSchemaVersion: 2`, protocol version, actual `lockedAt` and `allocationLockedAt`; fixed `targets`; participant collection authorization reference, private storage/access location and deletion date. Template dates document this draft only; replace with actual preregistration before collection.
+- Reviewers: stable `id`, explicit consent, comfortable `languages` (en/ar/mixed). Record the actual private signed consent separately.
+- Case: stable `id`, language, explicit withdrawal flag, full existing `context` AssessmentContext copied from the current report (key, resumeFingerprint, jobFingerprint, language, kind, isOptimized, rubricVersion), `snapshots`, `packet`, `approval`, candidate consent, actual delivery inspection and hidden score. Its key is the existing serialized tuple, not a new digest. Case language may be mixed while the assessment language is en/ar. Withdrawn cases are excluded; retain no withdrawn personal content here.
+- Full inputs: `snapshots.resume` and `snapshots.job` each have stable `id` and SHA-256 of the **complete exact UTF-8 text**. Their hashes must equal the assessment context fingerprints. Keep exact texts privately for inspection; the calculator records identities only.
+- Report packet: `packet.version` and `packet.sha256` identify the exact candidate-reviewed delivery artifact. `approval` records `contextKey`, `packetVersion`, `packetSha256`, `manifestSha256` and `approvedAt`. A changed report, source inclusion, or context needs a new packet version and approval. The manifest is SHA-256 of JSON-encoded sorted `[id,kind,targetId,sha256,included]` rows for all listed report sources; `reportMaterials(report)` generates initial identities from the current `CandidateEvidenceReport` contract and hashes its JSON serialization as a starting artifact. For PDF/other delivery, replace that packet hash with the hash of actual delivered bytes before approval and inspect fidelity.
+- Report sources: each `sources` row is an `EvidenceSource` excerpt (`id`, `kind` resume/clarification, `targetId`, excerpt `sha256`, `included`). Included rows also need an `approval` with that exact `sha256`, `contextKey`, `packetVersion`, `packetSha256` and `manifestSha256`. The excerpt hash usually differs from the full resume hash; never replace it with the full-input hash. Clarifications default excluded and require individual opt-in. A changed/appended included source invalidates the prior approval. Hashes identify content; they do not prove consent or authenticity.
+- `reviewedRows`: stable IDs of all preparation rows, including exclusions. `corrections`: rowId, stage pre_share/reviewer_review, role candidate/facilitator/recruiter, explicit substantive flag. Distinct rows count once overall; role counts can overlap.
+- `claims`: every substantive packet claim, unique ID, included evidence source IDs, human `unsupported` audit and auditReason. Audit the factual quotation and any implication separately; an unverified requirement association must stay described as unverified. A citation alone does not establish entailment. Zero unsupported claims is a safety target, not a reason to omit claims from the denominator.
+- `requirements`: every exact explicit requirement text and priority from JD, stable ID, independent initial annotations (two distinct annotatorId/label/reason records), resolved supplied-evidence `reference`, sourceIds and adjudicationReason. Labels supported/partial/not_evidenced/ambiguous. Source IDs support factual reference judgments; keep this reference hidden from recruiters. Record all initial labels before adjudication.
+- `allocation`: two locked rows with condition baseline/packet, reviewerId and distinct order 1/2. `reviews`: one per allocated condition/reviewer/order, different reviewer IDs, `materials` naming both full snapshot IDs/hashes and, for packet only, approved `packetVersion`, `packetSha256` and `manifestSha256`; plus roleFamiliar, actual submittedAt, elapsedSeconds, pauseSeconds, both comprehension fields and a judgment/reason per requirement. Baseline has no packet fields. Active time equals elapsed minus pauses. Different JD, old report, allocation drift, missing timing or judgments invalidates the dataset.
+
+The facilitator independently verifies complete JD enumeration (`allRequirementsEnumerated: true`), every substantive packet claim audited (`allSubstantiveClaimsAudited: true`), source-to-context mapping, candidate inclusion, manual packet fidelity, independent annotations, randomized locked assignment/order, actual timestamps, compatibility and consent. These explicit attestations do not replace the human inspection. The calculator checks record consistency, not those real-world facts. Preserve raw session notes privately. Report language strata and case differences alongside pooled results.
+
+## Provenance
+
+Consent prompts and fictional rehearsal were copied read-only from uncommitted preparation in `candidate-trust-foundations/resume-customizer/docs/hr-pilot/` on 2026-10-04. That checkout was preserved. This protocol adapts its definitions and proposals; old export-success/phase-deferral statements are not carried forward. The rehearsal is instructional material, not observed validation. No old participant records or results were copied.

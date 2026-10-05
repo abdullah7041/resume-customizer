@@ -3,6 +3,27 @@
     "title": "Export Resume",
     "styled": "Styled PDF",
     "ats": "ATS-Friendly PDF",
-    "downloading": "Preparing download..."
+    "downloading": "Preparing download...",
+    "evidenceReport": {
+      "title": "Candidate evidence report",
+      "description": "Create a separate local JSON report. Your associations are not independently verified. Scores and model narrative are omitted; source matching is not proof of a qualification. Review all included personal information before downloading or sharing.",
+      "historical": "This assessment is historical or unavailable. Its report will not associate current evidence or show current snapshots.",
+      "includeClarification": "Include this private answer as a source",
+      "requirementsHelp": "Copy exact requirement text from the job description. Choose a supplied source or leave a visible evidence gap. You choose this list; it may be incomplete. Repeat a requirement to include another source.",
+      "jobSnapshot": "Job description",
+      "requirement": "Exact job requirement quote",
+      "source": "Candidate-associated source",
+      "gap": "No evidence selected — gap",
+      "clarification": "Candidate answer",
+      "resume": "Resume source",
+      "quote": "Exact source quote",
+      "add": "Add requirement",
+      "remove": "Remove requirement",
+      "review": "Prepare report for review",
+      "preview": "Exact downloadable report (JSON)",
+      "download": "Download reviewed report",
+      "changed": "Inputs or inclusion choices changed. Prepare and review a new report before downloading.",
+      "failed": "The report could not be prepared or downloaded. Try again."
+    }
   }
 }

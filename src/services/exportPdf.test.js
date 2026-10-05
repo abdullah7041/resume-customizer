@@ -9,6 +9,33 @@ import {
 
 
 describe("exportPdf", () => {
+  it.each(["styled", "ats-plain"])("keeps supplied contact URLs as visible escaped text in %s print export", async variant => {
+    const urls = ["https://sara.example.test/?a=1&b=2", "https://github.com/sara-example", "https://linkedin.com/in/sara-example"];
+    const resumeDocument = {
+      basics: { name: "Sara", email: "sara@example.test", location: {}, url: urls[0],
+        profiles: [{ network: "GitHub", url: urls[1] }, { network: "LinkedIn", url: urls[2] },
+          { network: "Portfolio", url: urls[0] }, { network: "Other", url: '<script>alert("profile")</script>' }] },
+      work: [], education: [], skills: [], projects: [],
+    };
+    const html = await exportResumeToPdf({ resumeDocument, variant, skipPrint: true });
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    for (const url of urls) {
+      expect(doc.body.textContent).toContain(url);
+      expect(doc.body.textContent.split(url)).toHaveLength(2);
+    }
+    expect(doc.body.textContent).toContain('<script>alert("profile")</script>');
+    expect(doc.querySelector("script")).toBeNull();
+  });
+
+  it.each(["styled", "ats-plain"])("keeps legacy LinkedIn contacts in %s print export", async variant => {
+    const html = await exportResumeToPdf({ resumeDocument: {
+      header: { name: "Sara", linkedin: "https://linkedin.com/in/sara-legacy" },
+      summary: [], skills: [], experience: [], education: [], projects: [],
+    }, variant, skipPrint: true });
+    expect(new DOMParser().parseFromString(html, "text/html").body.textContent)
+      .toContain("https://linkedin.com/in/sara-legacy");
+  });
+
   it("renders the reviewed structured resume without raw suggestions or job-only facts", async () => {
     const resumeDocument = {
       basics: { name: "Sara", summary: "Confirmed summary", email: "sara@example.com", phone: "", location: { city: "Riyadh" }, profiles: [] },

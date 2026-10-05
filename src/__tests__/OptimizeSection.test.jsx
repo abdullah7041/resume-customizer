@@ -8,6 +8,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import OptimizeSection, { normalizeOptimization } from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { verificationSignature } from '@/lib/optimize/scoreModel';
+import { createAssessmentContext, fingerprintText } from '@/lib/match/assessmentContext';
 
 const mockRefineBullet = vi.hoisted(() => vi.fn());
 const mockAnalyzeResumeWithAI = vi.hoisted(() => vi.fn());
@@ -54,6 +55,8 @@ let mockStoreState = {
     originalResume: null,
     parsedResumeText: null,
     optimizations: [],
+    evidenceSources: [],
+    optimizeRun: null,
     keywordSuggestions: [],
     showOptimized: false,
     setOptimizations: mockSetOptimizations,
@@ -250,6 +253,8 @@ beforeEach(() => {
         originalResume: null,
         parsedResumeText: null,
         optimizations: [],
+        evidenceSources: [],
+        optimizeRun: null,
         keywordSuggestions: [],
         showOptimized: false,
         setOptimizations: mockSetOptimizations,
@@ -318,6 +323,29 @@ afterEach(() => {
 });
 
 describe('OptimizeSection', () => {
+    it('builds the local report from the active run, store sources, and exact job input', async () => {
+        const resumeText = 'Built reporting APIs.';
+        const jobDescription = 'Build APIs.';
+        const context = await createAssessmentContext({ resumeText, jobDescription, language: 'en', kind: 'optimize', isOptimized: false, rubricVersion: 'optimize-v1' });
+        const source = { id: 'resume-source', kind: 'resume', text: resumeText, targetId: 'resume:role', fingerprint: await fingerprintText(resumeText) };
+        mockStoreState.evidenceSources = [source];
+        mockStoreState.optimizeRun = { status: 'succeeded', startedAt: '2026-10-04', finishedAt: '2026-10-04', phase: null, error: null,
+            cards: [], data: { evidenceSources: [source] }, keywords: { add: [], remove: [], neutral: [] },
+            assessment: { context, jobSnapshot: jobDescription, requestId: 'fictional-run', createdAt: '2026-10-04', result: null } };
+        renderWithProviders(<OptimizeSection resumeText={resumeText} jobDescription={jobDescription} assessmentKey={context.key} assessmentCurrent />);
+        fireEvent.click(screen.getByText('export.evidenceReport.title'));
+        expect(screen.getByRole('blockquote', { name: 'export.evidenceReport.jobSnapshot' })).toHaveTextContent(jobDescription);
+        fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.add' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'export.evidenceReport.requirement' }), { target: { value: jobDescription } });
+        fireEvent.change(screen.getByRole('combobox', { name: 'export.evidenceReport.source' }), { target: { value: source.id } });
+        fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.review' }));
+        const preview = await screen.findByRole('textbox', { name: 'export.evidenceReport.preview' });
+        const report = JSON.parse(preview.value);
+        expect(report.status).toBe('current');
+        expect(report.assessment.context).toEqual(context);
+        expect(report.snapshots).toEqual({ resumeText, jobDescription });
+        expect(report.requirements[0]).toMatchObject({ status: 'candidate_associated', evidence: source });
+    });
     it('opens only export-blocking applied review cards', async () => {
         mockStoreState.optimizations = [
             { sectionId: 's-0', sectionType: 'summary', original: 'First original', optimized: 'First proposal', applied: true },

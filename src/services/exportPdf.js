@@ -309,8 +309,9 @@ const buildExportHtml = ({ resumeDocument, resumeText = "", jobDescription = "",
         resumeDocument.header.email,
         resumeDocument.header.phone,
         resumeDocument.header.location,
-        resumeDocument.header.linkedin
-      ].filter(Boolean)
+        resumeDocument.header.linkedin,
+        ...(resumeDocument.header.urls || [])
+      ].filter(Boolean).filter((entry, index, entries) => entries.indexOf(entry) === index)
     };
   } else {
     // Fallback to parsing
@@ -645,8 +646,9 @@ const buildPlainExportHtml = ({
         resumeDocument.header.email,
         resumeDocument.header.phone,
         resumeDocument.header.location,
-        resumeDocument.header.linkedin
-      ].filter(Boolean)
+        resumeDocument.header.linkedin,
+        ...(resumeDocument.header.urls || [])
+      ].filter(Boolean).filter((entry, index, entries) => entries.indexOf(entry) === index)
     };
     // For bullets in plain ATS, we might just use experience lines if specific bullets aren't separated nicely in the 'bullets' prop
     bullets = sections.experience;
@@ -761,7 +763,8 @@ const printableResume = (resume) => {
   return {
     header: { name: resume.basics.name, email: resume.basics.email, phone: resume.basics.phone,
       location: [resume.basics.location?.city, resume.basics.location?.region].filter(Boolean).join(', '),
-      linkedin: resume.basics.profiles?.find(profile => /linkedin/i.test(profile.network))?.url },
+      linkedin: resume.basics.profiles?.find(profile => /linkedin/i.test(profile.network))?.url,
+      urls: [resume.basics.url, ...(resume.basics.profiles || []).map(profile => profile.url)].filter(Boolean) },
     summary: [resume.basics.label, resume.basics.summary].filter(Boolean),
     skills: (resume.skills || []).map(skill => joinDetails(skill.name, skill.level, skill.keywords?.join(', '))).filter(Boolean),
     experience: (resume.work || []).map(work => ({ position: work.position, company: work.name,
