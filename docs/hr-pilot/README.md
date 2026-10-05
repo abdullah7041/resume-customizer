@@ -1,13 +1,23 @@
 # Local HR pilot preparation
 
-Prepared 2026-10-04. No participants enrolled, no actual results, no contact or sharing authorization. The [protocol](../superpowers/specs/2026-10-04-hr-pilot-validation-protocol.md) defines targets before the fictional calculator rehearsal. Source statements and candidate confirmations are not independent qualification verification.
+Prepared 2026-10-04; operational handoff updated 2026-10-05. The user delegated cohort, channel and storage decisions; the selected plan is below. No participants are identified or enrolled, no invitations sent, and no actual results exist. The [protocol](../superpowers/specs/2026-10-04-hr-pilot-validation-protocol.md) defines targets before the fictional calculator rehearsal. Source statements and candidate confirmations are not independent qualification verification.
+
+## Selected study operation
+
+Recruit 12 adult volunteer jobseekers: four English, four Arabic and four mixed-language cases, plus four consenting active HR reviewers familiar with the supplied roles and comfortable in the assigned language. Use private individual invitations through the owner's existing contacts/email. No contact names, addresses or account access have been supplied; the owner must identify actual recipients and send the [draft invitations and consent wording](consent-and-session-prompts.md). Invitation acceptance alone is not consent to share a resume or packet.
+
+Proposed private root: `C:/Users/NoteBook Pc/.watheq/hr-pilot/2026-10-05`, outside Git and cloud sharing. This directory and its access controls have **not been created or verified**. Before collection the owner must verify owner-only filesystem access, no sync/shared-parent exposure, and control of backups; record the actual access inspection. Store contact/consent records separately from pseudonymous case data. The facilitator is the owner; each assigned reviewer receives only their consented materials, individually. Never send the full study directory. Delete all personal inputs, packets, notes, identity mappings and reviewer copies 30 days after the final session; fill the actual ISO deletion date only when that session date is known, and confirm deletion with each reviewer. Withdrawal triggers immediate removal from working data and reviewer copies, exclusion from analysis, and removal of personal backups under the agreed process. Retain only nonidentifying withdrawal status if needed to account for missingness.
+
+Before any personal data arrives, identify the owner/contact and withdrawal route, verify private storage, obtain separate written candidate/reviewer consents, then preregister actual study dates and lock thresholds. Keep `collectionAuthorized` false and actual study lock dates, allocation, reviewers and cases unfilled until these actions occur. The checked-in template remains a simulation; its historical dates are not real preregistration. Do not turn its fictional example into participant records.
+
+For each consented case, enumerate the full JD, capture exact input identities, audit every substantive claim, and obtain two independent annotations plus adjudication. The candidate corrects and approves the exact version/bytes and each included clarification before delivery. Inspect the chosen delivery artifact; Arabic PDF logical fidelity is still unresolved, so choose a candidate-readable alternative and record its actual inspection rather than attest a PDF pass. Match reviewer language and role familiarity, randomize two distinct reviewers and baseline/packet order per case, balance assignment/order where feasible, then lock the actual allocation before any review. Each reviewer sees only their condition for that case; keep reference labels and alignment scores hidden. Use the session prompts, capture actual timing/pauses, judgments, corrections and comprehension, then audit the records before running the existing calculator. Report incomplete cases, language strata and negative outcomes.
 
 ## Run locally
 
 ```sh
 node docs/hr-pilot/summarize.test.mjs
 node docs/hr-pilot/summarize.mjs docs/hr-pilot/study-template.json
-# After explicit collection approval, copy the template to an agreed private location:
+# After actual consent and private storage verification, copy the template privately:
 node docs/hr-pilot/summarize.mjs PRIVATE_STUDY.json
 ```
 

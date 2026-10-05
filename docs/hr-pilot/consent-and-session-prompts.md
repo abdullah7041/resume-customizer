@@ -1,6 +1,14 @@
 # Consent and session prompts
 
-Draft operational wording, not a completed consent record or legal assessment. Fill study owner/contact, storage/access, deletion date, and withdrawal process before using it. Keep filled records in the approved private location.
+Draft operational wording, not a completed consent record or legal assessment. The selected storage/access/deletion operation is in [README](README.md#selected-study-operation). Fill actual owner/contact, verified storage/access, final-session date and deletion date, and the withdrawal contact before using these drafts. Keep filled records privately, outside Git. No invitations or consents have been completed.
+
+## Private invitation drafts
+
+Candidate: “I'm inviting adult volunteer jobseekers to a small Watheq study of a candidate-reviewed evidence worksheet. You would review your supplied resume/job materials and decide exactly what an assigned HR reviewer may see. This is voluntary, is not a hiring decision, and promises no interview. Before you send documents, I'll explain private access, deletion 30 days after the final session, and immediate removal if you withdraw. Would you like the consent details? Please do not send your resume yet.”
+
+HR reviewer: “I'm inviting four active HR reviewers to a small voluntary study comparing supplied resume/job materials with a candidate-approved evidence worksheet. You would review assigned cases in a language and role area you are comfortable with; we would record your requirement judgments, comprehension and active review time. This is not an actual hiring decision. I'll provide access, deletion and withdrawal details before consent. Would you like the study details?”
+
+Send individually only after the owner identifies actual recipients and checks their eligibility; do not use group messages or attach participant materials. Record replies and declines privately. Obtain written affirmative consent covering the specific materials, timing/notes and access rules before collecting documents or assigning cases. No audio/video collection is planned.
 
 ## Candidate
 

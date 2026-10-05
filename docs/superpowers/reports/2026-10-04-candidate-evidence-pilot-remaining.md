@@ -11,7 +11,7 @@ Started: 2026-10-04; final local verification: 2026-10-05 (Asia/Riyadh). Branch:
 - [ ] Resolve portable logical Arabic text extraction/search/copy and complete mixed reading order. The tested native PDFs retain legible pixels but fail these text-fidelity checks.
 - [ ] Verify deployed Linux Chromium, actual manual reader copy/search, native print dialog, additional templates and downstream readers/ATS. Local fixtures do not qualify those environments.
 
-See [PDF diagnosis and fresh evidence](2026-10-04-arabic-pdf-fidelity.md). DOCX is an existing recovery choice; XML fixture checks do not establish every consumer's behavior.
+See [PDF diagnosis and fresh evidence](2026-10-04-arabic-pdf-fidelity.md) and [2026-10-05 installed-writer follow-up](2026-10-05-arabic-pdf-followup.md). The stock jsPDF and logical-mapping probes failed independent ordering checks; no production renderer correction was demonstrated. DOCX is an existing recovery choice; XML fixture checks do not establish every consumer's behavior.
 
 ## Phase 2: candidate-controlled report
 
@@ -23,7 +23,8 @@ The minimum report is a local JSON download from Optimize. Candidates select exa
 ## Phase 3: offline pilot preparation
 
 - [x] Complete protocol/harness review, including exact source-approval and per-review material identity corrections and malformed-manifest regression.
-- [ ] Obtain explicit authorization for the actual collection/contact plan, final preregistration and randomized allocation, private storage/access/deletion and delivery process.
+- [x] Select concrete cohort, invitation channel, proposed private storage and deletion/withdrawal process under the user's delegated decisions; prepare candidate/HR invitation drafts and session steps in the existing offline kit.
+- [ ] Identify actual recipients and owner contact, verify storage/access/backups, obtain written consent, and record actual preregistration and locked randomized allocation. No people, consent, real dates or allocation are supplied yet.
 - [ ] Enroll consenting candidates and reviewers: proposed feasibility target 12 complete case pairs, four active reviewers, four English/four Arabic/four mixed cases.
 - [ ] Prepare candidate-approved exact packets; establish independent supplied-evidence reference annotations and claim audits before recruiter review.
 - [ ] Collect the 24 baseline/packet reviews, actual corrections, disagreements, judgments, comprehension and active time; preserve actual denominators and negative/inconclusive outcomes.
@@ -32,6 +33,8 @@ The minimum report is a local JSON download from Optimize. Candidates select exa
 The [offline kit](../../hr-pilot/README.md) and [protocol](../specs/2026-10-04-hr-pilot-validation-protocol.md) are preparation. Fictional rehearsals and automated tests are simulation. Supplied-source agreement does not verify credentials, hiring reliability, causality, fairness, employer demand or willingness to pay. Interview progression alone cannot establish accuracy or causality.
 
 ## Verification and release
+
+2026-10-05 review fixes, commit `12f090a66`: assessment identity changes reset candidate requirement rows/private clarification opt-ins while same-assessment edits remain; pilot malformed nested materials/languages return invalid/null metrics without throwing and retention requires a real ISO calendar date; both print variants retain legacy string skills. Focused report/export/builder tests passed (66 tests), fictional pilot self-check passed, touched-file ESLint and type checks passed, and whitespace passed. Independent review of these new fixes and combined final review remain pending at this documentation snapshot. Earlier integrated review below covers the prior implementation, not these new fixes. No broad test rerun is claimed for the new commit.
 
 Independent integrated review found one final duplicate-source provenance issue. The builder now counts IDs in raw source records before filtering; malformed duplicate records cannot establish support. Independent scoped re-review closed that finding with no new Critical or Important issue. Detailed local logs are kept in `.superpowers/sdd/2026-10-04-candidate-evidence-pilot/`.
 
