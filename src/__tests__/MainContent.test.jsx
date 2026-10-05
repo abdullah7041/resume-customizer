@@ -51,6 +51,7 @@ const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
 const matchSectionMockProps = vi.hoisted(() => ({ current: null }));
 const optimizeSectionMockProps = vi.hoisted(() => ({ current: null }));
+const auxiliarySectionMockProps = vi.hoisted(() => ({ interview: null, bulk: null, coverLetter: null }));
 const pipelineMockProps = vi.hoisted(() => ({ current: null }));
 const mobileWorkflowMockProps = vi.hoisted(() => ({ current: null }));
 const landingMockProps = vi.hoisted(() => ({ current: null }));
@@ -194,6 +195,25 @@ vi.mock("../components/sections/OptimizeSection", async () => {
     },
   };
 });
+
+vi.mock("../components/sections/InterviewSection", () => ({
+  InterviewSection: (props) => {
+    auxiliarySectionMockProps.interview = props;
+    return <div data-testid="interview-wiring-mock" />;
+  },
+}));
+vi.mock("../components/sections/BulkAnalysisSection", () => ({
+  BulkAnalysisSection: (props) => {
+    auxiliarySectionMockProps.bulk = props;
+    return <div data-testid="bulk-wiring-mock" />;
+  },
+}));
+vi.mock("../components/sections/CoverLetterSection", () => ({
+  CoverLetterSection: (props) => {
+    auxiliarySectionMockProps.coverLetter = props;
+    return <div data-testid="coverLetter-wiring-mock" />;
+  },
+}));
 
 vi.mock("../components/sections/TruthCheckSection", () => {
   const React = require("react");
@@ -1961,6 +1981,38 @@ describe("job feed hand-off", () => {
       removeItem: vi.fn((key) => { delete storage[key]; }),
       clear: vi.fn(() => { Object.keys(storage).forEach((key) => delete storage[key]); }),
     };
+  });
+
+  it("passes the active job description to every auxiliary tool", async () => {
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Candidate resume experience', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', 'Current target job');
+    render(<MainContent />);
+    for (const [tab, key] of [['interview', 'interview'], ['bulk', 'bulk'], ['cover-letter', 'coverLetter']]) {
+      await act(async () => { window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab } })); });
+      await screen.findByTestId(`${key}-wiring-mock`);
+      expect(auxiliarySectionMockProps[key].jobDescription).toBe('Current target job');
+    }
+  });
+
+  it("passes live Optimize job inputs across A to empty B and back to A", async () => {
+    const parsedResume = { basics: { name: 'Candidate' }, work: [], education: [], skills: [] };
+    useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+      { id: 'a', name: 'A.pdf', parsedResume, plainText: 'First resume experience', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+      { id: 'b', name: 'B.pdf', parsedResume, plainText: 'Second resume experience', fingerprint: 'b1', createdAt: 2, updatedAt: 2 },
+    ] });
+    render(<MainContent />);
+    await act(async () => { window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'match' } })); });
+    await screen.findByTestId('job-match-mock');
+    await act(async () => { matchSectionMockProps.current.onJobDescriptionChange('Resume A target job'); });
+    await act(async () => { window.dispatchEvent(new CustomEvent('watheq:navigate-tab', { detail: { tab: 'optimize' } })); });
+    await screen.findByTestId('optimization-mock');
+    expect(optimizeSectionMockProps.current.jobDescription).toBe('Resume A target job');
+    act(() => useResumeLibraryStore.setState({ activeResumeId: 'b' }));
+    await waitFor(() => expect(optimizeSectionMockProps.current.jobDescription).toBe(''));
+    expect(localStorage.getItem('watheq:lastJobDescription')).toBe('Resume A target job');
+    expect(optimizeSectionMockProps.current.hasMatchAnalysis).toBe(false);
+    act(() => useResumeLibraryStore.setState({ activeResumeId: 'a' }));
+    await waitFor(() => expect(optimizeSectionMockProps.current.jobDescription).toBe('Resume A target job'));
   });
 
   it("never renders a legacy Truth Check before resume provenance is known", async () => {

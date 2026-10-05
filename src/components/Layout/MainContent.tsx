@@ -3129,6 +3129,7 @@ export default function MainContent() {
                   isOptimizing={isOptimizing}
                   isCheckingQuestions={isCheckingClarifications}
                   onOptimize={handleOptimize}
+                  jobDescription={jobDescription}
                   resumeText={resumeData?.plainText || ''}
                   assessmentCurrent={optimizeAssessmentCurrent}
                   assessmentKey={optimizeAssessmentKey ?? undefined}
@@ -3177,7 +3178,8 @@ export default function MainContent() {
                   ? renderGuestProtectedPanel(t("tabs.interview", "Interview"))
                   : (
                     <InterviewSection
-                          resumeText={resumeData?.plainText || ""}
+                      jobDescription={jobDescription}
+                      resumeText={resumeData?.plainText || ""}
                       matchAnalysis={matchAnalysis}
                       resumeData={resumeData}
                       onUpdate={handleResumeDataUpdate}
@@ -3193,7 +3195,8 @@ export default function MainContent() {
                   ? renderGuestProtectedPanel(t("tabs.bulk", "Bulk"))
                   : (
                     <BulkAnalysisSection
-                        />
+                      jobDescription={jobDescription}
+                    />
                   )}
               </Suspense>
             </LazyErrorBoundary>
@@ -3205,8 +3208,9 @@ export default function MainContent() {
                   ? renderGuestProtectedPanel(t("tabs.coverLetter", "Cover Letter"))
                   : (
                     <CoverLetterSection
+                      jobDescription={jobDescription}
                       resumeText={resumeData?.plainText || ""}
-                          resumeData={resumeData}
+                      resumeData={resumeData}
                     />
                   )}
               </Suspense>
