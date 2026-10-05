@@ -20,6 +20,7 @@ export interface ClarificationOption {
 
 export interface ClarificationQuestion {
   id: string;
+  topicKey?: string;
   theme: string;
   rationale: string;
   question: string;
@@ -38,6 +39,7 @@ export type ClarificationAnswers = Record<string, ClarificationAnswer>;
 
 export interface ClarificationHistoryEntry {
   id: string;
+  topicKey: string;
   theme: string;
   question: string;
   answer: string;
@@ -55,6 +57,7 @@ export function appendClarificationHistory(
     if (!formatted.userClarifications && !formatted.userHardStops?.length) continue;
     next.set(question.id, {
       id: question.id,
+      topicKey: getClarificationTopicKey(question),
       theme: question.theme,
       question: question.question,
       answer: formatted.userClarifications?.split('\nA: ').slice(1).join('\nA: ').slice(0, 1500) || '',
@@ -162,11 +165,28 @@ export function filterClarificationQuestionsByHardStops(
 }
 
 export function isValidOtherAnswer(text: string): boolean {
-  const trimmed = text.trim();
-  if (/^[\p{N}]+(?:[.,][\p{N}]+)?\s*[%٪]?[+]?$/u.test(trimmed)) return true;
-  if (trimmed.length < 6) return false;
-  const words = trimmed.match(/\p{L}{2,}/gu) || [];
-  return words.length >= 3;
+  return /[\p{L}\p{N}]/u.test(text.trim());
+}
+
+function normalizeClarificationKey(value: string): string {
+  return value.normalize('NFKC').trim().toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ');
+}
+
+export function getClarificationTopicKey(question: Pick<ClarificationQuestion, 'topicKey' | 'theme'>): string {
+  return normalizeClarificationKey(question.topicKey || question.theme);
+}
+
+export function isRepeatedClarificationQuestion(
+  question: ClarificationQuestion,
+  history: ClarificationHistoryEntry[],
+): boolean {
+  const topicKey = getClarificationTopicKey(question);
+  const normalizedQuestion = normalizeClarificationKey(question.question);
+  return history.some(entry => (
+    entry.id === question.id
+    || entry.topicKey === topicKey
+    || normalizeClarificationKey(entry.question) === normalizedQuestion
+  ));
 }
 
 export function normalizeClarificationQuestion(
@@ -183,6 +203,7 @@ export function normalizeClarificationQuestion(
 
   return {
     ...question,
+    topicKey: getClarificationTopicKey(question),
     type: question.type === 'multi' ? 'multi' : 'single',
     allowOther: question.allowOther !== false,
     options: [...regularOptions, hardStop],

@@ -24,6 +24,13 @@ import { getClientIP } from '../lib/ip-utils.js';
 
 initSentry();
 
+const normalizeTopic = (value: string) => value
+  .normalize('NFKC')
+  .trim()
+  .toLocaleLowerCase()
+  .replace(/[^\p{L}\p{N}]+/gu, '_')
+  .replace(/^_+|_+$/g, '');
+
 // ---------------------------------------------------------------------------
 // Handler
 // ---------------------------------------------------------------------------
@@ -126,11 +133,17 @@ const baseHandler: Handler = async (event) => {
     });
     const asked = new Set(history.map(item => item.question.trim().toLocaleLowerCase()));
     const ids = new Set(history.map(item => item.id));
+    const topics = new Set(history.map(item => normalizeTopic(item.topicKey || item.theme)));
     const stopped = new Set(history.flatMap(item => item.hardStops.length ? [item.theme.toLocaleLowerCase()] : []));
-    parsed.clarifications = parsed.clarifications.filter(question => (
-      !ids.has(question.id) && !asked.has(question.question.trim().toLocaleLowerCase())
-      && !stopped.has(question.theme.toLocaleLowerCase())
-    )).slice(0, 3).map(({ defaultValue: _defaultValue, ...question }) => question);
+    parsed.clarifications = parsed.clarifications.filter(question => {
+      const topic = normalizeTopic(question.topicKey);
+      const keep = !ids.has(question.id)
+        && !asked.has(question.question.trim().toLocaleLowerCase())
+        && !topics.has(topic)
+        && !stopped.has(question.theme.toLocaleLowerCase());
+      if (keep) topics.add(topic);
+      return keep;
+    }).slice(0, 3).map(({ defaultValue: _defaultValue, ...question }) => question);
     parsed.complete = parsed.clarifications.length === 0;
 
     console.log(`[generate-clarifications] Returning ${parsed.clarifications.length} question(s)`);

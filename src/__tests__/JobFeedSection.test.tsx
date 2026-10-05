@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 // A fresh `t` per render, which is what react-i18next does in production when the
@@ -48,6 +48,7 @@ const mockTrackCompany = vi.fn();
 const mockUntrackCompany = vi.fn();
 const mockResolveCompany = vi.fn();
 const mockSaveSearchIntent = vi.fn();
+const mockVerifyFeedPosting = vi.fn();
 
 vi.mock('@/services/jobFeed', () => ({
   loadCandidateProfile: async () => null,
@@ -64,10 +65,12 @@ vi.mock('@/services/jobFeed', () => ({
   untrackCompany: (id: string) => mockUntrackCompany(id),
   recrawlTrackedCompanies: () => Promise.resolve({ data: { dispatched: 0, skipped: 0, crawlDispatched: false }, error: null }),
   saveSearchIntent: (intent: unknown) => mockSaveSearchIntent(intent),
+  verifyFeedPosting: (...args: unknown[]) => mockVerifyFeedPosting(...args),
   setFeedState: vi.fn(),
 }));
 
 import { JobFeedSection } from '../components/sections/JobFeedSection';
+import { useResumeLibraryStore } from '@/lib/resumeLibrary';
 
 const SENIOR_INTENT = {
   targetRoles: ['Senior AI Engineer'],
@@ -114,6 +117,112 @@ beforeEach(() => {
   mockResolveCompany.mockResolvedValue({ data: null, error: null });
   mockUntrackCompany.mockResolvedValue({ data: null, error: null });
   mockSaveSearchIntent.mockResolvedValue({ error: null });
+  mockVerifyFeedPosting.mockResolvedValue({ results: [], failures: [], error: null });
+  useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
+});
+
+it('verifies only the active resume and hides other resumes matches', async () => {
+  mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+  const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+  useResumeLibraryStore.setState({
+    initialized: true,
+    activeResumeId: 'universal',
+    entries: [
+      { id: 'universal', name: 'Universal', sourceFileName: 'universal.pdf', parsedResume, plainText: 'software', fingerprint: 'u1', createdAt: 1, updatedAt: 1 },
+      { id: 'service', name: 'Customer Service', sourceFileName: 'service.pdf', parsedResume, plainText: 'customer service', fingerprint: 's1', createdAt: 2, updatedAt: 2 },
+    ],
+  });
+  mockVerifyFeedPosting.mockResolvedValue({
+    error: null,
+    failures: [],
+    results: [
+      { resumeId: 'universal', resumeFingerprint: 'u1', cached: false, match: { score: 42, strategicRealityCheck: null } },
+      { resumeId: 'service', resumeFingerprint: 's1', cached: false, match: { score: 84, strategicRealityCheck: null } },
+    ],
+  });
+
+  render(<JobFeedSection />);
+
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalled());
+  expect(mockVerifyFeedPosting.mock.calls[0][1]).toEqual([{ id: 'universal', fingerprint: 'u1', text: 'software' }]);
+  expect(screen.queryByText(/84%/)).not.toBeInTheDocument();
+});
+
+it('checks the first ten deterministic candidates and waits for an explicit request to check more', async () => {
+  mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  mockListPostings.mockResolvedValue({
+    postings: Array.from({ length: 11 }, (_, index) => posting({
+      id: `posting-${index}`,
+      title: `Senior AI Engineer ${index}`,
+    })),
+    error: null,
+  });
+  const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+  useResumeLibraryStore.setState({
+    initialized: true,
+    activeResumeId: 'resume-0',
+    entries: Array.from({ length: 5 }, (_, index) => ({
+      id: `resume-${index}`,
+      name: `Resume ${index}`,
+      sourceFileName: `resume-${index}.pdf`,
+      parsedResume,
+      plainText: `Resume ${index}`,
+      fingerprint: `fingerprint-${index}`,
+      createdAt: index,
+      updatedAt: index,
+    })),
+  });
+
+  render(<JobFeedSection />);
+
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(10));
+  expect(screen.getByRole('button', { name: /check 10 more/i })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /check 10 more/i }));
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(11));
+});
+
+it('ignores a late result from the previously selected resume', async () => {
+  mockListTracked.mockResolvedValue({ companies: [company], error: null });
+  mockListPostings.mockResolvedValue({ postings: [posting()], error: null });
+  const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+  useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+    { id: 'a', name: 'A.pdf', parsedResume, plainText: 'a', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+    { id: 'b', name: 'B.pdf', parsedResume, plainText: 'b', fingerprint: 'b1', createdAt: 2, updatedAt: 2 },
+  ] });
+  let resolveA: (value: unknown) => void = () => {};
+  mockVerifyFeedPosting.mockImplementation((_postingId, resumes) => resumes[0].id === 'a'
+    ? new Promise(resolve => { resolveA = resolve; })
+    : Promise.resolve({ results: [{ resumeId: 'b', resumeFingerprint: 'b1', cached: false, match: { score: 82, strategicRealityCheck: null } }], failures: [], error: null }));
+
+  render(<JobFeedSection />);
+  await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalled());
+  act(() => useResumeLibraryStore.setState({ activeResumeId: 'b' }));
+  expect(await screen.findByText(/82%/)).toBeInTheDocument();
+  await act(async () => resolveA({ results: [{ resumeId: 'a', resumeFingerprint: 'a1', cached: false, match: { score: 96, strategicRealityCheck: null } }], failures: [], error: null }));
+  expect(screen.queryByText(/96%/)).not.toBeInTheDocument();
+});
+
+it('keeps the same two checks in flight when the display clock advances', async () => {
+  window.localStorage.clear();
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  try {
+    mockListTracked.mockResolvedValue({ companies: [company], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ id: 'first', postedAt: daysAgo(0), firstSeenAt: daysAgo(0) }), posting({ id: 'second', postedAt: daysAgo(0), firstSeenAt: daysAgo(0) })], error: null });
+    const parsedResume = { basics: { name: 'Candidate', label: '', email: '', phone: '', summary: '', location: { city: '', countryCode: '', region: '' }, profiles: [] }, work: [], education: [], skills: [], projects: [] };
+    useResumeLibraryStore.setState({ initialized: true, activeResumeId: 'a', entries: [
+      { id: 'a', name: 'A.pdf', parsedResume, plainText: 'resume text', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
+    ] });
+    mockVerifyFeedPosting.mockImplementation(() => new Promise(() => {}));
+    render(<JobFeedSection />);
+    await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2));
+    const initialSignals = mockVerifyFeedPosting.mock.calls.map(call => call[3] as AbortSignal);
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2);
+    expect(initialSignals.every(signal => !signal.aborted)).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 describe('Saudi starter companies', () => {

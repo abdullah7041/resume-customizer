@@ -438,7 +438,7 @@ export default function UploadCard({
           </GlassButton>
         )}
 
-        <GlassButton
+        {!isSaved && <GlassButton
           onClick={onSubmit}
           disabled={disabled || status === "uploading" || status === "parsing"}
           variant="primary"
@@ -457,7 +457,7 @@ export default function UploadCard({
               <span className="ml-2">→</span>
             </>
           )}
-        </GlassButton>
+        </GlassButton>}
       </div>
     </GlassCard>
   );

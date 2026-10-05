@@ -2,6 +2,26 @@
   "jobFeed": {
     "title": "Job feed",
     "subtitle": "New roles from the company boards you follow, matched against your target role.",
+    "verification": {
+      "checking": "Checking {{count}} shortlisted roles against your saved resumes…",
+        "progress": "{{checked}} of {{total}} checked against {{name}}",
+        "verifiedCount": "{{count}} medium/high matches confirmed",
+      "slow": "Verification is taking longer than usual. Results appear as each check finishes.",
+      "quota": "Daily verification limit reached. Cached results remain available.",
+      "timeouts": "{{count}} checks timed out. You can retry them.",
+      "retry": "Retry failed checks",
+      "more": "Check 10 more",
+      "noMatch": "No medium- or high-fit roles found for this resume in the checked jobs.",
+      "capped": "Showing verified matches. {{count}} lower-priority roles were not checked within today’s limit.",
+      "failed": "{{count}} checks failed.",
+      "noneVerified": "No role could be confirmed as a medium or high fit yet.",
+      "failedHelp": "{{count}} verification checks failed. You can retry them.",
+      "ready": "Showing only medium- and high-fit roles verified against your saved resumes.",
+      "pending": "Checking roles against your selected resume. Matches appear as each check finishes.",
+      "high": "High fit",
+      "medium": "Medium fit",
+      "compare": "Compare resumes"
+    },
     "newBadge": "New",
     "companies": {
       "heading": "Companies you follow",

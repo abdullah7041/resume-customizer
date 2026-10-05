@@ -42,6 +42,9 @@
 [functions."ai-match"]
   timeout = 90  # Increased: OpenRouter timeout 65s + 25s cleanup buffer
 
+[functions."feed-match"]
+  timeout = 90  # One 65s match attempt per request + auth/cache/response headroom
+
 [functions."optimize"]
   timeout = 60  # 40s AI deadline leaves time for validation, credits and delivery
 

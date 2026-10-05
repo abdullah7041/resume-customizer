@@ -387,6 +387,9 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // is both a request amplifier and the quickest way to get this app's IP blocked
   // by the very boards the Job Feed depends on. Tighter than import-job-url.
   "job-sources-api": { maxRequests: 10 },
+  // Each cache miss is one resume-job AI comparison. The feed calls this limit
+  // once per uncached pair, not once per HTTP request.
+  "feed-match": { maxRequests: 50, windowMs: 24 * 60 * 60 * 1000 },
 
   // Job-URL import: an SSRF-guarded outbound fetch, so keep both tiers tight.
   // Guests are keyed by IP with a daily window (mirrors the free-preview tiers).
@@ -502,7 +505,7 @@ function getClientIdentifierFromHeaders(headers: Headers): string {
 /**
  * Check rate limit for an incoming request
  */
-async function checkRateLimit(
+export async function checkRateLimit(
   event: HandlerEvent,
   endpoint: string
 ): Promise<{ allowed: boolean; response?: HandlerResponse }> {
@@ -513,6 +516,23 @@ async function checkRateLimit(
   }
 
   const clientId = getClientIdentifier(event);
+  return checkRateLimitForIdentifier(endpoint, clientId);
+}
+
+/**
+ * Check an incoming-request quota against a trusted application identifier.
+ * Use this only after authentication; anonymous callers must remain keyed by
+ * request IP through `checkRateLimit`.
+ */
+export async function checkRateLimitForIdentifier(
+  endpoint: string,
+  clientId: string
+): Promise<{ allowed: boolean; response?: HandlerResponse }> {
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    console.log('[rate-limiter] Development mode - bypassing rate limits');
+    return { allowed: true };
+  }
+
   const config = ENDPOINT_RATE_LIMITS[endpoint] || ENDPOINT_RATE_LIMITS.default;
   const limiter = getRateLimiter(config);
 
@@ -552,6 +572,61 @@ async function checkRateLimit(
     // If rate limiting fails, log error but allow request through
     console.error("[rate-limiter] Rate limit check failed:", summarizeErrorForLog(err));
     return { allowed: true };
+  }
+}
+
+const PAID_QUOTA_UNAVAILABLE_RESPONSE: HandlerResponse = {
+  statusCode: 503,
+  headers: RATE_LIMIT_HEADERS,
+  body: JSON.stringify({
+    error: 'Verification is temporarily unavailable. Please try again shortly.',
+    code: 'quota/unavailable',
+  }),
+};
+
+/**
+ * Fail-closed quota check for authenticated work that directly incurs AI cost.
+ * A missing or unhealthy limiter must never turn into unlimited paid requests.
+ */
+export async function checkCostBearingRateLimitForIdentifier(
+  endpoint: string,
+  clientId: string,
+): Promise<{ allowed: boolean; response?: HandlerResponse }> {
+  if (process.env.NODE_ENV === 'development' || process.env.NETLIFY_DEV === 'true') {
+    return { allowed: true };
+  }
+
+  const config = ENDPOINT_RATE_LIMITS[endpoint] || ENDPOINT_RATE_LIMITS.default;
+  const limiter = getRateLimiter(config);
+  if (!limiter) {
+    console.error(`[rate-limiter] Paid quota unavailable for ${endpoint}; failing closed`);
+    return { allowed: false, response: PAID_QUOTA_UNAVAILABLE_RESPONSE };
+  }
+
+  try {
+    const result = await limiter.limit(`${endpoint}:${clientId}`);
+    if (result.success) return { allowed: true };
+    const retryAfter = Math.max(60, Math.ceil((config.windowMs ?? 60_000) / 1000));
+    return {
+      allowed: false,
+      response: {
+        statusCode: 429,
+        headers: {
+          ...RATE_LIMIT_HEADERS,
+          'Retry-After': String(retryAfter),
+          'X-RateLimit-Limit': String(config.maxRequests),
+          'X-RateLimit-Remaining': '0',
+        },
+        body: JSON.stringify({
+          error: 'Daily verification limit reached.',
+          code: 'quota/exhausted',
+          retryAfter,
+        }),
+      },
+    };
+  } catch (err) {
+    console.error(`[rate-limiter] Paid quota check failed for ${endpoint}:`, summarizeErrorForLog(err));
+    return { allowed: false, response: PAID_QUOTA_UNAVAILABLE_RESPONSE };
   }
 }
 

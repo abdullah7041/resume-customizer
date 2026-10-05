@@ -7,6 +7,7 @@ import {
   formatClarificationAnswers,
   loadPersistentHardStops,
   normalizeClarificationQuestion,
+  isRepeatedClarificationQuestion,
   persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
@@ -48,7 +49,22 @@ describe('clarification helpers', () => {
   it('accepts a verifiable exact metric in Other', () => {
     expect(isValidOtherAnswer('12')).toBe(true);
     expect(isValidOtherAnswer('12.5%')).toBe(true);
+    expect(isValidOtherAnswer('SQL')).toBe(true);
+    expect(isValidOtherAnswer('خدمة العملاء')).toBe(true);
     expect(isValidOtherAnswer('')).toBe(false);
+    expect(isValidOtherAnswer('...')).toBe(false);
+  });
+
+  it('deduplicates follow-ups by stable topic even when wording and ids change', () => {
+    const history = appendClarificationHistory([], [{ ...excelQuestion, topicKey: 'tool:excel' }], {
+      excelExperience: { selectedValues: ['dashboards'], otherText: '' },
+    });
+    expect(isRepeatedClarificationQuestion({
+      ...excelQuestion,
+      id: 'spreadsheetProof',
+      topicKey: 'tool:excel',
+      question: 'Tell us about spreadsheet evidence.',
+    }, history)).toBe(true);
   });
   it('adds a localized hard-stop as the final option when the model omits one', () => {
     const normalized = normalizeClarificationQuestion(

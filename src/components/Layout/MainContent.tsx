@@ -19,6 +19,7 @@ import {
   formatClarificationHistory,
   formatClarificationAnswers,
   loadPersistentHardStops,
+  isRepeatedClarificationQuestion,
   persistHardStops,
   shouldRequestClarifications,
   type ClarificationAnswers,
@@ -29,6 +30,8 @@ import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
 import { isOnboarded } from "../../lib/onboarding/onboardedFlag";
+import { fingerprintResume, useResumeLibraryStore } from "@/lib/resumeLibrary";
+import { ResumeSelector } from "@/components/ui/ResumeSelector";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
 // Lazy-loaded tab sections — each gets its own chunk
@@ -59,7 +62,7 @@ import { analytics } from "../../services/analytics";
 import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
 import { createAssessmentContext, canAcceptAssessment } from "@/lib/match/assessmentContext";
-import type { AssessmentContext, AssessmentInput } from "@/types/assessment";
+import type { AssessmentContext, AssessmentInput, AssessmentRecord } from "@/types/assessment";
 import type { MatchResult } from "@/types/analysis";
 import type { OptimizationResult } from "@/types/templates";
 import { clearStoredMatchAnalysis, loadStoredMatchAssessment, saveMatchAssessment } from "@/lib/utils/matchAnalysisCache";
@@ -250,6 +253,11 @@ const getResumeFingerprint = (text: string) => {
   }
   return `${text.length}:${(first >>> 0).toString(36)}:${(second >>> 0).toString(36)}`;
 };
+const currentLibraryResumeKey = () => {
+  const state = useResumeLibraryStore.getState();
+  const active = state.entries.find(entry => entry.id === state.activeResumeId);
+  return active ? `${active.id}:${active.fingerprint}` : null;
+};
 const getTruthCheckLanguage = (language?: string) => language?.toLowerCase().startsWith('ar') ? 'ar' : 'en';
 const getHardStopsFingerprint = (hardStops: string[]) => hardStops
   .flatMap(value => {
@@ -263,6 +271,7 @@ const loadCachedTruthCheck = (
   resumeText: string,
   hardStops: string[] = [],
   language?: string,
+  allowUnscoped = false,
 ): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
@@ -273,10 +282,16 @@ const loadCachedTruthCheck = (
       resumeHash?: string;
       hardStopsHash?: string;
       language?: string;
+      resumeId?: string;
+      resumeFingerprint?: string;
       result?: ResumeTruthCheckResult;
     };
+    const library = useResumeLibraryStore.getState();
+    const active = library.entries.find(entry => entry.id === library.activeResumeId);
+    if (!active && !allowUnscoped) return null;
     return parsed?.contractVersion === TRUTH_CHECK_CONTRACT_VERSION
       && parsed?.resumeHash === getResumeFingerprint(resumeText)
+      && (!active || (parsed.resumeId === active.id && parsed.resumeFingerprint === active.fingerprint))
       && (parsed.hardStopsHash ?? '') === getHardStopsFingerprint(hardStops)
       && parsed.language === getTruthCheckLanguage(language)
       && parsed.result
@@ -484,6 +499,14 @@ export default function MainContent() {
           ? storedResumeData.plainText : parsedResumeText ?? storedResumeData.plainText }
       : storedResumeData,
   [storedResumeData, parsedResumeText, originalResume]);
+  const libraryEntries = useResumeLibraryStore((state) => state.entries);
+  const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
+  const libraryInitialized = useResumeLibraryStore((state) => state.initialized);
+  const initializeResumeLibrary = useResumeLibraryStore((state) => state.initialize);
+  const activateLibraryResume = useResumeLibraryStore((state) => state.activateResume);
+  const projectedResumeId = useRef<string | null>(null);
+  const [resumeSwitchNotice, setResumeSwitchNotice] = useState<string | null>(null);
+  const switchNoticeFrame = useRef<number | null>(null);
   const hasResume = Boolean(resumeData?.plainText);
   const { setWorkflowState: setHRSuperSaudWorkflowState } = useHRSuperSaud();
   const resumeGateReason = t(
@@ -568,6 +591,7 @@ export default function MainContent() {
   const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(null);
   const [historicalMatch, setHistoricalMatch] = useState<{ status: 'legacy' | 'outdated'; result: MatchResult } | null>(null);
   const matchRequest = useRef<MatchRequest | null>(null);
+  const matchAssessments = useRef(new Map<string, AssessmentRecord<MatchResult>>());
   const matchResumeText = resumeData?.plainText ?? '';
   const matchLanguage = i18n.language === 'ar' ? 'ar' : 'en';
   const latestMatchInput = useRef<AssessmentInput>({ resumeText: matchResumeText, jobDescription,
@@ -605,8 +629,10 @@ export default function MainContent() {
     void createAssessmentContext(input).then(context => {
       if (matchRequest.current !== request || !sameMatchInput(request.input, latestMatchInput.current)) return;
       request.context = context;
-      const saved = loadStoredMatchAssessment(context);
+      const remembered = matchAssessments.current.get(context.key);
+      const saved = remembered ? { status: 'current' as const, assessment: remembered } : loadStoredMatchAssessment(context);
       if (saved?.status === 'current' && saved.assessment.jobSnapshot === input.jobDescription) {
+        matchAssessments.current.set(context.key, saved.assessment);
         setHistoricalMatch(null);
         setMatchAnalysis(saved.assessment.result);
         useResumeStore.getState().setBaselineMatchScore(saved.assessment.result.score);
@@ -647,6 +673,55 @@ export default function MainContent() {
   const [optimizationKeywords, setOptimizationKeywords] = useState(
     () => ({ add: [], remove: [], neutral: [] } as { add: string[]; remove: string[]; neutral: string[] }),
   );
+  const resultsByResume = useRef(new Map<string, {
+    match: typeof matchAnalysis;
+    truth: typeof truthCheckResult;
+    job: typeof jobDescription;
+    cards: typeof optimizations;
+    optimization: typeof optimizationData;
+    keywords: typeof optimizationKeywords;
+    optimizeRun: ReturnType<typeof useResumeStore.getState>['optimizeRun'];
+    optimizationMetrics: ReturnType<typeof useResumeStore.getState>['optimizationMetrics'];
+    analysisCache: ReturnType<typeof useResumeStore.getState>['analysisCache'];
+    storeOptimizations: ReturnType<typeof useResumeStore.getState>['optimizations'];
+    evidenceSources: ReturnType<typeof useResumeStore.getState>['evidenceSources'];
+    keywordSuggestions: ReturnType<typeof useResumeStore.getState>['keywordSuggestions'];
+    optimizationOrigin: ReturnType<typeof useResumeStore.getState>['optimizationOrigin'];
+    baselineMatchScore: ReturnType<typeof useResumeStore.getState>['baselineMatchScore'];
+    showOptimized: ReturnType<typeof useResumeStore.getState>['showOptimized'];
+    jobVariants: ReturnType<typeof useResumeStore.getState>['jobVariants'];
+    activeVariantId: ReturnType<typeof useResumeStore.getState>['activeVariantId'];
+  }>());
+  const preUploadSnapshotKey = useRef<string | null>(null);
+
+  const snapshotActiveResumeResults = useCallback((beforeUpload = false) => {
+    const state = useResumeLibraryStore.getState();
+    const previous = state.entries.find(entry => entry.id === projectedResumeId.current);
+    if (!previous) return;
+    const key = `${previous.id}:${previous.fingerprint}`;
+    const store = useResumeStore.getState();
+    resultsByResume.current.set(key, {
+      match: matchAnalysis, truth: truthCheckResult, job: jobDescription,
+      cards: optimizations, optimization: optimizationData, keywords: optimizationKeywords,
+      optimizeRun: store.optimizeRun, optimizationMetrics: store.optimizationMetrics,
+      analysisCache: store.analysisCache, storeOptimizations: store.optimizations, evidenceSources: store.evidenceSources,
+      keywordSuggestions: store.keywordSuggestions, optimizationOrigin: store.optimizationOrigin,
+      baselineMatchScore: store.baselineMatchScore, showOptimized: store.showOptimized,
+      jobVariants: store.jobVariants, activeVariantId: store.activeVariantId,
+    });
+    if (beforeUpload) preUploadSnapshotKey.current = key;
+  }, [matchAnalysis, truthCheckResult, jobDescription, optimizations, optimizationData, optimizationKeywords]);
+
+  const confirmResumeSwitch = useCallback((name: string) => {
+    if (switchNoticeFrame.current !== null) window.cancelAnimationFrame(switchNoticeFrame.current);
+    switchNoticeFrame.current = window.requestAnimationFrame(() => {
+      setResumeSwitchNotice(t('upload.library.switched', 'Using {{name}}', { name }));
+      switchNoticeFrame.current = null;
+    });
+  }, [t]);
+  useEffect(() => () => {
+    if (switchNoticeFrame.current !== null) window.cancelAnimationFrame(switchNoticeFrame.current);
+  }, []);
 
   /**
    * Adopt a run that finished while this component was not mounted.
@@ -812,6 +887,89 @@ export default function MainContent() {
     setExtractedMetadata(null);
   }, []);
 
+  useEffect(() => {
+    const document = resumeData && typeof resumeData === 'object' ? resumeData : null;
+    const parsedResume = document?.data?.basics
+      ? document.data
+      : useResumeStore.getState().originalResume;
+    const plainText = typeof document?.plainText === 'string'
+      ? document.plainText
+      : useResumeStore.getState().parsedResumeText || '';
+    void initializeResumeLibrary(parsedResume && plainText ? {
+      parsedResume,
+      plainText,
+      sourceFileName: document?.fileName,
+    } : null);
+  }, [initializeResumeLibrary, resumeData]);
+
+  useEffect(() => {
+    if (!libraryInitialized) return;
+    const active = libraryEntries.find(entry => entry.id === activeResumeId);
+    if (!active) {
+      if (projectedResumeId.current) {
+        projectedResumeId.current = null;
+        setResumeData('');
+        useResumeStore.getState().resetForNewUpload();
+      }
+      return;
+    }
+    if (projectedResumeId.current === active.id) return;
+
+    const previous = libraryEntries.find(entry => entry.id === projectedResumeId.current);
+    const previousKey = previous ? `${previous.id}:${previous.fingerprint}` : null;
+    if (previous && previousKey !== preUploadSnapshotKey.current) snapshotActiveResumeResults();
+    preUploadSnapshotKey.current = null;
+    const restored = resultsByResume.current.get(`${active.id}:${active.fingerprint}`);
+    setResumeSwitchNotice(t('upload.library.switching', 'Updating results for {{name}}…', { name: active.name }));
+
+    const currentText = resumeData && typeof resumeData === 'object' && typeof resumeData.plainText === 'string'
+      ? resumeData.plainText
+      : '';
+    projectedResumeId.current = active.id;
+    if (previous === undefined && currentText && fingerprintResume(currentText) === active.fingerprint) {
+      setTruthCheckResult(loadCachedTruthCheck(active.plainText, loadPersistentHardStops(), i18n.language));
+      // Match and optimization restoration use the complete assessment context.
+      confirmResumeSwitch(active.name);
+      return;
+    }
+
+    const document = {
+      data: structuredClone(active.parsedResume),
+      plainText: active.plainText,
+      fileName: active.sourceFileName || active.name,
+    };
+    setResumeData(document);
+    setIsAnalyzing(false);
+    setIsTruthChecking(false);
+    setIsOptimizing(false);
+    const resumeStore = useResumeStore.getState();
+    resumeStore.resetForNewUpload();
+    resumeStore.setOriginalResume(document.data);
+    resumeStore.setParsedResumeText(document.plainText);
+    if (restored) useResumeStore.setState({
+      optimizationMetrics: restored.optimizationMetrics,
+      analysisCache: restored.analysisCache,
+      optimizations: restored.storeOptimizations,
+      evidenceSources: restored.evidenceSources,
+      keywordSuggestions: restored.keywordSuggestions,
+      optimizationOrigin: restored.optimizationOrigin,
+      baselineMatchScore: restored.baselineMatchScore,
+      showOptimized: restored.showOptimized,
+      jobVariants: restored.jobVariants,
+      activeVariantId: restored.activeVariantId,
+    });
+    setMatchAnalysis(null);
+    setTruthCheckResult(restored?.truth ?? null);
+    setJobDescription(restored?.job ?? '');
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    resumeStore.setOptimizeRun(restored?.optimizeRun ?? null);
+    if (typeof window !== 'undefined') window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    resetPipelineContext();
+    confirmResumeSwitch(active.name);
+  }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData, snapshotActiveResumeResults, jobDescription, setJobDescription, i18n.language, t, confirmResumeSwitch]);
+
   const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
     setActiveJobApplicationId(application.id);
     setActiveJobApplication(application);
@@ -891,6 +1049,11 @@ export default function MainContent() {
     },
     [dismissToast]
   );
+
+  useEffect(() => {
+    if (!resumeSwitchNotice) return;
+    pushToast({ type: "info", title: resumeSwitchNotice }, { id: "resume-switch" });
+  }, [pushToast, resumeSwitchNotice]);
 
   /**
    * Say so when a run did not survive the page.
@@ -1123,7 +1286,7 @@ export default function MainContent() {
    * only just clicked, and the Match tab already has the button for it.
    */
   const handleFeedMatchPosting = useCallback(
-    ({ jobDescription: postingDescription, companyName, jobTitle }: { jobDescription: string; companyName: string; jobTitle: string }) => {
+    ({ jobDescription: postingDescription, companyName, jobTitle, match }: { jobDescription: string; companyName: string; jobTitle: string; match?: MatchResult }) => {
       if (!hasResume) {
         handleTabChange("match");
         return;
@@ -1147,15 +1310,25 @@ export default function MainContent() {
         window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
       }
 
-      // Drop the PREVIOUS job's analysis before switching tab.
+      // Reuse the feed's verified comparison for the selected resume. This is the
+      // same AI contract as Match, so opening the result does not spend a credit.
       //
       // MatchSection hides its job-description editor entirely whenever results
       // exist (the `hasResults` gate), so arriving with a stale analysis showed the
       // old posting's score and no visible JD box — the hand-off looked like it had
       // only navigated, when in fact it had pasted the description behind a results
       // view for a different job.
-      setMatchAnalysis(null);
-      clearStoredMatchAnalysis();
+      if (match) {
+        // Feed verification is bounded and does not carry a complete assessment
+        // context. Keep it inspectable without promoting it to a current result.
+        setMatchAnalysis(null);
+        matchRequest.current = { id: crypto.randomUUID(), input: { ...latestMatchInput.current, jobDescription: trimmed } };
+        setHistoricalMatch({ status: 'legacy', result: match });
+        clearStoredMatchAnalysis();
+      } else {
+        setMatchAnalysis(null);
+        clearStoredMatchAnalysis();
+      }
       // Every other "this is a different job now" path pairs those two with this
       // (confirmDeleteAllData, handleClearResume, handleClearMatch, new upload).
       // Without it activeJobApplicationId still points at the PREVIOUS posting, and
@@ -1336,6 +1509,7 @@ export default function MainContent() {
 
     // Reset persisted Zustand store state
     useResumeStore.getState().clearAll();
+    void useResumeLibraryStore.getState().clearLibrary();
 
     setShowDeleteConfirm(false);
 
@@ -1504,6 +1678,28 @@ export default function MainContent() {
               storageUserId: storage?.userId,
             }
             : parsed;
+        const parsedResume = enriched?.data?.basics
+          ? enriched.data
+          : enriched?.basics
+            ? enriched
+            : null;
+        if (parsedResume && typeof enriched?.plainText === 'string' && enriched.plainText.trim()) {
+          try {
+            const saved = await useResumeLibraryStore.getState().saveResume({
+              parsedResume,
+              plainText: enriched.plainText,
+              sourceFileName: parseInput instanceof File ? enriched.fileName : undefined,
+            });
+            projectedResumeId.current = saved.id;
+            preUploadSnapshotKey.current = null;
+          } catch (libraryError) {
+            pushToast({
+              type: 'warning',
+              title: t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.'),
+              description: libraryError instanceof Error ? libraryError.message : undefined,
+            });
+          }
+        }
         setResumeData(enriched);
         setMatchAnalysis(null);
         setTruthCheckResult(null);
@@ -1666,10 +1862,12 @@ export default function MainContent() {
 
         // Persist the displayed result so it survives a page refresh (restored
         // by the matchAnalysis lazy initializer while the JD still matches).
-        saveMatchAssessment({ context, requestId: request.id, jobSnapshot: submittedJob,
+        const assessment = { context, requestId: request.id, jobSnapshot: submittedJob,
           createdAt: new Date().toISOString(), result,
           ...(typeof response.debug?.model === 'string' ? { model: response.debug.model } : {}),
-        });
+        };
+        matchAssessments.current.set(context.key, assessment);
+        saveMatchAssessment(assessment);
         void metadataPromise.then((metadata) =>
           autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, submittedJob, isCurrent)
         );
@@ -1748,6 +1946,7 @@ export default function MainContent() {
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
+    const requestedResumeKey = currentLibraryResumeKey();
     if (isGuestMode) {
       requireSignInForGuestAction();
       return null;
@@ -1768,7 +1967,7 @@ export default function MainContent() {
     const userHardStops = loadPersistentHardStops();
     const hardStopsHash = getHardStopsFingerprint(userHardStops);
     const truthCheckLanguage = getTruthCheckLanguage(i18n.language);
-    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops, truthCheckLanguage);
+    const cached = loadCachedTruthCheck(resumeTextToAnalyze, userHardStops, truthCheckLanguage, true);
     if (cached) {
       setTruthCheckResult(cached);
       return cached;
@@ -1790,6 +1989,7 @@ export default function MainContent() {
         language: truthCheckLanguage,
         userHardStops,
       }) as ResumeTruthCheckResult;
+      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
 
       setAiDebug(buildAiDebugSnapshot(result, "success"));
       setTruthCheckResult(result);
@@ -1797,6 +1997,8 @@ export default function MainContent() {
         window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
           contractVersion: TRUTH_CHECK_CONTRACT_VERSION,
           resumeHash,
+          resumeId: useResumeLibraryStore.getState().activeResumeId,
+          resumeFingerprint: useResumeLibraryStore.getState().entries.find(entry => entry.id === useResumeLibraryStore.getState().activeResumeId)?.fingerprint,
           hardStopsHash,
           language: truthCheckLanguage,
           result,
@@ -1818,6 +2020,7 @@ export default function MainContent() {
       );
       return result;
     } catch (error) {
+      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
       setAiDebug(buildAiDebugSnapshot(error, "error"));
       pushToast(
         {
@@ -1829,7 +2032,7 @@ export default function MainContent() {
       );
       throw error;
     } finally {
-      setIsTruthChecking(false);
+      if (requestedResumeKey === currentLibraryResumeKey()) setIsTruthChecking(false);
     }
   }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t]);
 
@@ -1846,6 +2049,8 @@ export default function MainContent() {
         // is the only thing left saying a run was in flight.
         useResumeStore.getState().setOptimizeRun({
           status: 'running',
+          resumeId: useResumeLibraryStore.getState().activeResumeId ?? undefined,
+          resumeFingerprint: useResumeLibraryStore.getState().entries.find(entry => entry.id === useResumeLibraryStore.getState().activeResumeId)?.fingerprint,
           pageSessionId: PAGE_SESSION_ID,
           startedAt: new Date().toISOString(),
           finishedAt: null,
@@ -2223,7 +2428,7 @@ export default function MainContent() {
                 jobDesc: input.jobDescription,
                 language: input.language,
                 history: clarificationHistory.current,
-                round: clarificationHistory.current.length ? Math.min(10, clarificationRound + 1) : 1,
+                round: clarificationHistory.current.length ? Math.min(3, clarificationRound + 1) : 1,
               });
             } finally {
               if (isCurrentOptimize(request)) setIsCheckingClarifications(false);
@@ -2236,7 +2441,7 @@ export default function MainContent() {
             persistentHardStops,
           );
 
-          if (unansweredQuestions.length > 0) {
+          if (!clarifyResult.complete && unansweredQuestions.length > 0) {
             // Keep the caller pending until the modal continuation completes. The
             // OptimizeSection uses that completion boundary to consume a free
             // preview and verify only the cards that were actually generated.
@@ -2309,7 +2514,7 @@ export default function MainContent() {
     const allHardStops = persistHardStops([...persistentHardStops, ...(newPersistentHardStops ?? [])]);
     const { userClarifications, userHardStops } = formatClarificationHistory(clarificationHistory.current);
     try {
-      if (!optimizeNow && clarificationRound < 10 && clarificationHistory.current.length < 30) {
+      if (!optimizeNow && clarificationRound < 3 && clarificationHistory.current.length < 30) {
         const next = await generateClarifications({
           resumeText: resumeData?.plainText,
           jobDesc: jobDescription,
@@ -2323,8 +2528,8 @@ export default function MainContent() {
           return;
         }
         const unanswered = filterClarificationQuestionsByHardStops(next.clarifications ?? [], allHardStops)
-          .filter(question => !clarificationHistory.current.some(entry => entry.id === question.id || entry.question === question.question));
-        if (unanswered.length) {
+          .filter(question => !isRepeatedClarificationQuestion(question, clarificationHistory.current));
+        if (!next.complete && unanswered.length) {
           setClarificationQuestions(unanswered);
           setClarificationRound(previous => previous + 1);
           setClarificationDraft({});
@@ -2679,7 +2884,7 @@ export default function MainContent() {
       <button
         type="button"
         onClick={handleClearAllData}
-        className="btn-danger-glass flex-shrink-0 group flex items-center gap-1.5 px-3 py-1.5 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-[color,background-color,border-color,box-shadow] duration-200"
+        className="btn-danger-glass group col-start-2 row-start-1 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-[background-color,box-shadow,scale] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 active:scale-[0.96] sm:min-w-0 sm:text-xs"
         title={t("workspace.clearAll")}
         aria-label={t("workspace.clearAll")}
       >
@@ -2788,40 +2993,42 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* Workflow navigation */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="sm:hidden">
+        {/* The desktop action column gives the selector its own row below More tools. */}
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-3">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:col-start-2 md:row-start-1 md:w-64 lg:w-72">
+            <GlassButton
+              type="button"
+              variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => handleTabChange("more-tools")}
+              className="hidden whitespace-nowrap md:col-start-1 md:row-start-1 md:inline-flex md:min-h-11 md:w-full"
+            >
+              <MoreHorizontal className="h-4 w-4 me-1.5" />
+              {t("tabs.moreTools", "More tools")}
+            </GlassButton>
+            {!isGuestMode && libraryEntries.length > 0 && (
+              <div className="col-start-1 row-start-1 min-w-0 md:col-span-2 md:row-start-2">
+                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+              </div>
+            )}
+            {renderClearAllAction(false)}
+          </div>
+          <div className="min-w-0 md:col-start-1 md:row-start-1">
+            <div className="md:hidden">
               <MobileWorkflowNav
                 primarySteps={mobilePrimarySteps}
                 secondarySteps={mobileSecondarySteps}
                 activeValue={activeTab}
                 onStepChange={handleTabChange}
                 gateReason={mobileWorkflowGateReason}
-                rightAction={renderClearAllAction(false)}
               />
             </div>
-            <div className="hidden sm:block">
-              <div className="flex items-start gap-3">
-                <WorkflowStepper
-                  steps={workflowSteps}
-                  onStepClick={handleTabChange}
-                  className="flex-1"
-                />
-                <div className="flex shrink-0 items-center gap-2">
-                  <GlassButton
-                    type="button"
-                    variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
-                    size="sm"
-                    onClick={() => handleTabChange("more-tools")}
-                    className="whitespace-nowrap"
-                  >
-                    <MoreHorizontal className="h-4 w-4 me-1.5" />
-                    {t("tabs.moreTools", "More tools")}
-                  </GlassButton>
-                  {renderClearAllAction(false)}
-                </div>
-              </div>
+            <div className="hidden md:block">
+              <WorkflowStepper
+                steps={workflowSteps}
+                onStepClick={handleTabChange}
+                className="min-w-0"
+              />
             </div>
           </div>
         </div>
@@ -2833,6 +3040,7 @@ export default function MainContent() {
             <>
               <UploadSection
                 onParseResume={handleParseResume}
+                onBeforeParseResume={() => snapshotActiveResumeResults(true)}
                 resumeDocument={resumeData}
                 onToast={handleUploadToast}
                 onClear={handleClearResume}
@@ -2865,9 +3073,10 @@ export default function MainContent() {
                   resumeText={matchResumeText}
                   onToast={pushToast}
                   onClear={handleClearMatch}
-                  jobDescription={jobDescription}
                   historicalMatch={historicalMatch}
                   onJobDescriptionChange={setJobDescription}
+                  jobDescription={activeResumeId && projectedResumeId.current !== activeResumeId ? '' : jobDescription}
+                  resumeContextKey={activeResumeId ? `${activeResumeId}:${libraryEntries.find(entry => entry.id === activeResumeId)?.fingerprint ?? ''}` : undefined}
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
                   savedApplicationId={activeJobApplicationId}
@@ -2921,7 +3130,6 @@ export default function MainContent() {
                   isCheckingQuestions={isCheckingClarifications}
                   onOptimize={handleOptimize}
                   resumeText={resumeData?.plainText || ''}
-                  jobDescription={jobDescription}
                   assessmentCurrent={optimizeAssessmentCurrent}
                   assessmentKey={optimizeAssessmentKey ?? undefined}
                   onCopy={handleCopy}
@@ -2969,8 +3177,7 @@ export default function MainContent() {
                   ? renderGuestProtectedPanel(t("tabs.interview", "Interview"))
                   : (
                     <InterviewSection
-                      jobDescription={jobDescription}
-                      resumeText={resumeData?.plainText || ""}
+                          resumeText={resumeData?.plainText || ""}
                       matchAnalysis={matchAnalysis}
                       resumeData={resumeData}
                       onUpdate={handleResumeDataUpdate}
@@ -2986,8 +3193,7 @@ export default function MainContent() {
                   ? renderGuestProtectedPanel(t("tabs.bulk", "Bulk"))
                   : (
                     <BulkAnalysisSection
-                      jobDescription={jobDescription}
-                    />
+                        />
                   )}
               </Suspense>
             </LazyErrorBoundary>
@@ -3000,8 +3206,7 @@ export default function MainContent() {
                   : (
                     <CoverLetterSection
                       resumeText={resumeData?.plainText || ""}
-                      jobDescription={jobDescription}
-                      resumeData={resumeData}
+                          resumeData={resumeData}
                     />
                   )}
               </Suspense>
@@ -3141,7 +3346,7 @@ export default function MainContent() {
         >
           <div
             className={cn(
-              "absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-md duration-200",
+              "absolute inset-0 bg-gray-950/60 backdrop-blur-xl duration-200 dark:bg-black/75",
               deleteConfirmPresence.isExiting ? "animate-out fade-out ease-out" : "animate-in fade-in"
             )}
             onClick={() => setShowDeleteConfirm(false)}
@@ -3149,39 +3354,39 @@ export default function MainContent() {
           />
           <div
             className={cn(
-              "relative w-full max-w-md neu-card shadow-2xl rounded-2xl duration-200 ease-out overflow-hidden",
+              "relative w-full max-w-md overflow-hidden rounded-2xl border border-[color:var(--glass-border)] bg-[color:var(--surface-glass-elevated)] shadow-2xl shadow-emerald-950/10 backdrop-blur-xl duration-200 ease-out dark:border-white/10 dark:bg-[#071f1a] dark:shadow-black/60",
               deleteConfirmPresence.isExiting
                 ? "animate-out fade-out zoom-out-95"
                 : "animate-in fade-in zoom-in-95"
             )}
           >
-            <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-white/10">
-              <div className="p-2 neu-inset rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 shrink-0">
+            <div className="flex items-center gap-3 border-b border-[color:var(--glass-border)] p-5 dark:border-white/10">
+              <div className="shrink-0 rounded-xl border border-red-500/15 bg-red-500/10 p-2.5 text-red-600 dark:border-red-400/20 dark:text-red-300">
                 <AlertTriangle className="w-5 h-5" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-bold text-gray-950 dark:text-white">
                 {t("workspace.deleteAllConfirm.title", "Delete All Data?")}
               </h3>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+            <div className="p-5 sm:p-6">
+              <p className="mb-6 leading-relaxed text-gray-700 dark:text-white/70">
                 {t(
                   "workspace.deleteAllConfirm.description",
                   "This will permanently delete your uploaded resume, optimizations, and all saved progress. This action cannot be undone."
                 )}
               </p>
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-out bg-gray-100 dark:bg-gray-900/80 hover:bg-gray-200 dark:hover:bg-black border border-gray-300/50 dark:border-white/10 text-gray-900 dark:text-white shadow-md active:scale-[0.96]"
+                  className="min-h-11 rounded-xl border border-[color:var(--glass-border)] bg-[color:var(--surface-control)] px-4 py-2.5 font-semibold text-gray-800 shadow-sm transition-[background-color,box-shadow,scale] duration-150 ease-out hover:bg-[color:var(--surface-control-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 active:scale-[0.96] dark:border-white/15 dark:text-white/85"
                 >
                   {t("common.cancel", "Cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={confirmDeleteAllData}
-                  className="flex-1 sm:flex-none px-4 py-2 font-medium rounded-xl transition-[color,background-color,border-color,box-shadow,scale] duration-150 ease-out bg-red-500 hover:bg-red-600 text-white shadow-[0_4px_15px_rgba(239,68,68,0.25)] hover:shadow-[0_8px_30px_rgba(239,68,68,0.4)] border border-red-400/20 flex items-center justify-center gap-2 active:scale-[0.96]"
+                  className="btn-danger-glass inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold shadow-sm transition-[background-color,box-shadow,scale] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60 active:scale-[0.96]"
                 >
                   <Trash2 className="w-4 h-4" />
                   {t("workspace.deleteAllConfirm.confirm", "Delete All")}

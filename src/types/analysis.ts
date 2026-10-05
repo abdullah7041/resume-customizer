@@ -94,6 +94,8 @@ export interface StoredMatchAnalysis {
   analysis?: MatchResult;
   jobText?: string;
   savedAt?: number;
+  resumeId?: string;
+  resumeFingerprint?: string;
 }
 
 /**

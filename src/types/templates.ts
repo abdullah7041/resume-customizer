@@ -276,6 +276,8 @@ export interface OptimizeRunRecord {
   /** Exact inputs for this run; absent on legacy persisted records. */
   assessment?: AssessmentRecord<unknown>;
   status: 'running' | 'succeeded' | 'failed';
+  resumeId?: string;
+  resumeFingerprint?: string;
   /**
    * Which page load started this run.
    *

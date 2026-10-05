@@ -67,6 +67,7 @@ describe('UploadCard Arabic localization', () => {
 
     expect(screen.getByText('السيرة جاهزة ومحفوظة')).toBeInTheDocument();
     expect(screen.queryByText('Resume Ready & Saved')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /prepare/i })).not.toBeInTheDocument();
 
     rerender(<UploadCard {...baseProps} status="parsing" onCancel={vi.fn()} />);
 

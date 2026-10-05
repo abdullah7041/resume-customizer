@@ -29,6 +29,7 @@ const sameContext = (left: AssessmentContext, right: AssessmentContext): boolean
   left.rubricVersion === right.rubricVersion;
 
 export const MATCH_STORAGE_KEY = 'watheq:lastMatchAnalysis';
+type ResumeProvenance = { resumeId: string; resumeFingerprint: string };
 
 /** Read a saved result with provenance; old records remain inspectable as legacy. */
 export function loadStoredMatchAssessment(context: AssessmentContext): StoredMatchAssessment | null {
@@ -73,13 +74,15 @@ export function saveMatchAssessment(assessment: AssessmentRecord<MatchResult>): 
   }
 }
 
-export function loadCachedMatchAnalysis(jobText: string): MatchResult | null {
+export function loadCachedMatchAnalysis(jobText: string, provenance?: ResumeProvenance): MatchResult | null {
   if (typeof window === 'undefined' || !jobText) return null;
   try {
     const stored = window.localStorage.getItem(MATCH_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as StoredMatchAnalysis;
-    return parsed?.jobText === jobText && parsed.analysis && typeof parsed.analysis.score === 'number'
+    return parsed?.jobText === jobText
+      && (!provenance || (parsed.resumeId === provenance.resumeId && parsed.resumeFingerprint === provenance.resumeFingerprint))
+      && parsed.analysis && typeof parsed.analysis.score === 'number'
       ? parsed.analysis
       : null;
   } catch {
@@ -93,12 +96,12 @@ export function loadCachedMatchAnalysis(jobText: string): MatchResult | null {
   }
 }
 
-export function saveMatchAnalysis(analysis: MatchResult, jobText: string): void {
+export function saveMatchAnalysis(analysis: MatchResult, jobText: string, provenance?: ResumeProvenance): void {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(
       MATCH_STORAGE_KEY,
-      JSON.stringify({ analysis, jobText, savedAt: Date.now() } satisfies StoredMatchAnalysis),
+      JSON.stringify({ analysis, jobText, savedAt: Date.now(), ...provenance } satisfies StoredMatchAnalysis),
     );
   } catch {
     console.warn('[MatchAnalysisCache] Failed to persist match analysis');

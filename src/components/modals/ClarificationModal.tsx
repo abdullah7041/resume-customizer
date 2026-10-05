@@ -86,6 +86,7 @@ export function ClarificationModal({
   );
   const [answers, setAnswers] = useState<ClarificationAnswers>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [confirmExit, setConfirmExit] = useState(false);
   const firstRef = useRef<HTMLButtonElement>(null);
 
   // Inject slideUp keyframe once on mount (avoids global CSS dependency)
@@ -107,21 +108,26 @@ export function ClarificationModal({
         initialAnswers?.[question.id] ?? emptyAnswer(),
       ])));
       setTouched({});
+      setConfirmExit(false);
       // Focus first textarea after animation settles
       const t = setTimeout(() => firstRef.current?.focus(), 80);
       return () => clearTimeout(t);
     }
   }, [isOpen, normalizedQuestions, initialAnswers]);
 
-  // Keyboard handler: Escape skips the modal
+  const requestExit = useCallback(() => {
+    setConfirmExit(true);
+  }, []);
+
+  // Escape opens the same explicit exit choice as the close button.
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isRegenerating) onSkip();
+      if (e.key === 'Escape' && !isRegenerating) requestExit();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onSkip, isRegenerating]);
+  }, [isOpen, requestExit, isRegenerating]);
 
   const handleOptionToggle = useCallback((question: ClarificationQuestion, option: ClarificationOption) => {
     setAnswers(previous => {
@@ -195,7 +201,7 @@ export function ClarificationModal({
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/65 backdrop-blur-md"
-        onClick={isRegenerating ? undefined : onSkip}
+        onClick={isRegenerating ? undefined : requestExit}
         aria-hidden="true"
       />
 
@@ -251,7 +257,7 @@ export function ClarificationModal({
             )}
             <button
               type="button"
-              onClick={onSkip}
+              onClick={requestExit}
               disabled={isRegenerating}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/10 transition-colors"
               aria-label="Skip and proceed without answers"
@@ -358,33 +364,54 @@ export function ClarificationModal({
 
         {/* ---- Footer ---- */}
         <div className="px-6 pb-6 space-y-3">
-          {/* Recommendation nudge (shown always) */}
-          <p className="text-center text-xs text-amber-700/90 dark:text-amber-300/70">
-            💡 {t('clarificationModal.nudge', 'Answering these questions helps the AI generate more targeted improvements')}
-          </p>
+          {confirmExit ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-50/80 p-3 dark:bg-amber-500/10">
+              <p className="mb-3 text-center text-xs text-amber-900 dark:text-amber-100">
+                {t('clarificationModal.exitWarning', 'Your valid answers will be kept. Keep answering, or optimize now with what you have.')}
+              </p>
+              <div className="flex gap-3">
+                <GlassButton variant="secondary" onClick={() => setConfirmExit(false)} className="flex-1">
+                  {t('clarificationModal.keepAnswering', 'Keep answering')}
+                </GlassButton>
+                <GlassButton
+                  variant="primary"
+                  onClick={() => onOptimizeNow ? onOptimizeNow(collectAnswers()) : onSkip()}
+                  className="flex-1"
+                >
+                  {t('clarificationModal.optimizeNow', 'Optimize now')}
+                </GlassButton>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-center text-xs text-amber-700/90 dark:text-amber-300/70">
+                💡 {t('clarificationModal.nudge', 'Answering these questions helps the AI generate more targeted improvements')}
+              </p>
 
-          <div className="flex gap-3">
-            <GlassButton
-              variant="secondary"
-              onClick={() => onOptimizeNow ? onOptimizeNow(collectAnswers()) : onSkip()}
-              disabled={isRegenerating}
-              className="flex-1"
-              id="clarify-skip-btn"
-            >
-              {onOptimizeNow ? t('clarificationModal.optimizeNow', 'Optimize now') : t('clarificationModal.skipBtn', 'Skip for now')}
-            </GlassButton>
+              <div className="flex gap-3">
+                <GlassButton
+                  variant="secondary"
+                  onClick={() => onOptimizeNow ? onOptimizeNow(collectAnswers()) : onSkip()}
+                  disabled={isRegenerating}
+                  className="flex-1"
+                  id="clarify-skip-btn"
+                >
+                  {onOptimizeNow ? t('clarificationModal.optimizeNow', 'Optimize now') : t('clarificationModal.skipBtn', 'Skip for now')}
+                </GlassButton>
 
-            <GlassButton
-              variant="primary"
-              onClick={() => onSubmit(collectAnswers())}
-              disabled={!hasAnyValidAnswer || isRegenerating || round >= 10}
-              className="flex-1 gap-1.5"
-              id="clarify-submit-btn"
-            >
-              {round >= 3 ? t('clarificationModal.continueQuestions', 'Continue questions') : t('clarificationModal.submitBtn', 'Submit Answers')}
-              <ChevronRight className="w-4 h-4" />
-            </GlassButton>
-          </div>
+                <GlassButton
+                  variant="primary"
+                  onClick={() => onSubmit(collectAnswers())}
+                  disabled={!hasAnyValidAnswer || isRegenerating}
+                  className="flex-1 gap-1.5"
+                  id="clarify-submit-btn"
+                >
+                  {t('clarificationModal.submitBtn', 'Submit Answers')}
+                  <ChevronRight className="w-4 h-4" />
+                </GlassButton>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

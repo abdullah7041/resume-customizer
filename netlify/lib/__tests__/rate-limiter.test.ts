@@ -29,6 +29,7 @@ vi.mock('@upstash/ratelimit', () => {
     }
 
     async limit(identifier: string) {
+      if (identifier.includes('throwing-user')) throw new Error('redis unavailable');
       const nextCount = (limitCounts.get(identifier) ?? 0) + 1;
       limitCounts.set(identifier, nextCount);
 
@@ -143,6 +144,38 @@ describe('rate-limiter endpoint configs', () => {
     expect(blocked.statusCode).toBe(429);
     expect(blocked.headers?.['X-RateLimit-Limit']).toBe('30');
     expect(handler).toHaveBeenCalledTimes(30);
+  });
+
+  it('tracks feed-match quotas independently by authenticated user identifier', async () => {
+    const { checkCostBearingRateLimitForIdentifier } = await loadRateLimiter();
+
+    for (let i = 1; i <= 50; i += 1) {
+      expect((await checkCostBearingRateLimitForIdentifier('feed-match', 'user-1')).allowed).toBe(true);
+    }
+
+    expect((await checkCostBearingRateLimitForIdentifier('feed-match', 'user-1')).allowed).toBe(false);
+    expect((await checkCostBearingRateLimitForIdentifier('feed-match', 'user-2')).allowed).toBe(true);
+    expect(constructedLimiters[constructedLimiters.length - 1]?.limiter).toEqual({
+      maxRequests: 50,
+      window: '86400 s',
+    });
+  });
+
+  it('fails closed when paid quota storage is missing or errors', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.NETLIFY_DEV;
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    let module = await loadRateLimiter();
+    const missing = await module.checkCostBearingRateLimitForIdentifier('feed-match', 'user-1');
+    expect(missing.allowed).toBe(false);
+    expect(missing.response?.statusCode).toBe(503);
+
+    setProductionUpstashEnv();
+    module = await loadRateLimiter();
+    const errored = await module.checkCostBearingRateLimitForIdentifier('feed-match', 'throwing-user');
+    expect(errored.allowed).toBe(false);
+    expect(errored.response?.statusCode).toBe(503);
   });
 });
 

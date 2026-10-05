@@ -136,6 +136,7 @@ interface MatchSectionProps {
   onClear?: () => void;
   jobDescription?: string;
   onJobDescriptionChange?: (jobDescription: string) => void;
+  resumeContextKey?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
   onJobSaved?: (application: JobApplication) => void;
   savedApplicationId?: string | null;
@@ -252,6 +253,7 @@ export function MatchSection({
   onClear,
   jobDescription,
   onJobDescriptionChange,
+  resumeContextKey,
   extractedMetadata,
   onJobSaved,
   savedApplicationId,
@@ -303,6 +305,13 @@ export function MatchSection({
     setImportedCriteria(null);
     setError('');
   }, [jobDescription]);
+
+  useEffect(() => {
+    if (resumeContextKey) {
+      setJobText(jobDescription ?? '');
+      setImportedCriteria(null);
+    }
+  }, [resumeContextKey, jobDescription]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
