@@ -11,7 +11,7 @@ Started: 2026-10-04; final local verification: 2026-10-05 (Asia/Riyadh). Branch:
 - [ ] Resolve portable logical Arabic text extraction/search/copy and complete mixed reading order. The tested native PDFs retain legible pixels but fail these text-fidelity checks.
 - [ ] Verify deployed Linux Chromium, actual manual reader copy/search, native print dialog, additional templates and downstream readers/ATS. Local fixtures do not qualify those environments.
 
-See [PDF diagnosis and fresh evidence](2026-10-04-arabic-pdf-fidelity.md) and [2026-10-05 installed-writer follow-up](2026-10-05-arabic-pdf-followup.md). The stock jsPDF and logical-mapping probes failed independent ordering checks; no production renderer correction was demonstrated. DOCX is an existing recovery choice; XML fixture checks do not establish every consumer's behavior.
+See [PDF diagnosis and fresh evidence](2026-10-04-arabic-pdf-fidelity.md), [2026-10-05 installed-writer follow-up](2026-10-05-arabic-pdf-followup.md), and the [2026-10-06 isolated fontkit experiment](2026-10-06-arabic-pdf-fontkit-experiment.md). The stock jsPDF, logical-mapping, and stock subset `pdf-lib`/fontkit routes failed their independent fidelity checks; no production renderer correction was demonstrated. DOCX is an existing recovery choice; XML fixture checks do not establish every consumer's behavior.
 
 ## Phase 2: candidate-controlled report
 
@@ -64,5 +64,18 @@ Local merge `e86f5e4` reconciles main `211f60f`; reviewed correction `05f23b6` r
 - [x] Run the current integrated-head gate and scoped recovery, retaining the failed broad-run caveat.
 - [x] Independent gate assessment and final docs/index verification. No actionable runtime/test defect established; PR review readiness is conditional on clean CI, merge readiness is not established.
 - [ ] Obtain/preserve push/PR authorization; require CI and approval before merge into main. No push, PR, main merge or deployment has occurred.
+
+## Remaining validation — 2026-10-06
+
+Test-only commit `0d7fd5a` synchronizes the JobFeed clock test's initial load and verification effect. A controlled probe failed with the old wait and passed with the corrected async `act`; the normal whole file passed 64/64, touched-file ESLint passed, and independent specification and quality review passed. The probe identifies a scheduling vulnerability, but it does not prove the precise cause of the 2026-10-05 full-suite failure. Runtime code and assertions are unchanged.
+
+The controller's new full serial run on `0d7fd5a` also exited 1: 222 files passed, with 2,323 tests passed and two skipped. One worker-start timeout prevented `feedback-api.test.ts` from executing. The fixed JobFeed clock test passed within this run, with no assertion failures. A separate focused execution then passed the missing feedback file's 15 tests in 2.30 seconds. Together the receipts cover all 223 files with 2,338 unique passing tests and two skips, but they are **not one green full-suite run**. The reported elapsed time was 18,050.29 seconds; the reason for its length and for the worker-start timeout was not diagnosed. Preserve both failed full-run receipts and require clean CI before merge. Do not repeat the broad suite blindly.
+
+The isolated `pdf-lib`/fontkit four-line probe failed visual mixed Latin/digit fidelity and exact extraction: PDFjs 2/4, PDFium 0/4, and pypdf 3/4. Its independent review passed after a wording correction. The [durable report](2026-10-06-arabic-pdf-fontkit-experiment.md) records the limited result. It is not an Arabic export fix. Previous lint, types, build, locale and fictional-pilot passes apply to unchanged runtime `05f23b6`; they were not fresh 2026-10-06 runs.
+
+- [x] Diagnose and correct the clock test synchronization with controlled and focused evidence; preserve the unproven historical cause.
+- [x] Record the second failed full serial receipt and focused feedback-file recovery without claiming a green full suite.
+- [x] Run and independently review the bounded stock fontkit experiment; stop that failed route.
+- [ ] Obtain clean CI and approval before merge. No push, PR, main merge or deployment has occurred.
 
 See [current readiness and full task coverage](2026-10-05-main-readiness.md). Arabic/mixed PDF, deployed/manual/ATS and real consented candidate/HR study gates above remain open. Offline preparation and fictional calculations are complete local work, not participant results.
