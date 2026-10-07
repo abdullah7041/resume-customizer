@@ -508,10 +508,16 @@ export function parseWorkBlocks(lines) {
   const entries = [];
   let current = null;
 
-  // A year appearing inside an achievement is not enough to start a new job.
-  // Accept an inline header only when it has a full date range or an explicit
-  // role/company separator; standalone date lines are attached below.
-  const isHeader = (line) => DATE_RANGE_RE.test(line) || COMPANY_SEP_RE.test(line);
+  // ISO date metadata cannot establish a second job without a role/company separator.
+  // Keep the older range-only title behavior for non-ISO dates.
+  const isHeader = (line) => {
+    const range = line.match(DATE_RANGE_RE);
+    const withoutRange = range
+      ? (line.slice(0, range.index) + line.slice(range.index + range[0].length)).trim()
+      : line;
+    return COMPANY_SEP_RE.test(withoutRange)
+      || Boolean(range && (!current || !/(?:19|20)\d{2}-(?:0[1-9]|1[0-2])/.test(range[0])));
+  };
 
   for (let index = 0; index < rows.length; index++) {
     const line = rows[index];

@@ -332,6 +332,29 @@ describe("parseWorkBlocks — conservative header detection", () => {
     }
   });
 
+  it("does not turn an ISO date range inside an achievement into work", () => {
+    for (const achievement of [
+      "Led migration from 2022-01 to 2023-06",
+      "Led migration 2022-01 - 2023-06",
+      "Led migration 2022-01 – 2023-06",
+      "Led migration 2022-01 — 2023-06",
+      "• Led migration from 2022-01 to 2023-06",
+    ]) {
+      const raw = [
+        "Nora Example", "Experience", "Engineer at Acme | 2020 - Present",
+        achievement, "Improved reliability.",
+      ].join("\n");
+      expect(parseWorkBlocks(raw.split("\n").slice(2))).toEqual([{
+        position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present",
+        highlights: [achievement.replace(/^• /, ""), "Improved reliability."],
+      }]);
+      const firstPass = { work: [{ position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present" }] };
+      const { analysis, fallbackSections } = recoverSectionsFromRawText(firstPass, detectSectionSignals(raw), raw);
+      expect(analysis.work).toEqual(firstPass.work);
+      expect(fallbackSections).not.toContain("experience");
+    }
+  });
+
   it("still recovers a missing ISO-dated role with an explicit role/company separator", () => {
     const lines = ["Engineer at Acme | 2020 - Present", "Analyst at Harbor Works | 2022-01 — 2023-06"];
     expect(parseWorkBlocks(lines)).toEqual([
