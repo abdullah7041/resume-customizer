@@ -55,5 +55,5 @@ export const resolveAuthRedirectUrl = ({
     return `${location.origin}${location.pathname}`;
   }
 
-  return location.origin;
+  return `${location.origin}/`;
 };
