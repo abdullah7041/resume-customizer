@@ -377,13 +377,14 @@ function splitSkillTokens(lines) {
 // Date token used to recognize work-entry header lines and to slice a date
 // range out of them (e.g. "Mar 2021 - Present", "2017 - 2018", "Jan 2019").
 const MONTH = "(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?";
-const DATE_TOKEN_RE = new RegExp(`(?:${MONTH}\\s*)?(?:19|20)\\d{2}|\\bpresent\\b`, "i");
+const DATE = `(?:${MONTH}\\s*)?(?:19|20)\\d{2}(?:-(?:0[1-9]|1[0-2]))?|\\bpresent\\b`;
+const DATE_TOKEN_RE = new RegExp(DATE, "i");
 const DATE_RANGE_RE = new RegExp(
-  `((?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)\\s*(?:[-–—]|to)\\s*((?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)`,
+  `(${DATE})\\s*(?:[-–—]|to)\\s*(${DATE})`,
   "i",
 );
 const DATE_ONLY_RE = new RegExp(
-  `^\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)(?:\\s*(?:[-–—]|to)\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present))?\\s*$`,
+  `^\\s*(?:${DATE})(?:\\s*(?:[-–—]|to)\\s*(?:${DATE}))?\\s*$`,
   "i",
 );
 const BULLET_PREFIX_RE = /^[\s•·*\-–—]+/;
@@ -515,6 +516,13 @@ export function parseWorkBlocks(lines) {
   for (let index = 0; index < rows.length; index++) {
     const line = rows[index];
     const nextLine = rows[index + 1] || "";
+    // A completed entry can be followed by another stacked role/company/date header.
+    const startsStackedHeader = current?.startDate
+      && !BULLET_PREFIX_RE.test(line)
+      && !BULLET_PREFIX_RE.test(nextLine)
+      && !/[.!?]$/.test(line)
+      && !/[.!?]$/.test(nextLine)
+      && DATE_ONLY_RE.test(rows[index + 2] || "");
 
     // A date-only line immediately after a role/company belongs to the current
     // entry; it must not become a second date-only work item.
@@ -595,7 +603,7 @@ export function parseWorkBlocks(lines) {
       continue;
     }
 
-    if (isHeader(line) || !current) {
+    if (isHeader(line) || startsStackedHeader || !current) {
       let rest = line;
       const entry = {};
 

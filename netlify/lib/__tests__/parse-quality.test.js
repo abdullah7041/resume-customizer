@@ -240,6 +240,22 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
   const raw = buildRealisticResume();
   const signals = detectSectionSignals(raw);
 
+  it("does not append date fragments when ISO-dated roles are already parsed", () => {
+    const isoRaw = [
+      "Nora Example", "Experience", "Senior Engineer", "Cedar Labs", "2022-01 — 2024-06",
+      "Maintained customer reports.", "Reporting Analyst", "Harbor Works", "2020-01 — 2021-12",
+      "Maintained internal reports.",
+    ].join("\n");
+    const firstPass = { work: [
+      { position: "Senior Engineer", name: "Cedar Labs", startDate: "2022-01", endDate: "2024-06" },
+      { position: "Reporting Analyst", name: "Harbor Works", startDate: "2020-01", endDate: "2021-12" },
+    ] };
+
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(firstPass, detectSectionSignals(isoRaw), isoRaw);
+    expect(analysis.work).toEqual(firstPass.work);
+    expect(fallbackSections).not.toContain("experience");
+  });
+
   it("fills work entirely when the AI parser returned none", () => {
     const { analysis, fallbackSections } = recoverSectionsFromRawText({ work: [] }, signals, raw);
     expect(analysis.work.length).toBeGreaterThanOrEqual(3);
@@ -280,6 +296,24 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
 });
 
 describe("parseWorkBlocks — conservative header detection", () => {
+  it("attaches ISO year-month ranges to stacked work headers", () => {
+    const work = parseWorkBlocks([
+      "Senior Engineer",
+      "Cedar Labs",
+      "2022-01 — 2024-06",
+      "Maintained customer reports.",
+      "Reporting Analyst",
+      "Harbor Works",
+      "2020-01 — 2021-12",
+      "Maintained internal reports.",
+    ]);
+
+    expect(work).toEqual([
+      { position: "Senior Engineer", name: "Cedar Labs", startDate: "2022-01", endDate: "2024-06", highlights: ["Maintained customer reports."] },
+      { position: "Reporting Analyst", name: "Harbor Works", startDate: "2020-01", endDate: "2021-12", highlights: ["Maintained internal reports."] },
+    ]);
+  });
+
   it("keeps year-bearing achievement lines as highlights", () => {
     const work = parseWorkBlocks([
       "Senior Engineer at Acme | 2022 - Present",
