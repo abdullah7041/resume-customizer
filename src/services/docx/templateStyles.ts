@@ -63,6 +63,7 @@ export interface DocxTemplateConfig {
   experiencePositionUnderline?: boolean;
   experienceCompanyItalic?: boolean;
   experienceCompanyAccentColor?: boolean;
+  educationDateRange?: boolean;
 }
 
 export type SectionKey =
@@ -97,6 +98,7 @@ const modernProfessional: DocxTemplateConfig = {
   summaryItalic: false,
   bulletChar: '●',
   dateSeparator: ' — ',
+  educationDateRange: true,
   skillsLayout: 'tags',
   lineSpacing: 372,
   labels: {

@@ -555,7 +555,9 @@ export function buildEducation(
 
     for (const edu of education) {
         const degreeText = `${edu.studyType || ''}${edu.area ? ` in ${edu.area}` : ''}`;
-        const dateText = edu.endDate || edu.startDate || '';
+        const dateText = cfg.educationDateRange && edu.startDate && edu.endDate
+            ? `${edu.startDate}${cfg.dateSeparator}${edu.endDate}`
+            : edu.endDate || edu.startDate || '';
 
         // Line 1: Degree <TAB> Date (same line)
         children.push(
