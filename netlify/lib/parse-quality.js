@@ -516,13 +516,6 @@ export function parseWorkBlocks(lines) {
   for (let index = 0; index < rows.length; index++) {
     const line = rows[index];
     const nextLine = rows[index + 1] || "";
-    // A completed entry can be followed by another stacked role/company/date header.
-    const startsStackedHeader = current?.startDate
-      && !BULLET_PREFIX_RE.test(line)
-      && !BULLET_PREFIX_RE.test(nextLine)
-      && !/[.!?]$/.test(line)
-      && !/[.!?]$/.test(nextLine)
-      && DATE_ONLY_RE.test(rows[index + 2] || "");
 
     // A date-only line immediately after a role/company belongs to the current
     // entry; it must not become a second date-only work item.
@@ -536,6 +529,12 @@ export function parseWorkBlocks(lines) {
     if (current && !withoutDate && !current.startDate && (dateRange || singleDate)) {
       current.startDate = (dateRange?.[1] || singleDate?.[0] || "").trim();
       if (dateRange) current.endDate = dateRange[2].trim();
+      continue;
+    }
+    // ponytail: ambiguous stacked roles stay as text; require stronger role evidence before auto-recovery.
+    // Another standalone date cannot establish a new role; retain it as source text.
+    if (DATE_ONLY_RE.test(line) && (!current || current.startDate)) {
+      if (current) current.highlights.push(line);
       continue;
     }
 
@@ -603,7 +602,7 @@ export function parseWorkBlocks(lines) {
       continue;
     }
 
-    if (isHeader(line) || startsStackedHeader || !current) {
+    if (isHeader(line) || !current) {
       let rest = line;
       const entry = {};
 
