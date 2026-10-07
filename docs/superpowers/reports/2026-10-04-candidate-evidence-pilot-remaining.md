@@ -1,5 +1,7 @@
 # Candidate trust continuation — remaining plan
 
+**2026-10-07 current-status pointer:** See [continuation validation](2026-10-07-continuation-validation.md) for the later [draft PR #146](https://github.com/abdullah7041/resume-customizer/pull/146), reviewed OAuth, Modern DOCX and parser corrections, saved fictional artifacts, and live export limits. Historical no-PR/pending-CI statements below apply to their dated snapshots. On parser head `eb78b29`, remote quality passed (224 files, 2,353 tests passed, three skipped) and the Netlify preview reported ready; security-check success is confirmed only for the earlier `820e49a` head. Main merge, portable/deployed PDF and reader/ATS checks, candidate approval and an actual consented HR study are still open.
+
 Started: 2026-10-04; final local verification: 2026-10-05 (Asia/Riyadh). Branch: `codex/candidate-evidence-pilot`, isolated from Phase 1 commit `4c422ab`. This checklist distinguishes local implementation from participant evidence and release.
 
 ## Phase 1 and PDF fidelity

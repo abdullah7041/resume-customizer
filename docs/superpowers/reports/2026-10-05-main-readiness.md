@@ -1,5 +1,7 @@
 # Main readiness — 2026-10-05, updated 2026-10-06
 
+**2026-10-07 current-status pointer:** [Continuation validation](2026-10-07-continuation-validation.md) records the later [draft PR #146](https://github.com/abdullah7041/resume-customizer/pull/146), reviewed OAuth, Modern DOCX and parser fixes, fictional artifact checks, and observed export failures. The older no-PR/pending-CI statements below describe their dated local snapshots. On parser head `eb78b29`, remote quality passed (224 files, 2,353 tests passed, three skipped) and the Netlify preview reported ready; security-check success is confirmed only for the earlier `820e49a` head. Main merge, portable/deployed export fidelity and the consented participant study remain open.
+
 Branch `codex/candidate-evidence-pilot`; reviewed runtime commit `05f23b6ca82e99b2cf6f2914e6779fe65eedfc16`, followed by test-only commit `0d7fd5aec3167b6d8afd3d1d3c9eb160173b25cb`. The latter was the branch HEAD for the 2026-10-06 test receipts, before this docs handoff. This is local implementation readiness, not release or participant validation. The original plan's unchecked instructions are not an execution ledger; do not redo completed Phase 1.
 
 ## Approved plan coverage
