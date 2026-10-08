@@ -179,7 +179,7 @@ export function ATSOptimized({
                         {getSectionLabel('coreCompetencies')}
                     </h2>
                     <p style={{ fontSize: fs(10.5) }}>
-                        {allSkills.join(' • ')}
+                        {allSkills.join(', ')}
                     </p>
                 </section>
             )}
@@ -262,7 +262,9 @@ export function ATSOptimized({
                                     <span className="font-semibold" style={{ fontSize: fs(10.5) }}>{safeString(edu.studyType)}</span>
                                     {edu.area && <span style={{ fontSize: fs(10.5) }}> in {edu.area}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>{edu.endDate}</span>
+                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                    {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : (edu.endDate || edu.startDate)}
+                                </span>
                             </div>
                             <p className="text-black" style={{ fontSize: fs(10.5) }}>{safeString(edu.institution)}</p>
                             {edu.score && <p style={{ fontSize: fs(10.5) }}>GPA: {edu.score}</p>}

@@ -7,7 +7,7 @@ export type PdfTextCheck = { state: 'text_checked' | 'unverified'; missingFieldI
 const normalize = (text: string) => text.normalize('NFC')
   .replace(/[\u200e\u200f\u061c\u202a-\u202e\u2066-\u2069]/g, '')
   .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, digit => String('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(digit) % 10))
-  .replace(/\s+/g, ' ').trim();
+  .replace(/\s+/g, ' ').trim().toLowerCase();
 
 export function comparePdfText(extracted: string, expected: ExpectedPdfText): PdfTextCheck {
   const text = normalize(extracted);

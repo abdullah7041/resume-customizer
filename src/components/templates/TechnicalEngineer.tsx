@@ -238,7 +238,7 @@ export function TechnicalEngineer({
                                             {safeString(job.position)}
                                         </h3>
                                         <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
-                                            {job.startDate} → {job.endDate || 'Present'}
+                                            {job.startDate} - {job.endDate || 'Present'}
                                         </span>
                                     </div>
                                     <p className="text-gray-500 mb-2" style={{ fontSize: fs(11) }}>
@@ -331,7 +331,7 @@ export function TechnicalEngineer({
                                             </h3>
                                             <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
                                                 {safeString(edu.studyType)}
-                                                {edu.area && ` — ${edu.area}`}
+                                                {edu.area && ` - ${edu.area}`}
                                             </p>
                                             {edu.score && (
                                                 <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
@@ -345,7 +345,7 @@ export function TechnicalEngineer({
                                             )}
                                         </div>
                                         <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
-                                            {edu.endDate || edu.startDate}
+                                            {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : (edu.endDate || edu.startDate)}
                                         </span>
                                     </div>
                                 </div>

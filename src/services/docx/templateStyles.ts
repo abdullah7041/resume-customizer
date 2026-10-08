@@ -136,7 +136,8 @@ const technicalEngineer: DocxTemplateConfig = {
   headingAlignment: 'LEFT',
   summaryItalic: false,
   bulletChar: '▸',
-  dateSeparator: ' → ',
+  dateSeparator: ' - ',
+  educationDateRange: true,
   skillsLayout: 'tags',
   lineSpacing: 360,
   labels: {
@@ -174,6 +175,7 @@ const atsOptimized: DocxTemplateConfig = {
   summaryItalic: false,
   bulletChar: '•',
   dateSeparator: ' - ',
+  educationDateRange: true,
   skillsLayout: 'comma',
   lineSpacing: 336,
   labels: {

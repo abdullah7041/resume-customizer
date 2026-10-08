@@ -16,6 +16,11 @@ describe('PDF selectable text check', () => {
     expect(comparePdfText('ليلى', expected)).toEqual({ state: 'unverified', missingFieldIds: ['year'] });
   });
 
+  it('accepts capitalization applied by the ATS template', () => {
+    expect(comparePdfText('NORA EXAMPLE', { fields: [{ id: 'name', text: 'Nora Example' }] }))
+      .toEqual({ state: 'text_checked', missingFieldIds: [] });
+  });
+
   it('checks only fields actually present in the captured preview', () => {
     const preview = document.createElement('div');
     preview.innerHTML = 'ليلى Company 2024 Delivered results <span data-no-print>hidden@example.com</span>';

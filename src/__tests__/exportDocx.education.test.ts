@@ -29,7 +29,17 @@ describe('DOCX education date projection', () => {
       .toContain('2016 — 2020');
   });
 
-  it.each(templateIds.slice(1))('%s keeps the end-date-only education projection', async templateId => {
+  it('exports the supplied Khobar date range with a portable separator', async () => {
+    expect(await educationLine('technical-engineer', 'en', '2016', '2020'))
+      .toContain('2016 - 2020');
+  });
+
+  it('exports both supplied Qiddiya education years', async () => {
+    expect(await educationLine('ats-optimized', 'en', '2016', '2020'))
+      .toContain('2016 - 2020');
+  });
+
+  it.each(templateIds.slice(3))('%s keeps the end-date-only education projection', async templateId => {
     const line = await educationLine(templateId, 'en', '2016', '2020');
     expect(line).toContain('2020');
     expect(line).not.toContain('2016');

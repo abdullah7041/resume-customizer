@@ -140,6 +140,21 @@ describe('candidate trust acceptance harness', () => {
     expect(text).toContain('https://github.com/nora-example');
   });
 
+  it('keeps both education years and extractable date separators in Khobar', () => {
+    const Template = getTemplate('technical-engineer');
+    const html = renderToStaticMarkup(<Template resume={trustResume('en')} />);
+    expect(html).toContain('2022-01 - 2024-06');
+    expect(html).toContain('2016 - 2020');
+    expect(html).toContain('Bachelor - Computer Science');
+    expect(html).not.toContain('2022-01 → 2024-06');
+  });
+
+  it('keeps both education years in Qiddiya', () => {
+    const Template = getTemplate('ats-optimized');
+    const html = renderToStaticMarkup(<Template resume={trustResume('en')} />);
+    expect(html).toContain('2016 - 2020');
+  });
+
   it('drops a late refinement after switching variants with the same section ID', async () => {
     const store = useResumeStore.getState();
     store.setOriginalResume(trustResume('en'));
@@ -169,7 +184,7 @@ describe('candidate trust acceptance harness', () => {
 
 const edgePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const assetDir = join(process.cwd(), 'dist/assets');
-const builtCssPath = existsSync(assetDir) ? readdirSync(assetDir).find(name => name.endsWith('.css')) : undefined;
+const builtCssPath = existsSync(assetDir) ? readdirSync(assetDir).find(name => /^index-.*\.css$/.test(name)) : undefined;
 const pdfExtractor = `
 import { readFileSync } from 'node:fs';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
@@ -183,21 +198,22 @@ process.stdout.write(JSON.stringify(pages));
 await doc.destroy();
 `;
 describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export artifacts', () => {
-  it('keeps substantive facts and reading order in English, Arabic, mixed, and multi-page PDFs and DOCX', async () => {
+  it('keeps substantive facts and reading order in English templates, Arabic, mixed, and multi-page PDFs and DOCX', async () => {
     const { handler } = await import('../../netlify/functions/generate-pdf');
     const styles = readFileSync(join(assetDir, builtCssPath!), 'utf8');
     const mixed = trustResume('mixed');
     const shortMixed = structuredClone(mixed);
     shortMixed.work[0].highlights = shortMixed.work[0].highlights.slice(0, 2);
     const cases = [
-      ['english', trustResume('en')], ['arabic', trustResume('ar')],
+      ['english', trustResume('en')], ['khobar', trustResume('en')], ['qiddiya', trustResume('en')], ['arabic', trustResume('ar')],
       ['mixed', shortMixed], ['multipage', mixed],
     ] as const;
     const artifactDir = join(process.cwd(), '.superpowers/sdd/2026-09-24-candidate-trust-foundations/task-9-artifacts');
     if (process.env.WRITE_TRUST_ARTIFACTS === '1') mkdirSync(artifactDir, { recursive: true });
     for (const [label, resume] of cases) {
-        const direction = label === 'english' ? 'ltr' : 'rtl';
-        const markup = renderToStaticMarkup(<TemplateRenderer template={{ id: 'modern-professional', structure: {} }}
+        const direction = label === 'arabic' || label === 'mixed' || label === 'multipage' ? 'rtl' : 'ltr';
+        const templateId = label === 'khobar' ? 'technical-engineer' : label === 'qiddiya' ? 'ats-optimized' : 'modern-professional';
+        const markup = renderToStaticMarkup(<TemplateRenderer template={{ id: templateId, structure: {} }}
           userData={resume as unknown as Parameters<typeof TemplateRenderer>[0]['userData']} contentDirection={direction} />);
         const container = document.createElement('div');
         container.innerHTML = markup;
@@ -219,7 +235,7 @@ describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export a
         if (process.env.WRITE_TRUST_ARTIFACTS === '1') writeFileSync(join(artifactDir, `${label}.html`), html);
         expect(preview.textContent).toContain(resume.basics.name);
         const response = await handler(({ httpMethod: 'POST', headers: { authorization: 'Bearer fictional-test' },
-          body: JSON.stringify({ html, styles, templateId: 'modern-professional', direction }) }
+          body: JSON.stringify({ html, styles, templateId, direction }) }
         ) as unknown as Parameters<typeof handler>[0], {} as Parameters<typeof handler>[1]);
         if (!response) throw new Error(`${label} production PDF handler returned no response`);
         if (response.statusCode !== 200 || !response.body) {
@@ -237,9 +253,9 @@ describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export a
             resume.work[1].highlights[1]];
           const pdfCheck = comparePdfText(extracted, { fields: facts.map((text, index) => ({ id: String(index), text })) });
           expect(extracted).toContain(resume.basics.email);
-          expect(extracted).toContain(resume.basics.phone);
           expect(extracted).not.toMatch(/40%|٤٠٪/);
-          if (label === 'english') {
+          if (direction === 'ltr') {
+            expect(extracted).toContain(resume.basics.phone);
             expect(pdfCheck).toEqual({ state: 'text_checked', missingFieldIds: [] });
           } else {
             // Chromium's Arabic ToUnicode map currently fails the app's selectable-text check.
@@ -249,9 +265,15 @@ describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export a
           if (label !== 'arabic') {
             expect(extracted.indexOf(resume.basics.name)).toBeLessThan(extracted.indexOf(resume.work[0].name));
           }
-          if (label === 'english') {
+          if (direction === 'ltr') {
             expect(extracted.indexOf(resume.work[0].name)).toBeLessThan(extracted.indexOf(resume.work[1].name));
           }
+          if (label === 'khobar') {
+            expect(extracted).toContain('2022-01 - 2024-06');
+            expect(extracted).toContain('2016 - 2020');
+            expect(extracted).not.toContain('\u0000');
+          }
+          if (label === 'qiddiya') expect(extracted).toContain('2016 - 2020');
           if (label === 'multipage') {
             const first = extracted.indexOf('Project detail 1:');
             const middle = extracted.indexOf('Project detail 10:');
@@ -261,8 +283,8 @@ describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export a
             expect(middle).toBeLessThan(last);
           }
           expect(pages.length).toBeGreaterThanOrEqual(label === 'multipage' ? 2 : 1);
-          const docx = await exportResumeAsDocx(resume, { templateId: 'modern-professional',
-            direction: label === 'english' ? 'ltr' : 'rtl', boldKeywords: false });
+          const docx = await exportResumeAsDocx(resume, { templateId,
+            direction, boldKeywords: false });
           const archive = await JSZip.loadAsync(await docx.arrayBuffer());
           const xml = await archive.file('word/document.xml')?.async('string');
           if (!xml) throw new Error(`${label} DOCX document.xml missing`);
