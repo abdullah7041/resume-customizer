@@ -22,9 +22,13 @@ const WINDOWS_CHROME_PATHS = [
   "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
 ];
 
+// NETLIFY may be absent in deployed functions; Lambda supplies runtime markers.
+// Netlify Dev can load hosted settings locally, so its marker takes precedence.
+const isServerless = !process.env.NETLIFY_DEV && !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_JS_RUNTIME);
+
 // Chromium executable path varies by environment
 const getChromiumPath = async (): Promise<string> => {
-  if (process.env.NETLIFY) {
+  if (isServerless) {
     return await chromium.executablePath();
   }
 
@@ -45,9 +49,6 @@ const getChromiumPath = async (): Promise<string> => {
 
   return "/usr/bin/google-chrome";
 };
-
-// Check if running on Netlify (production/deploy-preview)
-const isNetlify = !!process.env.NETLIFY;
 
 // Browser connection pooling - reuse browser instance across requests
 let browserInstance: Browser | null = null;
@@ -106,7 +107,7 @@ async function getBrowser() {
   if (!browserInstance) {
     console.log('[PDF] Launching new browser instance');
     browserInstance = await puppeteer.launch({
-      args: isNetlify ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: isServerless ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
       defaultViewport: { width: 794, height: 1123 }, // A4 at 96dpi: 210mm × 96/25.4 ≈ 794px, 297mm × 96/25.4 ≈ 1123px
       executablePath: await getChromiumPath(),
       headless: true, // Always headless for PDF generation
