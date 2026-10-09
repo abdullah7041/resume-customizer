@@ -1,5 +1,7 @@
 # Watheq owner handoff — 2026-10-08
 
+Updated 2026-10-10: a new plain-layout prototype now preserves all five original fixtures across three readers; production Arabic PDF is still unqualified. See the [new feasibility result and proposed integration](2026-10-10-arabic-pdf-feasibility.md). The owner selected a [personal recruiter walkthrough](../../hr-pilot/owner-test.md); the formal HR study below is deferred, with no participant results.
+
 Updated 2026-10-09: the owner's Riyadh/Qiddiya English PDFs and fresh deployed PDF/DOCX bytes were independently inspected. These download/content checks are complete for the listed files. The approved Arabic positioned-run prototype still fails two readers. See the [current verification and probe results](2026-10-09-export-verification-and-arabic-probe.md) before using the remaining checklist below.
 
 ## Current result

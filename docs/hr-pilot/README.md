@@ -1,5 +1,7 @@
 # Local HR pilot preparation
 
+Current choice, 2026-10-09: the owner will test personally because HR contacts are not currently available. Follow the [owner recruiter walkthrough and worksheet](owner-test.md). The formal cohort study below is deferred reference material; owner testing must not be recorded as independent HR participant results.
+
 Prepared 2026-10-04; operational handoff updated 2026-10-05. The user delegated cohort, channel and storage decisions; the selected plan is below. No participants are identified or enrolled, no invitations sent, and no actual results exist. The [protocol](../superpowers/specs/2026-10-04-hr-pilot-validation-protocol.md) defines targets before the fictional calculator rehearsal. Source statements and candidate confirmations are not independent qualification verification.
 
 ## Selected study operation
