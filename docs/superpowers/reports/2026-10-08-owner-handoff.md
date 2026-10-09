@@ -1,5 +1,7 @@
 # Watheq owner handoff — 2026-10-08
 
+Updated 2026-10-09: the owner's Riyadh/Qiddiya English PDFs and fresh deployed PDF/DOCX bytes were independently inspected. These download/content checks are complete for the listed files. The approved Arabic positioned-run prototype still fails two readers. See the [current verification and probe results](2026-10-09-export-verification-and-arabic-probe.md) before using the remaining checklist below.
+
 ## Current result
 
 The candidate-first implementation and evidenced English export fixes are on [draft PR #146](https://github.com/abdullah7041/resume-customizer/pull/146). Application code SHA: `dd69ae438e69157ec00e037c3e3c7bfe69a58b72`. [CI 37763164945](https://github.com/abdullah7041/resume-customizer/actions/runs/37763164945), GitGuardian, Netlify preview, header and redirect checks passed on that SHA. Pages changed was neutral. Netlify deploy `6ac76f273e8be80008c30b85` serves the [PR preview](https://deploy-preview-146--resume-optimizing.netlify.app). Main remains `211f60fdf42828081e19f99c7e68a2f909c1df85`; no merge, production release or participant contact occurred. A later documentation commit has its own PR checks.
