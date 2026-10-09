@@ -1,6 +1,6 @@
 # Logical text PDF recovery — proposed design
 
-Status: proposed, not implemented or approved. User intent: finish Arabic/mixed export engineering while preserving source facts and candidate review. The small feasibility gate now passes; [evidence and limits](../reports/2026-10-10-arabic-pdf-feasibility.md) identify exactly what passed.
+Status: approved by the owner on 2026-10-10, including the package and font scope; not implemented. User intent: finish Arabic/mixed export engineering while preserving source facts and candidate review. The small feasibility gate now passes; [evidence and limits](../reports/2026-10-10-arabic-pdf-feasibility.md) identify exactly what passed.
 
 ## Choice and tradeoff
 
