@@ -54,18 +54,20 @@ export function findMergeTarget(opt: OptimizationResult, resume: ResumeSchema): 
 
     case 'experience': {
       const work = resume.work ?? [];
+      const matches: MergeTarget[] = [];
       for (let workIdx = 0; workIdx < work.length; workIdx++) {
         const highlights = work[workIdx].highlights || [];
         for (let hlIdx = 0; hlIdx < highlights.length; hlIdx++) {
           if (fuzzyTextMatch(originalValue, highlights[hlIdx]).matched) {
-            return { kind: 'work.highlight', workIdx, hlIdx };
+            matches.push({ kind: 'work.highlight', workIdx, hlIdx });
           }
         }
         if (work[workIdx].summary && fuzzyTextMatch(originalValue, work[workIdx].summary!).matched) {
-          return { kind: 'work.summary', workIdx };
+          matches.push({ kind: 'work.summary', workIdx });
         }
       }
-      return null;
+      // Text-only cards cannot identify an employer when the same fragment appears twice.
+      return matches.length === 1 ? matches[0] : null;
     }
 
     case 'education': {
@@ -156,6 +158,7 @@ export interface MergeOptions {
 export interface MergeResult {
   resume: ResumeSchema;
   diagnostics: MergeDiagnostics;
+  includedEdits: OptimizationResult[];
 }
 
 /**
@@ -174,6 +177,7 @@ export function mergeOptimizedResume(
   options: MergeOptions,
 ): MergeResult {
   const merged = structuredClone(original) as ResumeSchema;
+  const finalEdits = new Map<string, OptimizationResult>();
 
   const diagnostics: MergeDiagnostics = {
     appliedCount: 0,
@@ -207,6 +211,7 @@ export function mergeOptimizedResume(
     if (target) {
       writeMergeTarget(merged, target, optimizedValue);
       diagnostics.appliedCount++;
+      finalEdits.set(JSON.stringify(target), opt);
     } else if (opt.sectionType === 'summary' || opt.sectionType === 'headline') {
       // basics missing — historical behavior was a silent skip (no failure record).
     } else {
@@ -225,5 +230,5 @@ export function mergeOptimizedResume(
     }
   }
 
-  return { resume: merged, diagnostics };
+  return { resume: merged, diagnostics, includedEdits: [...finalEdits.values()] };
 }

@@ -1,8 +1,10 @@
 // Template system types - extends JSON Resume schema
 import type { PartialResumeSchema, ResumeSchema } from './resume';
 import type { SearchIntent } from './onboarding';
+import type { AssessmentContext, AssessmentRecord } from './assessment';
 import type { StrategicRealityCheck } from './analysis';
 import type { CategoryScoresData } from '../components/ScoreBreakdown';
+import type { EditEvidence, EvidenceInputOmissions, EvidenceSource } from './optimization-evidence';
 
 /**
  * Available template identifiers
@@ -37,6 +39,8 @@ export interface TemplateConfig {
  */
 export interface OptimizationResult {
   sectionId: string;
+  /** Assessment that produced this proposal; applied state may carry only within it. */
+  assessmentKey?: string;
   sectionType: 'summary' | 'experience' | 'skills' | 'projects' | 'headline' | 'education' | 'certifications';
   original: string | string[];
   optimized: string | string[];
@@ -47,6 +51,9 @@ export interface OptimizationResult {
   // `rationale` explains what changed so the user can judge the edit.
   rationale?: string;
   issue?: string;
+  /** Absent on cards saved before evidence validation. */
+  evidence?: EditEvidence;
+  confirmation?: CandidateConfirmation;
   /**
    * Merge integrity, set at apply time by the dry-run content match:
    * 'mergeable' = the card's original text was located in the resume;
@@ -55,6 +62,13 @@ export interface OptimizationResult {
    * Cleared when the card is refined (new text may match differently).
    */
   mergeStatus?: 'mergeable' | 'failed';
+}
+
+export interface CandidateConfirmation {
+  proposedFingerprint: string;
+  targetId: string;
+  confirmedAt: string;
+  statement: string;
 }
 
 /**
@@ -96,7 +110,9 @@ export interface OptimizedWork {
  */
 export interface CachedAnalysis {
   score: number;
+  /** @deprecated Repeats overall score; retained for legacy cache shape. */
   coverage?: number;
+  /** @deprecated Repeats overall score; retained for legacy cache shape. */
   similarity?: number;
   missingKeywords: string[];
   matchedKeywords?: string[];
@@ -111,6 +127,8 @@ export interface CachedAnalysis {
   categoryScores?: CategoryScoresData | null;
   strategicRealityCheck?: StrategicRealityCheck | null;
   timestamp: number;
+  /** Present only on context-bound entries; older saved entries remain legacy. */
+  context?: AssessmentContext;
 }
 
 /**
@@ -255,6 +273,8 @@ export interface OptimizationMetrics {
  * promise driving it died with the previous page.
  */
 export interface OptimizeRunRecord {
+  /** Exact inputs for this run; absent on legacy persisted records. */
+  assessment?: AssessmentRecord<unknown>;
   status: 'running' | 'succeeded' | 'failed';
   resumeId?: string;
   resumeFingerprint?: string;
@@ -278,6 +298,7 @@ export interface OptimizeRunRecord {
 
 export interface JobVariantSnapshot {
   optimizations: OptimizationResult[];
+  evidenceSources: EvidenceSource[];
   keywordSuggestions: KeywordSuggestion[];
   optimizationMetrics: OptimizationMetrics;
   baselineMatchScore: number | null;
@@ -336,6 +357,7 @@ export interface ResumeState {
   originalResume: ResumeSchema | null;
   parsedResumeText: string | null;
   optimizations: OptimizationResult[];
+  evidenceSources: EvidenceSource[];
   keywordSuggestions: KeywordSuggestion[];
 
   // Analysis caching for consistent results
@@ -386,7 +408,10 @@ export interface ResumeState {
   addOptimization: (optimization: Omit<OptimizationResult, 'timestamp'>) => void;
   applyOptimization: (id: string) => void;
   revertOptimization: (id: string) => void;
-  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string }) => void;
+  refineOptimization: (id: string, refinement: { improved: string; issue?: string; rationale?: string; instruction: string; evidence?: EditEvidence; evidenceSources?: EvidenceSource[]; evidenceInputOmissions?: EvidenceInputOmissions }, expectedCard?: OptimizationResult) => void;
+  confirmOptimization: (id: string, confirmation: CandidateConfirmation) => boolean;
+  editOptimization: (id: string, value: string | string[], proposedFingerprint: string, expectedCard: OptimizationResult) => boolean;
+  setEvidenceSources: (sources: EvidenceSource[]) => void;
   setParsedResumeText: (text: unknown) => void;
   setOptimizations: (opts: OptimizationResult[]) => void;
   setOptimizationOrigin: (origin: 'guest_preview' | 'paid' | null) => void;
@@ -406,8 +431,8 @@ export interface ResumeState {
   resetOptimizationMetrics: () => void;
 
   // Cache actions
-  getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean) => CachedAnalysis | null;
-  setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => void;
+  getCachedAssessment: (context: AssessmentContext) => CachedAnalysis | null;
+  setCachedAssessment: (context: AssessmentContext, analysis: Omit<CachedAnalysis, 'timestamp'>) => void;
   clearAnalysisCache: () => void;
 
   // Display options actions

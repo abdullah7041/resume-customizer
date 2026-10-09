@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -34,7 +34,7 @@ import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsC
 import { FEATURE_COSTS } from '@/types/credits';
 import { analytics } from '@/services/analytics';
 import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from '@/types/pipeline';
-import type { MatchResult, StrategicRealityCheck } from '@/types/analysis';
+import type { MatchResult, MatchRunResult, StrategicRealityCheck } from '@/types/analysis';
 import type { AtsExplainabilitySource } from '@/types/explainability';
 import { AtsExplainabilityPanel } from '@/components/AtsExplainabilityPanel';
 import { CATEGORY_COLORS } from '@/lib/styles/categoryColors';
@@ -42,6 +42,9 @@ import { computeOptimizationOutlook, type OptimizationOutlookBand } from '@/lib/
 import { SaveJobToPipelineCard } from './SaveJobToPipelineCard';
 
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
+// Match and Reality Check prompts currently use this prefix (contracts/index.js).
+const MATCH_PROMPT_JOB_CHAR_LIMIT = 5000;
+const MATCH_PROMPT_RESUME_CHAR_LIMIT = 15000;
 const FREE_MATCH_STORAGE_KEY = 'watheq:freeMatchRuns';
 const FREE_MATCH_LEGACY_KEY = 'watheq:freeMatchUsed';
 const MAX_FREE_MATCH_RUNS = 3;
@@ -123,14 +126,16 @@ interface Toast {
 }
 
 interface MatchSectionProps {
-  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchResult>;
+  onAnalyzeMatchAI: (jobDescription: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => Promise<MatchRunResult | null>;
   matchAnalysis: MatchResult | null;
+  historicalMatch?: { status: 'legacy' | 'outdated'; result: MatchResult } | null;
   isAnalyzing?: boolean;
   hasResume?: boolean;
   resumeText?: string;
   onToast?: (toast: Toast) => void;
   onClear?: () => void;
   jobDescription?: string;
+  onJobDescriptionChange?: (jobDescription: string) => void;
   resumeContextKey?: string;
   extractedMetadata?: ExtractedJobMetadata | null;
   onJobSaved?: (application: JobApplication) => void;
@@ -240,11 +245,14 @@ const handleOptimizeClick = () => {
 export function MatchSection({
   onAnalyzeMatchAI,
   matchAnalysis,
+  historicalMatch,
   isAnalyzing = false,
   hasResume = false,
+  resumeText,
   onToast,
   onClear,
-  jobDescription = '',
+  jobDescription,
+  onJobDescriptionChange,
   resumeContextKey,
   extractedMetadata,
   onJobSaved,
@@ -254,10 +262,17 @@ export function MatchSection({
 }: MatchSectionProps) {
   const { t, i18n } = useTranslation();
   const [jobText, setJobText] = useState(() => {
-    if (resumeContextKey) return jobDescription;
+    if (jobDescription !== undefined) return jobDescription;
     if (typeof window === 'undefined') return '';
     return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
+  const previousParentJob = useRef(jobDescription);
+  const lastLocalEdit = useRef<string | null>(null);
+  const updateJobText = (text: string) => {
+    lastLocalEdit.current = text;
+    setJobText(text);
+    onJobDescriptionChange?.(text);
+  };
   const [error, setError] = useState('');
   const [jobUrl, setJobUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -278,9 +293,22 @@ export function MatchSection({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { isLoading: creditsLoading, refetch: refetchCredits } = useUserCredits();
 
+  useLayoutEffect(() => {
+    if (jobDescription === undefined || jobDescription === previousParentJob.current) return;
+    previousParentJob.current = jobDescription;
+    if (jobDescription === lastLocalEdit.current) {
+      lastLocalEdit.current = null;
+      return;
+    }
+    lastLocalEdit.current = null;
+    setJobText(jobDescription);
+    setImportedCriteria(null);
+    setError('');
+  }, [jobDescription]);
+
   useEffect(() => {
     if (resumeContextKey) {
-      setJobText(jobDescription);
+      setJobText(jobDescription ?? '');
       setImportedCriteria(null);
     }
   }, [resumeContextKey, jobDescription]);
@@ -332,7 +360,7 @@ export function MatchSection({
     try {
       const result = await importJobFromUrl(url, i18n.language === 'ar' ? 'ar' : 'en');
       if (result?.status === 'ok' && result.jobText) {
-        setJobText(result.jobText);
+        updateJobText(result.jobText);
         setImportedCriteria(result.criteria ?? null);
         setJobUrl('');
         analytics.track('job_url_import_succeeded', { source: result.source, confidence: result.confidence });
@@ -381,8 +409,8 @@ export function MatchSection({
   };
 
   const handleAnalyzeActual = async (options?: { freePreview?: boolean }) => {
-    const trimmedJob = jobText.trim();
-    if (!trimmedJob) {
+    const submittedJob = jobText;
+    if (!submittedJob.trim()) {
       const message = t('sections.match.errors.noJob', 'Paste the job description before analyzing.');
       setError(message);
       onToast?.({
@@ -397,14 +425,14 @@ export function MatchSection({
     analytics.trackMatchAnalysisStarted();
     if (isGuestMode) analytics.trackGuestRunStarted();
     try {
-      const result = await onAnalyzeMatchAI(trimmedJob, { ...options, importedCriteria });
-      if (options?.freePreview) markFreePreviewUsed();
+      const result = await onAnalyzeMatchAI(submittedJob, { ...options, importedCriteria });
+      if (options?.freePreview && result && !result.reusedFromCache) markFreePreviewUsed();
       if (result && typeof result.score === 'number') {
         analytics.trackMatchAnalysisSuccess(result.score);
         if (isGuestMode) {
           const attempt = getFreeMatchRunCount();
           analytics.trackGuestMatchScored({ attempt, score: result.score });
-          const fingerprint = fingerprintJobDescription(trimmedJob);
+          const fingerprint = fingerprintJobDescription(submittedJob);
           const previousFingerprint = window.localStorage.getItem(LAST_GUEST_JOB_FINGERPRINT_KEY);
           if (previousFingerprint && previousFingerprint !== fingerprint) {
             analytics.trackSecondJobAdRun({ attempt });
@@ -461,6 +489,11 @@ export function MatchSection({
     // and never spends the credits they actually have.
     if (isGuestMode && hasFreePreviewRun()) {
       void handleAnalyzeActual({ freePreview: true });
+      return;
+    }
+
+    if (matchAnalysis?.origin === 'paid' && jobText === jobDescription) {
+      void handleAnalyzeActual();
       return;
     }
 
@@ -522,6 +555,7 @@ export function MatchSection({
   );
   const jobWordCount = getJobWordCount(jobText);
   const buttonDisabled = !jobText.trim() || !hasResume || isAnalyzing;
+  const hasReusablePaidResult = matchAnalysis?.origin === 'paid' && jobText === jobDescription;
   const disabledHint = !hasResume
     ? t('sections.match.hints.uploadFirst', 'Upload or paste your resume first.')
     : !jobText.trim()
@@ -568,6 +602,39 @@ export function MatchSection({
   return (
     <>
       <div className="space-y-5">
+        {jobText.length > MATCH_PROMPT_JOB_CHAR_LIMIT && (
+          <p role="note" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            {i18n.language === 'ar'
+              ? 'يستخدم تحليل المطابقة أول ٥٬٠٠٠ حرف فقط من وصف الوظيفة. المتطلبات التي تلي ذلك لم تدخل في التقييم.'
+              : 'Match analysis uses only the first 5,000 characters of this job description. Later requirements were not evaluated.'}
+          </p>
+        )}
+        {(resumeText?.length ?? 0) > MATCH_PROMPT_RESUME_CHAR_LIMIT && (
+          <p role="note" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            {i18n.language === 'ar'
+              ? 'يستخدم تحليل المطابقة أول ١٥٬٠٠٠ حرف فقط من السيرة الذاتية. المحتوى الذي يلي ذلك لم يدخل في التقييم.'
+              : 'Match analysis uses only the first 15,000 characters of this resume. Later resume content was not evaluated.'}
+          </p>
+        )}
+        {historicalMatch && !matchAnalysis && (
+          <aside className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
+            <p className="font-semibold">
+              {historicalMatch.status === 'legacy'
+                ? (i18n.language === 'ar' ? 'تحليل سابق — لم تُحفظ معه بيانات المدخلات' : 'Previous analysis — its inputs were not recorded')
+                : (i18n.language === 'ar' ? 'تحليل سابق — لا يطابق المدخلات الحالية' : 'Previous analysis — does not match current inputs')}
+            </p>
+            <details className="mt-2">
+              <summary className="cursor-pointer font-medium">
+                {i18n.language === 'ar' ? 'عرض النتيجة السابقة' : 'View previous result'}
+              </summary>
+              <p className="mt-2">{i18n.language === 'ar' ? 'الدرجة السابقة:' : 'Previous score:'} {historicalMatch.result.score}</p>
+              {historicalMatch.result.reasoning && <p className="mt-2 whitespace-pre-wrap">{historicalMatch.result.reasoning}</p>}
+              {historicalMatch.result.missingKeywords?.length ? (
+                <p className="mt-2">{i18n.language === 'ar' ? 'الفجوات السابقة:' : 'Previous gaps:'} {historicalMatch.result.missingKeywords.join(', ')}</p>
+              ) : null}
+            </details>
+          </aside>
+        )}
         <GlassCard className="mx-auto w-full">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -587,7 +654,7 @@ export function MatchSection({
               <button
                 type="button"
                 onClick={() => {
-                  setJobText('');
+                  updateJobText('');
                   setImportedCriteria(null);
                   onClear?.();
                 }}
@@ -619,7 +686,7 @@ export function MatchSection({
                   <button
                     type="button"
                     onClick={() => {
-                      setJobText('');
+                      updateJobText('');
                       setImportedCriteria(null);
                       onClear?.();
                     }}
@@ -700,7 +767,7 @@ export function MatchSection({
               name="jobDescription"
               value={jobText}
               onChange={(event) => {
-                setJobText(event.target.value);
+                updateJobText(event.target.value);
                 // A manual edit means the text may no longer be the imported
                 // job — don't let stale seniority/employmentType override the
                 // AI's inference for whatever the user pasted over it with.
@@ -730,9 +797,11 @@ export function MatchSection({
             >
               {isAnalyzing ? t('sections.match.analyzing', 'Analyzing...') : (
                 <>
-                  {t('sections.match.analyze', 'Analyze Match with AI')}
-                  {/* Signed-in users always pay — show the price. */}
-                  {(!isGuestMode || !hasFreePreviewRun()) && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
+                  {hasReusablePaidResult
+                    ? (i18n.language === 'ar' ? 'عرض التحليل المحفوظ' : 'View saved analysis')
+                    : t('sections.match.analyze', 'Analyze Match with AI')}
+                  {/* A saved paid result for these exact inputs can be reused without another charge. */}
+                  {!hasReusablePaidResult && (!isGuestMode || !hasFreePreviewRun()) && <span className="ms-2 text-xs opacity-75">(2 {t('common.credits', 'credits')})</span>}
                 </>
               )}
             </GlassButton>
@@ -771,11 +840,11 @@ export function MatchSection({
               </div>
               <div className="relative z-10 flex flex-col gap-4 p-4 text-gray-900 dark:text-white sm:p-5 md:flex-row md:items-center md:justify-between">
                 <div className="flex min-w-0 flex-1 flex-wrap items-center gap-4">
-                  <Tooltip content={`${score}/100 - ${t(`sections.match.variant.${variant.label}`, variant.label)}`} position="bottom">
+                  <Tooltip content={t('sections.match.results.estimatedAlignment', 'Estimated alignment with this job description')} position="bottom">
                     <div className="grid h-20 w-20 shrink-0 cursor-help place-items-center rounded-full border border-white/50 bg-white/70 shadow-sm dark:border-white/10 dark:bg-black/15">
                       <div className="text-center">
                         <AnimatedCounter to={score} duration={1200} className="text-3xl font-black leading-none text-gray-900 dark:text-white" />
-                        <span className="mt-0.5 block text-[10px] font-bold uppercase text-gray-500 dark:text-white/50">{t('sections.match.scoreLabel', 'Score')}</span>
+                        <span className="mt-0.5 block text-[10px] font-bold uppercase text-gray-500 dark:text-white/50">{t('sections.match.scoreLabel', 'Estimated score')}</span>
                       </div>
                     </div>
                   </Tooltip>
@@ -796,6 +865,9 @@ export function MatchSection({
                     )}
                     <p className="mt-3 text-xs text-gray-500 dark:text-white/55">
                       {t('sections.match.results.optimizedCaption', 'Optimized-score verification appears here after you run Optimize.')}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-white/55">
+                      {t('sections.match.results.hiringDisclaimer', 'This assessment does not predict a hiring decision.')}
                     </p>
                   </div>
                 </div>
@@ -899,7 +971,7 @@ export function MatchSection({
                   </div>
                 ) : (
                   <p className="text-start text-sm leading-relaxed text-gray-800 dark:text-white/90">
-                    <strong>{t('sections.match.results.coverage', 'Coverage')}</strong> {t('sections.match.results.coverageDesc', 'measures what percentage of key job requirements appear in your resume.')}
+                    {t('sections.match.results.noBreakdown', 'A separate requirement coverage measure is unavailable for this assessment. Review the listed gaps and evidence.')}
                   </p>
                 )}
               </GlassCard>

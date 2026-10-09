@@ -4,12 +4,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { PartialResumeSchema, ResumeSchema } from '../../types/resume';
 import type { AiSuggestionEntry } from '../../types/analysis';
 import type { SearchIntent } from '../../types/onboarding';
+import type { AssessmentContext } from '@/types/assessment';
+import type { EvidenceInputOmissions, EvidenceSource } from '@/types/optimization-evidence';
 import type {
   ResumeState,
   OptimizationResult,
   KeywordSuggestion,
   TemplateId,
-  CachedAnalysis,
   JobVariant,
   JobVariantSnapshot,
 } from '../../types/templates';
@@ -17,20 +18,26 @@ import {
   validateResume,
   validateParsedText,
   validateOptimization,
+  OptimizationResultSchema,
   validateSearchIntent,
 } from '../validation/store-schemas';
-import { deduplicateByName } from '../utils/resumeUtils';
+import { deduplicateByName, formatResumeToText } from '../utils/resumeUtils';
 import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { isRecommendationOnly } from '@/lib/optimize/actionability';
+import { isConfirmationCurrent, proposalStatement } from '@/lib/optimize/evidenceReview';
 
 const MAX_JOB_VARIANTS = 10;
+// ponytail: localStorage writes are synchronous; use per-write receipts if persistence becomes async.
+let lastStorageWriteFailed = false;
 
 const resumeStorage = {
   getItem: (name: string) => localStorage.getItem(name),
   setItem: (name: string, value: string) => {
+    lastStorageWriteFailed = false;
     try {
       localStorage.setItem(name, value);
     } catch (error) {
+      lastStorageWriteFailed = true;
       if (import.meta.env.DEV) console.warn('[ResumeStore] Failed to persist resume state:', error);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('watheq:storage-error', {
@@ -108,44 +115,28 @@ const computeCompleteness = (resume: ResumeSchema | null, intent: SearchIntent |
 // Users re-analyzing the same resume+JD pair within this window hit cache instead of burning credits
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
-// Memoization cache for cache key generation (performance optimization)
-const cacheKeyMemo = new Map<string, string>();
+const sameAssessmentContext = (left: AssessmentContext, right: AssessmentContext): boolean =>
+  left.key === right.key &&
+  left.resumeFingerprint === right.resumeFingerprint &&
+  left.jobFingerprint === right.jobFingerprint &&
+  left.language === right.language &&
+  left.kind === right.kind &&
+  left.isOptimized === right.isOptimized &&
+  left.rubricVersion === right.rubricVersion;
 
-/**
- * Generate a cache key from resume and job description
- * Uses FNV-1a hash with memoization for performance
- * CRITICAL: Now includes isOptimized flag to prevent cache collisions
- */
-const generateCacheKey = (resumeText: string, jobDescription: string, isOptimized: boolean = false): string => {
-  // Use FULL text for hash to prevent collisions between original/optimized versions
-  // Include isOptimized flag to separate cache entries
-  const normalizedResumeText = (resumeText || '').trim();
-  const normalizedJobDescription = (jobDescription || '').trim();
-  const fullKey = `${normalizedResumeText}|${normalizedJobDescription}|${isOptimized ? 'opt' : 'orig'}`;
-
-  // Check memo cache first (key now includes optimization flag)
-  const memoKey = `${fullKey.slice(0, 100)}|${fullKey.length}|${isOptimized}`;
-  const cached = cacheKeyMemo.get(memoKey);
-  if (cached) return cached;
-
-  // FNV-1a hash - faster than djb2 and works with Arabic
-  let hash = 2166136261;
-  for (let i = 0; i < fullKey.length; i++) {
-    hash ^= fullKey.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  const result = `match-${(hash >>> 0).toString(36)}`;
-
-  // Memoize result (limit size to prevent memory leak)
-  cacheKeyMemo.set(memoKey, result);
-  if (cacheKeyMemo.size > 100) {
-    const firstKey = cacheKeyMemo.keys().next().value;
-    if (firstKey) cacheKeyMemo.delete(firstKey);
-  }
-
-  return result;
+const invalidateResumeEvidence = (cards: OptimizationResult[], sources: EvidenceSource[]): OptimizationResult[] => {
+  const sourceById = new Map(sources.map(source => [source.id, source]));
+  return cards.map(card => {
+    const fromResume = card.evidence?.references.some(reference => sourceById.get(reference.sourceId)?.kind !== 'clarification')
+      || (card.evidence?.status === 'source_matched' && card.evidence.references.length === 0);
+    return fromResume ? { ...card, confirmation: undefined,
+      evidence: { ...card.evidence!, status: 'needs_review' as const,
+        reasons: ['missing_source' as const] } } : card;
+  });
 };
+
+const changedBaseline = (previous: ResumeSchema | null, next: ResumeSchema): boolean =>
+  previous !== null && JSON.stringify({ ...previous, meta: undefined }) !== JSON.stringify({ ...next, meta: undefined });
 
 // --- Job variant helpers (module-level, pure) -----------------------------
 // JD stored truncated for retention hygiene (ADR §5); variants are local-only.
@@ -168,10 +159,24 @@ const generateVariantId = (): string =>
  */
 const snapshotWorkingSet = (state: ResumeState): JobVariantSnapshot => ({
   optimizations: structuredClone(state.optimizations),
+  evidenceSources: structuredClone(state.evidenceSources),
   keywordSuggestions: structuredClone(state.keywordSuggestions),
   optimizationMetrics: structuredClone(state.optimizationMetrics),
   baselineMatchScore: state.baselineMatchScore,
   selectedTemplate: state.selectedTemplate,
+});
+
+const migrateLegacyCard = (card: OptimizationResult, sources: EvidenceSource[]): OptimizationResult => ({
+  ...card,
+  confirmation: undefined,
+  evidence: card.evidence && OptimizationResultSchema.safeParse(card).success
+    && card.evidence.references.length > 0
+    && card.evidence.references.every((reference) => sources.some((source) => source.id === reference.sourceId
+      && source.fingerprint === card.evidence?.sourceFingerprints[reference.sourceId]
+      && source.text.includes(reference.quote)))
+    ? card.evidence
+    : { version: 1, targetId: card.sectionId, originalFingerprint: '', proposedFingerprint: '',
+      references: [], sourceFingerprints: {}, status: 'legacy', reasons: ['legacy'] },
 });
 
 /**
@@ -185,6 +190,7 @@ export const useResumeStore = create<ResumeState>()(
       originalResume: null,
       parsedResumeText: null,
       optimizations: [],
+      evidenceSources: [],
       keywordSuggestions: [],
       analysisCache: {},
       optimizationMetrics: {
@@ -254,9 +260,21 @@ export const useResumeStore = create<ResumeState>()(
           validatedResume.work = deduplicateByName(validatedResume.work);
         }
 
-        set({
-          originalResume: validatedResume,
-          hasDownloaded: false // Reset download status on content change
+        set((state) => {
+          if (!changedBaseline(state.originalResume, validatedResume)) {
+            return { originalResume: validatedResume, hasDownloaded: false };
+          }
+          const optimizations = invalidateResumeEvidence(state.optimizations, state.evidenceSources);
+          return {
+            originalResume: validatedResume,
+            parsedResumeText: formatResumeToText(validatedResume),
+            optimizations,
+            optimizeRun: state.optimizeRun?.cards ? { ...state.optimizeRun,
+              cards: invalidateResumeEvidence(state.optimizeRun.cards as OptimizationResult[], state.evidenceSources) } : state.optimizeRun,
+            jobVariants: state.jobVariants.map(variant => ({ ...variant, snapshot: { ...variant.snapshot,
+              optimizations: invalidateResumeEvidence(variant.snapshot.optimizations, variant.snapshot.evidenceSources ?? []) } })),
+            hasDownloaded: false,
+          };
         });
       },
 
@@ -360,8 +378,9 @@ export const useResumeStore = create<ResumeState>()(
       // content-based merge picks up the refined text automatically — even when the
       // bullet is already applied. Records only metadata on meta.ai_suggestions
       // to preserve schema integrity without persisting raw instructions or AI text.
-      refineOptimization: (sectionId, refinement) => {
+      refineOptimization: (sectionId, refinement, expectedCard) => {
         set((state) => {
+          if (expectedCard && state.optimizations.find((card) => card.sectionId === sectionId) !== expectedCard) return state;
           const optimizations = state.optimizations.map((o) =>
             o.sectionId === sectionId
               ? {
@@ -369,6 +388,8 @@ export const useResumeStore = create<ResumeState>()(
                 optimized: refinement.improved,
                 rationale: refinement.rationale,
                 issue: refinement.issue,
+                evidence: refinement.evidence,
+                confirmation: undefined,
                 // Refined text may match differently — clear the stale verdict so
                 // the next apply re-validates.
                 mergeStatus: undefined,
@@ -393,7 +414,31 @@ export const useResumeStore = create<ResumeState>()(
             };
           }
 
-          return { optimizations, originalResume, hasDownloaded: false };
+          const runData = state.optimizeRun?.data;
+          const data = runData && typeof runData === 'object' ? runData as {
+            evidenceSources?: EvidenceSource[];
+            evidenceInputOmissions?: EvidenceInputOmissions;
+          } : null;
+          const target = state.optimizations.find((o) => o.sectionId === sectionId);
+          const currentRun = state.optimizeRun?.status === 'succeeded' && target?.assessmentKey
+            && state.optimizeRun.assessment?.context.key === target.assessmentKey ? state.optimizeRun : null;
+          const optimizeRun = currentRun
+            ? { ...currentRun, cards: optimizations, data: data && (refinement.evidenceSources || refinement.evidenceInputOmissions) ? {
+              ...data,
+              evidenceSources: [...new Map([
+                ...(Array.isArray(data.evidenceSources) ? data.evidenceSources : []),
+                ...(Array.isArray(refinement.evidenceSources) ? refinement.evidenceSources : []),
+              ].map((source) => [source.id, source])).values()],
+              evidenceInputOmissions: {
+                resumeCharacters: Math.max(data.evidenceInputOmissions?.resumeCharacters ?? 0, refinement.evidenceInputOmissions?.resumeCharacters ?? 0),
+                clarificationCharacters: Math.max(data.evidenceInputOmissions?.clarificationCharacters ?? 0, refinement.evidenceInputOmissions?.clarificationCharacters ?? 0),
+              },
+            } : currentRun.data }
+            : state.optimizeRun;
+          return { optimizations, originalResume, optimizeRun,
+            evidenceSources: [...new Map([
+              ...state.evidenceSources, ...(refinement.evidenceSources ?? []),
+            ].map((source) => [source.id, source])).values()], hasDownloaded: false };
         });
       },
 
@@ -485,55 +530,63 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       // Analysis caching methods
-      getCachedAnalysis: (resumeText: string, jobDescription: string, forceIsOptimized?: boolean): CachedAnalysis | null => {
-        const state = get();
-        // Allow explicit override of isOptimized flag for specific lookups
-        // This is needed when OptimizeSection wants the original score regardless of current showOptimized state
-        const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
-        const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
-        const cached = state.analysisCache[cacheKey];
-
-        if (!cached) {
-          return null;
-        }
-
-        // Check if cache is still valid
-        const age = Date.now() - cached.timestamp;
-        if (age > CACHE_TTL_MS) {
-          return null;
-        }
-
-        return cached;
+      getCachedAssessment: (context) => {
+        const cached = get().analysisCache[context.key];
+        if (!cached?.context || !sameAssessmentContext(cached.context, context)) return null;
+        return Date.now() - cached.timestamp > CACHE_TTL_MS ? null : cached;
       },
 
-      setCachedAnalysis: (resumeText: string, jobDescription: string, analysis: Omit<CachedAnalysis, 'timestamp'>, forceIsOptimized?: boolean) => {
-        const state = get();
-        // Fix B2: Allow explicit override of isOptimized flag, matching getCachedAnalysis
-        const isOptimized = forceIsOptimized !== undefined ? forceIsOptimized : state.showOptimized;
-        const cacheKey = generateCacheKey(resumeText, jobDescription, isOptimized);
+      setEvidenceSources: (sources) => set({ evidenceSources: sources }),
+      confirmOptimization: (sectionId, confirmation) => {
+        const card = get().optimizations.find((item) => item.sectionId === sectionId);
+        if (!card || !isConfirmationCurrent(card.evidence, confirmation, proposalStatement(card.optimized))) return false;
+        const previous = get().optimizations;
+        set((state) => ({
+          optimizations: state.optimizations.map((item) => item.sectionId === sectionId
+            ? { ...item, confirmation } : item),
+        }));
+        if (lastStorageWriteFailed) {
+          set({ optimizations: previous });
+          return false;
+        }
+        return true;
+      },
+      editOptimization: (sectionId, value, proposedFingerprint, expectedCard) => {
+        const previous = get();
+        if (!previous.optimizations.some((item) => item.sectionId === sectionId && item === expectedCard)) return false;
+        set((state) => {
+          const optimizations = state.optimizations.map((item) => item.sectionId === sectionId
+            ? { ...item, optimized: value, confirmation: undefined, mergeStatus: undefined,
+              evidence: item.evidence && { ...item.evidence, proposedFingerprint, status: 'needs_review' as const,
+                reasons: ['semantic_review' as const] } } : item);
+          return { optimizations, hasDownloaded: false,
+            optimizeRun: state.optimizeRun?.status === 'succeeded'
+              ? { ...state.optimizeRun, cards: optimizations } : state.optimizeRun };
+        });
+        if (lastStorageWriteFailed) {
+          set({ optimizations: previous.optimizations, optimizeRun: previous.optimizeRun,
+            hasDownloaded: previous.hasDownloaded });
+          return false;
+        }
+        return true;
+      },
 
+      setCachedAssessment: (context, analysis) => {
         set((state) => {
           const newCache = {
             ...state.analysisCache,
-            [cacheKey]: {
+            [context.key]: {
               ...analysis,
+              context: { ...context },
               timestamp: Date.now(),
             },
           };
-
-          // Evict oldest entries if cache exceeds 10 entries
-          const MAX_CACHE_SIZE = 10;
-          const cacheEntries = Object.entries(newCache);
-          if (cacheEntries.length > MAX_CACHE_SIZE) {
-            // Sort by timestamp (oldest first) and keep only newest MAX_CACHE_SIZE
-            const sortedEntries = cacheEntries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-            const keepEntries = sortedEntries.slice(-MAX_CACHE_SIZE);
-            return {
-              analysisCache: Object.fromEntries(keepEntries),
-            };
-          }
-
-          return { analysisCache: newCache };
+          const entries = Object.entries(newCache);
+          return {
+            analysisCache: entries.length > 10
+              ? Object.fromEntries(entries.sort((a, b) => a[1].timestamp - b[1].timestamp).slice(-10))
+              : newCache,
+          };
         });
       },
 
@@ -549,6 +602,9 @@ export const useResumeStore = create<ResumeState>()(
        */
       setOptimizeRun: (run) =>
         set((state) => ({
+          evidenceSources: run?.status === 'succeeded' && run.data && typeof run.data === 'object'
+            && 'evidenceSources' in run.data && Array.isArray(run.data.evidenceSources)
+            ? run.data.evidenceSources as EvidenceSource[] : state.evidenceSources,
           optimizeRun: run === null
             ? null
             : {
@@ -663,7 +719,15 @@ export const useResumeStore = create<ResumeState>()(
             if (import.meta.env.DEV) console.warn('[ResumeStore] ⚠️ patchProfile validation issues:', validation.error);
           }
 
-          return { originalResume: merged, hasDownloaded: false };
+          const changed = state.originalResume === null || changedBaseline(state.originalResume, merged);
+          if (!changed) return { originalResume: merged, hasDownloaded: false };
+          const optimizations = invalidateResumeEvidence(state.optimizations, state.evidenceSources);
+          return { originalResume: merged, parsedResumeText: formatResumeToText(merged), optimizations,
+            optimizeRun: state.optimizeRun?.cards ? { ...state.optimizeRun,
+              cards: invalidateResumeEvidence(state.optimizeRun.cards as OptimizationResult[], state.evidenceSources) } : state.optimizeRun,
+            jobVariants: state.jobVariants.map(variant => ({ ...variant, snapshot: { ...variant.snapshot,
+              optimizations: invalidateResumeEvidence(variant.snapshot.optimizations, variant.snapshot.evidenceSources ?? []) } })),
+            hasDownloaded: false };
         });
       },
 
@@ -715,6 +779,7 @@ export const useResumeStore = create<ResumeState>()(
         const snap = variant.snapshot;
         set({
           optimizations: structuredClone(snap.optimizations),
+          evidenceSources: structuredClone(snap.evidenceSources ?? []),
           keywordSuggestions: structuredClone(snap.keywordSuggestions),
           optimizationMetrics: structuredClone(snap.optimizationMetrics),
           baselineMatchScore: snap.baselineMatchScore,
@@ -734,12 +799,12 @@ export const useResumeStore = create<ResumeState>()(
       },
 
       clearAll: () => {
-        cacheKeyMemo.clear();
         set({
           originalResume: null,
           parsedResumeText: null,
           hasDownloaded: false,
           optimizations: [],
+          evidenceSources: [],
           keywordSuggestions: [],
           analysisCache: {},
           optimizationMetrics: {
@@ -774,12 +839,12 @@ export const useResumeStore = create<ResumeState>()(
       resetForNewUpload: () => {
         // NOTE: searchIntent is intentionally NOT reset here — the target role is
         // profile-level intent that should survive a new resume upload.
-        cacheKeyMemo.clear();
         set({
           originalResume: null,
           parsedResumeText: null,
           hasDownloaded: false,
           optimizations: [],
+          evidenceSources: [],
           keywordSuggestions: [],
           analysisCache: {},
           optimizationMetrics: {
@@ -819,7 +884,7 @@ export const useResumeStore = create<ResumeState>()(
       // v3: added optimizationOrigin (guest-preview export/save gating). No
       //     migration needed — merge() below preserves the initial `null`
       //     default for state persisted before this field existed.
-      version: 3,
+      version: 4,
       migrate: (persistedState, fromVersion) => {
         let state = (persistedState ?? {}) as Partial<ResumeState>;
         if (fromVersion < 1) {
@@ -835,12 +900,31 @@ export const useResumeStore = create<ResumeState>()(
             ),
           };
         }
+        if (fromVersion < 4) {
+          const runData = state.optimizeRun?.data;
+          const sources = runData && typeof runData === 'object' && 'evidenceSources' in runData
+            && Array.isArray(runData.evidenceSources) ? runData.evidenceSources.filter((source): source is EvidenceSource =>
+              !!source && typeof source === 'object' && typeof source.id === 'string'
+              && typeof source.text === 'string' && typeof source.fingerprint === 'string'
+              && typeof source.targetId === 'string' && (source.kind === 'resume' || source.kind === 'clarification')) : [];
+          state = {
+            ...state,
+            evidenceSources: sources,
+            optimizations: Array.isArray(state.optimizations) ? state.optimizations.map((card) => migrateLegacyCard(card, sources)) : [],
+            jobVariants: (state.jobVariants ?? []).map((variant) => ({
+              ...variant,
+              snapshot: { ...variant.snapshot, evidenceSources: [],
+                optimizations: (variant.snapshot?.optimizations ?? []).map((card) => migrateLegacyCard(card, [])) },
+            })),
+          };
+        }
         return state;
       },
       partialize: (state) => ({
         originalResume: state.originalResume,
         parsedResumeText: state.parsedResumeText,
         optimizations: state.optimizations,
+        evidenceSources: state.evidenceSources,
         selectedTemplate: state.selectedTemplate,
         showOptimized: state.showOptimized,
         keywordSuggestions: state.keywordSuggestions,

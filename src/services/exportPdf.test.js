@@ -9,6 +9,90 @@ import {
 
 
 describe("exportPdf", () => {
+  it.each(["styled", "ats-plain"])("preserves legacy string and structured skills in %s reviewed print", async variant => {
+    const html = await exportResumeToPdf({ resumeDocument: {
+      basics: { name: "Sara", location: {} },
+      skills: ["Legacy SQL", { name: "Reporting", level: "Advanced", keywords: ["Power BI"] }],
+    }, variant, skipPrint: true });
+    const text = new DOMParser().parseFromString(html, "text/html").body.textContent;
+    for (const skill of ["Legacy SQL", "Reporting", "Advanced", "Power BI"]) expect(text).toContain(skill);
+  });
+  it.each(["styled", "ats-plain"])("keeps supplied contact URLs as visible escaped text in %s print export", async variant => {
+    const urls = ["https://sara.example.test/?a=1&b=2", "https://github.com/sara-example", "https://linkedin.com/in/sara-example"];
+    const resumeDocument = {
+      basics: { name: "Sara", email: "sara@example.test", location: {}, url: urls[0],
+        profiles: [{ network: "GitHub", url: urls[1] }, { network: "LinkedIn", url: urls[2] },
+          { network: "Portfolio", url: urls[0] }, { network: "Other", url: '<script>alert("profile")</script>' }] },
+      work: [], education: [], skills: [], projects: [],
+    };
+    const html = await exportResumeToPdf({ resumeDocument, variant, skipPrint: true });
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    for (const url of urls) {
+      expect(doc.body.textContent).toContain(url);
+      expect(doc.body.textContent.split(url)).toHaveLength(2);
+    }
+    expect(doc.body.textContent).toContain('<script>alert("profile")</script>');
+    expect(doc.querySelector("script")).toBeNull();
+  });
+
+  it.each(["styled", "ats-plain"])("keeps legacy LinkedIn contacts in %s print export", async variant => {
+    const html = await exportResumeToPdf({ resumeDocument: {
+      header: { name: "Sara", linkedin: "https://linkedin.com/in/sara-legacy" },
+      summary: [], skills: [], experience: [], education: [], projects: [],
+    }, variant, skipPrint: true });
+    expect(new DOMParser().parseFromString(html, "text/html").body.textContent)
+      .toContain("https://linkedin.com/in/sara-legacy");
+  });
+
+  it("renders the reviewed structured resume without raw suggestions or job-only facts", async () => {
+    const resumeDocument = {
+      basics: { name: "Sara", summary: "Confirmed summary", email: "sara@example.com", phone: "", location: { city: "Riyadh" }, profiles: [] },
+      work: [{ name: "Acme", position: "Engineer", startDate: "2020", endDate: "2024", highlights: ["Built the platform"] }],
+      education: [], skills: [], projects: [],
+    };
+    for (const variant of ["styled", "ats-plain"]) {
+      const html = await exportResumeToPdf({ resumeDocument, variant,
+        optimizations: [{ suggestion: "Unreviewed claim" }], keywords: { add: ["Unsupported skill"] },
+        jobDescription: "Private job description", skipPrint: true });
+      expect(html).toContain("Confirmed summary");
+      expect(html).toContain("Built the platform");
+      expect(html).toContain("Acme");
+      expect(html).not.toContain("Unreviewed claim");
+      expect(html).not.toContain("Unsupported skill");
+      expect(html).not.toContain("Private job description");
+    }
+  });
+  it("renders a sparse reviewed resume", async () => {
+    const html = await exportResumeToPdf({ resumeDocument: {
+      basics: { name: "Sara", summary: "", location: {} }, work: [], education: [], skills: [],
+    }, skipPrint: true });
+    expect(html).toContain("Sara");
+  });
+  it("keeps every canonical section in both reviewed HTML variants", async () => {
+    const resumeDocument = {
+      basics: { name: "Sara", summary: "Original summary", location: { city: "Riyadh" }, profiles: [] },
+      work: [],
+      education: [{ institution: "University A", studyType: "Master", area: "Data Science", startDate: "2020", endDate: "2022", score: "4.0", courses: ["Statistics"], highlights: ["Research distinction"] }],
+      skills: [], projects: [],
+      certificates: [{ name: "Security Certificate", issuer: "Issuer A", date: "2023" }],
+      languages: [{ language: "Arabic", fluency: "Native" }],
+      volunteer: [{ organization: "Community A", position: "Mentor", summary: "Mentored graduates", startDate: "2021", endDate: "2022", highlights: ["Coached 20 students"] }],
+      awards: [{ title: "Leadership Award", awarder: "Association A", date: "2024", summary: "For service" }],
+      publications: [{ name: "Research Paper", publisher: "Journal A", releaseDate: "2025", summary: "Study abstract" }],
+      interests: [{ name: "Robotics", keywords: ["Open source"] }],
+      references: [{ name: "Reference A", reference: "Available on request" }],
+    };
+    for (const variant of ["styled", "ats-plain"]) {
+      const html = await exportResumeToPdf({ resumeDocument, variant, skipPrint: true,
+        optimizations: [{ suggestion: "Unreviewed claim" }] });
+      for (const text of ["Master", "Data Science", "Statistics", "Research distinction",
+        "Security Certificate", "Arabic", "Native", "Community A", "Coached 20 students",
+        "Leadership Award", "Research Paper", "Robotics", "Reference A"]) {
+        expect(html).toContain(text);
+      }
+      expect(html).not.toContain("Unreviewed claim");
+    }
+  });
   const sampleResume = `John Doe
 Riyadh, Saudi Arabia | john@example.com | +966 555 555 555
 
@@ -54,7 +138,9 @@ Vision 2030 Dashboard – Built analytics portal for executive leadership.`;
     expect(html).toContain("Summary");
     expect(html).toContain("Skills");
     expect(html).toContain("Riyadh digital bank");
-    expect(html).toContain("Match Score");
+    expect(html).toContain("Estimated alignment with this job description");
+    expect(html).not.toContain("Keyword coverage:");
+    expect(html).not.toContain("Similarity index:");
   });
 
   it("preserves utf-8 characters in export html", () => {

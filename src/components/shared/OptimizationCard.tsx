@@ -11,7 +11,7 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
   const [isOpen, setIsOpen] = useState(true);
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
   const evidenceId = useId();
-  const evidence = typeof card?.evidence === "string" ? card.evidence.trim() : "";
+  const evidence = typeof card?.evidence === "string" ? card.evidence.trim() : card?.evidence;
 
   const handleCopy = async (e) => {
     e.stopPropagation();
@@ -152,7 +152,11 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                   onClick={() => setIsEvidenceOpen((value) => !value)}
                   className="inline-flex items-center rounded border border-[color:var(--glass-border)] bg-transparent px-2 py-0.5 text-xs text-ink-soft/70 transition-colors hover:border-emerald-500/25 hover:text-ink-soft focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40"
                 >
-                  {t('optimization.evidenceLabel', 'Grounded in your resume')}
+                  {typeof evidence === 'string'
+                    ? t('optimization.evidenceLabel', 'Grounded in your resume')
+                    : evidence.status === 'source_matched'
+                      ? t('optimization.evidenceSourceMatched', 'Matched to supplied source text; check the wording before applying.')
+                      : t('optimization.evidenceNeedsReview', 'Needs your review — source text does not verify every detail.')}
                 </button>
                 {isEvidenceOpen && (
                   <p
@@ -160,7 +164,12 @@ export default function OptimizationCard({ card, onCopy, disabledActions = false
                     role="note"
                     className="rounded bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_30%)] px-2 py-1.5 text-xs leading-relaxed text-ink-soft/80"
                   >
-                    {evidence}
+                    {typeof evidence === 'string' ? evidence : evidence.references?.map((reference, index) => {
+                      const source = card.evidenceSources?.find((item) => item.id === reference.sourceId);
+                      return source ? <span key={`${reference.sourceId}-${index}`} className="block whitespace-pre-wrap break-words">
+                        {source.kind === 'clarification' ? t('optimization.clarificationSource', 'Your answer') : t('optimization.resumeSource', 'Resume text')}: {reference.quote}
+                      </span> : null;
+                    })}
                   </p>
                 )}
               </div>

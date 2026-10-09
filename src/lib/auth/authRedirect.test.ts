@@ -13,6 +13,34 @@ const buildLocation = (url: string) => {
 };
 
 describe("resolveAuthRedirectUrl", () => {
+  it("keeps the root slash in the deployed preview redirect", () => {
+    expect(
+      resolveAuthRedirectUrl({
+        location: buildLocation("https://deploy-preview-146--resume-optimizing.netlify.app/"),
+      })
+    ).toBe("https://deploy-preview-146--resume-optimizing.netlify.app/");
+  });
+
+  it("uses a root slash when the browser location omits pathname", () => {
+    expect(
+      resolveAuthRedirectUrl({
+        location: {
+          hostname: "deploy-preview-146--resume-optimizing.netlify.app",
+          origin: "https://deploy-preview-146--resume-optimizing.netlify.app",
+        },
+      })
+    ).toBe("https://deploy-preview-146--resume-optimizing.netlify.app/");
+  });
+
+  it("ignores a localhost override on the deployed preview root", () => {
+    expect(
+      resolveAuthRedirectUrl({
+        envRedirectUrl: "http://localhost:5173",
+        location: buildLocation("https://deploy-preview-146--resume-optimizing.netlify.app/"),
+      })
+    ).toBe("https://deploy-preview-146--resume-optimizing.netlify.app/");
+  });
+
   it("uses the localhost origin and path when no override is configured", () => {
     expect(
       resolveAuthRedirectUrl({

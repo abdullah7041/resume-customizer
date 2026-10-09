@@ -110,7 +110,7 @@
         "rerun": "Re-run",
         "continue": "Continue",
         "breakdown": "Breakdown",
-        "currentMatch": "Current match",
+        "currentMatch": "Estimated alignment with this job description",
         "estimatedScore": "Estimated ~{{score}}%",
         "progressActionable": "{{applied}}/{{total}} resume changes applied",
         "recommendationsCount": "{{total}} recommendations",

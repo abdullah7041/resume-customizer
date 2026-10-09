@@ -8,7 +8,7 @@ import type { DocxTemplateConfig, SectionKey } from './templateStyles';
 import type { ResumeSchema } from '../../types/resume';
 import { splitTextWithKeywords, shouldApplyBolding } from '../../lib/utils/keywordBolder';
 import type { ResumeDirection } from '../../lib/utils/resumeDirection';
-import { normalizeUrl, resolveProfileUrl } from '../../lib/utils/profileUrl';
+import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '../../lib/utils/profileUrl';
 
 // ── Types for the dynamically-imported docx module ──────
 export interface DocxModule {
@@ -252,7 +252,7 @@ export function buildHeader(
         if (linkedInLink) {
             contactChildren.push(
                 new D.ExternalHyperlink({
-                    children: [new D.TextRun({ text: 'LinkedIn Account', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
+                    children: [new D.TextRun({ text: linkedInLink, font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
                     link: linkedInLink,
                 })
             );
@@ -272,7 +272,7 @@ export function buildHeader(
         if (portfolioLink) {
             contactChildren.push(
                 new D.ExternalHyperlink({
-                    children: [new D.TextRun({ text: 'Portfolio', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
+                    children: [new D.TextRun({ text: portfolioLink, font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
                     link: portfolioLink,
                 })
             );
@@ -281,6 +281,14 @@ export function buildHeader(
                 new D.TextRun({ text: basics.url || portfolioProfile?.url || portfolioProfile?.username || '', font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: cfg.contactColor })
             );
         }
+    }
+
+    for (const url of otherProfileUrls(basics.profiles)) {
+        addSep();
+        contactChildren.push(new D.ExternalHyperlink({
+            children: [new D.TextRun({ text: url, font: cfg.fontFamily, size: cfg.baseFontSize - 1, color: '2563EB', underline: {} })],
+            link: url,
+        }));
     }
 
     if (contactChildren.length > 0) {
@@ -547,7 +555,9 @@ export function buildEducation(
 
     for (const edu of education) {
         const degreeText = `${edu.studyType || ''}${edu.area ? ` in ${edu.area}` : ''}`;
-        const dateText = edu.endDate || edu.startDate || '';
+        const dateText = cfg.educationDateRange && edu.startDate && edu.endDate
+            ? `${edu.startDate}${cfg.dateSeparator}${edu.endDate}`
+            : edu.endDate || edu.startDate || '';
 
         // Line 1: Degree <TAB> Date (same line)
         children.push(

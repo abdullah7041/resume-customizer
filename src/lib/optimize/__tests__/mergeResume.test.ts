@@ -113,9 +113,10 @@ describe('mergeOptimizedResume', () => {
       card({ sectionId: 'summary-0', sectionType: 'summary', original: 'old', optimized: 'Sharper professional summary.' }),
       card({ sectionId: 'headline-0', sectionType: 'headline', original: 'old', optimized: 'Senior Backend Engineer' }),
     ];
-    const { resume } = mergeOptimizedResume(baseResume(), cards, { isSaudiNational: false });
+    const { resume, includedEdits } = mergeOptimizedResume(baseResume(), cards, { isSaudiNational: false });
     expect(resume.basics!.summary).toBe('Sharper professional summary.');
     expect(resume.basics!.label).toBe('Senior Backend Engineer');
+    expect(includedEdits.map(edit => edit.sectionId)).toEqual(['summary-0', 'headline-0']);
   });
 
   it('prepends Saudi to the summary for Saudi nationals (idempotently)', () => {
@@ -136,5 +137,14 @@ describe('mergeOptimizedResume', () => {
     expect(resume.work![0].highlights![0]).toBe('Delivered the core services platform for the fintech group');
     expect(diagnostics.appliedCount).toBe(1);
     expect(diagnostics.failedCount).toBe(1);
+  });
+
+  it('reports only the exact cards whose edits reached the composed document', () => {
+    const merged = card({ sectionId: 'merged', optimized: 'Delivered payment services for merchants' });
+    const failed = card({ sectionId: 'failed', original: 'No matching original text' });
+    const unapplied = card({ sectionId: 'unapplied', applied: false });
+    const recommendation = card({ sectionId: 'recommendation', sectionType: 'skills' });
+    const result = mergeOptimizedResume(baseResume(), [merged, failed, unapplied, recommendation], { isSaudiNational: false });
+    expect(result.includedEdits).toEqual([merged]);
   });
 });

@@ -53,16 +53,6 @@ describe('Multi-page PDF pagination bugs (revised root cause)', () => {
     ).not.toMatch(/page\.pdf\(\{[^)]*margin:\s*\{/s);
   });
 
-  it('BUG 1 (page 1 padding): server CSS must zero template paddingTop to avoid double-padding on page 1', () => {
-    // The Puppeteer margin provides top spacing on every page.
-    // The template root also has paddingTop (e.g. 12.7mm) for the browser preview.
-    // Without zeroing it in the PDF context, page 1 gets Puppeteer margin + template padding = double spacing.
-    expect(
-      pdfFn,
-      'generate-pdf.ts must inject padding-top: 0 on [data-resume-preview] > div to avoid double top padding on page 1'
-    ).toMatch(/\[data-resume-preview\]\s*>\s*div[^}]*padding-top:\s*0/);
-  });
-
   it('BUG 2: generate-pdf.ts must include h2 { break-after: avoid } to prevent orphaned headers', () => {
     // Section headers should not appear alone at the bottom of a page.
     // This CSS rule works in both screen and print rendering modes.

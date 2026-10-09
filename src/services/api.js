@@ -495,6 +495,8 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
       return {
         ...data,
         score: Number.isFinite(Number(data.score)) ? Math.round(Math.min(100, Math.max(0, Number(data.score)))) : 0,
+        // Deprecated compatibility aliases for existing match-response consumers.
+        // Neither value is an independent coverage or similarity measurement.
         coverage: Number.isFinite(Number(data.coverage)) ? Math.min(1, Math.max(0, Number(data.coverage))) : 0,
         similarity: Number.isFinite(Number(data.similarity)) ? Math.min(1, Math.max(0, Number(data.similarity))) : 0,
         cosine: Number.isFinite(Number(data.similarity)) ? Math.min(1, Math.max(0, Number(data.similarity))) : 0, // Legacy field
@@ -653,7 +655,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
  * @param {string} [params.jobContext] - job description for keyword grounding
  * @param {string} params.resumeText - the ONLY grounding source
  * @param {string} [params.language='en']
- * @returns {Promise<{ improved: string, issue: string, rationale: string }>}
+ * @returns {Promise<{ improved: string, issue: string, rationale: string, evidence?: object, evidenceSources?: object[], evidenceInputOmissions?: object }>}
  */
 export const refineBullet = async ({ original, currentImproved, userInstruction, jobContext = '', resumeText, language = 'en' }) => {
   if (isCircuitOpen('openrouter-ai')) {
@@ -675,6 +677,9 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
         improved: typeof data.improved === 'string' ? data.improved : currentImproved,
         issue: typeof data.issue === 'string' ? data.issue : '',
         rationale: typeof data.rationale === 'string' ? data.rationale : '',
+        evidence: data.evidence,
+        evidenceSources: data.evidenceSources,
+        evidenceInputOmissions: data.evidenceInputOmissions,
       };
     } catch (error) {
       console.error('[RefineBullet] Refine failed:', summarizeErrorForConsole(error));

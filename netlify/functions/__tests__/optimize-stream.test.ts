@@ -44,6 +44,14 @@ const mockRateLimiter = {
 };
 
 vi.mock('../../lib/gemini-client.js', () => mockGeminiClient);
+// Existing stream cases cover transport, cache, and billing; the evidence
+// path is covered with the real builder in optimize-evidence-flow.test.ts.
+vi.mock('../../lib/optimize-cards.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../lib/optimize-cards.js')>();
+  return { ...original, buildEvidenceBackedOptimizationCards: async (value: Parameters<typeof original.buildOptimizationCards>[0], options: { logPrefix: string }) => ({
+    cards: original.buildOptimizationCards(value, options), diagnostics: [],
+  }) };
+});
 vi.mock('../../lib/sentry.js', () => mockSentry);
 vi.mock('../../lib/credit-manager.js', () => mockCreditManager);
 vi.mock('../../lib/vulnerability-detector.js', () => mockVulnerabilityDetector);
@@ -87,12 +95,15 @@ describe('optimize-stream function', () => {
       available: 10,
     });
     mockRedisCache.getCached.mockResolvedValue({
+      evidenceVersion: 2,
+      evidenceSources: [{ id: 'source', targetId: 'target', kind: 'resume', text: 'Before', fingerprint: 'fingerprint' }],
       cards: [{
         section: 'General',
         issue: 'Cached issue',
         suggestion: 'Cached suggestion',
         exampleBefore: 'Before',
         exampleAfter: 'After',
+        evidence: { version: 1, status: 'needs_review', references: [{ sourceId: 'source', quote: 'Before' }] },
       }],
       source: 'cache',
     });
@@ -140,6 +151,13 @@ describe('optimize-stream function', () => {
     // Cache hit returns before pre-charge enforcement but still attaches live balance.
     expect(mockCreditManager.checkCredits).toHaveBeenCalledWith('user@example.com', 'optimize');
     expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+  });
+
+  it('does not return a legacy cached card without evidence', async () => {
+    mockRedisCache.getCached.mockResolvedValue({ cards: [{ section: 'Experience', exampleAfter: 'Old edit' }] });
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    expect(response.headers.get('X-Cache')).not.toBe('HIT');
+    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledTimes(1);
   });
 
   it('does not return a cached empty card payload as a successful optimization', async () => {
@@ -294,11 +312,12 @@ describe('optimize-stream function', () => {
       [],
       undefined,
       undefined,
-      {
+      expect.objectContaining({
         featureName: 'optimize_stream',
         userRef: '11111111-1111-4111-8111-111111111111',
         jdFingerprint: '4199a1957ebd4e07',
-      }
+        evidenceSources: expect.any(Array),
+      })
     );
     const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
     expect(options).not.toHaveProperty('resumeText');

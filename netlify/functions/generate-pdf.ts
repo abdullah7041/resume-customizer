@@ -22,9 +22,13 @@ const WINDOWS_CHROME_PATHS = [
   "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
 ];
 
+// NETLIFY may be absent in deployed functions; Lambda supplies runtime markers.
+// Netlify Dev can load hosted settings locally, so its marker takes precedence.
+const isServerless = !process.env.NETLIFY_DEV && !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_JS_RUNTIME);
+
 // Chromium executable path varies by environment
 const getChromiumPath = async (): Promise<string> => {
-  if (process.env.NETLIFY) {
+  if (isServerless) {
     return await chromium.executablePath();
   }
 
@@ -45,9 +49,6 @@ const getChromiumPath = async (): Promise<string> => {
 
   return "/usr/bin/google-chrome";
 };
-
-// Check if running on Netlify (production/deploy-preview)
-const isNetlify = !!process.env.NETLIFY;
 
 // Browser connection pooling - reuse browser instance across requests
 let browserInstance: Browser | null = null;
@@ -106,7 +107,7 @@ async function getBrowser() {
   if (!browserInstance) {
     console.log('[PDF] Launching new browser instance');
     browserInstance = await puppeteer.launch({
-      args: isNetlify ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: isServerless ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
       defaultViewport: { width: 794, height: 1123 }, // A4 at 96dpi: 210mm × 96/25.4 ≈ 794px, 297mm × 96/25.4 ≈ 1123px
       executablePath: await getChromiumPath(),
       headless: true, // Always headless for PDF generation
@@ -166,7 +167,8 @@ export async function hardenPageForRender(page: SandboxablePage): Promise<void> 
 }
 
 const DEFAULT_PAGE_MARGIN_MM = 19.05; // 0.75in — matches the client fallback default.
-const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom):\s*([\d.]+)(in|mm|px)/g;
+const DEFAULT_SIDE_MARGIN_MM = 15.24; // 0.6in — matches the preview default.
+const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom|side):\s*([\d.]+)(in|mm|px)/g;
 
 /**
  * Reads the `--margin-top`/`--margin-bottom` CSS custom properties that
@@ -179,8 +181,8 @@ const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom):\s*([\d.]+)(in|mm|
  * deliberate SSRF/XSS guard against attacker-controlled resume HTML) —
  * `page.evaluate()` calls fail once `setJavaScriptEnabled(false)` has run.
  */
-export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: number } {
-  const values: { top?: number; bottom?: number } = {};
+export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: number; sideMm: number } {
+  const values: { top?: number; bottom?: number; side?: number } = {};
   for (const match of html.matchAll(MARGIN_CUSTOM_PROPERTY_PATTERN)) {
     const [, side, amountStr, unit] = match;
     const amount = Number.parseFloat(amountStr);
@@ -188,10 +190,12 @@ export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: n
     const mm = unit === 'in' ? amount * 25.4 : unit === 'px' ? amount * (25.4 / 96) : amount;
     if (side === 'top' && values.top === undefined) values.top = mm;
     if (side === 'bottom' && values.bottom === undefined) values.bottom = mm;
+    if (side === 'side' && values.side === undefined) values.side = mm;
   }
   return {
     topMm: values.top ?? DEFAULT_PAGE_MARGIN_MM,
     bottomMm: values.bottom ?? DEFAULT_PAGE_MARGIN_MM,
+    sideMm: values.side ?? DEFAULT_SIDE_MARGIN_MM,
   };
 }
 
@@ -293,7 +297,7 @@ const baseHandler: Handler = async (event) => {
     // (plain string parsing, not page.evaluate() — the page has JavaScript
     // execution disabled by hardenPageForRender above, so any evaluate() call
     // here would throw and fail the whole request).
-    const { topMm, bottomMm } = extractPageMarginsMm(html);
+    const { topMm, bottomMm, sideMm } = extractPageMarginsMm(html);
 
     // Render the final HTML string with embedded styles. setContent and the
     // explicit network-idle wait share one deadline so this migration from
@@ -326,6 +330,12 @@ const baseHandler: Handler = async (event) => {
               background: #fff !important;
             }
 
+            [data-resume-preview] {
+              width: calc(210mm - ${sideMm * 2}mm) !important;
+              max-width: 100% !important;
+              margin: 0 auto !important;
+            }
+
             /* Hide elements marked as non-printable (page break indicators, etc.) */
             [data-no-print] { display: none !important; }
 
@@ -341,11 +351,11 @@ const baseHandler: Handler = async (event) => {
 
             /* Remove template root padding to prevent double-padding on page 1 —
                the @page rule below is the sole source of page margins. */
-            [data-resume-preview] > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+            [data-resume-preview] > div { padding: 0 !important; }
 
             /* Overrides index.css's @page { margin: 0 } print reset with the
                user's configured margins. */
-            @page { margin: ${topMm}mm 0 ${bottomMm}mm 0 !important; }
+            @page { margin: ${topMm}mm ${sideMm}mm ${bottomMm}mm ${sideMm}mm !important; }
 
           </style>
         </head>

@@ -19,7 +19,7 @@
  */
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo, useLayoutEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useState, useMemo, useLayoutEffect, useEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
@@ -39,10 +39,13 @@ import { FormattingPanel } from "../ui/FormattingPanel";
 import { PageBreakOverlay, A4_PAGE_HEIGHT_PX } from "../ui/PageBreakIndicator";
 import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 import { directionFromLanguage } from "../../lib/utils/resumeDirection";
+import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
+import { checkPdfBlob, expectedPdfText } from '@/lib/utils/pdfTextCheck';
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
 const DRAG_HANDLE_KEYBOARD_STEP_PX = 12;
+const RECOVERY_BUTTON_CLASS = 'rounded-md border border-current px-3 py-2 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:hover:bg-white/10';
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -221,9 +224,10 @@ interface TemplateGalleryProps {
    * `() => handleOptimize('auto', { freePreview: false })`.
    */
   onRequirePaidReoptimize?: () => Promise<unknown>;
+  onReviewSections?: (sectionIds: string[]) => void;
 }
 
-export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate, onRequirePaidReoptimize }: TemplateGalleryProps) {
+export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate, onRequirePaidReoptimize, onReviewSections }: TemplateGalleryProps) {
   const { t } = useTranslation();
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -232,13 +236,33 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
+  const [pdfStatus, setPdfStatus] = useState<string | null>(null);
+  const exportAttemptIdRef = useRef(0);
+  const isCurrentExport = (id: number) => exportAttemptIdRef.current === id;
+  const beginExport = () => {
+    const id = ++exportAttemptIdRef.current;
+    setPdfRecovery(null);
+    setPdfStatus(null);
+    setPendingLegacyReview(null);
+    setPendingExportAction(null);
+    setReadyExportAction(null);
+    setIsReoptimizing(false);
+    setIsDownloading(false);
+    setIsDownloadingDocx(false);
+    return id;
+  };
+  useEffect(() => () => { exportAttemptIdRef.current += 1; }, []);
   const [scale, setScale] = useState(1);
   const [isManuallyZoomed, setIsManuallyZoomed] = useState(false);
   const [showAdvancedFormatting, setShowAdvancedFormatting] = useState(false);
 
   // Guest-preview export/save gate — see optimizationOrigin.
   const [pendingExportAction, setPendingExportAction] = useState<'pdf' | 'docx' | null>(null);
+  const [readyExportAction, setReadyExportAction] = useState<'pdf' | 'docx' | null>(null);
   const [isReoptimizing, setIsReoptimizing] = useState(false);
+  const [legacyConfirmation, setLegacyConfirmation] = useState<{ documentFingerprint: string; confirmedAt: string } | undefined>();
+  const [pendingLegacyReview, setPendingLegacyReview] = useState<{ action: 'pdf' | 'docx'; documentFingerprint: string } | null>(null);
 
   // Draggable template bar state
   const [barPosition, setBarPosition] = useState({ x: 0, y: 0 });
@@ -286,7 +310,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   // Determine which resume to use
   const resumeData = useStoreData
-    ? (storeActiveResume || storeOriginalResume)
+    ? (storeActiveResume || storeOriginalResume || propResumeData)
     : propResumeData;
   const hasRealResume = Boolean(resumeData?.basics?.name);
   const exportFailureMessage = t(
@@ -313,7 +337,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   // Merged data for display - reactive to all state changes
   const displayData = useMemo((): Partial<ResumeSchema> => {
     const data = useStoreData
-      ? (storeActiveResume || storeOriginalResume || SAMPLE_RESUME)
+      ? (storeActiveResume || storeOriginalResume || propResumeData || SAMPLE_RESUME)
       : (propResumeData || SAMPLE_RESUME);
 
     return data;
@@ -435,20 +459,18 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   }, [isDragging, handleDragMove, handleDragEnd]);
 
   // Download PDF — Server-side Puppeteer rendering
-  const performDownloadPdf = async () => {
-    if (isDownloading || !hasRealResume || !resumeData) return;
+  const performDownloadPdf = async (attempt: NonNullable<typeof pdfRecovery>) => {
+    const { resume: exportResume, preview: previewSnapshot } = attempt;
+    if (isDownloading || !isCurrentExport(attempt.id)) return;
     setIsDownloading(true);
     setExportError(null);
-    analytics.trackExportClicked(selectedTemplate.id, 'pdf');
+    analytics.trackExportClicked(attempt.templateId, 'pdf');
+    const clone = previewSnapshot.cloneNode(true) as HTMLElement;
 
     try {
-      const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
+      const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
 
       // 1. Clone DOM off-screen
-      const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
-      if (!previewElement) throw new Error('Preview not found — unable to capture HTML');
-
-      const clone = previewElement.cloneNode(true) as HTMLElement;
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
       clone.style.top = '0';
@@ -498,6 +520,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           console.warn('Could not inline image for PDF:', summarizeErrorForConsole(e));
         }
       }));
+      if (!isCurrentExport(attempt.id)) return;
 
       // 4. Remove no-print elements
       clone.querySelectorAll('[data-no-print]').forEach(el => el.remove());
@@ -527,22 +550,25 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           }
         })
       );
+      if (!isCurrentExport(attempt.id)) return;
 
       const styles = inlineStyles + '\n' + externalStyles.join('\n');
 
-      document.body.removeChild(clone);
+      clone.remove();
 
       // 5. Send to Server (Netlify Function)
       const { getAuthHeaders } = await import('../../services/api');
       const apiHeaders = await getAuthHeaders({ requireAuth: true });
+      if (!isCurrentExport(attempt.id)) return;
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, styles, templateId: selectedTemplate.id, filename: filename.replace('.pdf', ''), direction: contentDirection }),
+        body: JSON.stringify({ html, styles, templateId: attempt.templateId, filename: filename.replace('.pdf', ''), direction: attempt.direction }),
         // Without this the client waits out the gateway's own kill, then starts a
         // second slow path on top of it.
         signal: AbortSignal.timeout(SERVER_PDF_TIMEOUT_MS),
       });
+      if (!isCurrentExport(attempt.id)) return;
 
       if (!response.ok) {
         // 429 (rate limited) and 503 (renderer still starting) are both 'try again
@@ -550,15 +576,25 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         // spend 20 more seconds to produce a worse PDF for a problem that fixes
         // itself, so these say so and stop.
         if (response.status === 429 || response.status === 503) {
-          analytics.trackExportFailed(selectedTemplate.id, 'pdf', `server_${response.status}`);
+          analytics.trackExportFailed(attempt.templateId, 'pdf', `server_${response.status}`);
           setExportError(exportBusyMessage);
+          setPdfRecovery(attempt);
           return;
         }
         throw new Error(`[PDFDownload] Server error: ${response.status}`);
       }
 
       const blob = await response.blob();
+      if (!isCurrentExport(attempt.id)) return;
       if (!blob || blob.size === 0) throw new Error('[PDFDownload] Server returned an empty PDF');
+      const quality = await checkPdfBlob(blob, expectedPdfText(exportResume, previewSnapshot));
+      if (!isCurrentExport(attempt.id)) return;
+      if (quality.state === 'unverified') {
+        setPdfRecovery({ ...attempt, blob });
+        setExportError(t('sections.templates.export.unverified', 'Selectable text could not be verified. Review this PDF before using it.'));
+        analytics.trackExportFailed(attempt.templateId, 'pdf_unverified', 'text_check');
+        return;
+      }
 
       // 6. Mobile-safe Download
       // iOS Safari frequently blocks navigator.share or blob URLs after async fetch delays.
@@ -568,6 +604,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       if (isIOS) {
         const reader = new FileReader();
         reader.onloadend = () => {
+          if (!isCurrentExport(attempt.id)) return;
           const a = document.createElement('a');
           a.style.display = 'none';
           a.href = reader.result as string;
@@ -581,23 +618,37 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         saveAs(blob, typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
       }
 
-      analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
+      analytics.trackExportSuccess(attempt.templateId, 'pdf_text_checked');
+      setPdfRecovery(null);
+      setPdfStatus(t('sections.templates.export.textChecked', 'Selectable text checked'));
       requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
 
     } catch (err) {
-      console.error('[PDFDownload] Failed server-side generation, attempting client-side fallback:', summarizeErrorForConsole(err));
-      analytics.trackExportFailed(selectedTemplate.id, 'pdf', 'server_error');
+      if (!isCurrentExport(attempt.id)) return;
+      console.error('[PDFDownload] Server-side generation failed:', summarizeErrorForConsole(err));
+      analytics.trackExportFailed(attempt.templateId, 'pdf', 'server_error');
+      setPdfRecovery(attempt);
+      setExportError(exportFailureMessage);
+    } finally {
+      clone.remove();
+      if (isCurrentExport(attempt.id)) setIsDownloading(false);
+    }
+  };
 
+  const downloadImageOnlyPdf = async (attempt: NonNullable<typeof pdfRecovery>) => {
+    const { resume: exportResume, preview: previewSnapshot } = attempt;
+    if (isDownloading || !isCurrentExport(attempt.id)) return;
+    setIsDownloading(true);
+    setExportError(null);
       try {
         // Dynamic import to keep bundle size small
         const [{ toCanvas }, { jsPDF }] = await Promise.all([
           import('html-to-image'),
           import('jspdf')
         ]);
+        if (!isCurrentExport(attempt.id)) return;
 
-        const previewElement = document.querySelector('[data-resume-preview]') as HTMLElement;
-        if (!previewElement) throw new Error('Preview not found for fallback');
 
         // Capture an isolated light clone so fallback export never mutates the live preview.
         // html-to-image can rasterize a blank page when a capture target sits at
@@ -617,7 +668,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           overflow: 'visible',
           pointerEvents: 'none',
         });
-        const fallbackClone = previewElement.cloneNode(true) as HTMLElement;
+        const fallbackClone = previewSnapshot.cloneNode(true) as HTMLElement;
         fallbackClone.style.position = 'static';
         fallbackClone.style.left = '';
         fallbackClone.style.top = '';
@@ -637,6 +688,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           htmlElement.style.minHeight = 'auto';
         });
         await waitForPdfCaptureLayout(fallbackClone);
+        if (!isCurrentExport(attempt.id)) {
+          fallbackHost.remove();
+          return;
+        }
 
         let canvas: HTMLCanvasElement;
         try {
@@ -662,6 +717,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         } finally {
           fallbackHost.remove();
         }
+        if (!isCurrentExport(attempt.id)) return;
 
         if (isCanvasBlank(canvas)) {
           throw new Error('[PDFDownload] Client-side fallback produced a blank canvas');
@@ -675,9 +731,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const a4Height = pdf.internal.pageSize.getHeight();
         
         // Use the user's selected margins, defaulting to 0.75in (19.05mm)
-        const displayOpts = useResumeStore.getState().displayOptions;
-        const mt = displayOpts?.marginTop ? displayOpts.marginTop * 25.4 : 19.05;
-        const mb = displayOpts?.marginBottom ? displayOpts.marginBottom * 25.4 : 19.05;
+        const mt = attempt.marginTop ? attempt.marginTop * 25.4 : 19.05;
+        const mb = attempt.marginBottom ? attempt.marginBottom * 25.4 : 19.05;
         
         // Printable area height
         const printableHeight = a4Height - mt - mb;
@@ -758,91 +813,161 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           isFirstPage = false;
         }
         
-        const filename = getSmartFilename(resumeData, selectedTemplate.id, 'pdf');
+        const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
         const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+        if (!isCurrentExport(attempt.id)) return;
         pdf.save(finalFilename);
 
-        analytics.trackExportSuccess(selectedTemplate.id, 'pdf');
+        analytics.trackExportSuccess(attempt.templateId, 'pdf_image');
+        setPdfRecovery(null);
+        setPdfStatus(null);
         requestValueMomentFeedbackPrompt('export_success');
         useResumeStore.getState().setHasDownloaded(true);
 
       } catch (clientErr) {
+        if (!isCurrentExport(attempt.id)) return;
         console.error('[PDFDownload] Client-side fallback also failed:', summarizeErrorForConsole(clientErr));
         const isBlankCanvas = clientErr instanceof Error && clientErr.message.includes('blank canvas');
         const isTimeout = clientErr instanceof Error && clientErr.message === 'CLIENT_FALLBACK_TIMEOUT';
         analytics.trackExportFailed(
-          selectedTemplate.id,
-          'pdf',
+          attempt.templateId,
+          'pdf_image',
           isTimeout ? 'fallback_timeout' : isBlankCanvas ? 'fallback_blank' : 'client_fallback_error'
         );
         setExportError(isTimeout ? exportTimeoutMessage : exportFailureMessage);
+      } finally {
+      if (isCurrentExport(attempt.id)) setIsDownloading(false);
       }
-    } finally {
-      setIsDownloading(false);
-    }
   };
 
 
   // Download DOCX using docx library (client-side)
-  const performDownloadDocx = async () => {
-    if (isDownloadingDocx || !hasRealResume || !resumeData) return;
+  const performDownloadDocx = async (exportResume: ResumeSchema, attempt?: NonNullable<typeof pdfRecovery>, id = attempt?.id ?? exportAttemptIdRef.current) => {
+    if (isDownloadingDocx || !isCurrentExport(id)) return;
 
     setIsDownloadingDocx(true);
     setExportError(null);
-    analytics.trackExportClicked(selectedTemplate.id, 'docx');
+    analytics.trackExportClicked(attempt?.templateId ?? selectedTemplate.id, 'docx');
     try {
       // Get keywords and bold preference from store
       const store = useResumeStore.getState();
-      const keywords = store.optimizationMetrics?.jdKeywords || [];
-      const boldKeywords = store.displayOptions?.boldKeywords ?? true;
+      const keywords = attempt?.keywords ?? store.optimizationMetrics?.jdKeywords ?? [];
+      const boldKeywords = attempt?.boldKeywords ?? store.displayOptions?.boldKeywords ?? true;
 
       const { exportResumeAsDocx } = await import('../../services/exportDocx');
-      const blob = await exportResumeAsDocx(resumeData as ResumeSchema, {
+      if (!isCurrentExport(id)) return;
+      const blob = await exportResumeAsDocx(exportResume, {
         keywords,
         boldKeywords,
-        templateId: selectedTemplate.id as TemplateId,
-        direction: contentDirection,
+        templateId: attempt?.templateId ?? selectedTemplate.id as TemplateId,
+        direction: attempt?.direction ?? contentDirection,
       });
+      if (!isCurrentExport(id)) return;
       if (!blob || blob.size === 0) throw new Error('DOCX export returned an empty file');
-      const filename = getSmartFilename(resumeData, selectedTemplate.id, 'docx');
+      const filename = getSmartFilename(exportResume, attempt?.templateId ?? selectedTemplate.id, 'docx');
       saveAs(blob, filename);
 
-      analytics.trackExportSuccess(selectedTemplate.id, 'docx');
+      analytics.trackExportSuccess(attempt?.templateId ?? selectedTemplate.id, 'docx');
+      setPdfRecovery(null);
       requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
     } catch (err) {
+      if (!isCurrentExport(id)) return;
       console.error('DOCX Download failed:', summarizeErrorForConsole(err));
-      analytics.trackExportFailed(selectedTemplate.id, 'docx', 'client_error');
+      analytics.trackExportFailed(attempt?.templateId ?? selectedTemplate.id, 'docx', 'client_error');
       setExportError(exportFailureMessage);
     } finally {
-      setIsDownloadingDocx(false);
+      if (isCurrentExport(id)) setIsDownloadingDocx(false);
     }
   };
+
+  const reviewAndDownload = async (action: 'pdf' | 'docx', confirmation = legacyConfirmation, id = exportAttemptIdRef.current) => {
+    if (!hasRealResume || !resumeData || !isCurrentExport(id)) return;
+    // Capture the rendered PDF and canonical composition before the fingerprint's first await.
+    const previewSnapshot = action === 'pdf'
+      ? document.querySelector<HTMLElement>('[data-resume-preview]')?.cloneNode(true) as HTMLElement | undefined
+      : undefined;
+    const state = useResumeStore.getState();
+    const baseline = state.originalResume ?? resumeData;
+    const missingBaseline = !state.originalResume && state.optimizations.some(edit => edit.applied);
+    let snapshot;
+    try {
+      snapshot = await createExportSnapshot(baseline, state.showOptimized && !!state.originalResume ? state.optimizations : [],
+        { isSaudiNational: state.isSaudiNational });
+    } catch (error) {
+      if (!isCurrentExport(id)) return;
+      console.error('[TemplatesSection] Export review failed:', summarizeErrorForConsole(error));
+      setExportError(exportFailureMessage);
+      return;
+    }
+    if (!isCurrentExport(id)) return;
+    // PDF uses captured DOM; reject if that preview was rendered from a different document.
+    if (JSON.stringify(snapshot.resume) !== JSON.stringify(resumeData)) {
+      setExportError(exportFailureMessage);
+      return;
+    }
+    const decision = reviewExport({ documentFingerprint: snapshot.documentFingerprint,
+      includedEdits: snapshot.includedEdits, missingBaseline, legacyDocumentConfirmation: confirmation });
+    if (decision.allowed === false) {
+      if (decision.reason === 'legacy_review') {
+        setPendingLegacyReview({ action, documentFingerprint: decision.documentFingerprint });
+      } else {
+        setExportError(t('sections.templates.export.reviewRequired', 'Review the highlighted changes before downloading.'));
+        onReviewSections?.(decision.sectionIds);
+      }
+      return;
+    }
+    setPendingLegacyReview(null);
+    if (action === 'pdf') {
+      if (!previewSnapshot) {
+        setExportError(exportFailureMessage);
+        return;
+      }
+      await performDownloadPdf({ id, resume: snapshot.resume, preview: previewSnapshot, templateId: selectedTemplate.id as TemplateId,
+        direction: contentDirection, marginTop: state.displayOptions?.marginTop, marginBottom: state.displayOptions?.marginBottom,
+        keywords: [...(state.optimizationMetrics?.jdKeywords ?? [])], boldKeywords: state.displayOptions?.boldKeywords ?? true });
+    } else {
+      await performDownloadDocx(snapshot.resume, undefined, id);
+    }
+  };
+
+  useEffect(() => {
+    if (!readyExportAction) return;
+    const action = readyExportAction;
+    setReadyExportAction(null);
+    void reviewAndDownload(action);
+    // The next render supplies the preview and document produced by the completed paid run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readyExportAction]);
 
   // Public entry points — gate a guest-preview-origin export behind one
   // charged re-optimize before the real download runs.
   const handleDownloadPdf = async () => {
+    const id = beginExport();
     if (isGuestPreviewExport) {
       setPendingExportAction('pdf');
       return;
     }
-    await performDownloadPdf();
+    await reviewAndDownload('pdf', legacyConfirmation, id);
   };
 
   const handleDownloadDocx = async () => {
+    const id = beginExport();
     if (isGuestPreviewExport) {
       setPendingExportAction('docx');
       return;
     }
-    await performDownloadDocx();
+    await reviewAndDownload('docx', legacyConfirmation, id);
   };
 
   const handleConfirmReoptimizeAndExport = async () => {
     if (!pendingExportAction) return;
     const action = pendingExportAction;
+    const id = exportAttemptIdRef.current;
     setIsReoptimizing(true);
     try {
       const result = await onRequirePaidReoptimize?.();
+      if (!isCurrentExport(id)) return;
       if (!result) {
         // The re-run failed or was aborted (e.g. clarification modal
         // dismissed) — the optimize flow has already surfaced its own error;
@@ -850,16 +975,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         return;
       }
       setPendingExportAction(null);
-      if (action === 'pdf') {
-        await performDownloadPdf();
-      } else {
-        await performDownloadDocx();
-      }
+      setReadyExportAction(action);
     } catch (err) {
+      if (!isCurrentExport(id)) return;
       console.error('[TemplatesSection] Paid re-optimize before export failed:', summarizeErrorForConsole(err));
       setExportError(exportFailureMessage);
     } finally {
-      setIsReoptimizing(false);
+      if (isCurrentExport(id)) setIsReoptimizing(false);
     }
   };
 
@@ -1034,6 +1156,24 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-300" />
               <p>{exportError}</p>
+            </div>
+          )}
+          {pdfStatus && <p role="status" className="text-sm text-green-700 dark:text-green-300">{pdfStatus}</p>}
+          {pdfRecovery && (
+            <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadPdf(pdfRecovery)}>{t('sections.templates.export.retry', 'Retry PDF')}</button>
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadDocx(pdfRecovery.resume, pdfRecovery)}>{t('sections.templates.export.downloadDocx', 'Download DOCX')}</button>
+                {pdfRecovery.blob && <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => {
+                  if (!isCurrentExport(pdfRecovery.id)) return;
+                  saveAs(pdfRecovery.blob!, getSmartFilename(pdfRecovery.resume, pdfRecovery.templateId, 'pdf'));
+                  analytics.trackExportSuccess(pdfRecovery.templateId, 'pdf_unverified');
+                  setPdfRecovery(null);
+                  useResumeStore.getState().setHasDownloaded(true);
+                }}>{t('sections.templates.export.downloadUnverified', 'Download unverified PDF')}</button>}
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void downloadImageOnlyPdf(pdfRecovery)}>{t('sections.templates.export.imageOnly', 'Choose image-only PDF')}</button>
+              </div>
+              <p>{t('sections.templates.export.imageWarning', 'Image-only PDF — text cannot be selected; some systems may need OCR.')}</p>
             </div>
           )}
         </div>
@@ -1219,6 +1359,28 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         feature="optimize"
         isLoading={isReoptimizing}
       />
+      {pendingLegacyReview && (
+        <div role="dialog" aria-modal="true" aria-label={t('sections.templates.export.legacyTitle', 'Review current document')}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+          <div className="max-w-md rounded-xl bg-white p-6 text-gray-900 shadow-xl dark:bg-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold">{t('sections.templates.export.legacyTitle', 'Review current document')}</h2>
+            <p className="mt-2 text-sm">{t('sections.templates.export.legacyBody', 'The original resume is unavailable. Check the entire visible document before downloading.')}</p>
+            <div className="mt-5 flex gap-3">
+              <button type="button" onClick={() => setPendingLegacyReview(null)} className="rounded-lg border px-4 py-2">
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button type="button" onClick={() => {
+                const confirmation = { documentFingerprint: pendingLegacyReview.documentFingerprint, confirmedAt: new Date().toISOString() };
+                setLegacyConfirmation(confirmation);
+                setPendingLegacyReview(null);
+                void reviewAndDownload(pendingLegacyReview.action, confirmation);
+              }} className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
+                {t('sections.templates.export.legacyConfirm', 'I reviewed this document')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }

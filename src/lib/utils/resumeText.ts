@@ -65,7 +65,7 @@ const decodeUtf8 = (input) => {
 
 let pdfjsLibPromise;
 
-const loadPdfjs = async () => {
+export const loadPdfjs = async () => {
   if (pdfjsLibPromise !== undefined) {
     return pdfjsLibPromise;
   }

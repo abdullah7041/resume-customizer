@@ -1,4 +1,4 @@
-import { lazy, Suspense, Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, Lock, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
 import {
@@ -61,13 +61,18 @@ import { shouldAutoSaveJob } from "@/lib/utils/pipelineAutoSave";
 import { analytics } from "../../services/analytics";
 import type { ExtractedJobCriteria, ExtractedJobMetadata, JobApplication } from "@/types/pipeline";
 import type { ResumeTruthCheckResult } from "../../types/truth-check";
+import { createAssessmentContext, canAcceptAssessment } from "@/lib/match/assessmentContext";
+import type { AssessmentContext, AssessmentInput, AssessmentRecord } from "@/types/assessment";
 import type { MatchResult } from "@/types/analysis";
-import { clearStoredMatchAnalysis, loadCachedMatchAnalysis, saveMatchAnalysis } from "@/lib/utils/matchAnalysisCache";
+import type { OptimizationResult } from "@/types/templates";
+import { clearStoredMatchAnalysis, loadStoredMatchAssessment, saveMatchAssessment } from "@/lib/utils/matchAnalysisCache";
 import ViewTextModal from "../ui/ViewTextModal";
 import { ParsingWarningsBanner } from "../ui/ParsingWarningsBanner";
 // Vision2030Summary removed - users should use the dedicated Vision 2030 tab instead
 import { useResumeStore } from "../../lib/stores/resumeStore";
-import { mergeResumeData } from "../../lib/utils/resumeUtils";
+import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
+import { formatResumeToText } from '@/lib/utils/resumeUtils';
+import type { ResumeSchema } from '@/types/resume';
 import { emitHRSuperSaudEvent } from "@/features/hr-super-saud/events";
 import { useHRSuperSaud } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useUserCredits } from "../../hooks/useUserCredits";
@@ -203,6 +208,20 @@ const MAX_VISIBLE_TOASTS = 3;
 const TAB_STORAGE_KEY = "watheq:lastActiveTab";
 const RESUME_STORAGE_KEY = "watheq:resumeData";
 const JOB_STORAGE_KEY = "watheq:lastJobDescription";
+const MATCH_RUBRIC_VERSION = 'match-v1';
+const OPTIMIZE_RUBRIC_VERSION = 'optimize-v1';
+type MatchRequest = { id: string; input: AssessmentInput; context?: AssessmentContext; failed?: boolean };
+type OptimizeRequest = { id: string; input: AssessmentInput; context?: AssessmentContext; inFlight: boolean };
+
+const sameMatchInput = (left: AssessmentInput | undefined, right: AssessmentInput): boolean => {
+  if (!left) return false;
+  return left.resumeText === right.resumeText &&
+    left.jobDescription === right.jobDescription &&
+    left.language === right.language &&
+    left.kind === right.kind &&
+    left.isOptimized === right.isOptimized &&
+    left.rubricVersion === right.rubricVersion;
+};
 const GUEST_MODE_STORAGE_KEY = "watheq:guestMode";
 const GUEST_MODE_CHANGED_EVENT = "watheq:guestModeChanged";
 const TRUTH_CHECK_STORAGE_KEY = "watheq:resumeTruthCheck";
@@ -419,6 +438,9 @@ export default function MainContent() {
   );
 
   const [activeTab, setActiveTab] = useState("resume");
+  const [exportReviewSectionIds, setExportReviewSectionIds] = useState<string[]>([]);
+  const [legacyExportConfirmation, setLegacyExportConfirmation] = useState<{ documentFingerprint: string; confirmedAt: string }>();
+  const [pendingLegacyExport, setPendingLegacyExport] = useState<{ variant: string; exportMethod: string; documentFingerprint: string; documentText: string } | null>(null);
   const [flowProgress, setFlowProgress] = useState(0);
   // Path-A intent capture: after a successful parse, auto-show the inline role/comp/
   // location prompt. The mount gate must NOT depend on searchIntent being empty —
@@ -437,7 +459,7 @@ export default function MainContent() {
     markIntentPrompted();
     setIntentPrompted(true);
   }, []);
-  const [resumeData, setResumeData] = useState(() => {
+  const [storedResumeData, setResumeData] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
       const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
@@ -469,6 +491,14 @@ export default function MainContent() {
       return "";
     }
   });
+  const parsedResumeText = useResumeStore(state => state.parsedResumeText);
+  const originalResume = useResumeStore(state => state.originalResume);
+  const resumeData = useMemo(() =>
+    storedResumeData && typeof storedResumeData === 'object'
+      ? { ...storedResumeData, plainText: parsedResumeText === '' && !originalResume
+          ? storedResumeData.plainText : parsedResumeText ?? storedResumeData.plainText }
+      : storedResumeData,
+  [storedResumeData, parsedResumeText, originalResume]);
   const libraryEntries = useResumeLibraryStore((state) => state.entries);
   const activeResumeId = useResumeLibraryStore((state) => state.activeResumeId);
   const libraryInitialized = useResumeLibraryStore((state) => state.initialized);
@@ -554,16 +584,68 @@ export default function MainContent() {
     [isFlagEnabled, t]
   );
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
-  const [jobDescription, setJobDescription] = useState(() => {
+  const [jobDescription, setJobDescriptionState] = useState(() => {
     if (typeof window === "undefined") return "";
     return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
   });
-  const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(() =>
-    loadCachedMatchAnalysis(
-      typeof window === "undefined" ? "" : window.localStorage.getItem(JOB_STORAGE_KEY) || "",
-      (() => { const state = useResumeLibraryStore.getState(); const entry = state.entries.find(item => item.id === state.activeResumeId); return entry ? { resumeId: entry.id, resumeFingerprint: entry.fingerprint } : { resumeId: '', resumeFingerprint: '' }; })(),
-    )
-  );
+  const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(null);
+  const [historicalMatch, setHistoricalMatch] = useState<{ status: 'legacy' | 'outdated'; result: MatchResult } | null>(null);
+  const matchRequest = useRef<MatchRequest | null>(null);
+  const matchAssessments = useRef(new Map<string, AssessmentRecord<MatchResult>>());
+  const matchResumeText = resumeData?.plainText ?? '';
+  const matchLanguage = i18n.language === 'ar' ? 'ar' : 'en';
+  const latestMatchInput = useRef<AssessmentInput>({ resumeText: matchResumeText, jobDescription,
+    language: matchLanguage, kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false });
+  latestMatchInput.current = { resumeText: matchResumeText, jobDescription,
+    language: matchLanguage, kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false };
+  const invalidateMatch = useCallback(() => {
+    matchRequest.current = null;
+    setMatchAnalysis(null);
+    setIsAnalyzing(false);
+    setFlowProgress(0);
+    setExtractedMetadata(null);
+    setActiveJobApplicationId(null);
+    setActiveJobApplication(null);
+    setPendingAttachment(null);
+    setExportedJobApplicationId(null);
+    const store = useResumeStore.getState();
+    store.setBaselineMatchScore(null);
+    store.setOptimizationMetrics({ beforeScore: null });
+  }, []);
+  const setJobDescription = useCallback((text: string) => {
+    latestMatchInput.current = { ...latestMatchInput.current, jobDescription: text };
+    if (matchRequest.current?.input.jobDescription !== text) invalidateMatch();
+    setJobDescriptionState(text);
+  }, [invalidateMatch]);
+
+  // Invalidate before paint. A handler may already own this input while hashing.
+  useLayoutEffect(() => {
+    const input = latestMatchInput.current;
+    if (sameMatchInput(matchRequest.current?.input, input)) return;
+    invalidateMatch();
+    if (!input.resumeText || !input.jobDescription) return;
+    const request: MatchRequest = { id: crypto.randomUUID(), input };
+    matchRequest.current = request;
+    void createAssessmentContext(input).then(context => {
+      if (matchRequest.current !== request || !sameMatchInput(request.input, latestMatchInput.current)) return;
+      request.context = context;
+      const remembered = matchAssessments.current.get(context.key);
+      const saved = remembered ? { status: 'current' as const, assessment: remembered } : loadStoredMatchAssessment(context);
+      if (saved?.status === 'current' && saved.assessment.jobSnapshot === input.jobDescription) {
+        matchAssessments.current.set(context.key, saved.assessment);
+        setHistoricalMatch(null);
+        setMatchAnalysis(saved.assessment.result);
+        useResumeStore.getState().setBaselineMatchScore(saved.assessment.result.score);
+        useResumeStore.getState().setOptimizationMetrics({ beforeScore: saved.assessment.result.score, hasJobDescription: true });
+      } else if (saved) {
+        setHistoricalMatch({ status: saved.status === 'legacy' ? 'legacy' : 'outdated',
+          result: saved.status === 'legacy' ? saved.analysis : saved.assessment.result });
+      } else {
+        setHistoricalMatch(null);
+      }
+    }).catch(() => { /* Restoration must never trigger a paid request. */ });
+  }, [matchResumeText, jobDescription, matchLanguage, invalidateMatch]);
+  useEffect(() => () => { matchRequest.current = null; }, []);
   const [truthCheckResult, setTruthCheckResult] = useState<ResumeTruthCheckResult | null>(() =>
     loadCachedTruthCheck(
       typeof resumeData?.plainText === "string" ? resumeData.plainText : "",
@@ -581,19 +663,15 @@ export default function MainContent() {
    * nothing" actually was.
    */
   const [optimizations, setOptimizations] = useState(
-    () => {
-      const run = useResumeStore.getState().optimizeRun;
-      const active = useResumeLibraryStore.getState();
-      const entry = active.entries.find(item => item.id === active.activeResumeId);
-      return run?.status === 'succeeded' && entry && run.resumeId === entry.id && run.resumeFingerprint === entry.fingerprint
-        ? (run.cards as typeof optimizations) ?? [] : [];
-    },
+    [] as OptimizationResult[],
   );
-  const [optimizationData, setOptimizationData] = useState<OptimizeRunRecord['data']>(
-    () => null,
+  const [optimizationData, setOptimizationData] = useState(
+    null as unknown,
   );
+  const [optimizeAssessmentCurrent, setOptimizeAssessmentCurrent] = useState(false);
+  const [optimizeAssessmentKey, setOptimizeAssessmentKey] = useState<string | null>(null);
   const [optimizationKeywords, setOptimizationKeywords] = useState(
-    () => ({ add: [], remove: [], neutral: [] }),
+    () => ({ add: [], remove: [], neutral: [] } as { add: string[]; remove: string[]; neutral: string[] }),
   );
   const resultsByResume = useRef(new Map<string, {
     match: typeof matchAnalysis;
@@ -606,6 +684,7 @@ export default function MainContent() {
     optimizationMetrics: ReturnType<typeof useResumeStore.getState>['optimizationMetrics'];
     analysisCache: ReturnType<typeof useResumeStore.getState>['analysisCache'];
     storeOptimizations: ReturnType<typeof useResumeStore.getState>['optimizations'];
+    evidenceSources: ReturnType<typeof useResumeStore.getState>['evidenceSources'];
     keywordSuggestions: ReturnType<typeof useResumeStore.getState>['keywordSuggestions'];
     optimizationOrigin: ReturnType<typeof useResumeStore.getState>['optimizationOrigin'];
     baselineMatchScore: ReturnType<typeof useResumeStore.getState>['baselineMatchScore'];
@@ -625,7 +704,7 @@ export default function MainContent() {
       match: matchAnalysis, truth: truthCheckResult, job: jobDescription,
       cards: optimizations, optimization: optimizationData, keywords: optimizationKeywords,
       optimizeRun: store.optimizeRun, optimizationMetrics: store.optimizationMetrics,
-      analysisCache: store.analysisCache, storeOptimizations: store.optimizations,
+      analysisCache: store.analysisCache, storeOptimizations: store.optimizations, evidenceSources: store.evidenceSources,
       keywordSuggestions: store.keywordSuggestions, optimizationOrigin: store.optimizationOrigin,
       baselineMatchScore: store.baselineMatchScore, showOptimized: store.showOptimized,
       jobVariants: store.jobVariants, activeVariantId: store.activeVariantId,
@@ -655,11 +734,14 @@ export default function MainContent() {
    * page is currently showing.
    */
   useEffect(() => {
-    const adopt = (run: OptimizeRunRecord | null) => {
-      if (run?.status !== 'succeeded') return;
-      const active = useResumeLibraryStore.getState();
-      const entry = active.entries.find(item => item.id === active.activeResumeId);
-      if (!entry || run.resumeId !== entry.id || run.resumeFingerprint !== entry.fingerprint) return;
+    let active = true;
+    const input: AssessmentInput = { resumeText: resumeData?.plainText || '', jobDescription,
+      language: matchLanguage, kind: 'optimize', isOptimized: false, rubricVersion: OPTIMIZE_RUBRIC_VERSION };
+    const adopt = async (run: OptimizeRunRecord | null) => {
+      if (run?.status !== 'succeeded' || !run.assessment || run.assessment.jobSnapshot !== input.jobDescription) return;
+      const context = await createAssessmentContext(input);
+      if (!active || !sameMatchInput(input, latestOptimizeInput.current) ||
+        useResumeStore.getState().optimizeRun !== run || run.assessment.context.key !== context.key) return;
       const cards = (run.cards ?? []) as typeof optimizations;
       if (cards.length === 0) return;
       setOptimizations((current) => (current.length > 0 ? current : cards));
@@ -669,18 +751,32 @@ export default function MainContent() {
           ? current
           : run.keywords ?? current,
       );
+      setOptimizeAssessmentCurrent(true);
+      setOptimizeAssessmentKey(context.key);
     };
 
-    adopt(useResumeStore.getState().optimizeRun);
-    return useResumeStore.subscribe((state, previous) => {
-      if (state.optimizeRun !== previous.optimizeRun) adopt(state.optimizeRun);
+    void adopt(useResumeStore.getState().optimizeRun).catch(() => { /* No paid restoration on context failure. */ });
+    const unsubscribe = useResumeStore.subscribe((state, previous) => {
+      if (state.optimizeRun !== previous.optimizeRun) void adopt(state.optimizeRun).catch(() => {});
     });
-    // Mount-scoped by design: the setters are stable and the store is read fresh on
-    // every call, so there is nothing to re-subscribe for.
-  }, []);
+    return () => { active = false; unsubscribe(); };
+  }, [resumeData?.plainText, jobDescription, matchLanguage]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTruthChecking, setIsTruthChecking] = useState(false);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const optimizeRequest = useRef<OptimizeRequest | null>(null);
+  const latestOptimizeContext = useRef<AssessmentContext | null>(null);
+  const optimizeInput: AssessmentInput = { resumeText: resumeData?.plainText || '', jobDescription,
+    language: matchLanguage, kind: 'optimize', isOptimized: false, rubricVersion: OPTIMIZE_RUBRIC_VERSION };
+  const latestOptimizeInput = useRef(optimizeInput);
+  latestOptimizeInput.current = optimizeInput;
+  const previousOptimizeInput = useRef(optimizeInput);
+  const isCurrentOptimize = useCallback((request: OptimizeRequest) =>
+    optimizeRequest.current === request &&
+    sameMatchInput(request.input, latestOptimizeInput.current) &&
+    Boolean(request.context && latestOptimizeContext.current &&
+      canAcceptAssessment(optimizeRequest.current?.id ?? null, request.id,
+        request.context, latestOptimizeContext.current)), []);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
@@ -700,12 +796,29 @@ export default function MainContent() {
   const clarificationBusy = useRef(false);
   const clarificationContext = useRef('');
   const [pendingOptimizeArgs, setPendingOptimizeArgs] = useState<{
+    request: OptimizeRequest;
     mode: string;
     workHistory?: WorkEntry[];
     persistentHardStops?: string[];
     freePreview?: boolean;
   } | null>(null);
   const pendingOptimizeContinuation = useRef<PendingOptimizeContinuation | null>(null);
+  useLayoutEffect(() => {
+    if (sameMatchInput(previousOptimizeInput.current, latestOptimizeInput.current)) return;
+    previousOptimizeInput.current = latestOptimizeInput.current;
+    optimizeRequest.current = null;
+    latestOptimizeContext.current = null;
+    setIsOptimizing(false);
+    setIsCheckingClarifications(false);
+    setFlowProgress(0);
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setOptimizeAssessmentCurrent(false);
+    setOptimizeAssessmentKey(null);
+    pendingOptimizeContinuation.current?.resolve(null);
+    pendingOptimizeContinuation.current = null;
+  }, [optimizeInput.resumeText, optimizeInput.jobDescription, optimizeInput.language]);
   useEffect(() => {
     const context = JSON.stringify([resumeData?.plainText, jobDescription, i18n.language]);
     if (clarificationContext.current && clarificationContext.current !== context) {
@@ -814,20 +927,8 @@ export default function MainContent() {
       : '';
     projectedResumeId.current = active.id;
     if (previous === undefined && currentText && fingerprintResume(currentText) === active.fingerprint) {
-      setMatchAnalysis(loadCachedMatchAnalysis(jobDescription, { resumeId: active.id, resumeFingerprint: active.fingerprint }));
       setTruthCheckResult(loadCachedTruthCheck(active.plainText, loadPersistentHardStops(), i18n.language));
-      const run = useResumeStore.getState().optimizeRun;
-      const validRun = run?.status === 'succeeded' && run.resumeId === active.id && run.resumeFingerprint === active.fingerprint ? run : null;
-      setOptimizations((validRun?.cards as typeof optimizations) ?? []);
-      setOptimizationData(validRun?.data ?? null);
-      setOptimizationKeywords(validRun?.keywords ?? { add: [], remove: [], neutral: [] });
-      if (!validRun) {
-        const store = useResumeStore.getState();
-        store.resetForNewUpload();
-        store.setOriginalResume(structuredClone(active.parsedResume));
-        store.setParsedResumeText(active.plainText);
-        store.setOptimizeRun(null);
-      }
+      // Match and optimization restoration use the complete assessment context.
       confirmResumeSwitch(active.name);
       return;
     }
@@ -849,6 +950,7 @@ export default function MainContent() {
       optimizationMetrics: restored.optimizationMetrics,
       analysisCache: restored.analysisCache,
       optimizations: restored.storeOptimizations,
+      evidenceSources: restored.evidenceSources,
       keywordSuggestions: restored.keywordSuggestions,
       optimizationOrigin: restored.optimizationOrigin,
       baselineMatchScore: restored.baselineMatchScore,
@@ -856,18 +958,17 @@ export default function MainContent() {
       jobVariants: restored.jobVariants,
       activeVariantId: restored.activeVariantId,
     });
-    setMatchAnalysis(restored?.match ?? null);
+    setMatchAnalysis(null);
     setTruthCheckResult(restored?.truth ?? null);
     setJobDescription(restored?.job ?? '');
-    setOptimizations(restored?.cards ?? []);
-    setOptimizationData(restored?.optimization ?? null);
-    setOptimizationKeywords(restored?.keywords ?? { add: [], remove: [], neutral: [] });
+    setOptimizations([]);
+    setOptimizationData(null);
+    setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     resumeStore.setOptimizeRun(restored?.optimizeRun ?? null);
-    clearStoredMatchAnalysis();
     if (typeof window !== 'undefined') window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     resetPipelineContext();
     confirmResumeSwitch(active.name);
-  }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData, snapshotActiveResumeResults, jobDescription, i18n.language, t, confirmResumeSwitch]);
+  }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData, snapshotActiveResumeResults, jobDescription, setJobDescription, i18n.language, t, confirmResumeSwitch]);
 
   const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
     setActiveJobApplicationId(application.id);
@@ -880,8 +981,8 @@ export default function MainContent() {
   // user lands in the pipeline as 'saved' (createJobApplication dedupes
   // company+title within 7 days server-side, so re-analyses update one row).
   const autoSaveJobToPipeline = useCallback(
-    async (metadata: ExtractedJobMetadata | null, matchScore: number | null, jobText: string) => {
-      if (!shouldAutoSaveJob({ isSignedIn: Boolean(user), isGuestMode, metadata }) || !metadata) return;
+    async (metadata: ExtractedJobMetadata | null, matchScore: number | null, jobText: string, isCurrent: () => boolean) => {
+      if (!isCurrent() || !shouldAutoSaveJob({ isSignedIn: Boolean(user), isGuestMode, metadata }) || !metadata) return;
       try {
         const { data, error, isDuplicate } = await createJobApplication({
           company_name: metadata.companyName ?? null,
@@ -895,15 +996,16 @@ export default function MainContent() {
           status: "saved",
           metadata: { autoSaved: true, extractionConfidence: metadata.confidence ?? null },
         }, { duplicateStrategy: 'preserve_user_fields' });
+        if (!isCurrent()) return;
         if (error || !data) {
-          console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
+          console.warn("[MainContent] Pipeline auto-save failed (non-fatal)");
           return;
         }
         setActiveJobApplicationId(data.id);
         setActiveJobApplication(data);
         analytics.trackPipelineJobSaved({ is_duplicate: Boolean(isDuplicate), auto: true });
-      } catch (error) {
-        console.warn("[MainContent] Pipeline auto-save failed (non-fatal):", error);
+      } catch {
+        if (isCurrent()) console.warn("[MainContent] Pipeline auto-save failed (non-fatal)");
       }
     },
     [user, isGuestMode]
@@ -1119,7 +1221,7 @@ export default function MainContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     setJobDescription(window.localStorage.getItem(JOB_STORAGE_KEY) || "");
-  }, [variantRestoreNonce]);
+  }, [variantRestoreNonce, setJobDescription]);
 
   // Warn user before closing tab with unsaved changes
   useEffect(() => {
@@ -1217,8 +1319,12 @@ export default function MainContent() {
       // only navigated, when in fact it had pasted the description behind a results
       // view for a different job.
       if (match) {
-        setMatchAnalysis(match);
-        { const active = useResumeLibraryStore.getState(); const entry = active.entries.find(item => item.id === active.activeResumeId); saveMatchAnalysis(match, trimmed, entry ? { resumeId: entry.id, resumeFingerprint: entry.fingerprint } : undefined); }
+        // Feed verification is bounded and does not carry a complete assessment
+        // context. Keep it inspectable without promoting it to a current result.
+        setMatchAnalysis(null);
+        matchRequest.current = { id: crypto.randomUUID(), input: { ...latestMatchInput.current, jobDescription: trimmed } };
+        setHistoricalMatch({ status: 'legacy', result: match });
+        clearStoredMatchAnalysis();
       } else {
         setMatchAnalysis(null);
         clearStoredMatchAnalysis();
@@ -1235,7 +1341,7 @@ export default function MainContent() {
       analytics.track("job_feed_match_handoff", { company: companyName, title: jobTitle });
       handleTabChange("match");
     },
-    [handleTabChange, hasResume, pushToast, resetPipelineContext, setMatchAnalysis, t]
+    [handleTabChange, hasResume, pushToast, resetPipelineContext, setJobDescription, setMatchAnalysis, t]
   );
 
   useEffect(() => {
@@ -1388,10 +1494,13 @@ export default function MainContent() {
     setResumeData("");
     setJobDescription("");
     setMatchAnalysis(null);
+    setHistoricalMatch(null);
     setTruthCheckResult(null);
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setOptimizeAssessmentCurrent(false);
+    setOptimizeAssessmentKey(null);
     // The persisted run describes results that no longer exist. Leaving it behind
     // would let a stale record be restored, or reported as interrupted.
     useResumeStore.getState().setOptimizeRun(null);
@@ -1409,7 +1518,7 @@ export default function MainContent() {
       title: t("toasts.dataClearedTitle"),
       description: t("toasts.dataClearedDesc"),
     });
-  }, [pushToast, resetPipelineContext, t]);
+  }, [pushToast, resetPipelineContext, setJobDescription, t]);
 
   const handleClearResume = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1426,6 +1535,7 @@ export default function MainContent() {
     setResumeData("");
     // Also clear dependent data
     setMatchAnalysis(null);
+    setHistoricalMatch(null);
     setTruthCheckResult(null);
     setJobDescription("");
     setOptimizations([]);
@@ -1434,21 +1544,24 @@ export default function MainContent() {
     useResumeStore.getState().setOptimizeRun(null);
     resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.resumeClearedTitle"), description: t("toasts.resumeClearedDesc") });
-  }, [pushToast, resetPipelineContext, t]);
+  }, [pushToast, resetPipelineContext, setJobDescription, t]);
 
   const handleClearMatch = useCallback(() => {
     clearStoredMatchAnalysis();
     setMatchAnalysis(null);
+    setHistoricalMatch(null);
     setJobDescription("");
     resetPipelineContext();
     pushToast({ type: "success", title: t("toasts.matchClearedTitle"), description: t("toasts.matchClearedDesc") });
-  }, [pushToast, resetPipelineContext, t]);
+  }, [pushToast, resetPipelineContext, setJobDescription, t]);
 
   const handleClearOptimizations = useCallback(() => {
     // Clear local component state
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
+    setOptimizeAssessmentCurrent(false);
+    setOptimizeAssessmentKey(null);
     useResumeStore.getState().setOptimizeRun(null);
 
     // Clear persisted Zustand state (survives refresh via localStorage)
@@ -1645,12 +1758,11 @@ export default function MainContent() {
         throw error;
       }
     },
-    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, t]
+    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, setJobDescription, t]
   );
 
   const handleAnalyzeMatchAI = useCallback(
-    async (jobDescriptionInput, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => {
-      const requestedResumeKey = currentLibraryResumeKey();
+    async (jobDescriptionInput: string, options?: { freePreview?: boolean; importedCriteria?: ExtractedJobCriteria | null }) => {
       if (!resumeData?.plainText) {
         const error = new Error("Please upload or paste a resume first.");
         pushToast({
@@ -1661,8 +1773,42 @@ export default function MainContent() {
         throw error;
       }
 
+      const input: AssessmentInput = {
+        resumeText: useResumeStore.getState().parsedResumeText || resumeData.plainText || '',
+        jobDescription: jobDescriptionInput,
+        language: i18n.language === 'ar' ? 'ar' : 'en',
+        kind: 'match', rubricVersion: MATCH_RUBRIC_VERSION, isOptimized: false,
+      };
+      setJobDescription(input.jobDescription);
+      // Ownership precedes asynchronous hashing; returning to A is a new request.
+      const request: MatchRequest = { id: crypto.randomUUID(), input };
+      matchRequest.current = request;
+      const isCurrent = () => {
+        const active = matchRequest.current;
+        if (!active || active.id !== request.id || request.failed || !sameMatchInput(request.input, latestMatchInput.current)) return false;
+        return !request.context || Boolean(active.context &&
+          canAcceptAssessment(active.id, request.id, request.context, active.context));
+      };
+      const capturedOptions = options ? { ...options, importedCriteria: options.importedCriteria ? { ...options.importedCriteria } : null } : undefined;
       try {
         setIsAnalyzing(true);
+        const context = await createAssessmentContext(input);
+        if (!isCurrent()) return null;
+        request.context = context;
+        const stored = loadStoredMatchAssessment(context);
+        // The store's score cache is intentionally partial. Only the complete
+        // persisted result can be displayed without a new request.
+        const restored = stored?.status === 'current' && stored.assessment.jobSnapshot === input.jobDescription
+          ? stored.assessment.result : null;
+        // A preview still needs the charged run when a signed-in user confirms one.
+        if (restored && (restored.origin === 'paid' || (capturedOptions?.freePreview && restored.origin === 'guest_preview'))) {
+          if (!isCurrent()) return null;
+          setHistoricalMatch(null);
+          setMatchAnalysis(restored);
+          useResumeStore.getState().setBaselineMatchScore(restored.score);
+          useResumeStore.getState().setOptimizationMetrics({ beforeScore: restored.score, hasJobDescription: true });
+          return { ...restored, reusedFromCache: true };
+        }
         setFlowProgress(22);
         pushToast(
           {
@@ -1672,14 +1818,15 @@ export default function MainContent() {
           },
           { id: TOAST_IDS.match }
         );
-        const trimmedJob = jobDescriptionInput.trim();
+        const submittedJob = input.jobDescription;
         resetPipelineContext();
 
         // Non-blocking metadata extraction from pasted job description. The
         // resolved value also feeds pipeline auto-save once the analysis lands.
-        const importedCriteria = options?.importedCriteria;
-        const metadataPromise: Promise<ExtractedJobMetadata | null> = extractJobMetadata(trimmedJob, i18n.language)
+        const importedCriteria = capturedOptions?.importedCriteria;
+        const metadataPromise: Promise<ExtractedJobMetadata | null> = extractJobMetadata(submittedJob, input.language)
           .then((aiMetadata) => {
+            if (!isCurrent()) return null;
             // Verbatim page criteria win over the AI's inference for the two
             // fields it's most prone to guess wrong on.
             const metadata: ExtractedJobMetadata | null = aiMetadata && importedCriteria
@@ -1698,39 +1845,40 @@ export default function MainContent() {
             return metadata ?? null;
           })
           .catch(() => {
+            if (!isCurrent()) return null;
             setExtractedMetadata(null);
             analytics.trackJobMetadataExtractionFailed('request_failed');
             return null;
           });
 
-        // Fix B1: Always analyze the ORIGINAL resume text for match scoring
-        // This prevents the optimized score (e.g. 87) from leaking into match analysis
-        // when showOptimized is true after optimization + download
-        const { parsedResumeText } = useResumeStore.getState();
-        const resumeTextToAnalyze: string = parsedResumeText || resumeData.plainText || '';
-
-        const result = await analyzeResumeWithAI(resumeTextToAnalyze, trimmedJob, i18n.language, options);
-        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+        const response = await analyzeResumeWithAI(input.resumeText, submittedJob, input.language, capturedOptions);
+        if (!isCurrent()) return null;
         // Tag provenance so a later export/save can tell a free guest-preview
         // result apart from a credit-charged one (see optimizationOrigin).
-        result.origin = options?.freePreview ? 'guest_preview' : 'paid';
+        const result: MatchResult = { ...response, origin: capturedOptions?.freePreview ? 'guest_preview' : 'paid' };
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        setHistoricalMatch(null);
         setMatchAnalysis(result);
-        setJobDescription(trimmedJob);
+
         // Persist the displayed result so it survives a page refresh (restored
         // by the matchAnalysis lazy initializer while the JD still matches).
-        { const active = useResumeLibraryStore.getState(); const entry = active.entries.find(item => item.id === active.activeResumeId); saveMatchAnalysis(result, trimmedJob, entry ? { resumeId: entry.id, resumeFingerprint: entry.fingerprint } : undefined); }
+        const assessment = { context, requestId: request.id, jobSnapshot: submittedJob,
+          createdAt: new Date().toISOString(), result,
+          ...(typeof response.debug?.model === 'string' ? { model: response.debug.model } : {}),
+        };
+        matchAssessments.current.set(context.key, assessment);
+        saveMatchAssessment(assessment);
         void metadataPromise.then((metadata) =>
-          autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, trimmedJob)
+          autoSaveJobToPipeline(metadata, typeof result?.score === "number" ? result.score : null, submittedJob, isCurrent)
         );
 
         // Cache the match analysis score so OptimizeSection can read it
         // This fixes the issue where "BEFORE" score shows 55% instead of the actual match score
         if (result && typeof result.score === 'number') {
-          const { setCachedAnalysis, setOptimizationMetrics, setBaselineMatchScore } = useResumeStore.getState();
+          const { setCachedAssessment, setOptimizationMetrics, setBaselineMatchScore } = useResumeStore.getState();
           // CRITICAL: Cache using the SAME text we used for analysis
           // This ensures cache key matches what we analyzed (original or optimized)
-          setCachedAnalysis(resumeTextToAnalyze, trimmedJob, {
+          setCachedAssessment(context, {
             score: result.score,
             matchedKeywords: result.matchedKeywords || result.topHits || [],
             missingKeywords: result.missingKeywords || [],
@@ -1740,7 +1888,7 @@ export default function MainContent() {
             // the "Why this score" panel from the original match after refresh.
             categoryScores: result.categoryScores ?? null,
             strategicRealityCheck: result.strategicRealityCheck ?? null,
-          }, false);
+          });
 
           // Always save match analysis score — line 500 already ensures we analyze
           // the ORIGINAL resume text regardless of showOptimized state.
@@ -1772,10 +1920,12 @@ export default function MainContent() {
           { id: TOAST_IDS.match }
         );
         setFlowProgress(100);
-        scheduleTimeout(() => setFlowProgress(0), 800);
+        scheduleTimeout(() => { if (isCurrent()) setFlowProgress(0); }, 800);
         return result;
       } catch (error) {
-        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+        if (!isCurrent()) return null;
+        request.failed = true;
+        setExtractedMetadata(null);
         setAiDebug(buildAiDebugSnapshot(error, "error"));
         setFlowProgress(0);
         emitHRSuperSaudEvent('error.generic');
@@ -1789,10 +1939,10 @@ export default function MainContent() {
         );
         throw error;
       } finally {
-        if (requestedResumeKey === currentLibraryResumeKey()) setIsAnalyzing(false);
+        if (matchRequest.current === request) setIsAnalyzing(false);
       }
     },
-    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, t]
+    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, setJobDescription, t]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
@@ -1888,9 +2038,10 @@ export default function MainContent() {
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
-    async ({ mode, workHistory, userClarifications, userHardStops, freePreview, clarificationOutcome }: { mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean; clarificationOutcome?: ClarificationOutcome }) => {
-      const requestedResumeKey = currentLibraryResumeKey();
-      if (!resumeData?.plainText || !jobDescription) return null;
+    async ({ request, mode, workHistory, userClarifications, userHardStops, freePreview, clarificationOutcome }: { request: OptimizeRequest; mode?: string; workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[]; freePreview?: boolean; clarificationOutcome?: ClarificationOutcome }) => {
+      if (!isCurrentOptimize(request)) return null;
+      const { resumeText, jobDescription, language } = request.input;
+      if (!resumeText || !jobDescription) return null;
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
@@ -1912,6 +2063,8 @@ export default function MainContent() {
           cards: [],
           data: null,
           keywords: { add: [], remove: [], neutral: [] },
+          assessment: { context: request.context!, jobSnapshot: jobDescription, requestId: request.id,
+            createdAt: new Date().toISOString(), result: null },
         });
         pushToast(
           {
@@ -1935,11 +2088,11 @@ export default function MainContent() {
           // Try SSE streaming endpoint first
           result = await optimizeResumeStream(
             {
-              resumeText: resumeData.plainText,
+              resumeText,
               jobDesc: jobDescription,
               mode,
               preview: !isPremium,
-              language: i18n.language,
+              language,
               workHistory,
               userClarifications,
               userHardStops,
@@ -1947,7 +2100,7 @@ export default function MainContent() {
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
-              if (requestedResumeKey !== currentLibraryResumeKey()) return;
+              if (!isCurrentOptimize(request)) return;
               useResumeStore.getState().setOptimizeRun({ phase });
               const message = phaseMessages[phase];
               if (message) {
@@ -1963,6 +2116,7 @@ export default function MainContent() {
             }
           );
         } catch (streamError: any) {
+          if (!isCurrentOptimize(request)) return null;
           if (streamError.isBillingStateUnknown) {
             // Stream opened (2xx) then failed — credits may have been consumed on the server.
             // Do NOT fall back to legacy: that would trigger a second paid optimization request.
@@ -1978,14 +2132,14 @@ export default function MainContent() {
           if (![404, 405].includes(streamError.status)) throw streamError;
           // Server explicitly rejected before processing (non-2xx, SSE error event) —
           // billing state is known-safe, fall back to legacy endpoint.
-          console.warn('[optimize] SSE rejected before processing, falling back to legacy:', streamError.message);
+          console.warn('[optimize] SSE rejected before processing; using legacy endpoint');
           result = await optimizeResume(
             {
-              resumeText: resumeData.plainText,
+              resumeText,
               jobDesc: jobDescription,
               mode,
               preview: !isPremium,
-              language: i18n.language,
+              language,
               workHistory,
               userClarifications,
               userHardStops,
@@ -1993,7 +2147,7 @@ export default function MainContent() {
             }
           );
         }
-        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+        if (!isCurrentOptimize(request)) return null;
         setAiDebug(buildAiDebugSnapshot(result, "success"));
         // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
         // has already resolved to a single successful `result` — never inside
@@ -2016,21 +2170,6 @@ export default function MainContent() {
         // Build full cards array including projects and certifications
         const allCards = [...(result.cards ?? [])];
 
-        // Add projectImprovements as cards (if any)
-        if (result.projectImprovements && Array.isArray(result.projectImprovements)) {
-          result.projectImprovements.forEach((proj: { project_name?: string; original?: string; improved?: string; issue?: string; rationale?: string }, index: number) => {
-            if (proj.improved || proj.original) {
-              allCards.push({
-                section: 'Projects',
-                issue: proj.issue || 'Project description could be more impactful',
-                suggestion: proj.rationale || 'Reframe project to highlight relevant skills',
-                exampleBefore: proj.original || '',
-                exampleAfter: proj.improved || '',
-              });
-            }
-          });
-        }
-
         // Add certificationRecommendations as display-only cards (if any)
         if (result.certificationRecommendations && Array.isArray(result.certificationRecommendations)) {
           result.certificationRecommendations.forEach((cert: { name?: string; issuer?: string; relevance?: string }, index: number) => {
@@ -2049,6 +2188,8 @@ export default function MainContent() {
         setOptimizations(allCards);
         setOptimizationData(result.optimization ?? null);
         setOptimizationKeywords(result.keywords ?? { add: [], remove: [], neutral: [] });
+        setOptimizeAssessmentCurrent(true);
+        setOptimizeAssessmentKey(request.context!.key);
 
         // FIX: Also persist keywords to Zustand store so they survive page refresh
         if (result.keywords) {
@@ -2100,12 +2241,15 @@ export default function MainContent() {
                 : null
             ),
         });
+        const omissions = result.evidenceInputOmissions;
+        const hasOmissions = (omissions?.resumeCharacters ?? 0) !== 0 || (omissions?.clarificationCharacters ?? 0) !== 0;
         pushToast(
           {
-            type: result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",
-            title: t("toasts.optimizationReady"),
-            description:
-              result.source === "gemini" && result.cards?.length > 0
+            type: hasOmissions ? "warning" : result.source === "gemini" && result.cards?.length > 0 ? "success" : "warning",
+            title: hasOmissions ? t('optimization.inputOmittedTitle', 'Some input was not analyzed') : t("toasts.optimizationReady"),
+            description: hasOmissions
+              ? t('optimization.inputOmitted', { defaultValue: 'Some supplied input was omitted before analysis: {{resume}} resume characters and {{clarifications}} answer characters. The suggestions did not evaluate that omitted text.', resume: omissions.resumeCharacters ?? 0, clarifications: omissions.clarificationCharacters ?? 0 })
+              : result.source === "gemini" && result.cards?.length > 0
                 ? "Review AI-crafted rewrites and keywords."
                 : "No optimizations were generated. Please try again with more context.",
           },
@@ -2130,7 +2274,7 @@ export default function MainContent() {
             applyCreditsRemaining(remaining);
           } else {
             scheduleTimeout(() => {
-              refetchCredits().catch(() => { /* non-blocking */ });
+              if (isCurrentOptimize(request)) refetchCredits().catch(() => { /* non-blocking */ });
             }, 500);
           }
         }
@@ -2143,13 +2287,15 @@ export default function MainContent() {
           cards: allCards,
           data: result,
           keywords: result.keywords ?? { add: [], remove: [], neutral: [] },
+          assessment: { context: request.context!, jobSnapshot: jobDescription, requestId: request.id,
+            createdAt: new Date().toISOString(), result },
         });
 
         setFlowProgress(100);
-        scheduleTimeout(() => setFlowProgress(0), 900);
+        scheduleTimeout(() => { if (isCurrentOptimize(request)) setFlowProgress(0); }, 900);
         return result;
       } catch (error: any) {
-        if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+        if (!isCurrentOptimize(request)) return null;
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
           finishedAt: new Date().toISOString(),
@@ -2183,10 +2329,11 @@ export default function MainContent() {
 
         throw error;
       } finally {
-        if (requestedResumeKey === currentLibraryResumeKey()) setIsOptimizing(false);
+        request.inFlight = false;
+        if (isCurrentOptimize(request)) setIsOptimizing(false);
       }
     },
-    [applyCreditsRemaining, i18n.language, isPremium, jobDescription, persistPreviewUsage, previewUsed, pushToast, refetchCredits, resumeData, t]
+    [applyCreditsRemaining, isCurrentOptimize, isPremium, persistPreviewUsage, previewUsed, pushToast, refetchCredits, t]
   );
 
   // Gate function: runs clarification step first, then delegates to handleOptimizeActual
@@ -2202,7 +2349,27 @@ export default function MainContent() {
       }
 
       // Guard against double-clicks or re-entrant calls while already processing
-      if (isOptimizing || isInterrogating || isCheckingClarifications) return null;
+      if (optimizeRequest.current?.inFlight || isOptimizing || isInterrogating || isCheckingClarifications) return null;
+
+      const input: AssessmentInput = { resumeText: resumeData.plainText, jobDescription,
+        language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'optimize',
+        isOptimized: false, rubricVersion: OPTIMIZE_RUBRIC_VERSION };
+      const request: OptimizeRequest = { id: crypto.randomUUID(), input, inFlight: true };
+      optimizeRequest.current = request;
+      latestOptimizeContext.current = null;
+      try {
+        request.context = await createAssessmentContext(input);
+      } catch {
+        request.inFlight = false;
+        if (optimizeRequest.current === request) {
+          optimizeRequest.current = null;
+          pushToast({ type: 'danger', title: t('toasts.optimizationFailed'),
+            description: t('toasts.contextUnavailable', 'Could not identify the current inputs. Please retry.') });
+        }
+        return null;
+      }
+      if (optimizeRequest.current !== request || !sameMatchInput(input, latestOptimizeInput.current)) return null;
+      latestOptimizeContext.current = request.context;
 
       /** Helper: build typed work-history from Zustand store */
       const buildWorkHistory = (): WorkEntry[] | undefined => {
@@ -2257,16 +2424,17 @@ export default function MainContent() {
             setIsCheckingClarifications(true);
             try {
               return await generateClarifications({
-                resumeText: resumeData.plainText,
-                jobDesc: jobDescription,
-                language: i18n.language,
+                resumeText: input.resumeText,
+                jobDesc: input.jobDescription,
+                language: input.language,
                 history: clarificationHistory.current,
                 round: clarificationHistory.current.length ? Math.min(3, clarificationRound + 1) : 1,
               });
             } finally {
-              setIsCheckingClarifications(false);
+              if (isCurrentOptimize(request)) setIsCheckingClarifications(false);
             }
           })();
+          if (!isCurrentOptimize(request)) return null;
 
           const unansweredQuestions = filterClarificationQuestionsByHardStops(
             clarifyResult.clarifications ?? [],
@@ -2282,6 +2450,7 @@ export default function MainContent() {
               setClarificationQuestions(unansweredQuestions);
               setClarificationDraft({});
               setPendingOptimizeArgs({
+                request,
                 mode,
                 workHistory,
                 persistentHardStops,
@@ -2294,9 +2463,10 @@ export default function MainContent() {
           }
 
           // No questions → fall through to the single optimize call below.
-        } catch (clarificationError) {
+        } catch {
+          if (!isCurrentOptimize(request)) return null;
           // Clarification is free and advisory. Losing it costs context, not the run.
-          console.warn('[handleOptimize] Clarification error, optimizing without it:', clarificationError);
+          console.warn('[handleOptimize] Clarification unavailable; continuing optimization');
         }
       }
 
@@ -2306,6 +2476,7 @@ export default function MainContent() {
       // what keeps the rejection from escaping into an un-awaited caller.
       try {
         return await handleOptimizeActual({
+          request,
           mode,
           workHistory,
           userClarifications: formatClarificationHistory(clarificationHistory.current).userClarifications,
@@ -2316,13 +2487,13 @@ export default function MainContent() {
         return null;
       }
     },
-    [clarificationRound, handleOptimizeActual, i18n.language, isCheckingClarifications, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
+    [clarificationRound, handleOptimizeActual, i18n.language, isCheckingClarifications, isCurrentOptimize, isInterrogating, isOptimizing, jobDescription, matchAnalysis?.score, pushToast, resumeData, t]
   );
 
   // ---- Clarification modal handlers ----
 
   const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers, optimizeNow = false) => {
-    if (clarificationBusy.current || !pendingOptimizeArgs) return;
+    if (clarificationBusy.current || !pendingOptimizeArgs || !isCurrentOptimize(pendingOptimizeArgs.request)) return;
     clarificationBusy.current = true;
     const requestContext = clarificationContext.current;
     setIsRegenerating(true);
@@ -2334,6 +2505,7 @@ export default function MainContent() {
       t('clarificationModal.hardStopFallback', "I don't have this / I never do this"),
     );
     const {
+      request,
       mode,
       workHistory,
       persistentHardStops = [],
@@ -2350,7 +2522,7 @@ export default function MainContent() {
           history: clarificationHistory.current,
           round: clarificationRound + 1,
         });
-        if (clarificationContext.current !== requestContext) return;
+        if (!isCurrentOptimize(request) || clarificationContext.current !== requestContext) return;
         if (next.unavailable) {
           pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
           return;
@@ -2365,12 +2537,14 @@ export default function MainContent() {
         }
       }
     } catch {
+      if (!isCurrentOptimize(request)) return;
       pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
       return;
     } finally {
-      setIsRegenerating(false);
+      if (isCurrentOptimize(request)) setIsRegenerating(false);
       clarificationBusy.current = false;
     }
+    if (!isCurrentOptimize(request)) return;
     clarificationBusy.current = true;
     setIsInterrogating(false);
     const outcome = clarificationHistory.current.length ? 'answered' : 'skipped';
@@ -2382,6 +2556,7 @@ export default function MainContent() {
     });
     try {
       const result = await handleOptimizeActual({
+        request,
         mode,
         workHistory,
         userClarifications,
@@ -2389,6 +2564,7 @@ export default function MainContent() {
         freePreview,
         clarificationOutcome: outcome,
       });
+      if (!isCurrentOptimize(request)) return;
       pendingOptimizeContinuation.current?.resolve(result);
       pendingOptimizeContinuation.current = null;
       setPendingOptimizeArgs(null);
@@ -2398,14 +2574,15 @@ export default function MainContent() {
       // original UI action as incomplete so it neither spends a preview nor
       // verifies stale cards.
       // Keep the current questions and draft available to explicitly retry.
-      if (clarificationContext.current === requestContext) setIsInterrogating(true);
+      if (isCurrentOptimize(request) && clarificationContext.current === requestContext) setIsInterrogating(true);
     } finally {
       clarificationBusy.current = false;
     }
-  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, pushToast, t]);
+  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, isCurrentOptimize, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, pushToast, t]);
 
   const handleClarificationSkip = useCallback(() => {
     if (clarificationBusy.current) return;
+    if (pendingOptimizeArgs) pendingOptimizeArgs.request.inFlight = false;
     setIsInterrogating(false);
     analytics.trackClarificationOutcome({
       outcome: 'skipped',
@@ -2417,11 +2594,13 @@ export default function MainContent() {
     setClarificationQuestions([]);
     pendingOptimizeContinuation.current?.resolve(null);
     pendingOptimizeContinuation.current = null;
-  }, [clarificationQuestions.length]);
+  }, [clarificationQuestions.length, pendingOptimizeArgs]);
 
   /** Re-generate clarification questions (user pressed refresh icon) */
   const handleRegenerate = useCallback(async () => {
-    if (!resumeData?.plainText || !jobDescription || clarificationBusy.current) return;
+    const request = pendingOptimizeArgs?.request;
+    if (!resumeData?.plainText || !jobDescription || !request ||
+      !isCurrentOptimize(request) || clarificationBusy.current) return;
     clarificationBusy.current = true;
     const requestContext = clarificationContext.current;
     const notifyRegenerateFailure = () => pushToast({
@@ -2442,7 +2621,7 @@ export default function MainContent() {
         history: clarificationHistory.current,
         round: clarificationRound,
       });
-      if (clarificationContext.current !== requestContext) return;
+      if (!isCurrentOptimize(request) || clarificationContext.current !== requestContext) return;
       const refreshedQuestions = filterClarificationQuestionsByHardStops(
         result.clarifications ?? [],
         loadPersistentHardStops(),
@@ -2452,14 +2631,16 @@ export default function MainContent() {
       } else {
         notifyRegenerateFailure();
       }
-    } catch (error) {
-      console.warn('[MainContent] Clarification regeneration failed:', error);
-      notifyRegenerateFailure();
+    } catch {
+      if (isCurrentOptimize(request)) {
+        console.warn('[MainContent] Clarification regeneration failed');
+        notifyRegenerateFailure();
+      }
     } finally {
-      setIsRegenerating(false);
+      if (isCurrentOptimize(request)) setIsRegenerating(false);
       clarificationBusy.current = false;
     }
-  }, [clarificationRound, i18n.language, jobDescription, pushToast, resumeData, t]);
+  }, [clarificationRound, i18n.language, isCurrentOptimize, jobDescription, pendingOptimizeArgs, pushToast, resumeData, t]);
 
   const handleMarkApplied = useCallback(async () => {
     if (isGuestMode) {
@@ -2547,7 +2728,7 @@ export default function MainContent() {
   }, []);
 
   const handleExportPdf = useCallback(
-    async (variant, exportMethod = "supabase") => {
+    async (variant, exportMethod = "supabase", confirmation = legacyExportConfirmation) => {
       if (!resumeData?.plainText) {
         pushToast({
           type: "warning",
@@ -2565,25 +2746,44 @@ export default function MainContent() {
           return;
         }
 
+        const state = useResumeStore.getState();
+        if (state.optimizationOrigin === 'guest_preview' && state.optimizations.some(edit => edit.applied)) {
+          handleTabChange('templates');
+          return;
+        }
+
+        const missingBaseline = !state.originalResume && state.optimizations.some(edit => edit.applied);
+        const snapshot = await createExportSnapshot(
+          (state.originalResume ?? resumeData) as ResumeSchema,
+          state.showOptimized && !!state.originalResume ? state.optimizations : [],
+          { isSaudiNational: state.isSaudiNational },
+        );
+        const decision = reviewExport({ documentFingerprint: snapshot.documentFingerprint,
+          includedEdits: snapshot.includedEdits, missingBaseline, legacyDocumentConfirmation: confirmation });
+        if (decision.allowed === false) {
+          if (decision.reason === 'legacy_review') {
+            setPendingLegacyExport({ variant, exportMethod, documentFingerprint: decision.documentFingerprint,
+              documentText: 'plainText' in snapshot.resume && typeof snapshot.resume.plainText === 'string'
+                ? snapshot.resume.plainText : formatResumeToText(snapshot.resume) });
+          } else {
+            setExportReviewSectionIds(decision.sectionIds);
+            setActiveTab('optimize');
+            pushToast({ type: 'warning', title: t('sections.templates.export.reviewRequired',
+              'Review the highlighted changes before downloading.') });
+          }
+          return;
+        }
+        setPendingLegacyExport(null);
+
         // Load export services on demand — keeps exportPdf + supabaseExport out of the entry chunk.
         const [{ exportResumeToPdf }, { exportToSupabase, isSupabaseExportAvailable }] = await Promise.all([
           import("../../services/exportPdf.js"),
           import("../../services/supabaseExport.js"),
         ]);
 
-        // Merge original resume with AI optimizations (Hard Overrides + Smart Match)
-        const mergedResume = mergeResumeData(resumeData, {
-          optimization: optimizationData,
-          candidateProfile: null, // Add if available
-        });
-
         // Get the HTML content from exportPdf (without triggering print)
         const htmlContent = await exportResumeToPdf({
-          resumeDocument: mergedResume || resumeData, // Fallback to original if merge fails
-          jobDescription,
-          matchAnalysis,
-          optimizations,
-          keywords: optimizationKeywords,
+          resumeDocument: snapshot.resume,
           variant: normalizedVariant,
           skipPrint: true, // Don't trigger print, just return HTML
         });
@@ -2607,8 +2807,7 @@ export default function MainContent() {
             metadata: {
               variant: normalizedVariant,
               hasJobDescription: Boolean(jobDescription),
-              hasOptimizations: optimizations.length > 0,
-              matchScore: matchAnalysis?.score,
+              hasOptimizations: snapshot.includedEdits.length > 0,
             },
           });
 
@@ -2638,11 +2837,7 @@ export default function MainContent() {
         } else {
           // Fallback to print dialog if Supabase is not available or user not signed in
           await exportResumeToPdf({
-            resumeDocument: mergedResume || resumeData,
-            jobDescription,
-            matchAnalysis,
-            optimizations,
-            keywords: optimizationKeywords,
+            resumeDocument: snapshot.resume,
             variant: normalizedVariant,
           });
 
@@ -2662,7 +2857,7 @@ export default function MainContent() {
         });
       }
     },
-    [activeJobApplicationId, isGuestMode, jobDescription, matchAnalysis, optimizationData, optimizations, optimizationKeywords, pushToast, requireSignInForGuestAction, resumeData, user, t]
+    [activeJobApplicationId, handleTabChange, isGuestMode, jobDescription, legacyExportConfirmation, pushToast, requireSignInForGuestAction, resumeData, user, t]
   );
 
   const renderedToasts = useMemo(
@@ -2875,9 +3070,11 @@ export default function MainContent() {
                   matchAnalysis={matchAnalysis}
                   isAnalyzing={isAnalyzing}
                   hasResume={Boolean(resumeData?.plainText)}
-                  resumeText={resumeData?.plainText || ''}
+                  resumeText={matchResumeText}
                   onToast={pushToast}
                   onClear={handleClearMatch}
+                  historicalMatch={historicalMatch}
+                  onJobDescriptionChange={setJobDescription}
                   jobDescription={activeResumeId && projectedResumeId.current !== activeResumeId ? '' : jobDescription}
                   resumeContextKey={activeResumeId ? `${activeResumeId}:${libraryEntries.find(entry => entry.id === activeResumeId)?.fingerprint ?? ''}` : undefined}
                   extractedMetadata={extractedMetadata}
@@ -2932,6 +3129,10 @@ export default function MainContent() {
                   isOptimizing={isOptimizing}
                   isCheckingQuestions={isCheckingClarifications}
                   onOptimize={handleOptimize}
+                  jobDescription={jobDescription}
+                  resumeText={resumeData?.plainText || ''}
+                  assessmentCurrent={optimizeAssessmentCurrent}
+                  assessmentKey={optimizeAssessmentKey ?? undefined}
                   onCopy={handleCopy}
                   previewUsed={previewUsed}
                   onUpgrade={handleUpgrade}
@@ -2948,6 +3149,7 @@ export default function MainContent() {
                   isGuestMode={isGuestMode}
                   onRequireSignIn={requireSignInForGuestAction}
                   protectedActionMessage={guestProtectedActionDescription}
+                  reviewSectionIds={exportReviewSectionIds}
                 />
               </Suspense>
             </LazyErrorBoundary>
@@ -2960,6 +3162,10 @@ export default function MainContent() {
                   resumeData={resumeData}
                   optimizationData={optimizationData}
                   onRequirePaidReoptimize={() => handleOptimize('auto', { freePreview: false })}
+                  onReviewSections={(sectionIds) => {
+                    setExportReviewSectionIds(sectionIds);
+                    setActiveTab('optimize');
+                  }}
                 />
               </Suspense>
             </LazyErrorBoundary>
@@ -3002,8 +3208,8 @@ export default function MainContent() {
                   ? renderGuestProtectedPanel(t("tabs.coverLetter", "Cover Letter"))
                   : (
                     <CoverLetterSection
-                      resumeText={resumeData?.plainText || ""}
                       jobDescription={jobDescription}
+                      resumeText={resumeData?.plainText || ""}
                       resumeData={resumeData}
                     />
                   )}
@@ -3089,6 +3295,31 @@ export default function MainContent() {
         onClose={() => setViewTextModalOpen(false)}
         text={resumeData?.plainText || ""}
       />
+      {pendingLegacyExport && (
+        <div role="dialog" aria-modal="true" aria-label={t('sections.templates.export.legacyTitle', 'Review current document')}
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+          <div className="max-w-md rounded-xl bg-white p-6 text-gray-900 shadow-xl dark:bg-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold">{t('sections.templates.export.legacyTitle', 'Review current document')}</h2>
+            <p className="mt-2 text-sm">{t('sections.templates.export.legacyBody',
+              'The original resume is unavailable. Check the entire visible document before downloading.')}</p>
+            <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap rounded-lg border p-3 text-xs">{pendingLegacyExport.documentText}</pre>
+            <div className="mt-5 flex gap-3">
+              <button type="button" onClick={() => setPendingLegacyExport(null)} className="rounded-lg border px-4 py-2">
+                {t('common.cancel', 'Cancel')}
+              </button>
+              <button type="button" onClick={() => {
+                const confirmation = { documentFingerprint: pendingLegacyExport.documentFingerprint, confirmedAt: new Date().toISOString() };
+                setLegacyExportConfirmation(confirmation);
+                const { variant, exportMethod } = pendingLegacyExport;
+                setPendingLegacyExport(null);
+                void handleExportPdf(variant, exportMethod, confirmation);
+              }} className="rounded-lg bg-emerald-600 px-4 py-2 text-white">
+                {t('sections.templates.export.legacyConfirm', 'I reviewed this document')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Clarification Modal — pre-optimization gap interrogation (lazy: optimize flow only) */}
       {isInterrogating && (

@@ -28,7 +28,8 @@ import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
-import { buildOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
+import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
@@ -69,12 +70,6 @@ function getClientIPFromRequest(request: Request): string | null {
     }
   }
   return null;
-}
-
-function hasRenderableCards(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const cards = (value as { cards?: unknown }).cards;
-  return Array.isArray(cards) && cards.length > 0;
 }
 
 async function attachLiveCredits<T extends Record<string, unknown>>(
@@ -238,7 +233,7 @@ export default async function handler(request: Request): Promise<Response> {
   });
 
   const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-  if (hasRenderableCards(cachedResponse)) {
+  if (hasCurrentEvidenceCards(cachedResponse)) {
     console.log('[optimize-stream] Cache HIT — returning cached JSON (no credit deduction).');
     const responsePayload = await attachLiveCredits(cachedResponse, userEmail, freePreview);
     return new Response(JSON.stringify(responsePayload), {
@@ -293,6 +288,7 @@ export default async function handler(request: Request): Promise<Response> {
   // --- Stream the optimization ---
   const encoder = new TextEncoder();
   const startTime = Date.now();
+  const evidenceSources = buildRequestEvidenceSources(resumeText, userClarifications);
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -316,10 +312,11 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 3: AI Processing (this is the long step)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "ai_processing" })));
 
-        const optimization = await optimizeResume(resumeText, jobText, language, vulnerabilities, userClarifications, userHardStops, {
+        const optimization = await optimizeResume(requestEvidenceResumeText(evidenceSources), jobText, language, vulnerabilities, userClarifications, userHardStops, {
           featureName: "optimize_stream",
           userRef: user?.id || null,
           jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
+          evidenceSources,
         });
 
         const aiDuration = Date.now() - startTime;
@@ -341,7 +338,8 @@ export default async function handler(request: Request): Promise<Response> {
         // Phase 4: Build response (reuses the same card-mapping logic as optimize.ts)
         controller.enqueue(encoder.encode(sseEvent("status", { phase: "building_response" })));
 
-        const cards = buildOptimizationCards(optimization, { logPrefix: "[optimize-stream]" });
+        const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: "[optimize-stream]", sources: evidenceSources });
+        if (cards.length === 0) throw new Error('AI optimization produced no usable evidence-backed edits');
         const { beforeScore, estimatedImprovement } = calculateScores(optimization, {
           cards,
           logPrefix: "[optimize-stream]",
@@ -378,7 +376,11 @@ export default async function handler(request: Request): Promise<Response> {
         }
 
         const resultPayload = {
+          evidenceVersion: 2,
           cards,
+          evidenceSources,
+          evidenceInputOmissions: evidenceInputOmissions(resumeText, userClarifications || '', evidenceSources),
+          evidenceDiagnostics: diagnostics,
           keywords: {
             add: addKeywords,
             neutral: optimization?.keywords_to_keep || [],
@@ -386,7 +388,7 @@ export default async function handler(request: Request): Promise<Response> {
           },
           matchScoring: {
             beforeScore: Math.round(beforeScore),
-            estimatedImprovement: Math.round(estimatedImprovement),
+            estimatedImprovement,
             jdKeywords: jdKeywords.slice(0, 20),
             matchedKeywords: matchedKeywords.slice(0, 15),
             reasoning: null,

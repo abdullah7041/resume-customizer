@@ -4,6 +4,7 @@ import { getSupabaseClient } from '../lib/supabase-client.js';
 import { executeAiContract } from '../lib/ai-contracts/executor.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 import { z } from 'zod';
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText, validateEditEvidence } from '../lib/optimization-evidence.js';
 
 initSentry();
 
@@ -58,6 +59,7 @@ const baseHandler: Handler = async (event) => {
     }
 
     const { original, currentImproved, userInstruction, jobContext, resumeText, language } = parseResult.data;
+    const evidenceSources = buildRequestEvidenceSources(resumeText);
 
     console.log('[RefineBullet] Refining bullet', {
       instructionLength: userInstruction.length,
@@ -70,9 +72,19 @@ const baseHandler: Handler = async (event) => {
       currentImproved,
       userInstruction,
       jobContext,
-      resumeText,
+      resumeText: requestEvidenceResumeText(evidenceSources),
       language,
+      evidenceSources,
     });
+
+    const evidence = await validateEditEvidence({
+      targetId: result.target_id || '', original, proposed: result.improved,
+      references: result.evidence_references || [],
+    }, evidenceSources);
+    if (evidence.status === 'rejected' || evidence.reasons.includes('new_number')) {
+      return { statusCode: 422, headers: jsonHeaders,
+        body: errorBody(422, 'EVIDENCE_INVALID', 'The refined edit lacked valid source evidence.') };
+    }
 
     return {
       statusCode: 200,
@@ -81,6 +93,9 @@ const baseHandler: Handler = async (event) => {
         improved: result.improved,
         issue: result.issue,
         rationale: result.rationale,
+        evidence,
+        evidenceSources,
+        evidenceInputOmissions: evidenceInputOmissions(resumeText, '', evidenceSources),
       }),
     };
   } catch (error) {

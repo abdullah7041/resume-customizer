@@ -1,5 +1,9 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { vi, beforeEach, afterEach, describe, it, expect } from 'vitest';
+import { vi, beforeAll, beforeEach, afterEach, describe, it, expect } from 'vitest';
+import { webcrypto } from 'node:crypto';
+import { createAssessmentContext } from '../lib/match/assessmentContext';
+
+beforeAll(() => { Object.defineProperty(globalThis, 'crypto', { configurable: true, value: webcrypto }); });
 
 // Mock supabase
 vi.mock('../services/supabase', () => ({
@@ -52,13 +56,35 @@ vi.mock('../hooks/useUserCredits', () => ({
 }));
 
 // Mock react-i18next - handle interpolation objects
+const mockLanguage = vi.hoisted(() => ({ value: 'en' }));
+const arabicReportLabels: Record<string, string> = {
+  'sections.bulk.reportTitle': 'تقرير مقارنة السير الذاتية',
+  'sections.bulk.comparisonTitle': 'نتائج المقارنة',
+  'sections.bulk.reportGenerated': 'أُنشئ في',
+  'sections.bulk.reportHistorical': 'تقييم سابق',
+  'sections.bulk.reportJobSummary': 'ملخص الوصف الوظيفي:',
+  'sections.bulk.reportRank': 'الترتيب',
+  'sections.bulk.reportResumeName': 'اسم السيرة الذاتية',
+  'sections.bulk.estimatedAlignment': 'تقدير التوافق مع هذا الوصف الوظيفي',
+  'sections.bulk.reportKeywords': 'الكلمات المفتاحية',
+  'sections.bulk.reportRelativeRank': 'الترتيب النسبي',
+  'sections.bulk.highestScore': 'أعلى درجة في هذه المقارنة',
+  'sections.bulk.lowerScore': 'درجة أقل في هذه المقارنة',
+  'sections.bulk.hiringDisclaimer': 'هذا التقييم لا يتنبأ بقرار التوظيف.',
+  'sections.bulk.reportMissingKeywords': 'متطلبات تحتاج إلى دليل:',
+  'sections.bulk.reportRealityCheck': 'ملخص الأدلة والمخاطر:',
+  'sections.bulk.printOrSave': 'طباعة / حفظ بصيغة PDF',
+  'sections.bulk.popupBlocked': 'تعذر فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة وأعد المحاولة.',
+};
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>) => {
       if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
       return key;
     },
-    i18n: { language: 'en', changeLanguage: vi.fn() },
+    i18n: { get language() { return mockLanguage.value; }, changeLanguage: vi.fn(),
+      getFixedT: (language: string) => (key: string, fallback?: string) => language === 'ar'
+        ? arabicReportLabels[key] ?? fallback ?? key : fallback ?? key },
   }),
 }));
 
@@ -85,6 +111,16 @@ vi.mock('../components/Credits/PricingWaitlistModal', () => ({
 
 // Mock parseResume
 const mockParseResume = vi.fn();
+const mockPdfText = vi.hoisted(() => vi.fn());
+const mockPdfSave = vi.hoisted(() => vi.fn());
+vi.mock('jspdf', () => ({ jsPDF: class {
+  internal = { pageSize: { getWidth: () => 210 } };
+  lastAutoTable = { finalY: 90 };
+  setFontSize = vi.fn(); setTextColor = vi.fn(); addPage = vi.fn();
+  splitTextToSize = (value: string) => [value];
+  text = mockPdfText; save = mockPdfSave;
+} }));
+vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 vi.mock('../services/api', () => ({
   parseResume: (...args: unknown[]) => mockParseResume(...args),
 }));
@@ -101,8 +137,10 @@ import { BulkAnalysisSection } from '../components/sections/BulkAnalysisSection'
 import { useResumeStore } from '../lib/stores/resumeStore';
 
 describe('BulkAnalysisSection', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLanguage.value = 'en';
     window.localStorage.clear();
     // Reset fetch mock
     vi.stubGlobal('fetch', vi.fn());
@@ -269,10 +307,8 @@ describe('BulkAnalysisSection', () => {
       });
 
       // Confirm the batch
-      await waitFor(() => {
-        const confirmButton = screen.queryByText(/confirm/i);
-        if (confirmButton) fireEvent.click(confirmButton);
-      });
+      const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
+      fireEvent.click(confirmButton);
 
       // Wait for all to complete
       await waitFor(() => {
@@ -341,12 +377,20 @@ describe('BulkAnalysisSection', () => {
         parsedResumeText: resumeText,
         originalResume: { basics: { name: 'Sara Al-Otaibi' } } as never,
       });
-      useResumeStore.getState().setCachedAnalysis(resumeText, jobDescription, {
+      const context = await createAssessmentContext({ resumeText, jobDescription,
+        language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+      useResumeStore.getState().setCachedAssessment(context, {
         score: 82,
         coverage: 0.82,
         matchedKeywords: ['Product'],
         missingKeywords: [],
-      }, false);
+        strategicRealityCheck: {
+          riskTier: 'medium', recommendation: 'review_role_fit', confidence: 'medium',
+          riskTypes: ['evidence_quality'], summary: 'Confirm product leadership evidence.',
+          strengths: [], confirmedRisks: [], unclearRisks: [],
+          limits: { cannotDetermine: ['Hiring decision'], assumptions: [] },
+        },
+      });
 
       render(<BulkAnalysisSection jobDescription={jobDescription} />);
 
@@ -364,7 +408,55 @@ describe('BulkAnalysisSection', () => {
       }, { timeout: 5000 });
 
       expect(screen.getAllByText('82%').length).toBeGreaterThan(0);
+      expect(screen.getByText('Confirm product leadership evidence.')).toBeInTheDocument();
       expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it('does not start a paid request from a file parse that finishes after the job changes', async () => {
+      let resolveParse!: (value: { plainText: string }) => void;
+      mockParseResume.mockReturnValueOnce(new Promise(resolve => { resolveParse = resolve; }));
+      const { container, rerender } = render(<BulkAnalysisSection jobDescription="Role A" />);
+      const file = new File(['resume'], 'candidate.pdf', { type: 'application/pdf' });
+      await act(async () => fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } }));
+      rerender(<BulkAnalysisSection jobDescription="Role B" />);
+      await act(async () => resolveParse({ plainText: 'Candidate resume for Role A' }));
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+      expect(screen.queryByText('Ready')).not.toBeInTheDocument();
+    });
+
+    it('does not treat same-prefix resume text or a different language as a free cache hit', async () => {
+      const resumeText = 'r'.repeat(120) + 'B';
+      const cachedContext = await createAssessmentContext({ resumeText: 'r'.repeat(120) + 'A',
+        jobDescription: 'API role', language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+      useResumeStore.getState().setCachedAssessment(cachedContext, { score: 90, missingKeywords: [] });
+      useResumeStore.setState({ parsedResumeText: resumeText,
+        originalResume: { basics: { name: 'Candidate' } } as never });
+      mockLanguage.value = 'ar';
+      render(<BulkAnalysisSection jobDescription="API role" />);
+      fireEvent.click(screen.getByText('Use my uploaded resume'));
+      expect(await screen.findByTestId('confirm-modal')).toBeInTheDocument();
+      expect(screen.queryByText('90%')).not.toBeInTheDocument();
+      expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it('rejects the first A parse after switching A to B and back to A', async () => {
+      let resolveOld!: (value: { plainText: string }) => void;
+      mockParseResume.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }))
+        .mockResolvedValueOnce({ plainText: 'Current A resume' });
+      (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200,
+        json: () => Promise.resolve({ score: 61, strongMatches: [], missingKeywords: [] }) });
+      const { container, rerender } = render(<BulkAnalysisSection jobDescription="Role A" />);
+      const input = container.querySelector('input[type="file"]')!;
+      fireEvent.change(input, { target: { files: [new File(['old'], 'old.pdf')] } });
+      rerender(<BulkAnalysisSection jobDescription="Role B" />);
+      rerender(<BulkAnalysisSection jobDescription="Role A" />);
+      fireEvent.change(input, { target: { files: [new File(['new'], 'new.pdf')] } });
+      await screen.findByTestId('confirm-modal');
+      await act(async () => resolveOld({ plainText: 'Stale A resume' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+      expect(JSON.parse((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1].body).resumeText)
+        .toBe('Current A resume');
     });
 
     it('hides itself once the uploaded resume is already in the list', async () => {
@@ -388,5 +480,191 @@ describe('BulkAnalysisSection', () => {
         expect(screen.queryByText('Use my uploaded resume')).not.toBeInTheDocument();
       });
     });
+  });
+
+  it('labels a low highest score as relative and does not show duplicate coverage', async () => {
+    mockParseResume.mockResolvedValue({ plainText: 'Limited relevant experience' });
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, status: 200,
+      json: () => Promise.resolve({ score: 20, coverage: 0.2, similarity: 0.2,
+        strongMatches: [], missingKeywords: ['Required skill'] }) });
+    const { container } = render(<BulkAnalysisSection jobDescription="Senior API engineer" />);
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(['resume'], 'candidate.pdf')] },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(screen.getByText('Highest score in this comparison')).toBeInTheDocument());
+    expect(screen.queryByText('Best Match')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coverage')).not.toBeInTheDocument();
+    expect(screen.getAllByText('This assessment does not predict a hiring decision.').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Export Report' }));
+    await waitFor(() => expect(mockPdfSave).toHaveBeenCalledTimes(1));
+    const { default: autoTable } = await import('jspdf-autotable');
+    expect(vi.mocked(autoTable).mock.calls[0][1].body[0][4]).toBe('Highest score in this comparison');
+    expect(mockPdfText.mock.calls.map(call => String(call[0])).join(' '))
+      .toContain('This assessment does not predict a hiring decision.');
+  });
+
+  it('requires a historical context selection and prints its saved JD rather than the live JD', async () => {
+    const resumeText = 'Candidate with API work';
+    const makeRow = async (id: string, jobSnapshot: string, score: number) => {
+      const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+        language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+      const analysis = { score, topHits: ['API'], missingKeywords: [] };
+      return { id, name: `${id}.pdf`, status: 'completed', plainText: resumeText, analysis,
+        assessment: { context, jobSnapshot, requestId: id, createdAt: '2026-09-26T00:00:00Z', result: analysis } };
+    };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([
+      await makeRow('old', 'Historical API role', 80),
+      await makeRow('new', 'Current data role', 50),
+      { id: 'legacy', name: 'legacy.pdf', status: 'completed', plainText: resumeText,
+        analysis: { score: 95 }, file: null },
+    ]));
+    render(<BulkAnalysisSection jobDescription="Current data role" />);
+    const selector = await screen.findByRole('combobox', { name: 'Report assessment' });
+    expect(screen.getByRole('button', { name: 'Export Report' })).toBeDisabled();
+    expect(screen.getByText('Previous assessment')).toBeInTheDocument();
+    expect(screen.getByText('Legacy assessment')).toBeInTheDocument();
+    fireEvent.change(selector, { target: { value: (selector as HTMLSelectElement).options[1].value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Export Report' }));
+    await waitFor(() => expect(mockPdfSave).toHaveBeenCalledTimes(1));
+    const pdfText = mockPdfText.mock.calls.map(call => String(call[0])).join(' ');
+    expect(pdfText).toContain('Historical assessment');
+    expect(pdfText).toContain('Historical API role');
+    expect(pdfText).not.toContain('Current data role');
+  });
+
+  it('exports Arabic report labels from the saved assessment while the live language is English', async () => {
+    const resumeText = 'عملت على التقارير الداخلية';
+    const jobSnapshot = 'محلل بيانات';
+    const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+      language: 'ar', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    const analysis = { score: 20, topHits: [], missingKeywords: [],
+      strategicRealityCheck: { summary: 'تحتاج الخبرة إلى دليل إضافي.' } };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'arabic', name: 'سيرة.pdf', status: 'completed', plainText: resumeText, analysis,
+      assessment: { context, jobSnapshot, requestId: 'saved-ar',
+        createdAt: '2026-09-26T00:00:00Z', result: analysis },
+    }]));
+    const popupDocument = document.implementation.createHTMLDocument('');
+    const print = vi.fn();
+    vi.spyOn(window, 'open').mockReturnValue({ document: popupDocument, focus: vi.fn(), print,
+      close: vi.fn() } as unknown as Window);
+    render(<BulkAnalysisSection jobDescription="Live English role" />);
+    expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'طباعة / حفظ بصيغة PDF' }));
+    expect(window.open).toHaveBeenCalledTimes(1);
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(mockPdfSave).not.toHaveBeenCalled();
+    expect(popupDocument.documentElement.lang).toBe('ar');
+    expect(popupDocument.documentElement.dir).toBe('rtl');
+    expect(popupDocument.querySelector('h1')?.textContent).toBe('تقرير مقارنة السير الذاتية');
+    expect([...popupDocument.querySelectorAll('th')].map(cell => cell.textContent)).toEqual([
+      'الترتيب', 'اسم السيرة الذاتية', 'تقدير التوافق مع هذا الوصف الوظيفي',
+      'الكلمات المفتاحية', 'الترتيب النسبي',
+    ]);
+    expect(popupDocument.querySelector('tbody')?.textContent).toContain('أعلى درجة في هذه المقارنة');
+    expect(popupDocument.body.textContent).toContain('تقييم سابق');
+    expect(popupDocument.body.textContent).toContain('محلل بيانات');
+    expect(popupDocument.body.textContent).toContain('هذا التقييم لا يتنبأ بقرار التوظيف.');
+    expect(popupDocument.body.textContent).toContain('تحتاج الخبرة إلى دليل إضافي.');
+    expect(popupDocument.body.textContent).toContain('ملخص الأدلة والمخاطر:');
+    expect(popupDocument.body.textContent).not.toContain('Live English role');
+  });
+
+  it('keeps untrusted Arabic report content as text in the print window', async () => {
+    const resumeText = 'خبرة في التقارير';
+    const jobSnapshot = 'محلل <script>run()</script>';
+    const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+      language: 'ar', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    const analysis = { score: 20, missingKeywords: ['<img src=x onerror=run()>'],
+      strategicRealityCheck: { summary: '<svg onload=run()> تحتاج أدلة.' } };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'unsafe', name: '<b>سيرة</b>.pdf', status: 'completed', plainText: resumeText, analysis,
+      assessment: { context, jobSnapshot, requestId: 'saved-unsafe',
+        createdAt: '2026-09-26T00:00:00Z', result: analysis },
+    }]));
+    const popupDocument = document.implementation.createHTMLDocument('');
+    vi.spyOn(window, 'open').mockReturnValue({ document: popupDocument, focus: vi.fn(), print: vi.fn(),
+      close: vi.fn() } as unknown as Window);
+    render(<BulkAnalysisSection jobDescription="Live English role" />);
+    expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'طباعة / حفظ بصيغة PDF' }));
+    expect(popupDocument.body.textContent).toContain('<script>run()</script>');
+    expect(popupDocument.body.textContent).toContain('<img src=x onerror=run()>');
+    expect(popupDocument.body.textContent).toContain('<svg onload=run()>');
+    expect(popupDocument.querySelector('script, img, svg, b')).toBeNull();
+  });
+
+  it('shows a recoverable error when the Arabic print popup is blocked', async () => {
+    const resumeText = 'خبرة في التقارير';
+    const jobSnapshot = 'محلل بيانات';
+    const context = await createAssessmentContext({ resumeText, jobDescription: jobSnapshot,
+      language: 'ar', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    const analysis = { score: 20, missingKeywords: [] };
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'blocked', name: 'سيرة.pdf', status: 'completed', plainText: resumeText, analysis,
+      assessment: { context, jobSnapshot, requestId: 'saved-blocked',
+        createdAt: '2026-09-26T00:00:00Z', result: analysis },
+    }]));
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    render(<BulkAnalysisSection jobDescription="Live English role" />);
+    expect(await screen.findByText('Previous assessment')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'طباعة / حفظ بصيغة PDF' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('تعذر فتح نافذة الطباعة');
+    expect(mockPdfSave).not.toHaveBeenCalled();
+  });
+
+  it('ignores a late network response after the job changes', async () => {
+    let resolveResponse!: (value: { ok: boolean; status: number; json: () => Promise<unknown> }) => void;
+    mockParseResume.mockResolvedValue({ plainText: 'Candidate for an API role' });
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(resolve => { resolveResponse = resolve; }));
+    const { container, rerender } = render(<BulkAnalysisSection jobDescription="API role" />);
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(['resume'], 'candidate.pdf')] },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+    rerender(<BulkAnalysisSection jobDescription="Data role" />);
+    await act(async () => resolveResponse({ ok: true, status: 200,
+      json: () => Promise.resolve({ score: 91, strongMatches: [], missingKeywords: [] }) }));
+    expect(screen.queryByText('91%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Detailed Comparison')).not.toBeInTheDocument();
+  });
+
+  it('invalidates an in-flight request when all rows are cleared', async () => {
+    let resolveResponse!: (value: { ok: boolean; status: number; json: () => Promise<unknown> }) => void;
+    mockParseResume.mockResolvedValue({ plainText: 'Candidate for an API role' });
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockReturnValue(new Promise(resolve => { resolveResponse = resolve; }));
+    const { container } = render(<BulkAnalysisSection jobDescription="API role" />);
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(['resume'], 'candidate.pdf')] },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear All' }));
+    await act(async () => resolveResponse({ ok: true, status: 200,
+      json: () => Promise.resolve({ score: 91, strongMatches: [], missingKeywords: [] }) }));
+    const context = await createAssessmentContext({ resumeText: 'Candidate for an API role',
+      jobDescription: 'API role', language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
+    expect(screen.queryByText('91%')).not.toBeInTheDocument();
+  });
+
+  it('keeps a restored row legacy when its visible score differs from the saved assessment result', async () => {
+    const resumeText = 'Candidate for an API role';
+    const jobDescription = 'API role';
+    const context = await createAssessmentContext({ resumeText, jobDescription,
+      language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+    window.localStorage.setItem('watheq:bulkAnalysis', JSON.stringify([{
+      id: 'mismatch', name: 'mismatch.pdf', status: 'completed', plainText: resumeText,
+      analysis: { score: 99, missingKeywords: [] }, assessment: { context, jobSnapshot: jobDescription,
+        requestId: 'saved-request', createdAt: '2026-09-26T00:00:00Z',
+        result: { score: 32, missingKeywords: [] } },
+    }]));
+    render(<BulkAnalysisSection jobDescription={jobDescription} />);
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    expect(screen.getByText('Legacy assessment')).toBeInTheDocument();
+    expect(screen.queryByText('Detailed Comparison')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export Report' })).toBeDisabled();
   });
 });

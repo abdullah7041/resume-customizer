@@ -70,7 +70,6 @@
 [functions."generate-pdf"]
   external_node_modules = ["@sparticuz/chromium"]
   timeout = 90  # PDF generation: Puppeteer browser launch can take 30-60s on cold start
-  memory = 1024
 
 [functions."vision2030-alignment"]
   timeout = 70  # Increased: OpenRouter timeout 50s + 20s buffer
