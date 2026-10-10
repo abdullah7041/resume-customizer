@@ -1,7 +1,7 @@
 // src/__tests__/TemplatesSection.test.jsx
 // Tests for TemplatesSection component - template gallery with floating selector
 
-import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TemplateGallery from '../components/sections/TemplatesSection';
@@ -221,6 +221,23 @@ describe('Text PDF recovery review', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Review Text PDF' })).not.toBeInTheDocument();
         expect(saveAs).not.toHaveBeenCalled();
+    });
+    it('clears the recovery DOCX busy state on input change without downloading its stale result', async () => {
+        globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 503 });
+        let releaseDocx;
+        exportResumeAsDocx.mockImplementationOnce(() => new Promise(resolve => { releaseDocx = resolve; }));
+        const view = renderWithProviders(<TemplateGallery resumeData={resume} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        const recovery = await screen.findByRole('group', { name: 'PDF export options' });
+        fireEvent.click(within(recovery).getByRole('button', { name: 'Download DOCX' }));
+        await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalledTimes(1));
+        expect(screen.getByRole('button', { name: 'Generating...' })).toBeDisabled();
+        view.rerender(<DirectionProvider><TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary: 'Later candidate edit' } }} /></DirectionProvider>);
+        await act(async () => releaseDocx(new Blob(['stale DOCX'])));
+        expect(saveAs).not.toHaveBeenCalled();
+        expect(screen.queryByRole('group', { name: 'PDF export options' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Generating...' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Download DOCX' })).not.toBeDisabled();
     });
     it.each(['auth', 'render', 'blob', 'check'])('ignores stale Text PDF during %s without download or status', async boundary => {
         const view = await setup();

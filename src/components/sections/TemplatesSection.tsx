@@ -344,6 +344,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       setPdfStatus(null);
       setExportError(null);
       setIsDownloading(false);
+      setIsDownloadingDocx(false);
     }
   }, [renderedInputs, currentStoreInputs, optimizationMetrics]);
   const hasRealResume = Boolean(resumeData?.basics?.name);
