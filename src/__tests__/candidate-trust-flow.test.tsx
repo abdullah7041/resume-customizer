@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import JSZip from 'jszip';
 import { trustResume } from './fixtures/candidate-trust';
 import { mergeOptimizedResume } from '@/lib/optimize/mergeResume';
@@ -16,6 +17,7 @@ import { getTemplate } from '@/components/templates/registry';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { exportResumeAsDocx } from '@/services/exportDocx';
 import { comparePdfText } from '@/lib/utils/pdfTextCheck';
+import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 import type { OptimizationResult } from '@/types/templates';
 import type { StructuredEvidenceResume } from '@/types/optimization-evidence';
 
@@ -197,6 +199,99 @@ for (let index = 1; index <= doc.numPages; index++) {
 process.stdout.write(JSON.stringify(pages));
 await doc.destroy();
 `;
+const textPdfAudit = `
+import { readFileSync, writeFileSync } from 'node:fs';
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
+const doc = await pdfjs.getDocument({ data: new Uint8Array(readFileSync(0)), useSystemFonts: false }).promise;
+const pages = [], links = [], items = [];
+for (let index = 1; index <= doc.numPages; index++) {
+  const page = await doc.getPage(index);
+  const content = await page.getTextContent();
+  pages.push(content.items.map(item => 'str' in item ? item.str : '').join(' '));
+  items.push(...content.items.filter(item => 'str' in item).map(item => ({ text: item.str, width: item.width, height: item.height, transform: item.transform, page: index })));
+  links.push(...(await page.getAnnotations()).map(item => ({ url: item.unsafeUrl, rect: item.rect })));
+  if (process.env.TEXT_PDF_RENDER_PREFIX && (index === 1 || index === doc.numPages)) {
+    const viewport = page.getViewport({ scale: 1.5 });
+    const surface = doc.canvasFactory.create(Math.ceil(viewport.width), Math.ceil(viewport.height));
+    await page.render({ canvasContext: surface.context, viewport }).promise;
+    writeFileSync(process.env.TEXT_PDF_RENDER_PREFIX + (index === 1 ? '' : '-last') + '-pdfjs.png', surface.canvas.toBuffer('image/png'));
+  }
+}
+process.stdout.write(JSON.stringify({ version: pdfjs.version, pages: doc.numPages, text: pages.join('\\n'), items, links }));
+await doc.destroy();
+`;
+
+describe('captured production Text PDF artifacts', () => {
+  it('preserves complete visible source and job associations across four templates and four language/page cases', async () => {
+    const { handler } = await import('../../netlify/functions/generate-pdf');
+    const artifactDir = join(process.cwd(), '.superpowers/sdd/2026-10-10-logical-text-pdf/evidence/production-capture');
+    const retain = process.env.WRITE_TEXT_PDF_ARTIFACTS === '1';
+    if (retain) mkdirSync(artifactDir, { recursive: true });
+    const manifest: Record<string, unknown> = {};
+    const compact = (text: string) => text.replace(/\s/gu, '');
+    for (const templateId of ['modern-professional', 'technical-engineer', 'ats-optimized', 'executive-professional'] as const) {
+      for (const label of ['english', 'arabic', 'mixed', 'multipage'] as const) {
+        const language = label === 'english' ? 'en' : label === 'arabic' ? 'ar' : 'mixed';
+        const resume = trustResume(language);
+        if (label === 'mixed') resume.work[0].highlights = resume.work[0].highlights.slice(0, 2);
+        if (label === 'multipage') resume.work[0].highlights = [
+          ...resume.work[0].highlights.slice(0, 2),
+          ...Array.from({ length: 275 }, (_, index) => `Project detail ${index + 1}: Documented delivery.`),
+        ];
+        resume.basics.summary += language === 'en' ? ' Quoted: "SQL 25% 2024".' : ' لا لأ لإ لآ سَلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. "SQL 25% 2024" ٢٥٪ ٢٠٢٤.';
+        const original = JSON.stringify(resume);
+        const name = `${label}-${templateId}`;
+        const markup = renderToStaticMarkup(<TemplateRenderer template={{ id: templateId, structure: {} }}
+          userData={resume as unknown as Parameters<typeof TemplateRenderer>[0]['userData']} contentDirection={language === 'en' ? 'ltr' : 'rtl'} />);
+        const host = document.createElement('div');
+        host.innerHTML = markup;
+        document.body.append(host);
+        try {
+          const preview = host.querySelector<HTMLElement>('[data-resume-preview]');
+          if (!preview) throw new Error(`${name}: production preview missing`);
+          const snapshot = cloneVisiblePdfPreview(preview);
+          const blocks = captureTextPdfBlocks(snapshot);
+          const expected = blocks.flatMap(block => block.runs.map(run => run.text)).join('\n');
+          expect(compact(expected), `${name}: all captured DOM source`).toBe(compact(snapshot.textContent ?? ''));
+          const facts = [resume.basics.name, resume.basics.label, resume.basics.email, resume.basics.phone,
+            resume.basics.url!, resume.basics.profiles[0].url, resume.basics.summary, resume.basics.location.city,
+            ...resume.work.flatMap(work => [work.name, work.position, work.startDate, work.endDate, ...work.highlights]),
+            resume.education[0].institution, resume.education[0].area, resume.education[0].studyType,
+            resume.education[0].endDate, ...resume.skills[0].keywords];
+          for (const fact of facts) expect(compact(expected), `${name}: raw fact ${fact}`).toContain(compact(fact));
+          const firstEmployer = compact(expected).indexOf(compact(resume.work[0].name));
+          const secondEmployer = compact(expected).indexOf(compact(resume.work[1].name));
+          expect(firstEmployer).toBeLessThan(secondEmployer);
+          expect(compact(expected).indexOf(compact(resume.work[0].highlights[1]))).toBeLessThan(secondEmployer);
+          expect(compact(expected).indexOf(compact(resume.work[1].highlights[1]))).toBeGreaterThan(secondEmployer);
+          const response = await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer fictional-test' },
+            body: JSON.stringify({ format: 'text', blocks, templateId, filename: `${name}-text.pdf` })
+          } as unknown as Parameters<typeof handler>[0], {} as Parameters<typeof handler>[1]);
+          if (!response || response.statusCode !== 200) throw new Error(`${name}: Text PDF response ${response ? response.statusCode : 'void'}`);
+          const pdf = Buffer.from(response.body, 'base64');
+          const pdfPath = join(artifactDir, `${name}.pdf`);
+          if (retain) writeFileSync(pdfPath, pdf);
+          const audit = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', textPdfAudit], {
+            input: retain ? readFileSync(pdfPath) : pdf, cwd: process.cwd(), maxBuffer: 8 * 1024 * 1024,
+            env: { ...process.env, TEXT_PDF_RENDER_PREFIX: retain ? join(artifactDir, name) : '' },
+          }).toString()) as { version: string; pages: number; text: string; links: { url: string }[] };
+          if (retain) writeFileSync(join(artifactDir, `${name}.json`), JSON.stringify({ expected, audit, blocks, rawResume: resume }, null, 2));
+          expect(compact(audit.text), `${name}: complete saved PDF source`).toBe(compact(expected));
+          const links = blocks.flatMap(block => block.runs.map(run => run.href).filter(Boolean));
+          for (const href of links) expect(audit.links.map(link => link.url)).toContain(href);
+          expect(audit.pages).toBeGreaterThanOrEqual(label === 'multipage' ? 2 : 1);
+          expect(audit.pages).toBeLessThanOrEqual(20);
+          expect(JSON.stringify(resume)).toBe(original);
+          const projections = [resume.basics.location.countryCode, resume.skills[0].name, resume.education[0].startDate]
+            .filter(fact => !compact(expected).includes(compact(fact)));
+          manifest[name] = { sha256: createHash('sha256').update(pdf).digest('hex'), bytes: pdf.length, pages: audit.pages,
+            templateId, label, rawResume: resume, blocks, expected, links, projections, pdfjs: { ...audit, pass: true } };
+        } finally { host.remove(); }
+      }
+    }
+    if (retain) writeFileSync(join(artifactDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  }, 120_000);
+});
 describe.skipIf(!existsSync(edgePath) || !builtCssPath)('real candidate export artifacts', () => {
   it('keeps substantive facts and reading order in English templates, Arabic, mixed, and multi-page PDFs and DOCX', async () => {
     const { handler } = await import('../../netlify/functions/generate-pdf');

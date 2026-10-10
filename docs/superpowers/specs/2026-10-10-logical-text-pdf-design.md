@@ -1,6 +1,6 @@
 # Logical text PDF recovery — proposed design
 
-Status: approved by the owner on 2026-10-10, including the package and font scope; not implemented. User intent: finish Arabic/mixed export engineering while preserving source facts and candidate review. The small feasibility gate now passes; [evidence and limits](../reports/2026-10-10-arabic-pdf-feasibility.md) identify exactly what passed.
+Status: approved by the owner on 2026-10-10, including the package and font scope. The candidate-reviewed Text PDF path is implemented locally on the feature branch; [Task 3 readiness](../reports/2026-10-10-text-pdf-readiness.md) records the saved-byte reader result and remaining gates. Hosted delivery and real browser copy/search/select remain unverified, so the engineering milestone is still open. User intent: finish Arabic/mixed export engineering while preserving source facts and candidate review. The earlier [feasibility evidence](../reports/2026-10-10-arabic-pdf-feasibility.md) remains historical.
 
 ## Choice and tradeoff
 

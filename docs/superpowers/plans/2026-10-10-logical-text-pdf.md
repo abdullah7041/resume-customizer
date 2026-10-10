@@ -10,6 +10,8 @@
 
 **Spec:** [Approved logical text PDF design](../specs/2026-10-10-logical-text-pdf-design.md).
 
+**Observed status (2026-10-10):** Tasks 1 and 2 passed independent task reviews and are committed on the feature branch. Task 3's local production capture passes 16 same-byte three-reader cases, including four 10-page PDFs with more than 255 encoded pieces; see the [readiness report](../reports/2026-10-10-text-pdf-readiness.md). Hosted authenticated download and real browser copy/search/select remain unchecked. The checkboxes below retain the original acceptance gates; no local fixture result closes those manual or remote gates.
+
 ## Global Constraints
 
 - Work only in the existing `candidate-evidence-pilot/resume-customizer` checkout and `codex/candidate-evidence-pilot` branch. Preserve the unrelated untracked October 6 handoff and the shared node_modules junction target.
@@ -60,7 +62,7 @@
 
 **Files:** Extend the existing `src/__tests__/candidate-trust-flow.test.tsx` harness where useful; create `docs/superpowers/reports/2026-10-10-text-pdf-readiness.md`. Update the owner handoff with actual results and limits, preserving historical receipts.
 
-- [ ] Generate complete fictional English, Arabic, mixed and multipage Text PDFs using the production renderer/collector. Compare every captured field, job association, number, date, quote and safe link from the saved bytes in PDF.js, PDFium and pypdf. Inspect both renderers and document each unsupported fixture.
+- [x] Generate complete fictional English, Arabic, mixed and multipage Text PDFs using the production renderer/collector. Compare every captured field, job association, number, date, quote and safe link from the saved bytes in PDF.js, PDFium and pypdf. Inspect both renderers and document each unsupported fixture.
 - [ ] Exercise real browser copy/search/select of the generated PDF, including Arabic words, lam-alef, mixed text and the phone prefix. Nonempty bounding boxes alone are insufficient. Fix any evidenced geometry regression or keep the affected path unqualified.
 - [ ] Run separate `npm run lint`, `npm run type:check`, `npm test -- --no-file-parallelism`, `npm run build`, and `npm run i18n:validate`. Do not run quality:parallel in-agent or repeat a timed-out broad gate blindly. Obtain final branch review and address actionable findings.
 - [ ] Push the authorized feature branch/draft PR. Check CI, GitGuardian, Netlify and exact preview SHA. With the existing authorized test session and fictional inputs, drive the actual recovery preview/download and inspect the delivered bytes across readers; local/mocked output is not hosted delivery.

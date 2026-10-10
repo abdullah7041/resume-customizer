@@ -72,6 +72,8 @@ function serializeFont(args: TextPdfFontHook, pieces: TextPdfPiece[]) {
 
 export function generateTextPdf(input: TextPdfBlock[], fontBytes: Uint8Array): Uint8Array {
   const blocks = validateTextPdfBlocks(input);
+  // PDFium treats this row boundary as discretionary hyphenation and loses '-'.
+  if (/-\s*[\u0660-\u0669\u06f0-\u06f9]/u.test(blocks.flatMap(block => block.runs.map(run => run.text)).join('\n'))) fail();
   let font: Font;
   try { font = fontkit.create(fontBytes); } catch { return fail(); }
   if (!font.unitsPerEm || !font.layout || !font.hasGlyphForCodePoint) fail();
@@ -191,11 +193,20 @@ export function generateTextPdf(input: TextPdfBlock[], fontBytes: Uint8Array): U
     bidi.doBidiReorder(text, [], levels); // Only resolved levels are used; never the reordered string.
     if (levels.length !== text.length) fail();
     const runs: { text: string; rtl: boolean }[] = [];
+    let previousGroup = '';
+    const arabicNumber = /[\u0660-\u0669\u06f0-\u06f9]/u;
     for (let i = 0; i < text.length; i++) {
       const rtl = levels[i] % 2 === 1;
-      if (!runs.length || runs[runs.length - 1].rtl !== rtl) runs.push({ text: text[i], rtl });
+      // Readers apply bidi again to a Type3 mapping such as "٢٠٪."; isolate
+      // Arabic numerals and percent signs from adjacent punctuation in logical order.
+      const group = arabicNumber.test(text[i]) ? 'number' : text[i] === '\u066a' ? 'percent'
+        : rtl && text[i] !== '-' && /[\p{P}\p{S}]/u.test(text[i]) ? 'punctuation' : String(rtl);
+      if (!runs.length || previousGroup !== group) runs.push({ text: text[i], rtl });
       else runs[runs.length - 1].text += text[i];
+      previousGroup = group;
     }
+    // A neutral-only span inherits its neighbor's level, but has no RTL letters.
+    for (const run of runs) if (/^[\p{P}\p{S}\s]+$/u.test(run.text)) run.rtl = false;
     return runs;
   }
   const graphemes = new Intl.Segmenter('ar', { granularity: 'grapheme' });

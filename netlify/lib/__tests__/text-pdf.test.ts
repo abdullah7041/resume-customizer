@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import fontkit from '@pdf-lib/fontkit';
 import type { TextPdfBlock } from '@/types/text-pdf.js';
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // The root Vitest config aliases the package import to a UI mock. Load the real reader.
@@ -16,26 +16,31 @@ const blocks = (lines: string[]) => lines.map(text => ({ kind: 'body' as const, 
 const font = () => readFileSync(new URL('../../assets/fonts/DejaVuSans.ttf', import.meta.url));
 async function savedPdf(lines: TextPdfBlock[], name: string) {
   const directory = mkdtempSync(join(tmpdir(), 'watheq-text-pdf-'));
-  const path = join(directory, `${name}.pdf`);
-  writeFileSync(path, generateTextPdf(lines, font()));
-  const document = await getDocument({ data: new Uint8Array(readFileSync(path)), useSystemFonts: false }).promise;
-  const text: string[] = [];
-  const links: string[] = [];
-  const fontChangesPerRow: number[] = [];
-  for (let page = 1; page <= document.numPages; page++) {
-    const pdfPage = await document.getPage(page);
-    text.push((await pdfPage.getTextContent()).items.map(item => 'str' in item ? item.str : '').join(' '));
-    links.push(...(await pdfPage.getAnnotations()).map(item => item.unsafeUrl).filter(Boolean));
-    let fonts = 0;
-    for (const op of (await pdfPage.getOperatorList()).fnArray) {
-      if (op === OPS.beginText) fonts = 0;
-      if (op === OPS.setFont) fonts++;
-      if (op === OPS.endText) fontChangesPerRow.push(fonts);
+  try {
+    const path = join(directory, `${name}.pdf`);
+    writeFileSync(path, generateTextPdf(lines, font()));
+    const document = await getDocument({ data: new Uint8Array(readFileSync(path)), useSystemFonts: false }).promise;
+    const text: string[] = [];
+    const links: string[] = [];
+    const fontChangesPerRow: number[] = [];
+    for (let page = 1; page <= document.numPages; page++) {
+      const pdfPage = await document.getPage(page);
+      text.push((await pdfPage.getTextContent()).items.map(item => 'str' in item ? item.str : '').join(' '));
+      links.push(...(await pdfPage.getAnnotations()).map(item => item.unsafeUrl).filter(Boolean));
+      let fonts = 0;
+      for (const op of (await pdfPage.getOperatorList()).fnArray) {
+        if (op === OPS.beginText) fonts = 0;
+        if (op === OPS.setFont) fonts++;
+        if (op === OPS.endText) fontChangesPerRow.push(fonts);
+      }
     }
+    const pages = document.numPages;
+    await document.destroy();
+    return { text: text.join(' '), pageTexts: text, links, pages, fontChangesPerRow };
+  } finally {
+    // mkdtemp owns this exact directory; retained audits use a separate evidence directory.
+    rmSync(directory, { recursive: true, force: true });
   }
-  const pages = document.numPages;
-  await document.destroy();
-  return { text: text.join(' '), pageTexts: text, links, pages, fontChangesPerRow };
 }
 describe('logical text PDF saved bytes', () => {
   it.each([['original', original], ['extended', extended]] as const)('preserves complete %s source in order', async (name, lines) => {
@@ -59,6 +64,20 @@ describe('logical text PDF saved bytes', () => {
   });
   it('fails closed on combined mark ligatures instead of returning reordered source', () => {
     expect(() => generateTextPdf(blocks(['السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ']), font())).toThrow('Text PDF content cannot be rendered safely.');
+  });
+  it('preserves punctuation following Arabic-Indic numbers and percentages', async () => {
+    const source = ['خفضت زمن استجابة الواجهة بنسبة ٢٠٪.', '"SQL 25% 2024" ٢٥٪ ٢٠٢٤.', '۲۰۲۴. ۲۵٪.',
+      'بلغت القيمة ١٬٢٣٤٫٥٦٪. (٢٠٢٤) +٢٥.', 'مقدار ۱٬۲۳۴٫۵۶٪. (۲۰۲۴) +۲۵.',
+      'مهندسة أولى | مختبرات الأرز', 'بكالوريوس in علوم الحاسب | جامعة المثال (2020)'];
+    expect(norm((await savedPdf(blocks(source), 'arabic-numeric-punctuation')).text)).toBe(norm(source.join(' ')));
+  });
+  it.each(['-٢٥', '-۲۵', '- ٢٥', '-\n۲۵'])('rejects PDFium hyphenation loss for %s', source => {
+    expect(() => generateTextPdf(blocks([source]), font())).toThrow('Text PDF content cannot be rendered safely.');
+    expect(() => generateTextPdf(blocks(['-', source.replace(/^-\s*/u, '')]), font())).toThrow('Text PDF content cannot be rendered safely.');
+    expect(() => generateTextPdf([{ kind: 'body', runs: [{ text: '-' }, { text: source.replace(/^-\s*/u, '') }] }], font())).toThrow('Text PDF content cannot be rendered safely.');
+  });
+  it('rejects ASCII-hyphen ranges and dates using Arabic numerals', () => {
+    for (const source of ['٢٠-٢٥', '۲۰-۲۵', '٢٠٢٢-٠١']) expect(() => generateTextPdf(blocks([source]), font())).toThrow('Text PDF content cannot be rendered safely.');
   });
   it('rejects compatibility ligatures that PDF.js rewrites to different scalars', () => {
     expect(() => generateTextPdf(blocks(['ﬁ']), font())).toThrow('Text PDF content cannot be rendered safely.');
