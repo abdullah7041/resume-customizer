@@ -8,6 +8,10 @@ import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { summarizeErrorForLog } from "../lib/sentry.js";
+import { generateTextPdf, validateTextPdfBlocks } from '../lib/text-pdf.js';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 
 
 import { existsSync } from "fs";
@@ -255,16 +259,67 @@ const baseHandler: Handler = async (event) => {
   let page: Page | null = null; // Declare outside try block for cleanup access
 
   try {
-    const { html, styles, filename, templateId, direction } = JSON.parse(event.body || "{}");
+    const textError = (status: number, code: string, message: string) => ({
+      statusCode: status,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ status, code, message, error: message }),
+    });
+    let payload: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(event.body || '{}');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+      payload = parsed as Record<string, unknown>;
+    } catch {
+      return textError(400, 'pdf/invalid-request', 'Invalid PDF request.');
+    }
+    const { html, styles, filename, templateId, direction } = payload;
     const safeFilename = sanitizeFilename(filename);
     const pageDirection = direction === "rtl" ? "rtl" : "ltr";
 
-    if (!html) {
+    if (payload.format !== undefined && payload.format !== 'text') {
+      return textError(400, 'pdf/invalid-request', 'Invalid PDF request.');
+    }
+    if (payload.format === 'text') {
+      let blocks;
+      try {
+        if (Object.keys(payload).some(key => !['format', 'blocks', 'templateId', 'filename'].includes(key)) ||
+            typeof templateId !== 'string' || !VALID_TEMPLATE_IDS.includes(templateId as typeof VALID_TEMPLATE_IDS[number]) ||
+            typeof filename !== 'string' || !filename.trim() || filename.length > 200) throw new Error();
+        const input = payload.blocks;
+        if (!Array.isArray(input) || input.some(block => !block || typeof block !== 'object' ||
+          Object.keys(block).some(key => !['kind', 'runs'].includes(key)) || !Array.isArray(block.runs) ||
+          block.runs.some((run: unknown) => !run || typeof run !== 'object' ||
+            Object.keys(run).some(key => !['text', 'href'].includes(key))))) throw new Error();
+        blocks = validateTextPdfBlocks(input);
+      } catch {
+        return textError(400, 'pdf/invalid-request', 'Invalid Text PDF request.');
+      }
+      let font: Uint8Array;
+      try {
+        // included_files retains this project-relative path under the function root.
+        // Using cwd also works after esbuild moves the handler into its bundle.
+        font = readFileSync(resolve(process.cwd(), 'netlify/assets/fonts/DejaVuSans.ttf'));
+        if (createHash('sha256').update(font).digest('hex') !== '7da195a74c55bef988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954') throw new Error();
+      } catch {
+        return textError(503, 'pdf/text-font-unavailable', 'Text PDF is temporarily unavailable. Please try another export option.');
+      }
+      try {
+        const bytes = generateTextPdf(blocks, font);
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`, 'Cache-Control': 'no-store' },
+          body: Buffer.from(bytes).toString('base64'), isBase64Encoded: true,
+        };
+      } catch {
+        return textError(422, 'pdf/text-unsupported', 'Text PDF content cannot be rendered safely. Please choose another export option.');
+      }
+    }
+    if (!html || typeof html !== 'string') {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing html" }) };
     }
 
     // Validate templateId to prevent header injection
-    const _sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId)
+    const _sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId as typeof VALID_TEMPLATE_IDS[number])
       ? templateId
       : 'modern-professional';
 

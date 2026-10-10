@@ -13,6 +13,7 @@ import { toCanvas } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { useResumeStore } from '../lib/stores/resumeStore';
 import { checkPdfBlob } from '../lib/utils/pdfTextCheck';
+import { getAuthHeaders } from '../services/api';
 
 let mockContentLanguage = null;
 
@@ -168,7 +169,114 @@ beforeEach(() => {
     });
     exportResumeAsDocx.mockClear();
     checkPdfBlob.mockResolvedValue({ state: 'text_checked', missingFieldIds: [] });
+    getAuthHeaders.mockResolvedValue({ Authorization: 'Bearer test-token' });
     useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
+});
+
+describe('Text PDF recovery review', () => {
+    const resume = { basics: { name: 'Noura Example', label: 'Analyst', summary: 'Saudi analyst SQL 25%' }, work: [], education: [], skills: [], projects: [] };
+    const setup = async () => {
+        checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
+        const view = renderWithProviders(<TemplateGallery resumeData={resume} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        await screen.findByRole('button', { name: 'Review Text PDF' });
+        return view;
+    };
+    const openReview = async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Review Text PDF' }));
+        return screen.findByRole('dialog', { name: 'Review Text PDF' });
+    };
+    it('requires explicit plain review and checks the captured source before downloading -text.pdf', async () => {
+        await setup();
+        const reviewButton = screen.getByRole('button', { name: 'Review Text PDF' });
+        reviewButton.focus();
+        const dialog = await openReview();
+        expect(dialog).toHaveTextContent('Saudi analyst SQL 25%');
+        expect(dialog).toHaveTextContent('different plain layout');
+        expect(saveAs).not.toHaveBeenCalled();
+        expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Download Text PDF' }));
+        await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'Noura_Example_Analyst-text.pdf'));
+        const body = JSON.parse(globalThis.fetch.mock.calls[1][1].body);
+        expect(body).toMatchObject({ format: 'text', templateId: 'modern-professional', filename: 'Noura_Example_Analyst-text', blocks: [{ kind: 'body', runs: [{ text: 'Template: Riyadh Noura Example Saudi analyst SQL 25%' }] }] });
+        expect(globalThis.fetch.mock.calls[1][1].headers.Authorization).toBe('Bearer test-token');
+        expect(checkPdfBlob).toHaveBeenCalledTimes(2);
+        expect(screen.getByRole('status')).toHaveTextContent('Text PDF — selectable text checked');
+    });
+    it('supports Escape and restores keyboard focus to the recovery review control', async () => {
+        await setup();
+        const button = screen.getByRole('button', { name: 'Review Text PDF' });
+        button.focus();
+        const dialog = await openReview();
+        expect(dialog.contains(document.activeElement)).toBe(true);
+        fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        expect(button).toHaveFocus();
+        expect(saveAs).not.toHaveBeenCalled();
+    });
+    it('dismisses review when the candidate document changes', async () => {
+        const view = await setup();
+        await openReview();
+        view.rerender(<DirectionProvider><TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary: 'Later private edit' } }} /></DirectionProvider>);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Review Text PDF' })).not.toBeInTheDocument();
+        expect(saveAs).not.toHaveBeenCalled();
+    });
+    it.each(['auth', 'render', 'blob', 'check'])('ignores stale Text PDF during %s without download or status', async boundary => {
+        const view = await setup();
+        await openReview();
+        let release;
+        const pending = new Promise(resolve => { release = resolve; });
+        if (boundary === 'auth') getAuthHeaders.mockImplementationOnce(() => pending);
+        if (boundary === 'render') globalThis.fetch.mockImplementationOnce(() => pending);
+        if (boundary === 'blob') globalThis.fetch.mockResolvedValueOnce({ ok: true, blob: () => pending });
+        if (boundary === 'check') checkPdfBlob.mockImplementationOnce(() => pending);
+        fireEvent.click(screen.getByRole('button', { name: 'Download Text PDF' }));
+        await waitFor(() => {
+            if (boundary === 'auth') expect(getAuthHeaders).toHaveBeenCalledTimes(2);
+            else if (boundary === 'check') expect(checkPdfBlob).toHaveBeenCalledTimes(2);
+            else expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+        });
+        view.rerender(<DirectionProvider><TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary: 'Later edit' } }} /></DirectionProvider>);
+        await act(async () => release(boundary === 'auth' ? { Authorization: 'Bearer test-token' } : boundary === 'check' ? { state: 'text_checked', missingFieldIds: [] } : boundary === 'blob' ? new Blob(['pdf']) : { ok: true, blob: async () => new Blob(['pdf']) }));
+        expect(saveAs).not.toHaveBeenCalled();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        if (boundary === 'auth') expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+    it('invalidates a reviewed snapshot when formatting changes', async () => {
+        const view = await setup();
+        await openReview();
+        useResumeStore.__setMockState({ displayOptions: { fontSize: 2, showPageBreaks: false, boldKeywords: false } });
+        view.rerender(<DirectionProvider><TemplateGallery resumeData={resume} /></DirectionProvider>);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        useResumeStore.__setMockState({ displayOptions: { fontSize: 1, showPageBreaks: false, boldKeywords: false } });
+    });
+    it.each(['nationality', 'keywords', 'evidence'])('dismisses review on changed %s export inputs even with unchanged visible props', async input => {
+        const view = await setup();
+        await openReview();
+        if (input === 'nationality') useResumeStore.__setMockState({ isSaudiNational: true });
+        if (input === 'keywords') useResumeStore.__setMockState({ optimizationMetrics: { jdKeywords: ['SQL'] } });
+        if (input === 'evidence') useResumeStore.__setMockState({ optimizations: [{ sectionId: 'summary', applied: false }] });
+        view.rerender(<DirectionProvider><TemplateGallery resumeData={resume} /></DirectionProvider>);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(saveAs).not.toHaveBeenCalled();
+        useResumeStore.__setMockState({ isSaudiNational: false, optimizationMetrics: { jdKeywords: [] }, optimizations: [] });
+    });
+    it.each(['unsupported', 'empty', 'font', '429', '503', 'unverified'])('keeps recovery available after %s and never downloads', async failure => {
+        await setup();
+        await openReview();
+        if (failure === 'unverified') checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
+        else if (failure === 'empty') globalThis.fetch.mockResolvedValueOnce({ ok: true, blob: async () => new Blob([]) });
+        else globalThis.fetch.mockResolvedValueOnce({ ok: false, status: failure === 'unsupported' ? 422 : failure === '429' ? 429 : 503, json: async () => ({ code: failure === 'font' ? 'pdf/text-font-unavailable' : 'pdf/text-unsupported' }) });
+        fireEvent.click(screen.getByRole('button', { name: 'Download Text PDF' }));
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Download Text PDF' })).not.toBeDisabled());
+        expect(saveAs).not.toHaveBeenCalled();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Retry PDF' })).toBeInTheDocument());
+        expect(screen.getByRole('button', { name: 'Choose image-only PDF' })).toBeInTheDocument();
+    });
 });
 
 afterEach(() => {
@@ -753,7 +861,7 @@ describe('TemplatesSection', () => {
             expect(analytics.trackExportSuccess).toHaveBeenCalledWith(expect.any(String), 'pdf_unverified');
         });
 
-        it('retries the reviewed snapshot after the current resume changes', async () => {
+        it('invalidates recovery after the current resume changes', async () => {
             const original = { basics: { name: 'Sara Ahmed', summary: 'Reviewed summary' }, work: [] };
             useResumeStore.__setMockState({ originalResume: original });
             globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
@@ -763,11 +871,8 @@ describe('TemplatesSection', () => {
             const later = { basics: { name: 'Sara Ahmed', summary: 'Later summary' }, work: [] };
             useResumeStore.__setMockState({ originalResume: later });
             view.rerender(<DirectionProvider><TemplateGallery /></DirectionProvider>);
-            fireEvent.click(screen.getByRole('button', { name: 'Retry PDF' }));
-            await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(2));
-            const body = JSON.parse(globalThis.fetch.mock.calls[1][1].body);
-            expect(body.html).toContain('Reviewed summary');
-            expect(body.html).not.toContain('Later summary');
+            expect(screen.queryByRole('button', { name: 'Retry PDF' })).not.toBeInTheDocument();
+            expect(globalThis.fetch).toHaveBeenCalledTimes(1);
         });
 
         it.each(['pdf', 'docx'])('blocks an included unresolved edit before %s generation and opens that section', async (format) => {
@@ -833,7 +938,7 @@ describe('TemplatesSection', () => {
             expect(globalThis.fetch).not.toHaveBeenCalled();
         });
 
-        it('uses the captured PDF preview after the resume changes during generation', async () => {
+        it('ignores the captured PDF when the resume changes during generation', async () => {
             useResumeStore.__setMockState({ originalResume: resume });
             let release;
             globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
@@ -841,8 +946,9 @@ describe('TemplatesSection', () => {
             fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
             await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
             useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
-            release({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) });
-            await waitFor(() => expect(saveAs).toHaveBeenCalled());
+            await act(async () => release({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) }));
+            expect(saveAs).not.toHaveBeenCalled();
+            expect(checkPdfBlob).not.toHaveBeenCalled();
             const body = JSON.parse(globalThis.fetch.mock.calls.find(([url]) => url === '/.netlify/functions/generate-pdf')[1].body);
             expect(body.html).toContain('Original summary');
             expect(body.html).not.toContain('Later summary');

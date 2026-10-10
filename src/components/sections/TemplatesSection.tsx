@@ -41,11 +41,19 @@ import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 import { directionFromLanguage } from "../../lib/utils/resumeDirection";
 import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
 import { checkPdfBlob, expectedPdfText } from '@/lib/utils/pdfTextCheck';
+import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
+import type { TextPdfBlock } from '@/types/text-pdf';
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/shadcn/dialog';
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
 const DRAG_HANDLE_KEYBOARD_STEP_PX = 12;
 const RECOVERY_BUTTON_CLASS = 'rounded-md border border-current px-3 py-2 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:hover:bg-white/10';
+const storeExportInputs = () => {
+  const state = useResumeStore.getState();
+  return JSON.stringify([state.originalResume, state.optimizations, state.showOptimized, state.isSaudiNational,
+    state.displayOptions, state.optimizationMetrics?.jdKeywords, state.optimizationOrigin]);
+};
 
 import { cn } from "../../lib/utils/cn";
 import type { ResumeSchema } from "../../types/resume";
@@ -236,12 +244,20 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
+  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; blocks: TextPdfBlock[]; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
+  const [textPdfReview, setTextPdfReview] = useState<NonNullable<typeof pdfRecovery> | null>(null);
+  const textReviewGenerationRef = useRef(0);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
   const exportAttemptIdRef = useRef(0);
-  const isCurrentExport = (id: number) => exportAttemptIdRef.current === id;
+  const renderedInputsRef = useRef('');
+  const capturedInputsRef = useRef<{ rendered: string; store: string } | null>(null);
+  const isCurrentExport = (id: number) => exportAttemptIdRef.current === id && (!capturedInputsRef.current ||
+    (capturedInputsRef.current.rendered === renderedInputsRef.current && capturedInputsRef.current.store === storeExportInputs()));
   const beginExport = () => {
     const id = ++exportAttemptIdRef.current;
+    capturedInputsRef.current = null;
+    textReviewGenerationRef.current += 1;
+    setTextPdfReview(null);
     setPdfRecovery(null);
     setPdfStatus(null);
     setPendingLegacyReview(null);
@@ -274,6 +290,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const optimizations = useResumeStore((state) => state.optimizations);
   const showOptimized = useResumeStore((state) => state.showOptimized);
   const optimizationOrigin = useResumeStore((state) => state.optimizationOrigin);
+  const isSaudiNational = useResumeStore((state) => state.isSaudiNational);
+  const optimizationMetrics = useResumeStore((state) => state.optimizationMetrics);
   // isSaudiNational is used by getActiveResume internally
   const getActiveResume = useResumeStore((state) => state.getActiveResume);
   const setStoreTemplate = useResumeStore((state) => state.setSelectedTemplate);
@@ -306,12 +324,28 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     // We must depend on these values so the memo recomputes when editor saves or optimizations change
     return getActiveResume();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useStoreData, getActiveResume, storeOriginalResume, optimizations, showOptimized]);
+  }, [useStoreData, getActiveResume, storeOriginalResume, optimizations, showOptimized, isSaudiNational]);
 
   // Determine which resume to use
   const resumeData = useStoreData
     ? (storeActiveResume || storeOriginalResume || propResumeData)
     : propResumeData;
+  const renderedInputs = JSON.stringify([resumeData, selectedTemplate.id, contentDirection, displayOptions]);
+  const currentStoreInputs = storeExportInputs();
+  useLayoutEffect(() => {
+    renderedInputsRef.current = renderedInputs;
+    if (capturedInputsRef.current && (capturedInputsRef.current.rendered !== renderedInputs || capturedInputsRef.current.store !== currentStoreInputs)) {
+      // A changed document/layout cannot publish an earlier review or async result.
+      exportAttemptIdRef.current += 1;
+      capturedInputsRef.current = null;
+      textReviewGenerationRef.current += 1;
+      setTextPdfReview(null);
+      setPdfRecovery(null);
+      setPdfStatus(null);
+      setExportError(null);
+      setIsDownloading(false);
+    }
+  }, [renderedInputs, currentStoreInputs, optimizationMetrics]);
   const hasRealResume = Boolean(resumeData?.basics?.name);
   const exportFailureMessage = t(
     'sections.templates.export.failed',
@@ -558,6 +592,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
       // 5. Send to Server (Netlify Function)
       const { getAuthHeaders } = await import('../../services/api');
+      if (!isCurrentExport(attempt.id)) return;
       const apiHeaders = await getAuthHeaders({ requireAuth: true });
       if (!isCurrentExport(attempt.id)) return;
       const response = await fetch('/.netlify/functions/generate-pdf', {
@@ -632,6 +667,75 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       setExportError(exportFailureMessage);
     } finally {
       clone.remove();
+      if (isCurrentExport(attempt.id)) setIsDownloading(false);
+    }
+  };
+
+  const downloadTextPdf = async (attempt: NonNullable<typeof pdfRecovery>) => {
+    if (isDownloading || !isCurrentExport(attempt.id) || textPdfReview !== attempt) return;
+    const reviewGeneration = textReviewGenerationRef.current;
+    const current = () => isCurrentExport(attempt.id) && reviewGeneration === textReviewGenerationRef.current;
+    setIsDownloading(true);
+    setExportError(null);
+    try {
+      if (!current()) return;
+      const { getAuthHeaders } = await import('../../services/api');
+      if (!current()) return;
+      const headers = await getAuthHeaders({ requireAuth: true });
+      if (!current()) return;
+      const filename = getSmartFilename(attempt.resume, attempt.templateId, 'pdf').replace(/\.pdf$/, '-text.pdf');
+      const response = await fetch('/.netlify/functions/generate-pdf', {
+        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: 'text', blocks: attempt.blocks, templateId: attempt.templateId, filename: filename.replace(/\.pdf$/, '') }),
+        signal: AbortSignal.timeout(SERVER_PDF_TIMEOUT_MS),
+      });
+      if (!current()) return;
+      if (!response.ok) {
+        let code: unknown;
+        try { code = (await response.json() as { code?: unknown }).code; } catch { /* Bounded local recovery copy. */ }
+        if (!current()) return;
+        setExportError(code === 'pdf/text-unsupported'
+          ? t('sections.templates.export.textUnsupported', 'Text PDF cannot safely render this content. Combined Arabic marks, compatibility ligatures and unsupported scripts may need another export option.')
+          : code === 'pdf/text-font-unavailable'
+            ? t('sections.templates.export.textUnavailable', 'Text PDF is temporarily unavailable. Try again or choose another export option.')
+            : response.status === 429 || response.status === 503 ? exportBusyMessage : exportFailureMessage);
+        return;
+      }
+      const blob = await response.blob();
+      if (!current()) return;
+      if (!blob.size) { setExportError(exportFailureMessage); return; }
+      const quality = await checkPdfBlob(blob, expectedPdfText(attempt.resume, attempt.preview));
+      if (!current()) return;
+      if (quality.state !== 'text_checked') {
+        setExportError(t('sections.templates.export.textUnverified', 'Text PDF did not pass the text check. Choose another export option.'));
+        return;
+      }
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('PDF read failed'));
+          reader.onerror = () => reject(new Error('PDF read failed'));
+          reader.readAsDataURL(blob);
+        });
+        if (!current()) return;
+        const anchor = document.createElement('a');
+        anchor.href = dataUrl; anchor.download = filename;
+        document.body.append(anchor); anchor.click(); anchor.remove();
+      } else {
+        if (!current()) return;
+        saveAs(blob, filename);
+      }
+      setTextPdfReview(null);
+      textReviewGenerationRef.current += 1;
+      setPdfRecovery(null);
+      setPdfStatus(t('sections.templates.export.textPdfChecked', 'Text PDF — selectable text checked'));
+      analytics.trackExportSuccess(attempt.templateId, 'pdf_text_checked');
+      requestValueMomentFeedbackPrompt('export_success');
+      useResumeStore.getState().setHasDownloaded(true);
+    } catch {
+      if (current()) setExportError(exportFailureMessage);
+    } finally {
       if (isCurrentExport(attempt.id)) setIsDownloading(false);
     }
   };
@@ -884,9 +988,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const reviewAndDownload = async (action: 'pdf' | 'docx', confirmation = legacyConfirmation, id = exportAttemptIdRef.current) => {
     if (!hasRealResume || !resumeData || !isCurrentExport(id)) return;
     // Capture the rendered PDF and canonical composition before the fingerprint's first await.
-    const previewSnapshot = action === 'pdf'
-      ? document.querySelector<HTMLElement>('[data-resume-preview]')?.cloneNode(true) as HTMLElement | undefined
-      : undefined;
+    const preview = action === 'pdf' ? document.querySelector<HTMLElement>('[data-resume-preview]') : null;
+    const blocks = preview ? captureTextPdfBlocks(preview) : [];
+    const previewSnapshot = preview ? cloneVisiblePdfPreview(preview) : undefined;
+    if (action === 'pdf') capturedInputsRef.current = { rendered: renderedInputsRef.current, store: storeExportInputs() };
     const state = useResumeStore.getState();
     const baseline = state.originalResume ?? resumeData;
     const missingBaseline = !state.originalResume && state.optimizations.some(edit => edit.applied);
@@ -923,7 +1028,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         setExportError(exportFailureMessage);
         return;
       }
-      await performDownloadPdf({ id, resume: snapshot.resume, preview: previewSnapshot, templateId: selectedTemplate.id as TemplateId,
+      await performDownloadPdf({ id, resume: snapshot.resume, preview: previewSnapshot, blocks, templateId: selectedTemplate.id as TemplateId,
         direction: contentDirection, marginTop: state.displayOptions?.marginTop, marginBottom: state.displayOptions?.marginBottom,
         keywords: [...(state.optimizationMetrics?.jdKeywords ?? [])], boldKeywords: state.displayOptions?.boldKeywords ?? true });
     } else {
@@ -1162,6 +1267,31 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           {pdfRecovery && (
             <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
               <div className="flex flex-wrap gap-2">
+                <Dialog open={!!textPdfReview} onOpenChange={open => {
+                  textReviewGenerationRef.current += 1;
+                  setTextPdfReview(open && isCurrentExport(pdfRecovery.id) ? pdfRecovery : null);
+                }}>
+                  <DialogTrigger asChild>
+                    <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx || !pdfRecovery.blocks.length}>{t('sections.templates.export.reviewTextPdf', 'Review Text PDF')}</button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogTitle>{t('sections.templates.export.reviewTextPdf', 'Review Text PDF')}</DialogTitle>
+                    <DialogDescription>{t('sections.templates.export.textPreviewDescription', 'This is a different plain layout with one left margin. Arabic and Latin text or links may use separate rows. Review every fact and link before downloading; the PDF must still pass the text check. This does not guarantee ATS compatibility.')}</DialogDescription>
+                    <p className="text-sm">{t('sections.templates.export.textLimits', 'Some combined Arabic marks, compatibility ligatures and unsupported scripts cannot be rendered safely. Other export options remain available.')}</p>
+                    <div className="space-y-3 rounded border bg-white p-4 text-black" dir="ltr">
+                      {textPdfReview?.blocks.map((block, index) => (
+                        <div key={index} className={block.kind === 'title' ? 'text-lg font-semibold' : block.kind === 'heading' ? 'font-semibold' : ''}>
+                          {block.runs.map((run, runIndex) => <div key={runIndex} className="whitespace-pre-wrap break-words" dir="auto">{run.href ? <a href={run.href} target="_blank" rel="noopener noreferrer" className="underline">{run.text}</a> : run.text}</div>)}
+                        </div>
+                      ))}
+                    </div>
+                    {exportError && <p role="alert" className="text-sm text-red-700 dark:text-red-200">{exportError}</p>}
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <DialogClose asChild><button type="button" className={RECOVERY_BUTTON_CLASS}>{t('sections.templates.export.closeTextReview', 'Back to export options')}</button></DialogClose>
+                      <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || !textPdfReview} onClick={() => textPdfReview && void downloadTextPdf(textPdfReview)}>{t('sections.templates.export.downloadTextPdf', 'Download Text PDF')}</button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadPdf(pdfRecovery)}>{t('sections.templates.export.retry', 'Retry PDF')}</button>
                 <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadDocx(pdfRecovery.resume, pdfRecovery)}>{t('sections.templates.export.downloadDocx', 'Download DOCX')}</button>
                 {pdfRecovery.blob && <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => {
