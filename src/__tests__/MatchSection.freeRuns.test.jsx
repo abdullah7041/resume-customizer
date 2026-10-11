@@ -1,11 +1,15 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { MatchSection } from '../components/sections/MatchSection';
+import { importJobFromUrl } from '../services/api';
 
 const FREE_MATCH_KEY = 'watheq:freeMatchRuns';
 const FREE_MATCH_LEGACY_KEY = 'watheq:freeMatchUsed';
 const language = vi.hoisted(() => ({ current: 'en' }));
+
+vi.mock('../services/api', () => ({ importJobFromUrl: vi.fn() }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -122,6 +126,41 @@ describe('MatchSection guest free-run counter', () => {
 });
 
 describe('MatchSection signed-in users never take the guest free-run path', () => {
+  it.each(['resume switch', 'parent replacement', 'manual edit'])('preserves imported criteria on a controlled-parent echo, then clears them on %s', async transition => {
+    const job = 'We need a backend engineer with Node.js experience.';
+    const criteria = { seniority: 'Entry level', employmentType: 'Full-time', jobFunction: 'Engineering', industries: 'Software' };
+    importJobFromUrl.mockResolvedValueOnce({ status: 'ok', jobText: job, criteria, source: 'json_ld', confidence: 'high' });
+    const onAnalyzeMatchAI = vi.fn().mockResolvedValue({ score: 70 });
+    function ControlledParent() {
+      const [jobDescription, setJobDescription] = useState('');
+      const [resumeContextKey, setResumeContextKey] = useState('a:one');
+      return <>
+        <button onClick={() => setResumeContextKey('b:two')}>Switch resume</button>
+        <button onClick={() => setJobDescription('Different job from parent')}>Replace parent job</button>
+        <MatchSection onAnalyzeMatchAI={onAnalyzeMatchAI} matchAnalysis={null} hasResume onClear={vi.fn()}
+          jobDescription={jobDescription} onJobDescriptionChange={setJobDescription} resumeContextKey={resumeContextKey} />
+      </>;
+    }
+    renderWithProviders(<ControlledParent />);
+    fireEvent.change(document.getElementById('jobUrl'), { target: { value: 'https://example.com/jobs/1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await waitFor(() => expect(document.getElementById('jobDescription')).toHaveValue(job));
+    const analyze = async () => {
+      fireEvent.click(screen.getByRole('button', { name: analyzeButtonName }));
+      fireEvent.click(await screen.findByRole('button', { name: /confirm/i }));
+      await waitFor(() => expect(onAnalyzeMatchAI).toHaveBeenCalled());
+    };
+    await analyze();
+    expect(onAnalyzeMatchAI).toHaveBeenLastCalledWith(job, expect.objectContaining({ importedCriteria: criteria }));
+    onAnalyzeMatchAI.mockClear();
+    if (transition === 'resume switch') fireEvent.click(screen.getByRole('button', { name: 'Switch resume' }));
+    else if (transition === 'parent replacement') fireEvent.click(screen.getByRole('button', { name: 'Replace parent job' }));
+    else fireEvent.change(document.getElementById('jobDescription'), { target: { value: `${job} SQL is required.` } });
+    await analyze();
+    expect(onAnalyzeMatchAI).toHaveBeenLastCalledWith(transition === 'parent replacement' ? 'Different job from parent' : transition === 'manual edit' ? `${job} SQL is required.` : job,
+      expect.objectContaining({ importedCriteria: null }));
+  });
+
   it('replaces the job editor text when the active resume context changes', () => {
     const common = { onAnalyzeMatchAI: vi.fn(), matchAnalysis: null, hasResume: true, onClear: vi.fn() };
     const view = renderWithProviders(<MatchSection {...common} resumeContextKey="a:one" jobDescription="A job description" />);

@@ -267,6 +267,7 @@ export function MatchSection({
     return getCompatibleStorageItem(LAST_JOB_KEY) ?? '';
   });
   const previousParentJob = useRef(jobDescription);
+  const previousResumeContextKey = useRef<string | undefined>(undefined);
   const lastLocalEdit = useRef<string | null>(null);
   const updateJobText = (text: string) => {
     lastLocalEdit.current = text;
@@ -307,6 +308,8 @@ export function MatchSection({
   }, [jobDescription]);
 
   useEffect(() => {
+    if (resumeContextKey === previousResumeContextKey.current) return;
+    previousResumeContextKey.current = resumeContextKey;
     if (resumeContextKey) {
       setJobText(jobDescription ?? '');
       setImportedCriteria(null);

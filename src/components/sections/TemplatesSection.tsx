@@ -696,7 +696,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         try { code = (await response.json() as { code?: unknown }).code; } catch { /* Bounded local recovery copy. */ }
         if (!current()) return;
         setExportError(code === 'pdf/text-unsupported'
-          ? t('sections.templates.export.textUnsupported', 'Text PDF cannot safely render this content. Combined Arabic marks, compatibility ligatures, unsupported scripts or ASCII hyphens before Arabic numerals may need another export option.')
+          ? t('sections.templates.export.textUnsupported', 'Text PDF cannot safely render this content. Combined Arabic marks, compatibility ligatures, unsupported scripts or ASCII hyphens before Arabic-Indic or Eastern Arabic digits may need another export option.')
           : code === 'pdf/text-font-unavailable'
             ? t('sections.templates.export.textUnavailable', 'Text PDF is temporarily unavailable. Try again or choose another export option.')
             : response.status === 429 || response.status === 503 ? exportBusyMessage : exportFailureMessage);
@@ -988,11 +988,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
   const reviewAndDownload = async (action: 'pdf' | 'docx', confirmation = legacyConfirmation, id = exportAttemptIdRef.current) => {
     if (!hasRealResume || !resumeData || !isCurrentExport(id)) return;
-    // Capture the rendered PDF and canonical composition before the fingerprint's first await.
+    // Capture every export's input identity and canonical composition before the fingerprint's first await.
     const preview = action === 'pdf' ? document.querySelector<HTMLElement>('[data-resume-preview]') : null;
     const blocks = preview ? captureTextPdfBlocks(preview) : [];
     const previewSnapshot = preview ? cloneVisiblePdfPreview(preview) : undefined;
-    if (action === 'pdf') capturedInputsRef.current = { rendered: renderedInputsRef.current, store: storeExportInputs() };
+    capturedInputsRef.current = { rendered: renderedInputsRef.current, store: storeExportInputs() };
     const state = useResumeStore.getState();
     const baseline = state.originalResume ?? resumeData;
     const missingBaseline = !state.originalResume && state.optimizations.some(edit => edit.applied);
@@ -1278,7 +1278,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogTitle>{t('sections.templates.export.reviewTextPdf', 'Review Text PDF')}</DialogTitle>
                     <DialogDescription>{t('sections.templates.export.textPreviewDescription', 'This is a different plain layout with one left margin. Arabic and Latin text or links may use separate rows. Review every fact and link before downloading; the PDF must still pass the text check. This does not guarantee ATS compatibility.')}</DialogDescription>
-                    <p className="text-sm">{t('sections.templates.export.textLimits', 'Some combined Arabic marks, compatibility ligatures, unsupported scripts and ASCII hyphens before Arabic numerals (including negative values, ranges and dates) cannot be rendered safely. Other export options remain available.')}</p>
+                    <p className="text-sm">{t('sections.templates.export.textLimits', 'Some combined Arabic marks, compatibility ligatures, unsupported scripts and ASCII hyphens before Arabic-Indic or Eastern Arabic digits (including negative values, ranges and dates) cannot be rendered safely. Other export options remain available.')}</p>
                     <div className="space-y-3 rounded border bg-white p-4 text-black" dir="ltr">
                       {textPdfReview?.blocks.map((block, index) => (
                         <div key={index} className={block.kind === 'title' ? 'text-lg font-semibold' : block.kind === 'heading' ? 'font-semibold' : ''}>

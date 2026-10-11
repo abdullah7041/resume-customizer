@@ -1021,17 +1021,46 @@ describe('TemplatesSection', () => {
             expect(checkPdfBlob).not.toHaveBeenCalled();
         });
 
-        it('uses the captured DOCX document after the resume changes during generation', async () => {
+        it.each(['resume', 'formatting', 'applied edits', 'template'])('cancels direct DOCX and clears busy state when %s changes during generation', async input => {
             useResumeStore.__setMockState({ originalResume: resume });
             let release;
             exportResumeAsDocx.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
-            renderWithProviders(<TemplateGallery />);
+            const view = renderWithProviders(<TemplateGallery />);
             fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
             await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalled());
-            useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
-            release(new Blob(['docx']));
-            await waitFor(() => expect(saveAs).toHaveBeenCalled());
+            expect(screen.getByRole('button', { name: 'Generating...' })).toBeDisabled();
+            if (input === 'resume') useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
+            if (input === 'formatting') useResumeStore.__setMockState({ displayOptions: { ...useResumeStore.getState().displayOptions, fontSize: 2 } });
+            if (input === 'applied edits') useResumeStore.__setMockState({ optimizations: [{ ...unresolved, applied: true }] });
+            if (input === 'template') fireEvent.click(screen.getByRole('button', { name: 'Khobar' }));
+            view.rerender(<DirectionProvider><TemplateGallery /></DirectionProvider>);
+            expect(screen.queryByRole('button', { name: 'Generating...' })).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /download docx/i })).not.toBeDisabled();
+            await act(async () => release(new Blob(['stale docx'])));
+            expect(saveAs).not.toHaveBeenCalled();
+            expect(useResumeStore.getState().setHasDownloaded).not.toHaveBeenCalled();
             expect(exportResumeAsDocx.mock.calls[0][0].basics.summary).toBe('Original summary');
+            useResumeStore.__setMockState({ displayOptions: { fontSize: 1, showPageBreaks: false, boldKeywords: false } });
+        });
+
+        it('cancels direct DOCX before generation when the resume changes during snapshot hashing', async () => {
+            useResumeStore.__setMockState({ originalResume: resume });
+            let releaseHash;
+            const digest = vi.spyOn(crypto.subtle, 'digest').mockImplementationOnce(() => new Promise(resolve => { releaseHash = resolve; }));
+            try {
+                const view = renderWithProviders(<TemplateGallery />);
+                fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
+                await waitFor(() => expect(digest).toHaveBeenCalled());
+                useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
+                view.rerender(<DirectionProvider><TemplateGallery /></DirectionProvider>);
+                await act(async () => releaseHash(new ArrayBuffer(32)));
+                expect(exportResumeAsDocx).not.toHaveBeenCalled();
+                expect(saveAs).not.toHaveBeenCalled();
+                expect(useResumeStore.getState().setHasDownloaded).not.toHaveBeenCalled();
+                expect(screen.getByRole('button', { name: /download docx/i })).not.toBeDisabled();
+            } finally {
+                digest.mockRestore();
+            }
         });
     });
 
