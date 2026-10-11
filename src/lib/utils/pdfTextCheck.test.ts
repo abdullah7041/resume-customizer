@@ -10,8 +10,8 @@ const blob = new Blob(['pdf'], { type: 'application/pdf' });
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 
 describe('PDF selectable text check', () => {
-  it('normalizes Arabic digits, whitespace, NFC and bidi controls', () => {
-    expect(comparePdfText('ليلى\u200f   ٢٠٢٤', expected)).toEqual({ state: 'text_checked', missingFieldIds: [] });
+  it('normalizes whitespace, NFC and bidi controls', () => {
+    expect(comparePdfText('ليلى\u200f   2024', expected)).toEqual({ state: 'text_checked', missingFieldIds: [] });
     expect(comparePdfText('', expected)).toEqual({ state: 'unverified', missingFieldIds: ['name', 'year'] });
     expect(comparePdfText('ليلى', expected)).toEqual({ state: 'unverified', missingFieldIds: ['year'] });
   });
@@ -21,14 +21,36 @@ describe('PDF selectable text check', () => {
       .toEqual({ state: 'text_checked', missingFieldIds: [] });
   });
 
-  it('checks only fields actually present in the captured preview', () => {
+  it('checks every visible block, including Arabic summary behind an English name', () => {
     const preview = document.createElement('div');
-    preview.innerHTML = 'ليلى Company 2024 Delivered results <span data-no-print>hidden@example.com</span>';
-    const resume = { basics: { name: 'ليلى', email: 'hidden@example.com' }, work: [{ name: 'Company', startDate: '2024', endDate: '2025', highlights: ['• Delivered results', 'Excluded bullet'] }] };
-    expect(expectedPdfText(resume as Parameters<typeof expectedPdfText>[0], preview)).toEqual({ fields: [
-      { id: 'name', text: 'ليلى' }, { id: 'work.0.name', text: 'Company' }, { id: 'work.0.startDate', text: '2024' },
-      { id: 'work.0.highlight', text: 'Delivered results' },
-    ] });
+    preview.innerHTML = '<h1>Nora Example</h1><p>مهندسة برمجيات ٢٠٢٤.</p><ul><li>First bullet</li><li>Second bullet 25%.</li></ul><p>Diploma - Computing</p><p>SQL, TypeScript</p><a href="https://example.test">Portfolio label</a>';
+    const captured = expectedPdfText({ basics: { name: 'Nora Example' } } as Parameters<typeof expectedPdfText>[0], preview);
+    const complete = 'Nora Example مهندسة برمجيات ٢٠٢٤. First bullet Second bullet 25%. Diploma - Computing SQL, TypeScript Portfolio label';
+    expect(comparePdfText(complete, captured).state).toBe('text_checked');
+    for (const omitted of ['مهندسة برمجيات ٢٠٢٤.', 'Second bullet 25%.', 'Diploma - Computing', 'SQL, TypeScript', 'Portfolio label']) {
+      expect(comparePdfText(complete.replace(omitted, ''), captured).state, omitted).toBe('unverified');
+    }
+  });
+
+  it('excludes cleaned hidden, private and non-exported content without consulting resume fields', () => {
+    const preview = document.createElement('div');
+    preview.innerHTML = '<p>Visible fact</p>' + ['data-no-print', 'hidden', 'aria-hidden="true"', 'data-private', 'data-private-answer', 'style="display:none"', 'style="visibility:hidden"', 'style="opacity:0"'].map(attribute => `<p ${attribute}>Secret fact</p>`).join('');
+    document.body.append(preview);
+    try {
+      expect(expectedPdfText({ basics: { name: 'Secret fact' } } as Parameters<typeof expectedPdfText>[0], preview)).toEqual({ fields: [{ id: 'preview.0', text: 'Visible fact' }] });
+    } finally { preview.remove(); }
+  });
+
+  it.each(['\u0000', '\ufffd'])('rejects invalid extracted character %j even with all expected facts', invalid => {
+    expect(comparePdfText(`ليلى 2024 ${invalid}`, expected).state).toBe('unverified');
+  });
+
+  it('preserves digit scripts and punctuation while accepting layout whitespace at scalar boundaries', () => {
+    const captured = { fields: [{ id: 'fact', text: 'سَلَام SQL ٢٥٪ - ۲۰۲۴.' }] };
+    expect(comparePdfText('س َ ل َ ام S Q L ٢ ٥ ٪ - ۲ ۰ ۲ ۴ .', captured).state).toBe('text_checked');
+    for (const changed of ['سَلَام SQL 25٪ - ۲۰۲۴.', 'سَلَام SQL ٢٥٪ - 2024.', 'سَلَام SQL ٢٥٪ ۲۰۲۴.']) {
+      expect(comparePdfText(changed, captured).state).toBe('unverified');
+    }
   });
 
   it('checks page text and destroys PDF.js resources', async () => {

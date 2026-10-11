@@ -1,39 +1,29 @@
 import type { ResumeSchema } from '@/types/resume';
 import { loadPdfjs } from '@/lib/utils/resumeText';
+import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 
 export interface ExpectedPdfText { fields: Array<{ id: string; text: string }> }
 export type PdfTextCheck = { state: 'text_checked' | 'unverified'; missingFieldIds: string[] };
 
-const normalize = (text: string) => text.normalize('NFC')
+// PDF.js may insert layout whitespace between scripts, punctuation and combining marks.
+const normalize = (text: string) => text
   .replace(/[\u200e\u200f\u061c\u202a-\u202e\u2066-\u2069]/g, '')
-  .replace(/[\u0660-\u0669\u06f0-\u06f9]/g, digit => String('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(digit) % 10))
-  .replace(/\s+/g, ' ').trim().toLowerCase();
+  .replace(/\s+/gu, '').normalize('NFC').toLowerCase();
 
 export function comparePdfText(extracted: string, expected: ExpectedPdfText): PdfTextCheck {
+  if (extracted.includes('\u0000') || extracted.includes('\ufffd')) {
+    return { state: 'unverified', missingFieldIds: expected.fields.map(field => field.id) };
+  }
   const text = normalize(extracted);
   const missingFieldIds = expected.fields.filter(field => !text.includes(normalize(field.text))).map(field => field.id);
   return { state: text && expected.fields.length > 0 && missingFieldIds.length === 0 ? 'text_checked' : 'unverified', missingFieldIds };
 }
 
-export function expectedPdfText(resume: ResumeSchema, preview: HTMLElement): ExpectedPdfText {
-  const captured = preview.cloneNode(true) as HTMLElement;
-  captured.querySelectorAll('[data-no-print], [hidden], [aria-hidden="true"]').forEach(element => element.remove());
-  const visible = normalize(captured.textContent ?? '');
-  const fields: ExpectedPdfText['fields'] = [];
-  const add = (id: string, text?: string) => {
-    if (text && visible.includes(normalize(text))) fields.push({ id, text });
-  };
-  add('name', resume.basics?.name);
-  add('email', resume.basics?.email);
-  add('phone', resume.basics?.phone);
-  resume.work?.forEach((job, index) => {
-    add(`work.${index}.name`, job.name);
-    add(`work.${index}.startDate`, job.startDate);
-    add(`work.${index}.endDate`, job.endDate);
-    add(`work.${index}.highlight`, job.highlights?.map(text => text.replace(/^\s*(?:[•·*\-–—]\s+)+/, '').trim())
-      .find(text => visible.includes(normalize(text))));
-  });
-  return { fields };
+export function expectedPdfText(_resume: ResumeSchema, preview: HTMLElement): ExpectedPdfText {
+  const blocks = captureTextPdfBlocks(cloneVisiblePdfPreview(preview));
+  return { fields: blocks.map((block, index) => ({
+    id: `preview.${index}`, text: block.runs.map(run => run.text).join(''),
+  })) };
 }
 
 export async function checkPdfBlob(blob: Blob, expected: ExpectedPdfText): Promise<PdfTextCheck> {

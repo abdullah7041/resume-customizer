@@ -16,7 +16,7 @@ import { buildEvidenceSources, validateEditEvidence } from '../../netlify/lib/op
 import { getTemplate } from '@/components/templates/registry';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { exportResumeAsDocx } from '@/services/exportDocx';
-import { comparePdfText } from '@/lib/utils/pdfTextCheck';
+import { comparePdfText, expectedPdfText } from '@/lib/utils/pdfTextCheck';
 import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 import type { OptimizationResult } from '@/types/templates';
 import type { StructuredEvidenceResume } from '@/types/optimization-evidence';
@@ -277,6 +277,8 @@ describe('captured production Text PDF artifacts', () => {
           }).toString()) as { version: string; pages: number; text: string; links: { url: string }[] };
           if (retain) writeFileSync(join(artifactDir, `${name}.json`), JSON.stringify({ expected, audit, blocks, rawResume: resume }, null, 2));
           expect(compact(audit.text), `${name}: complete saved PDF source`).toBe(compact(expected));
+          expect(comparePdfText(audit.text, expectedPdfText(resume, snapshot)), `${name}: shared complete preview check`)
+            .toEqual({ state: 'text_checked', missingFieldIds: [] });
           const links = blocks.flatMap(block => block.runs.map(run => run.href).filter(Boolean));
           for (const href of links) expect(audit.links.map(link => link.url)).toContain(href);
           expect(audit.pages).toBeGreaterThanOrEqual(label === 'multipage' ? 2 : 1);
