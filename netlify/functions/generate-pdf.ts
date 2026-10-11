@@ -9,7 +9,7 @@ import { withRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { summarizeErrorForLog } from "../lib/sentry.js";
 import { generateTextPdf, validateTextPdfBlocks } from '../lib/text-pdf.js';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
@@ -33,7 +33,16 @@ const isServerless = !process.env.NETLIFY_DEV && !!(process.env.NETLIFY || proce
 // Chromium executable path varies by environment
 const getChromiumPath = async (): Promise<string> => {
   if (isServerless) {
-    return await chromium.executablePath();
+    const executablePath = await chromium.executablePath();
+    // The packaged fonts.conf searches /tmp/fonts. Provision after extraction:
+    // creating that directory first would make Chromium skip its font archive.
+    const font = readFileSync(resolve(process.cwd(), 'netlify/assets/fonts/DejaVuSans.ttf'));
+    if (createHash('sha256').update(font).digest('hex') !== '7da195a74c55bef988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954') {
+      throw new Error('Bundled PDF font failed integrity validation.');
+    }
+    mkdirSync('/tmp/fonts', { recursive: true });
+    writeFileSync('/tmp/fonts/DejaVuSans.ttf', font);
+    return executablePath;
   }
 
   // Local development - find available browser

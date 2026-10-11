@@ -5,17 +5,19 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 const hostPlatform = process.platform;
 
-const { launch, executablePath, getUser, rateLimit, readFont } = vi.hoisted(() => ({
+const { launch, executablePath, getUser, rateLimit, readFont, mkdir, writeFont } = vi.hoisted(() => ({
   launch: vi.fn(),
   executablePath: vi.fn().mockResolvedValue('/tmp/chromium'),
   getUser: vi.fn(),
   rateLimit: vi.fn((_name: string, handler: Handler) => handler),
   readFont: vi.fn(),
+  mkdir: vi.fn(),
+  writeFont: vi.fn(),
 }));
 
 vi.mock('node:fs', async importOriginal => {
   const fs = await importOriginal<typeof import('node:fs')>();
-  return { ...fs, readFileSync: readFont };
+  return { ...fs, readFileSync: readFont, mkdirSync: mkdir, writeFileSync: writeFont };
 });
 
 vi.mock('puppeteer-core', () => ({ default: { launch } }));
@@ -34,6 +36,9 @@ vi.mock('../../lib/supabase-client.js', () => ({
 beforeEach(async () => {
   vi.resetModules();
   vi.clearAllMocks();
+  readFont.mockReset();
+  mkdir.mockReset();
+  writeFont.mockReset();
   getUser.mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null });
   const fs = await vi.importActual<typeof import('node:fs')>('node:fs');
   readFont.mockImplementation((path: string) => fs.readFileSync(path));
@@ -97,6 +102,43 @@ describe('PDF browser runtime selection', () => {
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     }));
     expect(executablePath).not.toHaveBeenCalled();
+    expect(readFont).not.toHaveBeenCalled();
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(writeFont).not.toHaveBeenCalled();
+  });
+});
+
+describe('serverless styled font provisioning', () => {
+  const call = async () => {
+    const { handler } = await import('../generate-pdf.js');
+    return handler({ httpMethod: 'POST', headers: { authorization: 'Bearer test-token' },
+      body: JSON.stringify({ html: '<p>English مرحبا</p>' }) } as unknown as HandlerEvent, {} as HandlerContext, () => {});
+  };
+  beforeEach(() => { vi.stubEnv('AWS_LAMBDA_FUNCTION_NAME', 'generate-pdf'); });
+  it('makes the approved font available before launch and retains it across pooled exports', async () => {
+    const fs = await vi.importActual<typeof import('node:fs')>('node:fs');
+    const approvedFont = fs.readFileSync(resolve(process.cwd(), 'netlify/assets/fonts/DejaVuSans.ttf'));
+    const files = new Map<string, Buffer>();
+    writeFont.mockImplementation((path: string, bytes: Buffer) => { files.set(path, bytes); });
+    const browser = await launch.getMockImplementation()?.();
+    launch.mockImplementation(async () => {
+      expect(files.get('/tmp/fonts/DejaVuSans.ttf')?.equals(approvedFont)).toBe(true);
+      return browser;
+    });
+    expect(await call()).toMatchObject({ statusCode: 200 });
+    expect(await call()).toMatchObject({ statusCode: 200 });
+    expect(files.get('/tmp/fonts/DejaVuSans.ttf')?.equals(approvedFont)).toBe(true);
+    expect(launch).toHaveBeenCalledTimes(1);
+    expect(mkdir).toHaveBeenCalledWith('/tmp/fonts', { recursive: true });
+    expect(executablePath.mock.invocationCallOrder[0]).toBeLessThan(writeFont.mock.invocationCallOrder[0]);
+  });
+  it.each(['read', 'integrity', 'directory', 'write'])('fails without PDF success when font %s fails', async failure => {
+    if (failure === 'read') readFont.mockImplementationOnce(() => { throw new Error('font unavailable'); });
+    if (failure === 'integrity') readFont.mockReturnValueOnce(Buffer.from('corrupted font'));
+    if (failure === 'directory') mkdir.mockImplementationOnce(() => { throw new Error('directory unavailable'); });
+    if (failure === 'write') writeFont.mockImplementationOnce(() => { throw new Error('write unavailable'); });
+    expect(await call()).toMatchObject({ statusCode: 500 });
+    expect(launch).not.toHaveBeenCalled();
   });
 });
 
