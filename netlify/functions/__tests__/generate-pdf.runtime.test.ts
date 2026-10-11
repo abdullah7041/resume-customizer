@@ -158,8 +158,9 @@ describe('authenticated text layout', () => {
   it('loads the included font from a built function root after esbuild relocation', async () => {
     const fs = await vi.importActual<typeof import('node:fs')>('node:fs');
     const workspace = fileURLToPath(new URL('../../../', import.meta.url));
-    const scratchParent = resolve(workspace, '.superpowers/sdd/2026-10-10-logical-text-pdf');
-    const root = fs.mkdtempSync(resolve(scratchParent, 'task-2-bundle-'));
+    // Keep external package resolution under the project without an ignored scratch parent.
+    const scratchParent = resolve(workspace);
+    const root = fs.mkdtempSync(resolve(scratchParent, 'watheq-text-pdf-bundle-'));
     if (!resolve(root).startsWith(scratchParent + sep)) throw new Error('Unexpected fixture path');
     try {
       const font = resolve(root, 'netlify/assets/fonts/DejaVuSans.ttf');
@@ -186,7 +187,7 @@ describe('authenticated text layout', () => {
       expect(launch).not.toHaveBeenCalled();
       expect(fs.readFileSync(resolve(workspace, 'netlify.toml'), 'utf8')).toContain('included_files = ["netlify/assets/fonts/DejaVuSans.ttf", "netlify/assets/fonts/LICENSE.txt"]');
     } finally {
-      // Delete only the unique task fixture directory just created under scratchParent.
+      // Delete only the unique bundle fixture directory just created under scratchParent.
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
