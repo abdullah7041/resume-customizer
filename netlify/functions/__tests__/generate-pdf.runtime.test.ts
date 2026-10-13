@@ -187,6 +187,25 @@ describe('authenticated text layout', () => {
     expect(launch).not.toHaveBeenCalled();
     expect(network).not.toHaveBeenCalled();
   });
+  it('returns a styled Arabic PDF through the authenticated font and layout boundary without Chromium', async () => {
+    const response = await call({ ...request, format: 'styled', blocks: [{ kind: 'body', runs: [{ text: 'لا تغيّر الحقائق. SQL 25% 2024 ٢٥٪ ٢٠٢٤' }] }],
+      presentation: [{ fontSize: 11, lineHeight: 16.5, color: '#123456', bold: false, italic: false, direction: 'rtl', align: 'right', spacingAfter: 6 }] });
+    expect(response).toMatchObject({ statusCode: 200, isBase64Encoded: true });
+    expect(Buffer.from(response.body, 'base64').subarray(0, 5).toString()).toBe('%PDF-');
+    expect(launch).not.toHaveBeenCalled();
+  });
+  it('rejects malformed styled geometry and inline ranges before loading the font', async () => {
+    const style = { fontSize: 11, lineHeight: 16.5, color: '#123456', bold: false, italic: false, direction: 'rtl', align: 'right', spacingAfter: 6 };
+    for (const extra of [{ presentation: [] }, { presentation: [{ ...style, fontSize: 100 }] },
+      { presentation: [{ ...style, emphasis: [{ start: -1, end: 5, bold: true, italic: false, color: '#123456' }] }] },
+      { presentation: [{ ...style, spacedBoundaries: [1000] }] }, { margins: { marginTop: 0 } }, { margins: { private: 'secret' } }]) {
+      const response = await call({ ...request, format: 'styled', presentation: [style], ...extra });
+      expect(response).toMatchObject({ statusCode: 400 });
+      expect(response.body).not.toContain('secret');
+    }
+    expect(readFont).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
+  });
   it('returns bounded font-load recovery without logging source or filesystem details', async () => {
     readFont.mockImplementationOnce(() => { throw new Error('missing /private/font'); });
     const log = vi.spyOn(console, 'error');

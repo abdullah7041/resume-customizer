@@ -8,7 +8,7 @@ import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { summarizeErrorForLog } from "../lib/sentry.js";
-import { generateTextPdf, validateTextPdfBlocks } from '../lib/text-pdf.js';
+import { generateTextPdf, validateTextPdfBlocks, validateStyledPdfStyles, validateStyledPdfMargins } from '../lib/text-pdf.js';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -285,13 +285,16 @@ const baseHandler: Handler = async (event) => {
     const safeFilename = sanitizeFilename(filename);
     const pageDirection = direction === "rtl" ? "rtl" : "ltr";
 
-    if (payload.format !== undefined && payload.format !== 'text') {
+    if (payload.format !== undefined && payload.format !== 'text' && payload.format !== 'styled') {
       return textError(400, 'pdf/invalid-request', 'Invalid PDF request.');
     }
-    if (payload.format === 'text') {
+    if (payload.format === 'text' || payload.format === 'styled') {
       let blocks;
+      let presentation;
+      let margins;
       try {
-        if (Object.keys(payload).some(key => !['format', 'blocks', 'templateId', 'filename'].includes(key)) ||
+        const keys = ['format', 'blocks', 'templateId', 'filename', ...(payload.format === 'styled' ? ['presentation', 'margins'] : [])];
+        if (Object.keys(payload).some(key => !keys.includes(key)) ||
             typeof templateId !== 'string' || !VALID_TEMPLATE_IDS.includes(templateId as typeof VALID_TEMPLATE_IDS[number]) ||
             typeof filename !== 'string' || !filename.trim() || filename.length > 200) throw new Error();
         const input = payload.blocks;
@@ -300,6 +303,7 @@ const baseHandler: Handler = async (event) => {
           block.runs.some((run: unknown) => !run || typeof run !== 'object' ||
             Object.keys(run).some(key => !['text', 'href'].includes(key))))) throw new Error();
         blocks = validateTextPdfBlocks(input);
+        if (payload.format === 'styled') { presentation = validateStyledPdfStyles(payload.presentation, blocks); margins = validateStyledPdfMargins(payload.margins); }
       } catch {
         return textError(400, 'pdf/invalid-request', 'Invalid Text PDF request.');
       }
@@ -313,7 +317,7 @@ const baseHandler: Handler = async (event) => {
         return textError(503, 'pdf/text-font-unavailable', 'Text PDF is temporarily unavailable. Please try another export option.');
       }
       try {
-        const bytes = generateTextPdf(blocks, font);
+        const bytes = generateTextPdf(blocks, font, presentation, margins);
         return {
           statusCode: 200,
           headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`, 'Cache-Control': 'no-store' },

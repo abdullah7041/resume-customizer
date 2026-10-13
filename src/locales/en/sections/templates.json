@@ -35,6 +35,8 @@
         "download": "Download PDF",
         "ats": "ATS-Friendly",
         "styled": "Styled",
+        "arabicLayout": "Arabic PDFs use DejaVu Sans with template colors, emphasis and spacing. Copied text may include standard text direction marks.",
+        "styledUnsupported": "This Arabic PDF could not preserve every character safely. Choose DOCX or review the Text PDF layout.",
         "failed": "Export failed. Please try again, or switch to the ATS-friendly template and retry.",
         "timeout": "Export is taking unusually long — bring this browser tab into focus (some browsers pause rendering work in background tabs) and try again.",
         "busy": "The PDF renderer was busy. Wait a few seconds and press Download again.",

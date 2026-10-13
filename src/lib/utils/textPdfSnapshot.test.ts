@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
+import { captureTextPdfBlocks, captureStyledPdfSnapshot, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 import { ModernProfessional } from '@/components/templates/ModernProfessional';
 import { ATSOptimized } from '@/components/templates/ATSOptimized';
 import { TechnicalEngineer } from '@/components/templates/TechnicalEngineer';
@@ -14,6 +14,39 @@ const resume = { basics: { name: 'Noura Example', label: 'Analyst', email: 'nour
 const compact = (value: string) => value.replace(/\s/g, '');
 
 describe('captureTextPdfBlocks', () => {
+  it('captures immutable styled Arabic content, headings and safe links while omitting private data', () => {
+    const preview = document.createElement('div');
+    preview.style.direction = 'rtl';
+    preview.innerHTML = '<h1 style="font-size:24px;color:rgb(18,52,86);font-weight:700;text-align:center">نورا مثال</h1><p style="font-size:16px;line-height:24px">لا تغيّر الحقائق. <a href="https://example.com/profile">Portfolio</a></p><p data-private>Secret</p>';
+    document.body.append(preview);
+    const snapshot = captureStyledPdfSnapshot(preview);
+    expect(snapshot.blocks.flatMap(block => block.runs.map(run => run.text)).join('')).toBe('نورا مثاللا تغيّر الحقائق. Portfolio');
+    expect(snapshot.styles).toHaveLength(snapshot.blocks.length);
+    expect(snapshot.styles[0]).toMatchObject({ fontSize: 18, color: '#123456', bold: true, align: 'center', direction: 'rtl' });
+    expect(snapshot.blocks[1].runs[1].href).toBe('https://example.com/profile');
+    preview.querySelector('h1')!.textContent = 'Later edit';
+    expect(snapshot.blocks[0].runs[0].text).toBe('نورا مثال');
+    preview.remove();
+  });
+  it('preserves point sizes, unitless line-height and explicit zero spacing', () => {
+    const preview = document.createElement('div');
+    preview.innerHTML = '<h1 style="font-size:20pt;line-height:1.6;margin-bottom:0">Title</h1>';
+    document.body.append(preview);
+    expect(captureStyledPdfSnapshot(preview).styles[0]).toMatchObject({ fontSize: 20, lineHeight: 32, spacingAfter: 0 });
+    preview.remove();
+  });
+  it('preserves chip gaps, inline emphasis and enclosing section spacing separately from source characters', () => {
+    const preview = document.createElement('div');
+    preview.innerHTML = '<section style="margin-bottom:16px"><p><strong>Engineering:</strong> TypeScript SQL</p><div style="display:flex;column-gap:8px"><span>TypeScript</span><span>SQL</span></div></section>';
+    document.body.append(preview);
+    const snapshot = captureStyledPdfSnapshot(preview);
+    expect(snapshot.blocks[1].runs[0].text).toBe('TypeScriptSQL');
+    expect(snapshot.styles[0].bold).toBe(false);
+    expect(snapshot.styles[0].emphasis[0]).toMatchObject({ start: 0, end: 12, bold: true });
+    expect(snapshot.styles[1].spacedBoundaries).toEqual([10]);
+    expect(snapshot.styles[1].spacingAfter).toBeGreaterThanOrEqual(12);
+    preview.remove();
+  });
   it.each([{ name: 'Modern', Template: ModernProfessional }, { name: 'ATS', Template: ATSOptimized }, { name: 'Technical', Template: TechnicalEngineer }, { name: 'Executive', Template: ExecutiveProfessional }])('preserves every displayed scalar and link from $name', ({ Template }) => {
     const { container } = render(createElement(Template, { resume }));
     const preview = container.firstElementChild as HTMLElement;

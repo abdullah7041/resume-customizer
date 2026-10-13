@@ -174,6 +174,19 @@ beforeEach(() => {
 });
 
 describe('Text PDF recovery review', () => {
+    it('sends the captured styled Arabic document directly and downloads only after the text gate', async () => {
+        const input = { basics: { name: 'Noura Example', label: 'Engineer', summary: 'لا تغيّر الحقائق. SQL 25% 2024 ٢٥٪ ٢٠٢٤' }, work: [], education: [], skills: [], projects: [] };
+        renderWithProviders(<TemplateGallery resumeData={input} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'Noura_Example_Engineer.pdf'));
+        const body = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
+        expect(body.format).toBe('styled');
+        expect(body.blocks.flatMap(block => block.runs.map(run => run.text)).join('')).toContain(input.basics.summary);
+        expect(body.presentation).toHaveLength(body.blocks.length);
+        expect(body.html).toBeUndefined();
+        expect(checkPdfBlob).toHaveBeenCalled();
+        expect(screen.getByRole('status')).toHaveTextContent('Selectable text checked');
+    });
     const resume = { basics: { name: 'Noura Example', label: 'Analyst', summary: 'Saudi analyst SQL 25%' }, work: [], education: [], skills: [], projects: [] };
     const setup = async () => {
         checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });

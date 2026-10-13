@@ -17,7 +17,7 @@ import { getTemplate } from '@/components/templates/registry';
 import TemplateRenderer from '@/components/templates/TemplateRenderer';
 import { exportResumeAsDocx } from '@/services/exportDocx';
 import { comparePdfText, expectedPdfText } from '@/lib/utils/pdfTextCheck';
-import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
+import { captureTextPdfBlocks, captureStyledPdfSnapshot, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 import type { OptimizationResult } from '@/types/templates';
 import type { StructuredEvidenceResume } from '@/types/optimization-evidence';
 
@@ -222,10 +222,10 @@ await doc.destroy();
 `;
 
 describe('captured production Text PDF artifacts', () => {
-  it('preserves complete visible source and job associations across four templates and four language/page cases', async () => {
+  it.each(['text', 'styled'] as const)('%s preserves complete visible source and job associations across four templates and four language/page cases', async format => {
     const { handler } = await import('../../netlify/functions/generate-pdf');
-    const artifactDir = join(process.cwd(), '.superpowers/sdd/2026-10-10-logical-text-pdf/evidence/production-capture');
-    const retain = process.env.WRITE_TEXT_PDF_ARTIFACTS === '1';
+    const artifactDir = join(process.cwd(), format === 'styled' ? '.superpowers/sdd/2026-10-12-styled-arabic/production-capture' : '.superpowers/sdd/2026-10-10-logical-text-pdf/evidence/production-capture');
+    const retain = process.env[format === 'styled' ? 'WRITE_STYLED_PDF_ARTIFACTS' : 'WRITE_TEXT_PDF_ARTIFACTS'] === '1';
     if (retain) mkdirSync(artifactDir, { recursive: true });
     const manifest: Record<string, unknown> = {};
     const compact = (text: string) => text.replace(/\s/gu, '');
@@ -251,6 +251,7 @@ describe('captured production Text PDF artifacts', () => {
           if (!preview) throw new Error(`${name}: production preview missing`);
           const snapshot = cloneVisiblePdfPreview(preview);
           const blocks = captureTextPdfBlocks(snapshot);
+          const presentation = format === 'styled' ? captureStyledPdfSnapshot(preview).styles : undefined;
           const expected = blocks.flatMap(block => block.runs.map(run => run.text)).join('\n');
           expect(compact(expected), `${name}: all captured DOM source`).toBe(compact(snapshot.textContent ?? ''));
           const facts = [resume.basics.name, resume.basics.label, resume.basics.email, resume.basics.phone,
@@ -265,7 +266,7 @@ describe('captured production Text PDF artifacts', () => {
           expect(compact(expected).indexOf(compact(resume.work[0].highlights[1]))).toBeLessThan(secondEmployer);
           expect(compact(expected).indexOf(compact(resume.work[1].highlights[1]))).toBeGreaterThan(secondEmployer);
           const response = await handler({ httpMethod: 'POST', headers: { authorization: 'Bearer fictional-test' },
-            body: JSON.stringify({ format: 'text', blocks, templateId, filename: `${name}-text.pdf` })
+            body: JSON.stringify({ format, blocks, ...(presentation ? { presentation } : {}), templateId, filename: `${name}-${format}.pdf` })
           } as unknown as Parameters<typeof handler>[0], {} as Parameters<typeof handler>[1]);
           if (!response || response.statusCode !== 200) throw new Error(`${name}: Text PDF response ${response ? response.statusCode : 'void'}`);
           const pdf = Buffer.from(response.body, 'base64');
@@ -275,7 +276,7 @@ describe('captured production Text PDF artifacts', () => {
             input: retain ? readFileSync(pdfPath) : pdf, cwd: process.cwd(), maxBuffer: 8 * 1024 * 1024,
             env: { ...process.env, TEXT_PDF_RENDER_PREFIX: retain ? join(artifactDir, name) : '' },
           }).toString()) as { version: string; pages: number; text: string; links: { url: string }[] };
-          if (retain) writeFileSync(join(artifactDir, `${name}.json`), JSON.stringify({ expected, audit, blocks, rawResume: resume }, null, 2));
+          if (retain) writeFileSync(join(artifactDir, `${name}.json`), JSON.stringify({ expected, audit, blocks, presentation, rawResume: resume }, null, 2));
           expect(compact(audit.text), `${name}: complete saved PDF source`).toBe(compact(expected));
           expect(comparePdfText(audit.text, expectedPdfText(resume, snapshot)), `${name}: shared complete preview check`)
             .toEqual({ state: 'text_checked', missingFieldIds: [] });
@@ -287,7 +288,7 @@ describe('captured production Text PDF artifacts', () => {
           const projections = [resume.basics.location.countryCode, resume.skills[0].name, resume.education[0].startDate]
             .filter(fact => !compact(expected).includes(compact(fact)));
           manifest[name] = { sha256: createHash('sha256').update(pdf).digest('hex'), bytes: pdf.length, pages: audit.pages,
-            templateId, label, rawResume: resume, blocks, expected, links, projections, pdfjs: { ...audit, pass: true } };
+            templateId, label, rawResume: resume, blocks, presentation, expected, links, projections, pdfjs: { ...audit, pass: true } };
         } finally { host.remove(); }
       }
     }

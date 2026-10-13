@@ -41,8 +41,9 @@ import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 import { directionFromLanguage } from "../../lib/utils/resumeDirection";
 import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
 import { checkPdfBlob, expectedPdfText } from '@/lib/utils/pdfTextCheck';
-import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
-import type { TextPdfBlock } from '@/types/text-pdf';
+import { captureStyledPdfSnapshot, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
+import { containsArabic } from '@/lib/utils/arabicTextUtils';
+import type { TextPdfBlock, StyledPdfStyle } from '@/types/text-pdf';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/shadcn/dialog';
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
@@ -244,7 +245,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; blocks: TextPdfBlock[]; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
+  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; blocks: TextPdfBlock[]; presentation: StyledPdfStyle[]; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; marginSide?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
   const [textPdfReview, setTextPdfReview] = useState<NonNullable<typeof pdfRecovery> | null>(null);
   const textReviewGenerationRef = useRef(0);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
@@ -504,92 +505,101 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     try {
       const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
+      const styledArabic = attempt.blocks.some(block => block.runs.some(run => containsArabic(run.text)));
+      let requestBody: Record<string, unknown>;
+      if (styledArabic) {
+        requestBody = { format: 'styled', blocks: attempt.blocks, presentation: attempt.presentation,
+          margins: { marginTop: attempt.marginTop, marginBottom: attempt.marginBottom, marginSide: attempt.marginSide },
+          templateId: attempt.templateId, filename: filename.replace(/\.pdf$/, '') };
+      } else {
 
-      // 1. Clone DOM off-screen
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      clone.style.top = '0';
-      document.body.appendChild(clone);
+        // 1. Clone DOM off-screen
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        clone.style.top = '0';
+        document.body.appendChild(clone);
 
-      // 2. Run pagination mutations
-      const wrapper = (
-        clone.closest?.('[style*="transform"]') as HTMLElement | null
-        ?? clone.parentElement?.closest?.('[style*="transform"]') as HTMLElement | null
-      );
-      if (wrapper) {
-        wrapper.style.transform = 'none';
-        wrapper.style.width = '210mm';
-      }
-      if (clone.style.transform) clone.style.transform = 'none';
-      clone.style.width = '210mm';
-
-      const innerTf = clone.querySelectorAll('[style*="transform"]');
-      innerTf.forEach(el => {
-        const htmlEl = el as HTMLElement;
-        htmlEl.style.transform = 'none';
-        htmlEl.style.width = '210mm';
-        htmlEl.style.maxWidth = '100%';
-        htmlEl.style.height = 'auto'; // let height grow organically
-        htmlEl.style.minHeight = 'auto'; // Must NOT be 297mm — that forces a full-page blank gap when content is shorter
-      });
-      
-      clone.style.overflow = 'visible';
-      clone.style.boxSizing = 'border-box';
-
-      // 3. inline all images as base64 so Puppeteer doesn't need to load external URLs.
-      // Images are independent, so fetch them concurrently.
-      const images = clone.querySelectorAll('img');
-      await Promise.all(Array.from(images).map(async (img) => {
-        try {
-          if (img.src && !img.src.startsWith('data:')) {
-            const res = await fetch(img.src);
-            const imageBlob = await res.blob();
-            const base64Data = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.readAsDataURL(imageBlob);
-            });
-            img.src = base64Data as string;
-          }
-        } catch (e) {
-          console.warn('Could not inline image for PDF:', summarizeErrorForConsole(e));
+        // 2. Run pagination mutations
+        const wrapper = (
+          clone.closest?.('[style*="transform"]') as HTMLElement | null
+          ?? clone.parentElement?.closest?.('[style*="transform"]') as HTMLElement | null
+        );
+        if (wrapper) {
+          wrapper.style.transform = 'none';
+          wrapper.style.width = '210mm';
         }
-      }));
-      if (!isCurrentExport(attempt.id)) return;
+        if (clone.style.transform) clone.style.transform = 'none';
+        clone.style.width = '210mm';
 
-      // 4. Remove no-print elements
-      clone.querySelectorAll('[data-no-print]').forEach(el => el.remove());
-      forceLightThemeForPdf(clone);
+        const innerTf = clone.querySelectorAll('[style*="transform"]');
+        innerTf.forEach(el => {
+          const htmlEl = el as HTMLElement;
+          htmlEl.style.transform = 'none';
+          htmlEl.style.width = '210mm';
+          htmlEl.style.maxWidth = '100%';
+          htmlEl.style.height = 'auto'; // let height grow organically
+          htmlEl.style.minHeight = 'auto'; // Must NOT be 297mm — that forces a full-page blank gap when content is shorter
+        });
 
-      // 5. Capture HTML + styles (STRIP off-screen positioning first!)
-      clone.style.position = 'static';
-      clone.style.left = '0';
-      clone.style.top = '0';
-      const html = clone.outerHTML;
+        clone.style.overflow = 'visible';
+        clone.style.boxSizing = 'border-box';
 
-      // Capture all internal <style> blocks
-      const inlineStyles = Array.from(document.querySelectorAll('style'))
-        .map(style => style.innerHTML)
-        .join('\n');
-
-      // Capture and fetch all external <link rel="stylesheet"> files
-      const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
-      const hrefs = Array.from(linkTags).map(link => (link as HTMLLinkElement).href);
-      const externalStyles = await Promise.all(
-        hrefs.map(async href => {
+        // 3. inline all images as base64 so Puppeteer doesn't need to load external URLs.
+        // Images are independent, so fetch them concurrently.
+        const images = clone.querySelectorAll('img');
+        await Promise.all(Array.from(images).map(async (img) => {
           try {
-            const resp = await fetch(href);
-            return await resp.text();
-          } catch {
-            return '';
+            if (img.src && !img.src.startsWith('data:')) {
+              const res = await fetch(img.src);
+              const imageBlob = await res.blob();
+              const base64Data = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(imageBlob);
+              });
+              img.src = base64Data as string;
+            }
+          } catch (e) {
+            console.warn('Could not inline image for PDF:', summarizeErrorForConsole(e));
           }
-        })
-      );
-      if (!isCurrentExport(attempt.id)) return;
+        }));
+        if (!isCurrentExport(attempt.id)) return;
 
-      const styles = inlineStyles + '\n' + externalStyles.join('\n');
+        // 4. Remove no-print elements
+        clone.querySelectorAll('[data-no-print]').forEach(el => el.remove());
+        forceLightThemeForPdf(clone);
 
-      clone.remove();
+        // 5. Capture HTML + styles (STRIP off-screen positioning first!)
+        clone.style.position = 'static';
+        clone.style.left = '0';
+        clone.style.top = '0';
+        const html = clone.outerHTML;
+
+        // Capture all internal <style> blocks
+        const inlineStyles = Array.from(document.querySelectorAll('style'))
+          .map(style => style.innerHTML)
+          .join('\n');
+
+        // Capture and fetch all external <link rel="stylesheet"> files
+        const linkTags = document.querySelectorAll('link[rel="stylesheet"]');
+        const hrefs = Array.from(linkTags).map(link => (link as HTMLLinkElement).href);
+        const externalStyles = await Promise.all(
+          hrefs.map(async href => {
+            try {
+              const resp = await fetch(href);
+              return await resp.text();
+            } catch {
+              return '';
+            }
+          })
+        );
+        if (!isCurrentExport(attempt.id)) return;
+
+        const styles = inlineStyles + '\n' + externalStyles.join('\n');
+
+        clone.remove();
+        requestBody = { html, styles, templateId: attempt.templateId, filename: filename.replace('.pdf', ''), direction: attempt.direction };
+      }
 
       // 5. Send to Server (Netlify Function)
       const { getAuthHeaders } = await import('../../services/api');
@@ -599,7 +609,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html, styles, templateId: attempt.templateId, filename: filename.replace('.pdf', ''), direction: attempt.direction }),
+        body: JSON.stringify(requestBody),
         // Without this the client waits out the gateway's own kill, then starts a
         // second slow path on top of it.
         signal: AbortSignal.timeout(SERVER_PDF_TIMEOUT_MS),
@@ -607,6 +617,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       if (!isCurrentExport(attempt.id)) return;
 
       if (!response.ok) {
+        if (styledArabic && response.status === 422) {
+          setPdfRecovery(attempt);
+          setExportError(t('sections.templates.export.styledUnsupported', 'This Arabic PDF could not preserve every character safely. Choose DOCX or review the Text PDF layout.'));
+          analytics.trackExportFailed(attempt.templateId, 'pdf', 'styled_unsupported');
+          return;
+        }
         // 429 (rate limited) and 503 (renderer still starting) are both 'try again
         // shortly', not 'your export is broken'. Rasterising the page instead would
         // spend 20 more seconds to produce a worse PDF for a problem that fixes
@@ -990,8 +1006,18 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     if (!hasRealResume || !resumeData || !isCurrentExport(id)) return;
     // Capture every export's input identity and canonical composition before the fingerprint's first await.
     const preview = action === 'pdf' ? document.querySelector<HTMLElement>('[data-resume-preview]') : null;
-    const blocks = preview ? captureTextPdfBlocks(preview) : [];
     const previewSnapshot = preview ? cloneVisiblePdfPreview(preview) : undefined;
+    let blocks: TextPdfBlock[] = [], presentation: StyledPdfStyle[] = [];
+    if (previewSnapshot) {
+      const styledClone = previewSnapshot.cloneNode(true) as HTMLElement;
+      styledClone.style.position = 'absolute'; styledClone.style.left = '-9999px';
+      styledClone.style.direction = contentDirection;
+      document.body.append(styledClone);
+      try {
+        forceLightThemeForPdf(styledClone);
+        ({ blocks, styles: presentation } = captureStyledPdfSnapshot(styledClone));
+      } finally { styledClone.remove(); }
+    }
     capturedInputsRef.current = { rendered: renderedInputsRef.current, store: storeExportInputs() };
     const state = useResumeStore.getState();
     const baseline = state.originalResume ?? resumeData;
@@ -1029,8 +1055,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         setExportError(exportFailureMessage);
         return;
       }
-      await performDownloadPdf({ id, resume: snapshot.resume, preview: previewSnapshot, blocks, templateId: selectedTemplate.id as TemplateId,
-        direction: contentDirection, marginTop: state.displayOptions?.marginTop, marginBottom: state.displayOptions?.marginBottom,
+      await performDownloadPdf({ id, resume: snapshot.resume, preview: previewSnapshot, blocks, presentation, templateId: selectedTemplate.id as TemplateId,
+        direction: contentDirection, marginTop: state.displayOptions?.marginTop, marginBottom: state.displayOptions?.marginBottom, marginSide: state.displayOptions?.marginSide,
         keywords: [...(state.optimizationMetrics?.jdKeywords ?? [])], boldKeywords: state.displayOptions?.boldKeywords ?? true });
     } else {
       await performDownloadDocx(snapshot.resume, undefined, id);
@@ -1253,6 +1279,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
 
           {showAdvancedFormatting && <KeywordBoldingToggle />}
+          {contentLanguage !== 'en' && (
+            <p className="text-xs text-gray-600 dark:text-gray-300">
+              {t('sections.templates.export.arabicLayout', 'Arabic PDFs use DejaVu Sans with template colors, emphasis and spacing. Copied text may include standard text direction marks.')}
+            </p>
+          )}
 
           {exportError && (
             <div
