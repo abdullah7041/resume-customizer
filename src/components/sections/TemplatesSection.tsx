@@ -678,7 +678,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     } catch (err) {
       if (!isCurrentExport(attempt.id)) return;
-      console.error('[PDFDownload] Server-side generation failed:', summarizeErrorForConsole(err));
+      console.error(`[PDFDownload] Server-side generation failed: ${summarizeErrorForConsole(err).message}`);
       analytics.trackExportFailed(attempt.templateId, 'pdf', 'server_error');
       setPdfRecovery(attempt);
       setExportError(exportFailureMessage);
