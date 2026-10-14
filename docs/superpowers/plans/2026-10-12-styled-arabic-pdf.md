@@ -27,8 +27,8 @@ Files: netlify/lib/text-pdf.ts, src/types/text-pdf.ts, netlify/lib/__tests__/tex
 Interface: generateTextPdf(blocks, approved font bytes, optional presentation, optional margins) returns bounded PDF bytes; calls without presentation remain compatible.
 - [x] Add saved-byte RED regressions for correct RTL placement, bracket outlines, inline shaping, complete source and links.
 - [x] Implement bounded styles, inline wrapping/bidi placement and complete-line ActualText using the existing encoder.
-- [ ] Verify complete saved bytes in three readers, font rollover, pages and visual output.
-- [ ] Run focused tests/types and commit scoped files.
+- [x] Verify complete saved bytes in three readers, font rollover, pages and visual output.
+- [x] Run focused tests/types and commit scoped files.
 
 ### Task 2: Snapshot, endpoint and client
 
@@ -36,12 +36,14 @@ Files: textPdfSnapshot.ts and tests; generate-pdf.ts and tests; TemplatesSection
 Interface: format styled plus validated captured blocks through the same authenticated endpoint; stale attempts never save.
 - [x] Add RED capture/handler/client regressions preserving visible facts and excluding hidden data.
 - [x] Capture bounded presentation attributes and connect Arabic styled requests to the encoder.
-- [ ] Run focused function/client tests, types and touched lint; commit scoped files.
+- [x] Run focused function/client tests, types and touched lint; commit scoped files.
 
 ### Task 3: Release qualification
 
 - [x] Extend the real four-template/language matrix for styled bytes, full source, links and visual checks.
-- [ ] Complete independent three-reader audits and inspect page images.
-- [ ] Run lint, types, full tests, build and i18n separately; resolve failures.
-- [ ] Obtain fresh code review, fix important findings with regression tests, push PR branch.
+- [x] Complete independent three-reader audits and inspect page images.
+- [x] Run lint, types, full tests, build and i18n separately; resolve failures.
+- [x] Obtain fresh code review, fix important findings with regression tests, push PR branch.
 - [ ] Verify CI/security/Netlify and actual hosted bytes; rewrite PR description and mark ready only when required gates pass.
+
+Application head `6e4b6e116a9d7b1a6b4563d7c603c120d9e3e747`: CI, GitGuardian, exact-head Netlify deployment and public delivery pass. PR description is updated. Only authenticated hosted PDF/clipboard qualification remains blocked by the browser request-header-policy loader; the PR remains draft.

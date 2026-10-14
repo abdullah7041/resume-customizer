@@ -2,7 +2,7 @@
 
 PR: https://github.com/abdullah7041/resume-customizer/pull/146
 
-Repair continued on 2026-10-13 in the attached `candidate-evidence-pilot/resume-customizer` worktree, branch `codex/candidate-evidence-pilot`, starting head `6aece19254b0da379da3ad42d0c6a5eb01c4efdb`. Main and unrelated untracked documents are preserved. Final CI and hosted qualification follow the repair push; this receipt alone does not declare production readiness.
+Repair continued on 2026-10-13 in the attached `candidate-evidence-pilot/resume-customizer` worktree, branch `codex/candidate-evidence-pilot`, starting head `6aece19254b0da379da3ad42d0c6a5eb01c4efdb`. Application repair `6e4b6e116a9d7b1a6b4563d7c603c120d9e3e747` is committed and pushed. Main and unrelated untracked documents are preserved. CI and deployment pass; authenticated hosted-file qualification is still blocked, so this receipt does not declare production readiness.
 
 ## Final implementation
 
@@ -18,8 +18,9 @@ PDFium needs narrowly generated U+200E direction hints in complete-line ActualTe
 
 - Final encoder: 54 saved-byte/validation tests pass, including drawn bracket outlines, nested punctuation positions, joined Arabic/diacritic style boundaries, mixed LTR order, inner-ligature links and positive mark-link rectangles.
 - Final endpoint: 29 tests pass, including authenticated bounded styled requests and malformed presentation/geometry rejection. Client/capture files pass 105 tests.
-- A combined Windows run hit cold-import and large-reader timing limits, with a following mock contaminated by the timed-out import. Fresh isolated endpoint and encoder runs pass. The existing large plain-reader fixture retains exact assertions with a 90-second reader allowance; generation of its 310 rows was measured at 9.6 seconds. Final CI remains the broad gate.
-- Frontend/function types pass. Source lint excludes ignored historical `.superpowers` QA scripts; CI does not contain those files. Build and translations pass; final deployment checks are pending.
+- A combined Windows run hit cold-import and large-reader timing limits, with a following mock contaminated by the timed-out import. Fresh isolated endpoint and encoder runs pass. The existing large plain-reader fixture retains exact assertions with a 90-second reader allowance; generation of its 310 rows was measured at 9.6 seconds. Full CI subsequently passes on the application head.
+- [CI 38521106557](https://github.com/abdullah7041/resume-customizer/actions/runs/38521106557) passes normal lint, frontend/function types and 227 test files: 2,482 tests passed, three skipped, 116.84 seconds. GitGuardian passes on the same head. Local source lint excludes ignored historical `.superpowers` QA scripts; CI does not contain those files. Final local build and translations pass.
+- [Netlify deploy 6acf1de5543aa2d9a1373642](https://app.netlify.com/projects/resume-optimizing/deploys/6acf1de5543aa2d9a1373642) reports ready, deploy-preview context, and the exact application commit_ref. Preview/header/redirect checks pass. Its immutable URL returns HTTP 200, the application root, nosniff and DENY headers. This verifies deployment identity and public delivery, not an authenticated PDF response.
 - All 16 English/Arabic/mixed/multipage production-template captures pass PDF.js complete source/order/link assertions and the unchanged checker. Final retained run: 93.85 seconds. Multipage files have seven pages.
 - All 26 same-file native audits pass pypdf with original source except layout whitespace and PDFium with exactly the recorded generated hints. They also retain links, valid scalars, bounded pages/character boxes and native query receipts. Queries include `(2020)`, `[SQL]`, `عن بعد`, a complete parenthesized URL, `id(x)`, `ABC123`, Arabic marks and digit scripts. The tracked reader receipt contains file hashes and results; raw text/hint positions are retained locally.
 - Fresh scoped independent review confirms the final layout, joining, source, style/link and descriptor corrections, with no remaining code blocker identified.
@@ -27,7 +28,7 @@ PDFium needs narrowly generated U+200E direction hints in complete-line ActualTe
 
 ## Remaining release work
 
-Commit and push the scoped repair, verify full CI/GitGuardian/Netlify on the new head, and check actual authenticated hosted exports and available native copy/search interactions before marking the PR ready. The browser's earlier request-header-policy failure recovered on continuation. Main merge remains a separate action.
+Check actual authenticated hosted exports and available native copy/search interactions before marking the PR ready. The browser connection recovered temporarily on 2026-10-13, but on 2026-10-14 both session setup and one inventory retry return `Unable to load browser request-header policy`. Supported troubleshooting guidance provides no repair for that loader failure. No security-policy bypass, alternative browser credential extraction or weaker release claim was attempted. The owner has been asked to reconnect the Brave/Codex connection; independent CI and public deployment qualification are complete. Main merge remains a separate action.
 
 ## Rejected prototype and tooling
 
