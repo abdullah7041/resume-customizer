@@ -478,7 +478,295 @@
     "Direction padding breaks wrapped-phrase search and selection geometry.",
     "Standard CID TrueType font with positioned original Unicode mappings fails mixed punctuation/search.",
     "Mirrored text-matrix prototype fails independent source/search checks.",
-    "Chromium with rlig/liga/clig/ccmp disabled, using approved and isolated cmap-derived fonts, still fails the hosted paragraph across readers."
+    "Chromium with rlig/liga/clig/ccmp disabled, using approved and isolated cmap-derived fonts, still fails the hosted paragraph across readers.",
+    "Approved isolated MuPDF Story 1.28.2: 13/14 original-font cases fail at least one required source reader, including every Arabic case; all 3 cmap-derived controls fail. Not integrated."
   ],
-  "conclusion": "The prior 26-case passing reader receipt is superseded. PDF.js and CI pass but do not establish native-reader fidelity. Keep PR #146 draft; no production merge."
+  "conclusion": "The prior 26-case passing reader receipt is superseded. PDF.js and CI pass but do not establish native-reader fidelity. Keep PR #146 draft; no production merge.",
+  "ownerBraveCheck": {
+    "date": "2026-10-15",
+    "source": "Direct owner observation in Brave Ctrl+F",
+    "savedFile": "Nora_Example_Software-Engineer.pdf",
+    "queriesRequested": [
+      "عن بعد",
+      "[SQL]"
+    ],
+    "ownerAnswer": "One or both are missing",
+    "conclusion": "At least one ordinary native-browser query fails. Exact per-query outcome was not supplied; do not claim both fail from this observation alone."
+  },
+  "approvedMuPdfPrototype": {
+    "status": "REJECTED - not integrated",
+    "authorization": "Owner explicitly approved isolated MuPDF prototype after native Brave failure.",
+    "pymupdfVersion": "1.28.2",
+    "mupdfCoreVersion": "1.28.2",
+    "installedOnlyInIgnoredDirectory": ".superpowers/sdd/2026-10-12-styled-arabic/mupdf-1.28.2",
+    "sourceGate": "Original scalars/order except layout whitespace. NFC comparisons were recorded separately and do not rescue the failed cases.",
+    "baseCases": 14,
+    "baseCasesExactInAllThreeReaders": 1,
+    "derivedFontCases": 3,
+    "derivedFontCasesExactInAllThreeReaders": 0,
+    "caseResults": [
+      {
+        "id": "hosted-paragraph-ltr-left-mupdf-story",
+        "sha256": "0c0345e8bb4c43430917be11bb1f86ccca586a203fa466dcc1d7ebec63eaf7e6",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "السَّلَامُ": false,
+          "office عربي": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "hosted-paragraph-ltr-right-mupdf-story",
+        "sha256": "9aeb3748b97d48cbc4176d1b0b4eac4eb56d9387f9243bd0b33583646decc8b1",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "السَّلَامُ": false,
+          "office عربي": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "hosted-paragraph-rtl-left-mupdf-story",
+        "sha256": "cc6ec6ae843751ce46ba98a5dc8b98f70bd0118407d14880251a16e8b0522ee8",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "السَّلَامُ": false,
+          "office عربي": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "hosted-paragraph-rtl-right-mupdf-story",
+        "sha256": "2de127e33d20fa3df0f52ead4a7e782c93b711979b6de20bfb0cb34b2ffe7c45",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "السَّلَامُ": false,
+          "office عربي": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "final-punctuation-0-mupdf-story",
+        "sha256": "777747e39127c4a9be726e049a908704a03f3469ada085451df466888a0ac91a",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "final-punctuation-1-mupdf-story",
+        "sha256": "0f777059a9041fbd73b64c3f53f869edad88faaa4546673b43d89a932dcc2ffe",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "(2020)": false
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "final-punctuation-2-mupdf-story",
+        "sha256": "107ee15e61d6b2dbb4c179a625bc1112f7eddfc6e6c39ec5827867fcd16ce984",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "id(x)": true,
+          "https://example.com/(path)": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "final-punctuation-3-mupdf-story",
+        "sha256": "ac3ae39a8cf24e2ad29893568e60de07461a85c7a65cf122cc394fd11e248a46",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "السَّلَامُ": false
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "nested-0-mupdf-story",
+        "sha256": "89fadd7f938d6166001c352f44e3797e893120f31bf33e98b68ff896b864d533",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {},
+        "boundedBoxes": true
+      },
+      {
+        "id": "nested-1-mupdf-story",
+        "sha256": "af0048a2c8cae70b6b232094ff9b5fd70503d750095e18f17cc21422dbb6c13d",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {},
+        "boundedBoxes": true
+      },
+      {
+        "id": "mixed-ltr-0-mupdf-story",
+        "sha256": "cb83822af3a9314b5fdfa859c8d2eb3a4a282cf2fdcfec5c85c8916e7112ef6f",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "office عربي": false
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "mixed-ltr-1-mupdf-story",
+        "sha256": "f99e482d0b1d420a1166df80fcd9869467017599d80d0785bd70571b95aaab3d",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {},
+        "boundedBoxes": true
+      },
+      {
+        "id": "ligature-link-mupdf-story",
+        "sha256": "34297525ae49f2241282a0cc5f8e69e927c64e3a73a384048806ead381abd68f",
+        "pypdfExact": true,
+        "pdfiumExact": true,
+        "pdfjsExact": true,
+        "nativeQueries": {},
+        "boundedBoxes": true
+      },
+      {
+        "id": "mark-link-mupdf-story",
+        "sha256": "e39cba2a0bd913700e41e9d820e8235b45670f0a74ae2f0a4607c88b8f72c6ff",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {},
+        "boundedBoxes": true
+      },
+      {
+        "id": "hosted-paragraph-rtl-left-mupdf-story-derived",
+        "sha256": "e3e7b9e67fd74d5f11d3855e87eb615461e666e46a21d4fdd1ca8ee536d9b0ba",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "السَّلَامُ": false,
+          "office عربي": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "final-punctuation-0-mupdf-story-derived",
+        "sha256": "5304d2939a01d2d9025346c0e9eeb75b0b0fe9fd8ecc949f4060e3e09d7fdf41",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "عن بعد": false,
+          "[SQL]": false,
+          "٢٥": true
+        },
+        "boundedBoxes": true
+      },
+      {
+        "id": "mixed-ltr-0-mupdf-story-derived",
+        "sha256": "2a5749e8fb8ecd0fbf3158ea1c7a426b0909ecea6e01aab4cf7485c38360c248",
+        "pypdfExact": false,
+        "pdfiumExact": false,
+        "pdfjsExact": false,
+        "nativeQueries": {
+          "office عربي": false
+        },
+        "boundedBoxes": true
+      }
+    ],
+    "representativeFailure": {
+      "expected": "خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥",
+      "pypdf": "٥٢",
+      "pdfium": "[ )دعب نع( ةربخ 2020> [SQL ≥ ةميقلا »يبرع« > ٢٥",
+      "pdfjs": "ﺧ ﺒ ﺮ ة ) ﻋ ﻦ ﺑ ﻌ ﺪ ( ] SQL] <2020 < » ﻋ ﺮ ﺑ ﻲ « ا ﻟ ﻘ ﻴ ﻤ ﺔ ≥ ٢٥"
+    },
+    "reason": "Arabic presentation forms, ordering and native search fail. Source gate failed before template/deployment integration. No app dependency, checker or runtime setting changed."
+  },
+  "minimalNativeOrderingControls": {
+    "description": "Whole-line ActualText removed, original CMaps/positions retained, RTL paragraphs. No punctuation/combining marks; isolates native run ordering. Empty query sets do not establish search fidelity.",
+    "versions": {
+      "pypdf": "6.10.0",
+      "pdfium": "156.0.8076.0",
+      "pypdfium2": "5.14.0"
+    },
+    "pdfjsVersion": "5.7.284",
+    "results": [
+      {
+        "source": "اسم foo bar baz",
+        "sha256": "92e1b9ddf634ec6284117bfd7d3702cd2146245cb1be82af1c312a8e9defe086",
+        "pypdfText": "اسمfoo bar baz",
+        "pdfiumText": "foo bar baz اسم",
+        "pdfjsText": "اسم foo bar baz",
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true
+      },
+      {
+        "source": "اسم foo bar",
+        "sha256": "a64758f9a2d4203a1836e0afa232cdd72e72fd99b04cc840056172e3a9191568",
+        "pypdfText": "اسمfoo bar",
+        "pdfiumText": "foo bar اسم",
+        "pdfjsText": "اسم foo bar",
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true
+      },
+      {
+        "source": "اسم foo",
+        "sha256": "78e12f4dc1ad75d7665ec9bb2f72d981d16bdd6f04410099fb741aedd28a3cf5",
+        "pypdfText": "اسمfoo",
+        "pdfiumText": "foo اسم",
+        "pdfjsText": "اسم foo",
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true
+      },
+      {
+        "source": "اسم SQL Java Python",
+        "sha256": "4b61e397b9023290248a78844cf5fd52342799b7730b16e9d036a04c5854ee5d",
+        "pypdfText": "اسمSQL Java Python",
+        "pdfiumText": "SQL Java Python اسم",
+        "pdfjsText": "اسم SQL Java Python",
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true
+      }
+    ],
+    "nativeDirectionSource": "https://pdfium.googlesource.com/pdfium/+/refs/heads/chromium/8076/fpdfsdk/fpdf_text.cpp#43",
+    "boundary": "The native direction input is document-wide. Tested ViewerPreferences R2L also reorders plain Latin words. A demonstrated per-paragraph/run construction or reader capability change is still needed; this does not prove all possible constructions impossible."
+  }
 }
