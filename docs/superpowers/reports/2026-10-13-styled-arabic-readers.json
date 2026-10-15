@@ -1,4 +1,7 @@
 {
+  "status": "SUPERSEDED - current native retest fails",
+  "supersededBy": "2026-10-15-styled-arabic-hosted-failure.json",
+  "note": "Historical results below are retained. The old receipt recorded a wrapper version without its PDFium core build; the earlier environment cannot be reconstructed from this receipt alone.",
   "scope": "Final local styled renderer bytes; hosted qualification is separate",
   "versions": {
     "pypdf": "6.10.0",

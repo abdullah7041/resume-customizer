@@ -2,9 +2,23 @@
 
 PR: https://github.com/abdullah7041/resume-customizer/pull/146
 
-Repair continued on 2026-10-13 in the attached `candidate-evidence-pilot/resume-customizer` worktree, branch `codex/candidate-evidence-pilot`, starting head `6aece19254b0da379da3ad42d0c6a5eb01c4efdb`. Application repair `6e4b6e116a9d7b1a6b4563d7c603c120d9e3e747` is committed and pushed. Main and unrelated untracked documents are preserved. CI and deployment pass; authenticated hosted-file qualification is still blocked, so this receipt does not declare production readiness.
+Repair continued in the attached `candidate-evidence-pilot/resume-customizer` worktree, branch `codex/candidate-evidence-pilot`, starting head `6aece19254b0da379da3ad42d0c6a5eb01c4efdb`. Application repair `6e4b6e116a9d7b1a6b4563d7c603c120d9e3e747` and diagnostic follow-up `2bdb2a97964437ca4f3720ed52224b28f1352b54` are pushed. Main and unrelated untracked documents are preserved. **The owner-saved hosted PDF fails independent reader qualification. PR #146 remains draft and is not ready for production.**
 
-## Final implementation
+## Blocking saved-file result — 2026-10-15
+
+The owner supplied `Nora_Example_Software-Engineer.pdf` from the authenticated PR preview. Its 68,656 bytes have SHA-256 `218ea37a3451efcb73df3642ed89c8648bde258dc1af413f46bd50aa59c6f7e8`. The source includes ordinary Arabic parentheticals, mixed brackets/Latin tokens, Arabic digits and combining marks. The deployed PDF.js complete-text check passes; independent extraction does not:
+
+- pypdf 6.10.0 drops the period before `office` in the long Arabic paragraph. All other non-whitespace scalars match. The paragraph inherits LTR direction; forcing RTL repairs this pypdf difference but still fails PDFium.
+- PDFium core **156.0.8076.0**, accessed through pypdfium2 **5.14.0**, reverses/reorders content. Native queries for `[SQL]`, `عن بعد` and `السَّلَامُ` fail. Arabic digits, links, page bounds, valid scalars and character bounds pass; these do not compensate for lost text/search fidelity.
+- Rerunning the existing 26 retained files keeps all 26 pypdf comparisons passing, but only **11/26** PDFium source comparisons and **23/26** query sets pass. The earlier passing receipt is superseded. It recorded the wrapper version without the native core build, so an exact historical engine comparison is unavailable.
+
+[Saved-file receipt](2026-10-15-styled-arabic-hosted-failure.json) retains the source, raw independent text, exact difference, queries, hashes, runtime versions and all 26 retest outcomes. The original comparison requirements were retained.
+
+Current PDFium source explains the incompatibility: `ProcessMarkedContent()` can reverse logical ActualText based on the first consuming text object, then `CloseTempLine()` applies segment ordering again. Its bidi heuristic counts strong-direction segments; combining marks split them. This diagnosis follows the [8076 text-page implementation](https://pdfium.googlesource.com/pdfium/+/refs/heads/chromium/8076/core/fpdftext/cpdf_textpage.cpp) and [bidi implementation](https://pdfium.googlesource.com/pdfium/+/refs/heads/chromium/8076/core/fxcrt/fx_bidi.cpp). It does not prove the exact build used by the owner's browser or by every ATS.
+
+Rejected local probes include removing complete-line ActualText, selective replacements, standard CID TrueType embedding with positioned original Unicode mappings, and mirrored text matrices. An additional Chromium probe disables `rlig`/`liga`/`clig`/`ccmp` with both the approved font and the previous isolated cmap-derived font: neither preserves the hosted paragraph across the readers. None passes the required source/search checks. More direction marks can improve extraction while breaking Arabic word search; direction padding also breaks wrapped-phrase search and distorts selection. Those workarounds are not integrated. The saved PDF remains the regression case; no additional dependency or production renderer change was made during this qualification pass.
+
+## Current implementation — qualification failed
 
 Arabic content uses the existing fontkit/jsPDF encoder through the authenticated `generate-pdf` endpoint. Capture binds source blocks, inline emphasis, colors, chip gaps, spacing and margins to the same reviewed snapshot. Stale attempts cannot save. The approved DejaVu font, request/page bounds, safe links and complete-preview checker remain enforced. Latin Chromium exports and explicit Text PDF recovery remain available.
 
@@ -14,7 +28,7 @@ PDF.js otherwise coalesces Type3 script runs with a generic font name and revers
 
 PDFium needs narrowly generated U+200E direction hints in complete-line ActualText around mirrored punctuation. Visible glyph mappings retain the original scalars. Hints surround complete Latin tokens, preserving literal URLs, identifiers and dates, or precede mirrored punctuation within an Arabic token. Raw extractions and every expected hint position are retained. Qualification is **content preserved with bidi formatting marks**, not character-identical clipboard output. No blanket invisible-character removal, hidden duplicate text, raster substitute or weaker application checker is introduced. Literal searches including Arabic delimiters can depend on these marks; ordinary phrases and complete Latin-token searches pass.
 
-## Current evidence
+## Earlier local evidence — native results superseded above
 
 - Final encoder: 54 saved-byte/validation tests pass, including drawn bracket outlines, nested punctuation positions, joined Arabic/diacritic style boundaries, mixed LTR order, inner-ligature links and positive mark-link rectangles.
 - Final endpoint: 29 tests pass, including authenticated bounded styled requests and malformed presentation/geometry rejection. Client/capture files pass 105 tests.
@@ -22,13 +36,13 @@ PDFium needs narrowly generated U+200E direction hints in complete-line ActualTe
 - [CI 38521106557](https://github.com/abdullah7041/resume-customizer/actions/runs/38521106557) passes normal lint, frontend/function types and 227 test files: 2,482 tests passed, three skipped, 116.84 seconds. GitGuardian passes on the same head. Local source lint excludes ignored historical `.superpowers` QA scripts; CI does not contain those files. Final local build and translations pass.
 - [Netlify deploy 6acf1de5543aa2d9a1373642](https://app.netlify.com/projects/resume-optimizing/deploys/6acf1de5543aa2d9a1373642) reports ready, deploy-preview context, and the exact application commit_ref. Preview/header/redirect checks pass. Its immutable URL returns HTTP 200, the application root, nosniff and DENY headers. This verifies deployment identity and public delivery, not an authenticated PDF response.
 - All 16 English/Arabic/mixed/multipage production-template captures pass PDF.js complete source/order/link assertions and the unchanged checker. Final retained run: 93.85 seconds. Multipage files have seven pages.
-- All 26 same-file native audits pass pypdf with original source except layout whitespace and PDFium with exactly the recorded generated hints. They also retain links, valid scalars, bounded pages/character boxes and native query receipts. Queries include `(2020)`, `[SQL]`, `عن بعد`, a complete parenthesized URL, `id(x)`, `ABC123`, Arabic marks and digit scripts. The tracked reader receipt contains file hashes and results; raw text/hint positions are retained locally.
-- Fresh scoped independent review confirms the final layout, joining, source, style/link and descriptor corrections, with no remaining code blocker identified.
+- The earlier 26-file native audit reported passing comparisons and queries. **This claim is superseded by the current native retest and actual hosted-file failure above.** Historical hashes/results are retained and marked superseded rather than presented as current evidence.
+- The earlier scoped review found no blocker in its then-tested cases. The new saved-file failure and subsequent independent review block the complete-line ActualText strategy and added direction-padding workarounds.
 - Neither bidi-js nor its existing transitive require-from-string package appears in npm audit findings. Existing repository audit findings are outside this dependency change; this is not a blanket security claim.
 
 ## Remaining release work
 
-Check actual authenticated hosted exports and available native copy/search interactions before marking the PR ready. The browser connection recovered temporarily on 2026-10-13, but on 2026-10-14 both session setup and one inventory retry return `Unable to load browser request-header policy`. Supported troubleshooting guidance provides no repair for that loader failure. No security-policy bypass, alternative browser credential extraction or weaker release claim was attempted. The owner has been asked to reconnect the Brave/Codex connection; independent CI and public deployment qualification are complete. Main merge remains a separate action.
+The connector recovered and the owner supplied actual saved bytes. The remaining blocker is renderer correctness, not download access. A replacement must preserve the saved fixture's complete source, punctuation, joining, styles, links and useful search/selection across the independent reader matrix, then pass production-template and hosted-byte qualification. Do not mark this PR ready based on the PDF.js badge or green CI. Current application head `2bdb2a97964437ca4f3720ed52224b28f1352b54` passes [CI 38551774719](https://github.com/abdullah7041/resume-customizer/actions/runs/38551774719), GitGuardian and Netlify preview/header/redirect checks; deploy `6acf5d3c7b4377f1c0d2787b` matches that commit. These checks do not resolve the reader failure. Actual native GUI clipboard, Print and Word behavior remain unverified. Main merge remains a separate action.
 
 ## Rejected prototype and tooling
 

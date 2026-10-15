@@ -1,5 +1,7 @@
 # Styled Arabic PDF repair
 
+**Qualification update, 2026-10-15:** The saved hosted PDF fails independent extraction/search and the current PDFium retest no longer passes. The complete-line ActualText approach below remains implemented but is not qualified for release. See the [blocking receipt](../reports/2026-10-15-styled-arabic-hosted-failure.json) and [current status](../reports/2026-10-12-styled-arabic-fix-status.md).
+
 The owner authorized completing the recommended encoder/layout repair and preparing PR #146 for production merge on 2026-10-12. Success means actual styled Arabic and mixed downloads preserve the reviewed visible facts, original Unicode/digit scripts, links and usable template styling. Repeating font/tag probes or declaring the plain recovery a styled fix does not satisfy the request.
 
 ## Design

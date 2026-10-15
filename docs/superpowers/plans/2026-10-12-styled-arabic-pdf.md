@@ -1,5 +1,7 @@
 # Styled Arabic PDF Implementation Plan
 
+**Blocked at saved-file qualification, 2026-10-15:** The owner supplied the actual hosted bytes. They fail pypdf source fidelity and PDFium source/search checks. Earlier native passing results are superseded; retain the source/search requirements and keep PR #146 draft. See [the current result](../reports/2026-10-12-styled-arabic-fix-status.md).
+
 > **For agentic workers:** Use superpowers:executing-plans task by task, with one fresh final reviewer.
 
 **Goal:** Resolve styled Arabic extraction and prepare PR #146 for production merge.
