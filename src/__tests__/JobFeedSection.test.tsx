@@ -214,8 +214,10 @@ it('keeps the same two checks in flight when the display clock advances', async 
       { id: 'a', name: 'A.pdf', parsedResume, plainText: 'resume text', fingerprint: 'a1', createdAt: 1, updatedAt: 1 },
     ] });
     mockVerifyFeedPosting.mockImplementation(() => new Promise(() => {}));
-    render(<JobFeedSection />);
-    await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2));
+    // Flush the resolved load promises and verification effect before ticking time.
+    // waitFor polling also uses setInterval, which this test deliberately freezes.
+    await act(async () => { render(<JobFeedSection />); });
+    expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2);
     const initialSignals = mockVerifyFeedPosting.mock.calls.map(call => call[3] as AbortSignal);
     act(() => vi.advanceTimersByTime(60_000));
     expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2);

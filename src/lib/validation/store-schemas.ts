@@ -84,6 +84,11 @@ export const ProjectSchema = z.object({
     highlights: z.array(z.string()).nullish().transform(val => val ?? []),
     keywords: z.array(z.string()).nullish().transform(val => val ?? []),
     url: z.string().nullish().transform(val => val ?? ''),
+    entity: z.string().optional(),
+    type: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    roles: z.array(z.string()).optional(),
 });
 
 export const CertificateSchema = z.object({
@@ -160,6 +165,19 @@ export const OptimizationResultSchema = z.object({
     optimized: z.union([z.string(), z.array(z.string())]),
     applied: z.boolean(),
     timestamp: z.string().optional(),
+    evidence: z.object({
+        version: z.literal(1),
+        targetId: z.string(),
+        originalFingerprint: z.string(),
+        proposedFingerprint: z.string(),
+        references: z.array(z.object({ sourceId: z.string(), quote: z.string() })),
+        sourceFingerprints: z.record(z.string(), z.string()),
+        status: z.enum(['source_matched', 'needs_review', 'rejected', 'legacy']),
+        reasons: z.array(z.enum(['missing_source', 'wrong_target', 'new_number', 'semantic_review', 'legacy'])),
+    }).optional(),
+    confirmation: z.object({
+        proposedFingerprint: z.string(), targetId: z.string(), confirmedAt: z.string(), statement: z.string(),
+    }).optional(),
 });
 
 /**

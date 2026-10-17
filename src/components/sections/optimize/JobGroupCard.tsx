@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { cn } from '@/lib/utils/cn';
 import type { OptimizationResult } from '@/lib/stores/resumeStore';
+import type { EvidenceSource } from '@/types/optimization-evidence';
+import { EvidenceReview } from './EvidenceReview';
 
 export interface QueueGroup {
   id: string;
@@ -21,6 +23,7 @@ export interface QueueGroup {
 
 interface JobGroupCardProps {
   group: QueueGroup;
+  evidenceSources?: EvidenceSource[];
   viewMode: 'split' | 'diff';
   expandedCards: Set<string>;
   compareMode: string | null;
@@ -34,6 +37,8 @@ interface JobGroupCardProps {
   onToggleCompare: (sectionId: string) => void;
   onApply: (opt: OptimizationResult) => void;
   onRevert: (sectionId: string) => void;
+  onConfirm: (id: string, confirmation: NonNullable<OptimizationResult['confirmation']>) => boolean;
+  onEdit: (id: string, value: string | string[], fingerprint: string, expectedCard: OptimizationResult) => boolean;
   onApplyGroup: (ids: string[]) => void;
   onRevertGroup: (ids: string[]) => void;
   onCopy?: (value: string) => Promise<void>;
@@ -54,6 +59,7 @@ const firstWords = (value: string | string[] | undefined) => {
 // Keep every object/function prop referentially stable so memoization remains effective.
 export const JobGroupCard = memo(function JobGroupCard({
   group,
+  evidenceSources = [],
   viewMode,
   expandedCards,
   compareMode,
@@ -67,6 +73,8 @@ export const JobGroupCard = memo(function JobGroupCard({
   onToggleCompare,
   onApply,
   onRevert,
+  onConfirm,
+  onEdit,
   onApplyGroup,
   onRevertGroup,
   onCopy,
@@ -255,6 +263,9 @@ export const JobGroupCard = memo(function JobGroupCard({
                       />
                     </div>
                   )}
+
+                  {!isRecommendationGroup && <EvidenceReview key={JSON.stringify([opt.evidence?.targetId, opt.optimized])} card={opt} sources={evidenceSources}
+                    onConfirm={onConfirm} onEdit={onEdit} onRevert={onRevert} />}
 
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     {isRecommendationGroup ? null : opt.applied ? (

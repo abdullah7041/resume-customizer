@@ -1,10 +1,15 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useResumeStore } from './resumeStore';
 import type { ResumeSchema } from '../../types/resume';
 import type { OptimizationResult } from '../../types/templates';
 import { buildScorePresentation, verificationSignature } from '@/lib/optimize/scoreModel';
+import { createAssessmentContext } from '@/lib/match/assessmentContext';
+import type { AssessmentInput } from '@/types/assessment';
+import { fingerprintText } from '@/lib/match/assessmentContext';
+import { formatResumeToText } from '@/lib/utils/resumeUtils';
 
 describe('resumeStore', () => {
+    afterEach(() => vi.useRealTimers());
     beforeEach(() => {
         useResumeStore.getState().clearAll();
     });
@@ -673,8 +678,10 @@ describe('resumeStore.getActiveResume()', () => {
   describe('cached analysis explainability payload', () => {
     const RESUME = 'resume text for cache';
     const JOB = 'job description for cache';
+    const context = () => createAssessmentContext({ resumeText: RESUME, jobDescription: JOB,
+      language: 'en', kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
 
-    it('round-trips categoryScores and strategicRealityCheck', () => {
+    it('round-trips categoryScores and strategicRealityCheck', async () => {
       const realityCheck = {
         riskTier: 'medium' as const,
         recommendation: 'optimize_now' as const,
@@ -686,7 +693,8 @@ describe('resumeStore.getActiveResume()', () => {
         unclearRisks: [{ type: 'skill', topic: 'K8s', reason: 'no detail', evidenceNeeded: 'a project' }],
         limits: { cannotDetermine: [], assumptions: ['Assumed fluency'] },
       };
-      useResumeStore.getState().setCachedAnalysis(RESUME, JOB, {
+      const assessment = await context();
+      useResumeStore.getState().setCachedAssessment(assessment, {
         score: 72,
         coverage: 0.7,
         similarity: 0.7,
@@ -701,16 +709,17 @@ describe('resumeStore.getActiveResume()', () => {
           soft_skills: { score: 7, max: 10 },
         },
         strategicRealityCheck: realityCheck,
-      }, false);
+      });
 
-      const cached = useResumeStore.getState().getCachedAnalysis(RESUME, JOB, false);
+      const cached = useResumeStore.getState().getCachedAssessment(assessment);
       expect(cached?.categoryScores?.hard_skills.matched).toEqual(['React']);
       expect(cached?.strategicRealityCheck?.unclearRisks).toHaveLength(1);
       expect(cached?.strategicRealityCheck?.limits.assumptions).toEqual(['Assumed fluency']);
     });
 
-    it('reads a legacy-shape entry without the new fields', () => {
-      useResumeStore.getState().setCachedAnalysis(RESUME, JOB, {
+    it('reads a minimal context-bound entry without optional explainability fields', async () => {
+      const assessment = await context();
+      useResumeStore.getState().setCachedAssessment(assessment, {
         score: 60,
         coverage: 0.6,
         similarity: 0.6,
@@ -718,25 +727,299 @@ describe('resumeStore.getActiveResume()', () => {
         strongMatches: [],
         recommendations: [],
         overallAssessment: '',
-      }, false);
+      });
 
-      const cached = useResumeStore.getState().getCachedAnalysis(RESUME, JOB, false);
+      const cached = useResumeStore.getState().getCachedAssessment(assessment);
       expect(cached?.score).toBe(60);
       expect(cached?.categoryScores).toBeUndefined();
       expect(cached?.strategicRealityCheck).toBeUndefined();
     });
 
-    it('retrieves an original analysis when resume and job text differ only by surrounding whitespace', () => {
+    it('does not reuse an analysis when text differs by surrounding whitespace', async () => {
       useResumeStore.getState().setShowOptimized(true);
-      useResumeStore.getState().setCachedAnalysis('  resume text for cache  ', '  job description for cache  ', {
+      const spaced = await createAssessmentContext({ resumeText: '  resume text for cache  ',
+        jobDescription: '  job description for cache  ', language: 'en', kind: 'match',
+        isOptimized: false, rubricVersion: 'match-v1' });
+      useResumeStore.getState().setCachedAssessment(spaced, {
         score: 64,
         matchedKeywords: ['React'],
         missingKeywords: ['Docker'],
-      }, false);
+      });
 
-      const cached = useResumeStore.getState().getCachedAnalysis('resume text for cache', 'job description for cache', false);
-      expect(cached?.score).toBe(64);
-      expect(cached?.matchedKeywords).toEqual(['React']);
+      const unspaced = await context();
+      expect(useResumeStore.getState().getCachedAssessment(unspaced)).toBeNull();
+    });
+  });
+
+  describe('context-bound assessment cache', () => {
+    const input: AssessmentInput = {
+      resumeText: 'r'.repeat(120) + 'A',
+      jobDescription: 'j'.repeat(120) + 'A',
+      language: 'en',
+      kind: 'match',
+      isOptimized: false,
+      rubricVersion: 'match-v1',
+    };
+    const analysis = { score: 71, missingKeywords: ['Kubernetes'] };
+
+    it('separates full-prefix collisions and all scoring dimensions', async () => {
+      const base = await createAssessmentContext(input);
+      useResumeStore.getState().setCachedAssessment(base, analysis);
+      expect(useResumeStore.getState().getCachedAssessment(base)).toMatchObject({ ...analysis, context: base });
+
+      const variations: AssessmentInput[] = [
+        { ...input, resumeText: 'r'.repeat(120) + 'B' },
+        { ...input, jobDescription: 'j'.repeat(120) + 'B' },
+        { ...input, language: 'ar' },
+        { ...input, kind: 'optimize' },
+        { ...input, isOptimized: true },
+        { ...input, rubricVersion: 'match-v2' },
+      ];
+      for (const variation of variations) {
+        const changed = await createAssessmentContext(variation);
+        expect(changed.key).not.toBe(base.key);
+        expect(useResumeStore.getState().getCachedAssessment(changed)).toBeNull();
+      }
+      expect(useResumeStore.getState().getCachedAssessment({ ...base, language: 'ar' })).toBeNull();
+    });
+
+    it('keeps exact upload text until a real baseline edit and invalidates old resume evidence', () => {
+        const original = buildFixture();
+        const store = useResumeStore.getState();
+        store.setOriginalResume(original);
+        store.setParsedResumeText('Exact extracted text with a fact the parser omitted');
+        store.setOriginalResume(structuredClone(original));
+        store.patchProfile({ basics: { ...original.basics } });
+        expect(useResumeStore.getState().parsedResumeText).toBe('Exact extracted text with a fact the parser omitted');
+
+        useResumeStore.setState({ evidenceSources: [{ id: 'old-source', kind: 'resume', text: 'Old fact',
+            fingerprint: 'old-fingerprint', targetId: 'basics:summary' }],
+        optimizations: [{ sectionId: 'summary-1', sectionType: 'summary', original: 'Old fact',
+            optimized: 'Rewritten fact', applied: true,
+            evidence: { version: 1, targetId: 'basics:summary', originalFingerprint: 'old',
+                proposedFingerprint: 'new', references: [{ sourceId: 'old-source', quote: 'Old fact' }],
+                sourceFingerprints: { 'old-source': 'old-fingerprint' }, status: 'source_matched', reasons: [] },
+            confirmation: { targetId: 'basics:summary', proposedFingerprint: 'new',
+                statement: 'Rewritten fact', confirmedAt: '2026-09-24' } }] });
+        const variantId = store.saveCurrentAsVariant('Saved role', 'Target job');
+        useResumeStore.setState({ optimizeRun: { status: 'succeeded', startedAt: '2026-09-24',
+            finishedAt: '2026-09-24', phase: null, error: null,
+            cards: structuredClone(useResumeStore.getState().optimizations), data: null,
+            keywords: { add: [], remove: [], neutral: [] } } });
+        store.setOriginalResume({ ...original, basics: { ...original.basics, summary: 'Candidate edited summary' } });
+
+        const state = useResumeStore.getState();
+        expect(state.parsedResumeText).toContain('Candidate edited summary');
+        expect(state.parsedResumeText).not.toContain('Exact extracted text');
+        expect(state.optimizations[0].evidence?.status).toBe('needs_review');
+        expect(state.optimizations[0].confirmation).toBeUndefined();
+        expect((state.optimizeRun?.cards[0] as OptimizationResult).evidence?.status).toBe('needs_review');
+        expect(state.jobVariants.find(variant => variant.id === variantId)?.snapshot.optimizations[0].evidence?.status)
+            .toBe('needs_review');
+    });
+
+    it('serializes substantive structured facts without private metadata', () => {
+        const resume = buildFixture();
+        resume.work[0].name = 'Actual Employer';
+        resume.skills = [{ name: 'Data', keywords: ['Power BI'], level: 'Advanced' }];
+        resume.languages = [{ language: 'Arabic', fluency: 'Native' }];
+        resume.meta = { ai_suggestions: [{ type: 'onboarding', sectionId: 'private-marker', timestamp: '2026-09-24' }] };
+        const text = formatResumeToText(resume);
+        expect(text).toContain('Actual Employer');
+        expect(text).toContain('Power BI');
+        expect(text).toContain('Arabic - Native');
+        expect(text).not.toContain('private-marker');
+    });
+
+    it('keeps legacy string skills in the assessment text after a candidate edit', () => {
+        const resume = { ...buildFixture(), skills: ['Power BI', 'SQL'] } as unknown as ResumeSchema;
+        useResumeStore.getState().setOriginalResume(resume);
+        useResumeStore.getState().setParsedResumeText('Exact uploaded text');
+        useResumeStore.getState().setOriginalResume({ ...resume, basics: { ...resume.basics, summary: 'Candidate edited summary' } });
+        const text = useResumeStore.getState().parsedResumeText;
+        expect(text).toContain('Candidate edited summary');
+        expect(text).toContain('Power BI');
+        expect(text).toContain('SQL');
+    });
+
+    it('keeps project context through validation and baseline refresh', () => {
+        const resume = buildFixture();
+        resume.projects = [{ name: 'Client portal', description: 'Built a portal', entity: 'Example Client',
+            type: 'application', startDate: '2023-01', endDate: '2023-06', roles: ['Lead developer'] }];
+        useResumeStore.getState().setOriginalResume(resume);
+        useResumeStore.getState().setParsedResumeText('Exact uploaded text');
+        useResumeStore.getState().setOriginalResume({ ...resume, basics: { ...resume.basics, summary: 'Candidate edited summary' } });
+        const state = useResumeStore.getState();
+        expect(state.originalResume?.projects?.[0]).toMatchObject({ entity: 'Example Client', type: 'application',
+            startDate: '2023-01', endDate: '2023-06', roles: ['Lead developer'] });
+        for (const fact of ['Example Client', 'application', '2023-01', '2023-06', 'Lead developer']) {
+            expect(state.parsedResumeText).toContain(fact);
+        }
+    });
+
+    it('confirms only the exact current proposal and preserves it across variants', async () => {
+        const statement = 'Led delivery';
+        const proposedFingerprint = await fingerprintText(statement);
+        const evidence = { version: 1 as const, targetId: 'work:a', originalFingerprint: 'old', proposedFingerprint,
+            references: [], sourceFingerprints: {}, status: 'needs_review' as const, reasons: ['semantic_review' as const] };
+        const card = { sectionId: 'bullet-a', sectionType: 'experience' as const, original: 'Delivered', optimized: statement,
+            applied: false, evidence };
+        useResumeStore.getState().setOptimizations([card]);
+        const source = { id: 'source-a', kind: 'resume' as const, targetId: 'work:a', text: 'Delivered', fingerprint: 'old' };
+        useResumeStore.getState().setEvidenceSources([source]);
+        const confirmation = { targetId: 'work:a', proposedFingerprint, statement, confirmedAt: '2026-09-24T12:00:00Z' };
+        expect(useResumeStore.getState().confirmOptimization('bullet-a', { ...confirmation, statement: 'Other' })).toBe(false);
+        expect(useResumeStore.getState().confirmOptimization('bullet-a', confirmation)).toBe(true);
+        const variant = useResumeStore.getState().saveCurrentAsVariant('One', 'Job');
+        useResumeStore.getState().setEvidenceSources([]);
+        useResumeStore.getState().refineOptimization('bullet-a', { improved: 'Led another project', instruction: 'change' });
+        expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
+        useResumeStore.getState().openVariant(variant);
+        expect(useResumeStore.getState().optimizations[0].confirmation).toEqual(confirmation);
+        expect(useResumeStore.getState().evidenceSources).toEqual([source]);
+    });
+
+    it('keeps old visible content while migrating versions 0–3 to unconfirmed legacy review', async () => {
+        const migrate = useResumeStore.persist.getOptions().migrate;
+        if (!migrate) throw new Error('Migration unavailable');
+        for (const version of [0, 1, 2, 3]) {
+            const restored = await migrate({ originalResume: buildFixture(), optimizations: [{
+                sectionId: 'legacy', sectionType: 'summary', original: 'Old', optimized: 'Visible', applied: true,
+                evidence: { status: 'source_matched' },
+            }], jobVariants: [] }, version) as ReturnType<typeof useResumeStore.getState>;
+            expect(restored.originalResume?.basics.name).toBe('Jane Doe');
+            expect(restored.optimizations[0]).toMatchObject({ optimized: 'Visible', evidence: { status: 'legacy' } });
+            expect(restored.optimizations[0].confirmation).toBeUndefined();
+            expect(restored.evidenceSources).toEqual([]);
+        }
+        const missingBaseline = await migrate({ originalResume: null, parsedResumeText: 'Visible old resume',
+            optimizations: [{ sectionId: 'old', sectionType: 'summary', original: '', optimized: 'Visible old claim', applied: true }],
+            jobVariants: [] }, 3) as ReturnType<typeof useResumeStore.getState>;
+        expect(missingBaseline.parsedResumeText).toBe('Visible old resume');
+        expect(missingBaseline.optimizations[0].optimized).toBe('Visible old claim');
+        expect(missingBaseline.optimizations[0].evidence?.status).toBe('legacy');
+        const source = { id: 'source', kind: 'resume', text: 'Old', fingerprint: 'fingerprint', targetId: 'summary' };
+        const withSources = await migrate({ optimizations: [], jobVariants: [],
+            optimizeRun: { data: { evidenceSources: [source, { id: 1 }] } } }, 3) as ReturnType<typeof useResumeStore.getState>;
+        expect(withSources.evidenceSources).toEqual([source]);
+        const sourcedEvidence = { version: 1 as const, targetId: 'summary', originalFingerprint: 'old',
+            proposedFingerprint: 'new', references: [{ sourceId: 'source', quote: 'Old' }],
+            sourceFingerprints: { source: 'fingerprint' }, status: 'source_matched' as const, reasons: [] };
+        const variantCard = { sectionId: 'same-id', sectionType: 'summary' as const, original: 'Old',
+            optimized: 'New', applied: false, evidence: sourcedEvidence };
+        const migratedVariant = await migrate({ optimizations: [variantCard], jobVariants: [{ id: 'legacy-variant',
+            name: 'Legacy', jobDescription: 'Job', createdAt: '2026-09-24T12:00:00Z',
+            updatedAt: '2026-09-24T12:00:00Z', snapshot: { optimizations: [variantCard] } }],
+            optimizeRun: { data: { evidenceSources: [source] } } }, 3) as ReturnType<typeof useResumeStore.getState>;
+        expect(migratedVariant.optimizations[0].evidence?.status).toBe('source_matched');
+        expect(migratedVariant.jobVariants[0].snapshot.evidenceSources).toEqual([]);
+        expect(migratedVariant.jobVariants[0].snapshot.optimizations[0].evidence?.status).toBe('legacy');
+    });
+
+    it('clears approval when candidate wording changes and keeps unrelated cards approved', async () => {
+        const proposedFingerprint = await fingerprintText('Same claim');
+        const evidence = { version: 1 as const, targetId: 'work:a', originalFingerprint: 'old', proposedFingerprint,
+            references: [], sourceFingerprints: {}, status: 'needs_review' as const, reasons: ['semantic_review' as const] };
+        useResumeStore.getState().setOptimizations([
+            { sectionId: 'a', sectionType: 'experience', original: 'Old', optimized: 'Same claim', applied: false, evidence },
+            { sectionId: 'b', sectionType: 'experience', original: 'Old', optimized: 'Same claim', applied: false,
+                evidence: { ...evidence, targetId: 'work:b' } },
+        ]);
+        const confirmation = { proposedFingerprint, targetId: 'work:a', statement: 'Same claim', confirmedAt: '2026-09-24T12:00:00Z' };
+        useResumeStore.getState().confirmOptimization('a', confirmation);
+        useResumeStore.getState().confirmOptimization('b', { ...confirmation, targetId: 'work:b' });
+        useResumeStore.getState().editOptimization('a', 'Corrected claim', await fingerprintText('Corrected claim'),
+            useResumeStore.getState().optimizations[0]);
+        expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
+        expect(useResumeStore.getState().optimizations[0].evidence?.proposedFingerprint).toBe(await fingerprintText('Corrected claim'));
+        expect(useResumeStore.getState().optimizations[1].confirmation?.targetId).toBe('work:b');
+    });
+
+    it('refuses an edit completed after another variant reuses the section ID', async () => {
+        useResumeStore.getState().setOptimizations([{ sectionId: 'same-id', sectionType: 'summary',
+            original: 'Before A', optimized: 'Proposal A', applied: false }]);
+        const staleCard = useResumeStore.getState().optimizations[0];
+        useResumeStore.getState().saveCurrentAsVariant('A', 'Job A');
+        useResumeStore.getState().setOptimizations([{ sectionId: 'same-id', sectionType: 'summary',
+            original: 'Before B', optimized: 'Proposal B', applied: false }]);
+        const variant = useResumeStore.getState().saveCurrentAsVariant('B', 'Job B');
+        useResumeStore.getState().openVariant(variant);
+        expect(useResumeStore.getState().editOptimization('same-id', 'Unsaved A',
+            await fingerprintText('Unsaved A'), staleCard)).toBe(false);
+        expect(useResumeStore.getState().optimizations[0].optimized).toBe('Proposal B');
+    });
+
+    it('does not report a saved confirmation when local storage rejects the write', async () => {
+        const statement = 'Claim';
+        const proposedFingerprint = await fingerprintText(statement);
+        useResumeStore.getState().setOptimizations([{ sectionId: 'claim', sectionType: 'summary', original: 'Old',
+            optimized: statement, applied: false, evidence: { version: 1, targetId: 'summary:1',
+                originalFingerprint: 'old', proposedFingerprint, references: [], sourceFingerprints: {},
+                status: 'needs_review', reasons: ['semantic_review'] } }]);
+        const setItem = vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('full'); });
+        try {
+            expect(useResumeStore.getState().confirmOptimization('claim', { targetId: 'summary:1',
+                proposedFingerprint, statement, confirmedAt: '2026-09-24T12:00:00Z' })).toBe(false);
+            expect(useResumeStore.getState().optimizations[0].confirmation).toBeUndefined();
+        } finally { setItem.mockRestore(); }
+    });
+
+    it('replaces refinement evidence while keeping source records out of public resume metadata', async () => {
+      const context = await createAssessmentContext(input);
+      const evidence = { version: 1 as const, targetId: 'resume:1', originalFingerprint: 'a', proposedFingerprint: 'b',
+        references: [{ sourceId: 'resume:1', quote: '<script>literal</script>' }], sourceFingerprints: { 'resume:1': 'a' },
+        status: 'needs_review' as const, reasons: ['semantic_review' as const] };
+      const source = { id: 'resume:1', kind: 'resume' as const, targetId: 'resume:1', text: '<script>literal</script>', fingerprint: 'a' };
+      useResumeStore.getState().addOptimization(buildOpt({ sectionId: 'summary-evidence', assessmentKey: context.key, sectionType: 'summary', optimized: 'Initial', applied: false }));
+      useResumeStore.getState().addOptimization(buildOpt({ sectionId: 'legacy-authored', assessmentKey: context.key, sectionType: 'summary', optimized: 'Candidate wording', applied: false }));
+      useResumeStore.getState().setOptimizeRun({ status: 'succeeded', cards: useResumeStore.getState().optimizations,
+        assessment: { context, jobSnapshot: input.jobDescription, requestId: 'test', createdAt: new Date().toISOString(), result: null },
+        data: { evidenceSources: [] } });
+      useResumeStore.getState().refineOptimization('summary-evidence', {
+        improved: 'Revised', instruction: 'shorten', evidence, evidenceSources: [source],
+        evidenceInputOmissions: { resumeCharacters: 5, clarificationCharacters: 0 },
+      });
+      const state = useResumeStore.getState();
+      expect(state.optimizations[0].evidence).toEqual(evidence);
+      expect(state.optimizeRun?.cards).toContainEqual(expect.objectContaining({ sectionId: 'summary-evidence', optimized: 'Revised', evidence }));
+      expect(state.optimizeRun?.cards).toContainEqual(expect.objectContaining({ sectionId: 'legacy-authored', optimized: 'Candidate wording' }));
+      expect(state.optimizeRun?.data).toMatchObject({ evidenceSources: [source], evidenceInputOmissions: { resumeCharacters: 5, clarificationCharacters: 0 } });
+      expect(JSON.stringify(state.originalResume?.meta)).not.toContain(source.text);
+    });
+
+    it('does not admit legacy entries or mutate candidate data', async () => {
+      const context = await createAssessmentContext(input);
+      const originalResume = {
+        basics: { name: 'Candidate', label: 'Engineer', email: '', phone: '', summary: 'Original summary', location: { city: '', countryCode: '', region: '' }, profiles: [] },
+        work: [], education: [], skills: [], projects: [],
+      } satisfies ResumeSchema;
+      useResumeStore.setState({ originalResume });
+      useResumeStore.setState({ analysisCache: { legacy: { ...analysis, timestamp: Date.now() } } });
+      expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
+      useResumeStore.setState({ analysisCache: { [context.key]: { ...analysis, timestamp: Date.now() } } });
+      expect(useResumeStore.getState().getCachedAssessment(context)).toBeNull();
+      useResumeStore.getState().setCachedAssessment(context, analysis);
+      expect(useResumeStore.getState().originalResume).toBe(originalResume);
+      expect(originalResume.basics.summary).toBe('Original summary');
+      expect(input.resumeText).toBe('r'.repeat(120) + 'A');
+    });
+
+    it('expires at 30 minutes and retains at most 10 entries', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-09-24T00:00:00Z'));
+      const first = await createAssessmentContext(input);
+      useResumeStore.getState().setCachedAssessment(first, analysis);
+      vi.advanceTimersByTime(30 * 60 * 1000);
+      expect(useResumeStore.getState().getCachedAssessment(first)).not.toBeNull();
+      vi.advanceTimersByTime(1);
+      expect(useResumeStore.getState().getCachedAssessment(first)).toBeNull();
+      for (let index = 0; index < 11; index++) {
+        vi.advanceTimersByTime(1);
+        const context = await createAssessmentContext({ ...input, jobDescription: `job-${index}` });
+        useResumeStore.getState().setCachedAssessment(context, analysis);
+      }
+      expect(Object.keys(useResumeStore.getState().analysisCache)).toHaveLength(10);
+      expect(useResumeStore.getState().getCachedAssessment(first)).toBeNull();
     });
   });
 });

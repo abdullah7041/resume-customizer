@@ -1,7 +1,7 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
-import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
+import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -139,7 +139,7 @@ export function ATSOptimized({
                             <Sep />
                             {linkedInUrl ? (
                                 <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
-                                    LinkedIn Account
+                                    {linkedInUrl}
                                 </a>
                             ) : (
                                 <span>{linkedInLabel}</span>
@@ -151,13 +151,14 @@ export function ATSOptimized({
                             <Sep />
                             {portfolioUrl ? (
                                 <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
-                                    Portfolio
+                                    {portfolioUrl}
                                 </a>
                             ) : (
                                 <span>{portfolioLabel}</span>
                             )}
                         </>
                     )}
+                    {otherProfileUrls(basics.profiles).map(url => <span key={url}><Sep /><a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{url}</a></span>)}
                 </p>
             </header>
 
@@ -178,7 +179,7 @@ export function ATSOptimized({
                         {getSectionLabel('coreCompetencies')}
                     </h2>
                     <p style={{ fontSize: fs(10.5) }}>
-                        {allSkills.join(' • ')}
+                        {allSkills.join(', ')}
                     </p>
                 </section>
             )}
@@ -261,7 +262,9 @@ export function ATSOptimized({
                                     <span className="font-semibold" style={{ fontSize: fs(10.5) }}>{safeString(edu.studyType)}</span>
                                     {edu.area && <span style={{ fontSize: fs(10.5) }}> in {edu.area}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>{edu.endDate}</span>
+                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                    {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : (edu.endDate || edu.startDate)}
+                                </span>
                             </div>
                             <p className="text-black" style={{ fontSize: fs(10.5) }}>{safeString(edu.institution)}</p>
                             {edu.score && <p style={{ fontSize: fs(10.5) }}>GPA: {edu.score}</p>}

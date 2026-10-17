@@ -2,11 +2,13 @@
 // Tests for OptimizeSection component - AI optimization suggestions
 
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { webcrypto } from 'node:crypto';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import OptimizeSection, { normalizeOptimization } from '../components/sections/OptimizeSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { verificationSignature } from '@/lib/optimize/scoreModel';
+import { createAssessmentContext, fingerprintText } from '@/lib/match/assessmentContext';
 
 const mockRefineBullet = vi.hoisted(() => vi.fn());
 const mockAnalyzeResumeWithAI = vi.hoisted(() => vi.fn());
@@ -43,8 +45,8 @@ const mockRefineOptimization = vi.fn();
 const mockSetKeywordSuggestions = vi.fn();
 const mockSetOptimizationMetrics = vi.fn();
 const mockResetOptimizationMetrics = vi.fn();
-const mockGetCachedAnalysis = vi.fn(() => null);
-const mockSetCachedAnalysis = vi.fn();
+const mockGetCachedAssessment = vi.fn(() => null);
+const mockSetCachedAssessment = vi.fn();
 const LAST_JOB_KEY = 'watheq:lastJobDescription';
 const localStorageValues = new Map();
 
@@ -53,6 +55,8 @@ let mockStoreState = {
     originalResume: null,
     parsedResumeText: null,
     optimizations: [],
+    evidenceSources: [],
+    optimizeRun: null,
     keywordSuggestions: [],
     showOptimized: false,
     setOptimizations: mockSetOptimizations,
@@ -74,8 +78,8 @@ let mockStoreState = {
     },
     setOptimizationMetrics: mockSetOptimizationMetrics,
     resetOptimizationMetrics: mockResetOptimizationMetrics,
-    getCachedAnalysis: mockGetCachedAnalysis,
-    setCachedAnalysis: mockSetCachedAnalysis,
+    getCachedAssessment: mockGetCachedAssessment,
+    setCachedAssessment: mockSetCachedAssessment,
     getActiveResume: vi.fn(() => null),
     baselineMatchScore: null,
     // Job variants slice (Phase 1) — JobVariantsBar reads these
@@ -237,16 +241,20 @@ beforeAll(() => {
     Object.defineProperty(window, 'crypto', {
         value: {
             randomUUID: () => 'test-session-id-' + Math.random(),
+            subtle: webcrypto.subtle,
         },
     });
 });
 
 beforeEach(() => {
+    mockGetCachedAssessment.mockReturnValue(null);
     // Reset mock store state before each test
     mockStoreState = {
         originalResume: null,
         parsedResumeText: null,
         optimizations: [],
+        evidenceSources: [],
+        optimizeRun: null,
         keywordSuggestions: [],
         showOptimized: false,
         setOptimizations: mockSetOptimizations,
@@ -268,8 +276,8 @@ beforeEach(() => {
         },
         setOptimizationMetrics: mockSetOptimizationMetrics,
         resetOptimizationMetrics: mockResetOptimizationMetrics,
-        getCachedAnalysis: mockGetCachedAnalysis,
-        setCachedAnalysis: mockSetCachedAnalysis,
+        getCachedAssessment: mockGetCachedAssessment,
+        setCachedAssessment: mockSetCachedAssessment,
         getActiveResume: vi.fn(() => null),
         baselineMatchScore: null,
         // Job variants slice (Phase 1) — JobVariantsBar reads these
@@ -315,6 +323,39 @@ afterEach(() => {
 });
 
 describe('OptimizeSection', () => {
+    it('builds the local report from the active run, store sources, and exact job input', async () => {
+        const resumeText = 'Built reporting APIs.';
+        const jobDescription = 'Build APIs.';
+        const context = await createAssessmentContext({ resumeText, jobDescription, language: 'en', kind: 'optimize', isOptimized: false, rubricVersion: 'optimize-v1' });
+        const source = { id: 'resume-source', kind: 'resume', text: resumeText, targetId: 'resume:role', fingerprint: await fingerprintText(resumeText) };
+        mockStoreState.evidenceSources = [source];
+        mockStoreState.optimizeRun = { status: 'succeeded', startedAt: '2026-10-04', finishedAt: '2026-10-04', phase: null, error: null,
+            cards: [], data: { evidenceSources: [source] }, keywords: { add: [], remove: [], neutral: [] },
+            assessment: { context, jobSnapshot: jobDescription, requestId: 'fictional-run', createdAt: '2026-10-04', result: null } };
+        renderWithProviders(<OptimizeSection resumeText={resumeText} jobDescription={jobDescription} assessmentKey={context.key} assessmentCurrent />);
+        fireEvent.click(screen.getByText('export.evidenceReport.title'));
+        expect(screen.getByRole('blockquote', { name: 'export.evidenceReport.jobSnapshot' })).toHaveTextContent(jobDescription);
+        fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.add' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'export.evidenceReport.requirement' }), { target: { value: jobDescription } });
+        fireEvent.change(screen.getByRole('combobox', { name: 'export.evidenceReport.source' }), { target: { value: source.id } });
+        fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.review' }));
+        const preview = await screen.findByRole('textbox', { name: 'export.evidenceReport.preview' });
+        const report = JSON.parse(preview.value);
+        expect(report.status).toBe('current');
+        expect(report.assessment.context).toEqual(context);
+        expect(report.snapshots).toEqual({ resumeText, jobDescription });
+        expect(report.requirements[0]).toMatchObject({ status: 'candidate_associated', evidence: source });
+    });
+    it('opens only export-blocking applied review cards', async () => {
+        mockStoreState.optimizations = [
+            { sectionId: 's-0', sectionType: 'summary', original: 'First original', optimized: 'First proposal', applied: true },
+            { sectionId: 's-1', sectionType: 'summary', original: 'Second original', optimized: 'Second proposal', applied: true },
+        ];
+        renderWithProviders(<OptimizeSection reviewSectionIds={['s-1']} />);
+        const cardButton = (text) => screen.getAllByText(text).map((node) => node.closest('button')).find(Boolean);
+        await waitFor(() => expect(cardButton('Second original')?.nextElementSibling).toHaveTextContent('Second proposal'));
+        expect(cardButton('First original')?.nextElementSibling).toBeNull();
+    });
     describe('Rendering', () => {
         it('renders the section title', () => {
             renderWithProviders(<OptimizeSection />);
@@ -356,6 +397,42 @@ describe('OptimizeSection', () => {
             expect(screen.getByRole('button', { name: 'All' })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Pending' })).toBeInTheDocument();
             expect(screen.getByRole('button', { name: 'Applied' })).toBeInTheDocument();
+        });
+
+        it('does not carry Job A applied state into a different Job B rewrite', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-b" jobDescription="Job B"
+                optimizations={[{ ...sampleOptimization, optimized: 'Built TypeScript services for Job B.' }]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ optimized: 'Built TypeScript services for Job B.', applied: false, assessmentKey: 'job-b' }),
+            ]);
+        });
+
+        it('does not carry an applied flag across assessments even when the edit text matches', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-b" jobDescription="Job B"
+                optimizations={[sampleOptimization]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ applied: false, assessmentKey: 'job-b' }),
+            ]);
+        });
+
+        it('does not carry an applied flag to a different edit in the same assessment', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-a" jobDescription="Job A"
+                optimizations={[{ ...sampleOptimization, optimized: 'A different rewrite.' }]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ optimized: 'A different rewrite.', applied: false, assessmentKey: 'job-a' }),
+            ]);
+        });
+
+        it('preserves applied state only for the same assessment and identical edit', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, sectionId: 'legacy-summary', applied: true, assessmentKey: 'job-a' }];
+            renderWithProviders(<OptimizeSection assessmentKey="job-a" jobDescription="Job A"
+                optimizations={[{ ...sampleOptimization, rationale: 'Updated explanation' }]} />);
+            expect(mockSetOptimizations).toHaveBeenCalledWith([
+                expect.objectContaining({ optimized: sampleOptimization.optimized, applied: true, assessmentKey: 'job-a' }),
+            ]);
         });
 
         it('renders collapsed strategy section when optimization strategy exists', () => {
@@ -588,7 +665,7 @@ describe('OptimizeSection', () => {
 
             // After expansion, content should be visible
             expect(screen.getAllByText('Original summary text').length).toBeGreaterThan(0);
-            expect(screen.getByText('Optimized summary text')).toBeInTheDocument();
+            expect(screen.getAllByText('Optimized summary text').length).toBeGreaterThan(0);
         });
 
         it('shows applied badge when optimization is applied', () => {
@@ -885,7 +962,7 @@ describe('OptimizeSection', () => {
                 issue: '',
                 rationale: 'Preserved the existing web application evidence and tightened the impact wording.',
                 instruction: 'Use active voice',
-            });
+            }, sampleOptimization);
             expect(mockApplyOptimization).not.toHaveBeenCalled();
             expect(mockAnalyticsTrack).toHaveBeenCalledWith('bullet_refined', { section_type: 'summary' });
         });
@@ -1227,8 +1304,8 @@ describe('Optimization Card Types', () => {
             },
             setOptimizationMetrics: mockSetOptimizationMetrics,
             resetOptimizationMetrics: mockResetOptimizationMetrics,
-            getCachedAnalysis: mockGetCachedAnalysis,
-            setCachedAnalysis: mockSetCachedAnalysis,
+            getCachedAssessment: mockGetCachedAssessment,
+            setCachedAssessment: mockSetCachedAssessment,
             getActiveResume: vi.fn(() => null),
             baselineMatchScore: null,
             jobVariants: [],
@@ -1243,6 +1320,52 @@ describe('Optimization Card Types', () => {
     });
 
     describe('Auto-verified optimized score', () => {
+        it('keeps prior cards inspectable without showing their score for a changed assessment', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.optimizationMetrics = { ...mockStoreState.optimizationMetrics,
+                beforeScore: 95, improvement: 5, hasJobDescription: true };
+            mockStoreState.baselineMatchScore = 95;
+            renderWithProviders(<OptimizeSection jobDescription="New role" assessmentCurrent={false} />);
+            expect(screen.queryAllByText('95%')).toHaveLength(0);
+            expect(screen.getByRole('note')).toHaveTextContent('previous assessment');
+            fireEvent.click(screen.getByRole('button', { name: 'Applied' }));
+            expect(screen.getByText(sampleOptimization.original)).toBeInTheDocument();
+        });
+
+        it('keeps structured evidence on headline and summary cards', () => {
+            const evidence = { version: 1, status: 'needs_review', targetId: 'resume:1', originalFingerprint: 'a', proposedFingerprint: 'b', references: [{ sourceId: 'resume:1', quote: '<script>alert(1)</script>' }], sourceFingerprints: { 'resume:1': 'a' }, reasons: ['semantic_review'] };
+            for (const section of ['Headline', 'Summary']) {
+                expect(normalizeOptimization({ section, exampleBefore: 'Before', exampleAfter: 'After', evidence }, 0).evidence).toEqual(evidence);
+            }
+        });
+
+        it('discloses omitted input from the saved current run', () => {
+            mockStoreState.optimizeRun = {
+                assessment: { context: { key: 'current' } },
+                data: { evidenceInputOmissions: { resumeCharacters: 12, clarificationCharacters: 3 } },
+            };
+            renderWithProviders(<OptimizeSection assessmentKey="current" />);
+            expect(screen.getByRole('alert')).toHaveTextContent('12 resume characters and 3 answer characters');
+        });
+        it('restores the original score without admitting the optimized cache entry', async () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.parsedResumeText = 'Original resume for Role A';
+            mockGetCachedAssessment.mockImplementation((context) => context.isOptimized
+                ? { score: 98, timestamp: Date.now() }
+                : { score: 55, timestamp: Date.now() });
+            renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+            await waitFor(() => expect(screen.getByTestId('companion-score')).toHaveTextContent('55%'));
+            expect(screen.queryAllByText('98%')).toHaveLength(0);
+            expect(mockGetCachedAssessment).toHaveBeenCalledWith(expect.objectContaining({ isOptimized: false, kind: 'match' }));
+        });
+        it('does not show an original score from a context-free legacy cache hit', () => {
+            mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
+            mockStoreState.baselineMatchScore = null;
+            mockStoreState.optimizationMetrics.beforeScore = null;
+            mockStoreState.parsedResumeText = 'Original resume for this job';
+            renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+            expect(screen.queryAllByText('96%')).toHaveLength(0);
+        });
         it('renders a baseline score of 0 as a real current score', () => {
             mockStoreState.optimizations = [{ ...sampleOptimization, applied: true }];
             mockStoreState.baselineMatchScore = 0;
@@ -1274,7 +1397,6 @@ describe('Optimization Card Types', () => {
                 skills: [],
                 meta: { match_score: null },
             };
-            mockGetCachedAnalysis.mockReturnValue(null);
 
             renderWithProviders(<OptimizeSection />);
 
@@ -1420,11 +1542,8 @@ describe('Optimization Card Types', () => {
                     improvement: -45,
                 })
             );
-            expect(mockSetCachedAnalysis).not.toHaveBeenCalledWith(
-                expect.any(String),
-                'Backend engineer role',
-                expect.objectContaining({ score: 0 }),
-                true
+            expect(mockSetCachedAssessment).not.toHaveBeenCalledWith(
+                expect.any(Object), expect.objectContaining({ score: 0 })
             );
             expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
         });
@@ -1484,7 +1603,7 @@ describe('Optimization Card Types', () => {
 
             // A negative estimate is not a meaningful projection — the header shows
             // the honest current score alone, never "78% -> Estimated ~75%".
-            expect(screen.getByText('Current match')).toBeInTheDocument();
+            expect(screen.getByText('Estimated alignment with this job description')).toBeInTheDocument();
             expect(screen.getAllByText('78%').length).toBeGreaterThan(0);
             expect(screen.queryByText('Estimated ~75%')).not.toBeInTheDocument();
             expect(screen.queryByText('-3%')).not.toBeInTheDocument();
@@ -1686,7 +1805,7 @@ describe('Optimization Card Types', () => {
             expect(screen.getByTestId('companion-score')).toHaveTextContent('78%');
         });
 
-        it('feeds the explainability panel from the cached original analysis', () => {
+        it('feeds the explainability panel from the cached original analysis', async () => {
             mockStoreState.parsedResumeText = 'Original resume text used as the cache key.';
             mockStoreState.optimizations = [
                 { sectionId: 's-0', sectionType: 'summary', original: 'Built apps.', optimized: 'Built React apps.', applied: true },
@@ -1698,7 +1817,7 @@ describe('Optimization Card Types', () => {
                 improvement: 10,
                 hasJobDescription: true,
             };
-            mockGetCachedAnalysis.mockReturnValue({
+            mockGetCachedAssessment.mockReturnValue({
                 score: 55,
                 matchedKeywords: ['React'],
                 missingKeywords: ['GraphQL'],
@@ -1718,8 +1837,7 @@ describe('Optimization Card Types', () => {
 
             renderWithProviders(<OptimizeSection />);
 
-            expect(screen.getByText('sections.explainability.title')).toBeInTheDocument();
-            mockGetCachedAnalysis.mockReturnValue(null);
+            expect(await screen.findByText('sections.explainability.title')).toBeInTheDocument();
         });
     });
 });

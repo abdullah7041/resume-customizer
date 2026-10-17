@@ -3,6 +3,9 @@ import {
   normalizeScore,
   scoreFromCategoryScores,
 } from './score-utils.js';
+import { validateEditEvidence } from './optimization-evidence.js';
+import { proposalStatement } from '../../src/types/optimization-evidence.js';
+import type { EditEvidence, EvidenceReference, EvidenceSource } from '../../src/types/optimization-evidence.js';
 
 export interface OptimizationCard {
   section: string;
@@ -10,6 +13,23 @@ export interface OptimizationCard {
   suggestion: string;
   exampleBefore: string;
   exampleAfter: string;
+  evidence?: EditEvidence;
+}
+
+export function hasCurrentEvidenceCards(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const result = value as { evidenceVersion?: unknown; evidenceSources?: unknown; cards?: unknown };
+  const sources = result.evidenceSources;
+  return result.evidenceVersion === 2 && Array.isArray(sources)
+    && sources.length > 0 && Array.isArray(result.cards) && result.cards.length > 0
+    && result.cards.every((card: unknown) => {
+      if (!card || typeof card !== 'object') return false;
+      const evidence = (card as OptimizationCard).evidence;
+      return evidence?.version === 1 && (evidence.status === 'source_matched' || evidence.status === 'needs_review')
+        && Array.isArray(evidence.references) && evidence.references.length > 0
+        && evidence.references.every(reference => sources.some((source: unknown) =>
+          source && typeof source === 'object' && (source as EvidenceSource).id === reference.sourceId));
+    });
 }
 
 interface BulletImprovement {
@@ -18,13 +38,19 @@ interface BulletImprovement {
   suggestion?: string;
   issue?: string;
   rationale?: string;
+  target_id?: string;
+  evidence_references?: EvidenceReference[];
 }
 
 type OptimizationInput = {
   suggested_headline?: unknown;
   original_headline?: unknown;
+  headline_target_id?: string;
+  headline_evidence_references?: EvidenceReference[];
   summary_rewrite?: unknown;
   original_summary?: unknown;
+  summary_target_id?: string;
+  summary_evidence_references?: EvidenceReference[];
   bullet_improvements?: BulletImprovement[];
   missing_keywords?: unknown[];
   match_score?: unknown;
@@ -48,6 +74,7 @@ function hasContent(value: unknown): boolean {
 
 function getString(value: unknown, fallback: string): string {
   if (typeof value === 'string' && value.trim().length > 0) return value;
+  if (Array.isArray(value) && value.every((item) => typeof item === 'string')) return proposalStatement(value);
   return fallback;
 }
 
@@ -151,10 +178,54 @@ export function buildOptimizationCards(
   return cards;
 }
 
+export interface EvidenceDiagnostic {
+  status: 422;
+  code: 'EVIDENCE_INVALID';
+  message: string;
+}
+
+/** Build only source-bound edit cards from a fresh provider result. */
+export async function buildEvidenceBackedOptimizationCards(
+  optimization: OptimizationInput,
+  { logPrefix, sources }: CardBuilderOptions & { sources: EvidenceSource[] },
+): Promise<{ cards: OptimizationCard[]; diagnostics: EvidenceDiagnostic[] }> {
+  const cards: OptimizationCard[] = [];
+  const diagnostics: EvidenceDiagnostic[] = [];
+  const add = async (targetId: string | undefined, original: unknown, proposed: unknown, references: EvidenceReference[] | undefined, input: OptimizationInput) => {
+    if (!hasContent(original) || !hasContent(proposed)) return;
+    if (!targetId || !references) {
+      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
+      return;
+    }
+    const statement = (value: unknown) => Array.isArray(value) && value.every((item) => typeof item === 'string')
+      ? proposalStatement(value) : String(value);
+    const evidence = await validateEditEvidence({ targetId,
+      original: statement(original), proposed: statement(proposed), references }, sources);
+    if (evidence.status === 'rejected' || evidence.reasons.includes('new_number')) {
+      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
+      return;
+    }
+    const built = buildOptimizationCards(input, { logPrefix });
+    for (const card of built) {
+      if (card.section !== 'General' && card.section !== 'Skills') cards.push({ ...card, evidence });
+    }
+  };
+  await add(optimization?.headline_target_id, optimization?.original_headline, optimization?.suggested_headline, optimization?.headline_evidence_references, {
+    original_headline: optimization?.original_headline, suggested_headline: optimization?.suggested_headline,
+  });
+  await add(optimization?.summary_target_id, optimization?.original_summary, optimization?.summary_rewrite, optimization?.summary_evidence_references, {
+    original_summary: optimization?.original_summary, summary_rewrite: optimization?.summary_rewrite,
+  });
+  for (const item of optimization?.bullet_improvements ?? []) {
+    await add(item.target_id, item.original, item.improved ?? item.suggestion, item.evidence_references, { bullet_improvements: [item] });
+  }
+  return { cards, diagnostics };
+}
+
 export function calculateScores(
   optimization: OptimizationInput,
-  { cards, logPrefix }: CalculateScoresOptions,
-): { beforeScore: number; estimatedImprovement: number } {
+  { logPrefix }: CalculateScoresOptions,
+): { beforeScore: number; estimatedImprovement: number | null } {
   let beforeScore: number | null = null;
   if (optimization?.match_score != null) {
     beforeScore = normalizeScore(optimization.match_score, 'match_score');
@@ -169,12 +240,10 @@ export function calculateScores(
     throw new Error('AI optimization failed to calculate match score');
   }
 
-  const fallbackImprovement = Math.min(cards.length * 2, 15);
-  const estimatedImprovement = normalizeEstimatedImprovement(
-    beforeScore,
-    optimization?.after_score,
-    fallbackImprovement,
-  );
+  // Card count is not evidence of a score increase. Missing projected scores
+  // stay unavailable until the optimized resume is actually re-scored.
+  const estimatedImprovement = optimization?.after_score == null
+    ? null : normalizeEstimatedImprovement(beforeScore, optimization.after_score);
 
   return { beforeScore, estimatedImprovement };
 }

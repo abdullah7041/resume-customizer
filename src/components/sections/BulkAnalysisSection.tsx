@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 // jsPDF and jspdf-autotable are dynamically imported in exportComparison() to avoid bundling ~344 KB in the main chunk
 import { GlassCard } from '../ui/GlassCard';
@@ -27,6 +27,11 @@ import { useUserCredits } from '../../hooks/useUserCredits';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { UpgradeModal } from '../Credits/UpgradeModal';
 import { ConfirmActionModal } from '../Credits/ConfirmActionModal';
+import { createAssessmentContext } from '@/lib/match/assessmentContext';
+import type { AssessmentContext, AssessmentRecord } from '@/types/assessment';
+import type { StrategicRealityCheck } from '@/types/analysis';
+import type { CachedAnalysis } from '@/types/templates';
+import { renderBulkReportPrint } from '@/lib/export/bulkReportPrint';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -38,7 +43,13 @@ interface ResumeAnalysis {
   topHits?: string[];
   matchedKeywords?: string[];
   missingKeywords?: string[];
-  coverage?: number;
+  strategicRealityCheck?: StrategicRealityCheck | null;
+  categoryScores?: CachedAnalysis['categoryScores'];
+  reasoning?: string;
+  overallAssessment?: string;
+  recommendations?: string[];
+  suggestions?: string[];
+  strongMatches?: string[];
   localAnalysis?: {
     matchedKeywords: string[];
     jobKeywords: string[];
@@ -53,6 +64,7 @@ interface Resume {
   plainText?: string | null;
   analysis?: ResumeAnalysis | null;
   error?: string | null;
+  assessment?: AssessmentRecord<ResumeAnalysis>;
 }
 
 interface BulkAnalysisSectionProps {
@@ -62,6 +74,15 @@ interface BulkAnalysisSectionProps {
 /** A resume's text either comes from parsing an uploaded file or is already
  * known (the "use my uploaded resume" convenience row seeds it directly). */
 type ResumeSource = { kind: 'file'; file: File } | { kind: 'text'; plainText: string };
+interface RowRequest {
+  id: string;
+  rowId: string;
+  jobSnapshot: string;
+  language: 'en' | 'ar';
+  createdAt: string;
+  plainText?: string;
+  context?: AssessmentContext;
+}
 
 // === Sub-components ===
 const getScoreColor = (s: number) => {
@@ -78,8 +99,10 @@ const ScoreBadge = ({ score }: { score: number }) => {
   );
 };
 
-const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void }) => {
+const ResumeCard = ({ resume, onRemove, contextStatus }: { resume: Resume; onRemove: () => void;
+  contextStatus: 'current' | 'historical' | 'legacy' }) => {
   const { name, status, error, analysis } = resume;
+  const { t } = useTranslation();
 
   return (
     <div className="group relative">
@@ -105,7 +128,7 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
                 ) : status === 'completed' ? (
                   <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    Ready
+                    {contextStatus === 'current' ? 'Ready' : contextStatus === 'historical' ? 'Previous assessment' : 'Legacy assessment'}
                   </span>
                 ) : status === 'error' ? (
                   <span className="text-rose-700 dark:text-rose-400 flex items-center gap-1">
@@ -149,23 +172,28 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
         {status === 'completed' && analysis && (
           <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-medium">Match</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{t('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description')}</span>
               <ScoreBadge score={analysis.score || 0} />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-2 text-center">
                 <span className="block text-lg font-semibold text-gray-900 dark:text-white">
                   {analysis.topHits?.length || analysis.matchedKeywords?.length || 0}
                 </span>
                 <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Keywords</span>
               </div>
-              <div className="bg-gray-100 dark:bg-white/5 rounded-lg p-2 text-center">
-                <span className="block text-lg font-semibold text-gray-900 dark:text-white">
-                  {Math.round((analysis.coverage || 0) * 100)}%
-                </span>
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Coverage</span>
-              </div>
             </div>
+            {analysis.missingKeywords && analysis.missingKeywords.length > 0 && (
+              <p className="text-xs text-rose-700 dark:text-rose-300">
+                {t('sections.bulk.gaps', 'Requirements needing evidence')}: {analysis.missingKeywords.join(', ')}
+              </p>
+            )}
+            {analysis.strategicRealityCheck?.summary && (
+              <p className="text-xs text-gray-600 dark:text-gray-300">{analysis.strategicRealityCheck.summary}</p>
+            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {t('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.')}
+            </p>
           </div>
         )}
       </GlassCard>
@@ -176,6 +204,12 @@ const ResumeCard = ({ resume, onRemove }: { resume: Resume; onRemove: () => void
 export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps) {
   const { t, i18n } = useTranslation();
   const { credits, refetch: refetchCredits } = useUserCredits();
+  const currentJob = jobDescription ?? '';
+  const currentLanguage: 'en' | 'ar' = i18n.language === 'ar' ? 'ar' : 'en';
+  const latestInput = useRef({ jobSnapshot: currentJob, language: currentLanguage });
+  latestInput.current = { jobSnapshot: currentJob, language: currentLanguage };
+  const previousInput = useRef(latestInput.current);
+  const requests = useRef(new Map<string, RowRequest>());
   const [resumes, setResumes] = useState<Resume[]>(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -184,8 +218,8 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
         const parsed = JSON.parse(saved);
         return parsed.filter((r: Resume) => r.status === 'completed' || r.status === 'error');
       }
-    } catch (e) {
-      console.warn('Failed to load saved bulk analysis:', e);
+    } catch {
+      console.warn('[BulkAnalysisSection] Could not load saved rows');
     }
     return [];
   });
@@ -193,6 +227,43 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingResumeIds, setPendingResumeIds] = useState<string[]>([]);
+  const [verifiedRowIds, setVerifiedRowIds] = useState<Set<string>>(new Set());
+  const [selectedReportGroup, setSelectedReportGroup] = useState('');
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const isCurrentRequest = useCallback((request: RowRequest) =>
+    requests.current.get(request.rowId) === request &&
+    latestInput.current.jobSnapshot === request.jobSnapshot &&
+    latestInput.current.language === request.language, []);
+  useLayoutEffect(() => {
+    if (previousInput.current.jobSnapshot === currentJob && previousInput.current.language === currentLanguage) return;
+    previousInput.current = { jobSnapshot: currentJob, language: currentLanguage };
+    requests.current.clear();
+    setPendingResumeIds([]);
+    setShowConfirmModal(false);
+    setResumes(previous => previous.map(row =>
+      row.status === 'parsing' || row.status === 'analyzing'
+        ? { ...row, status: 'pending', error: null } : row));
+  }, [currentJob, currentLanguage]);
+  useLayoutEffect(() => () => { requests.current.clear(); }, []);
+
+  useEffect(() => {
+    let active = true;
+    void Promise.all(resumes.map(async row => {
+      if (row.status !== 'completed' || !row.analysis || !row.plainText || !row.assessment) return null;
+      const { context, jobSnapshot, requestId, createdAt, result } = row.assessment;
+      if (typeof requestId !== 'string' || !requestId || typeof createdAt !== 'string' ||
+        !result || JSON.stringify(result) !== JSON.stringify(row.analysis)) return null;
+      if (context.kind !== 'match' || context.isOptimized || context.rubricVersion !== 'match-v1') return null;
+      const current = await createAssessmentContext({ resumeText: row.plainText, jobDescription: jobSnapshot,
+        language: context.language, kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+      return current.key === context.key && current.resumeFingerprint === context.resumeFingerprint &&
+        current.jobFingerprint === context.jobFingerprint ? row.id : null;
+    })).then(ids => {
+      if (active) setVerifiedRowIds(new Set(ids.filter((id): id is string => Boolean(id))));
+    }).catch(() => { if (active) setVerifiedRowIds(new Set()); });
+    return () => { active = false; };
+  }, [resumes]);
 
   // Save to localStorage
   useEffect(() => {
@@ -207,124 +278,119 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       } else {
         removeCompatibleStorageItem(STORAGE_KEY);
       }
-    } catch (e) {
-      console.warn('Failed to save bulk analysis:', e);
+    } catch {
+      console.warn('[BulkAnalysisSection] Could not save rows');
     }
   }, [resumes]);
 
   const clearSavedData = useCallback(() => {
+    requests.current.clear();
+    setPendingResumeIds([]);
+    setShowConfirmModal(false);
+    setSelectedReportGroup('');
     setResumes([]);
     removeCompatibleStorageItem(STORAGE_KEY);
   }, []);
 
-  const processResumeActual = useCallback(async (resumeId: string, source: ResumeSource) => {
+  const allocateRequest = useCallback((rowId: string, jobSnapshot: string, language: 'en' | 'ar'): RowRequest => {
+    const request = { id: crypto.randomUUID(), rowId, jobSnapshot, language, createdAt: new Date().toISOString() };
+    requests.current.set(rowId, request);
+    return request;
+  }, []);
+
+  const completeFromCache = useCallback((request: RowRequest) => {
+    if (!request.context || !request.plainText || !isCurrentRequest(request)) return false;
+    const cached = useResumeStore.getState().getCachedAssessment(request.context);
+    if (!cached) return false;
+    const analysis: ResumeAnalysis = { score: cached.score, strategicRealityCheck: cached.strategicRealityCheck,
+      categoryScores: cached.categoryScores, reasoning: cached.reasoning,
+      overallAssessment: cached.overallAssessment, recommendations: cached.recommendations,
+      suggestions: cached.suggestions, strongMatches: cached.strongMatches,
+      topHits: cached.matchedKeywords || cached.strongMatches || [],
+      matchedKeywords: cached.matchedKeywords || cached.strongMatches || [],
+      missingKeywords: cached.missingKeywords || [] };
+    setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, plainText: request.plainText,
+      analysis, status: 'completed', assessment: { context: request.context!, jobSnapshot: request.jobSnapshot,
+        requestId: request.id, createdAt: request.createdAt, result: analysis } } : row));
+    return true;
+  }, [isCurrentRequest]);
+
+  const prepareResume = useCallback(async (request: RowRequest, source: ResumeSource) => {
     try {
       let plainText: string;
       if (source.kind === 'file') {
-        setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'parsing' as const } : r));
-        const parseResult = await parseResume(source.file);
-        plainText = parseResult?.plainText || '';
-        if (!plainText) throw new Error('Failed to extract text from resume');
-      } else {
-        plainText = source.plainText;
+        if (isCurrentRequest(request)) setResumes(previous => previous.map(row => row.id === request.rowId
+          ? { ...row, status: 'parsing' } : row));
+        const parsed = await parseResume(source.file);
+        if (!isCurrentRequest(request)) return false;
+        plainText = parsed?.plainText || '';
+      } else plainText = source.plainText;
+      if (!plainText) throw new Error('unreadable');
+      if (!isCurrentRequest(request)) return false;
+      request.plainText = plainText;
+      setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, plainText,
+        status: 'pending' } : row));
+      if (!request.jobSnapshot) {
+        setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, status: 'completed' } : row));
+        return false;
       }
+      request.context = await createAssessmentContext({ resumeText: plainText, jobDescription: request.jobSnapshot,
+        language: request.language, kind: 'match', isOptimized: false, rubricVersion: 'match-v1' });
+      if (!isCurrentRequest(request)) return false;
+      return !completeFromCache(request);
+    } catch {
+      if (isCurrentRequest(request)) setResumes(previous => previous.map(row => row.id === request.rowId
+        ? { ...row, status: 'error', error: 'Could not prepare this resume' } : row));
+      return false;
+    }
+  }, [completeFromCache, isCurrentRequest]);
 
-      setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, plainText, status: 'analyzing' as const } : r));
-
-      if (jobDescription) {
-        // Cache hit (e.g. the "use my resume" seeded row, same text+JD as the
-        // Match tab) is free and guarantees score parity by construction —
-        // skip the paid re-analysis entirely.
-        const cached = useResumeStore.getState().getCachedAnalysis(plainText, jobDescription, false);
-        if (cached) {
-          const cachedAnalysis: ResumeAnalysis = {
-            score: cached.score,
-            // The Match tab's cache entry never stores coverage (MainContent's
-            // setCachedAnalysis call omits it) — derive it the same way
-            // ai-match's response does so the card doesn't show "0%".
-            coverage: cached.coverage ?? cached.score / 100,
-            topHits: cached.matchedKeywords || cached.strongMatches || [],
-            matchedKeywords: cached.matchedKeywords || cached.strongMatches || [],
-            missingKeywords: cached.missingKeywords || [],
-          };
-          setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, analysis: cachedAnalysis, status: 'completed' as const } : r));
-          return;
-        }
-
-        // Use authenticated AI match endpoint (costs 2 credits per resume)
-        const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
-        const headers = await getAuthHeaders();
-
-        const response = await fetch('/.netlify/functions/ai-match', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            resumeText: plainText,
-            jobText: jobDescription,
-            language: i18n.language,
-          }),
-        });
-
-        // Handle insufficient credits (403)
-        if (response.status === 403) {
-          setShowUpgradeModal(true);
-          setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'error' as const, error: 'Insufficient credits' } : r));
-          return;
-        }
-
-        if (!response.ok) throw new Error(`Analysis failed: ${response.statusText}`);
-
-        const aiAnalysis = await response.json();
-        // Normalize: backend returns strongMatches/matched_keywords, UI expects topHits/matchedKeywords
-        const normalizedAnalysis: ResumeAnalysis = {
-          ...aiAnalysis,
-          topHits: aiAnalysis.topHits || aiAnalysis.strongMatches || aiAnalysis.matched_keywords || [],
-          matchedKeywords: aiAnalysis.matchedKeywords || aiAnalysis.strongMatches || aiAnalysis.matched_keywords || [],
-        };
-        setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, analysis: normalizedAnalysis, status: 'completed' as const } : r));
-
-        // Refetch credits after each resume analysis
-        setTimeout(() => refetchCredits(), 500);
-      } else {
-        setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'completed' as const } : r));
+  const runAnalysis = useCallback(async (request: RowRequest) => {
+    if (!request.context || !request.plainText || !isCurrentRequest(request)) return;
+    if (completeFromCache(request)) return;
+    setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, status: 'analyzing' } : row));
+    try {
+      const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
+      const headers = await getAuthHeaders();
+      if (!isCurrentRequest(request)) return;
+      const response = await fetch('/.netlify/functions/ai-match', { method: 'POST', headers,
+        body: JSON.stringify({ resumeText: request.plainText, jobText: request.jobSnapshot, language: request.language }) });
+      if (!isCurrentRequest(request)) return;
+      if (response.status === 403) {
+        setShowUpgradeModal(true);
+        setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, status: 'error', error: 'Insufficient credits' } : row));
+        return;
       }
-    } catch (error) {
-      setResumes(prev => prev.map(r => r.id === resumeId ? { ...r, status: 'error' as const, error: (error as Error).message } : r));
+      if (!response.ok) throw new Error('Analysis failed');
+      const raw: ResumeAnalysis & { strongMatches?: string[]; matched_keywords?: string[] } = await response.json();
+      if (!isCurrentRequest(request)) return;
+      if (typeof raw.score !== 'number' || !Number.isFinite(raw.score)) throw new Error('Invalid score');
+      const analysis: ResumeAnalysis = { ...raw, topHits: raw.topHits || raw.strongMatches || raw.matched_keywords || [],
+        matchedKeywords: raw.matchedKeywords || raw.strongMatches || raw.matched_keywords || [] };
+      useResumeStore.getState().setCachedAssessment(request.context, {
+        score: raw.score, matchedKeywords: analysis.matchedKeywords,
+        missingKeywords: analysis.missingKeywords,
+        strategicRealityCheck: analysis.strategicRealityCheck,
+        categoryScores: analysis.categoryScores, reasoning: analysis.reasoning,
+        overallAssessment: analysis.overallAssessment, recommendations: analysis.recommendations,
+        suggestions: analysis.suggestions, strongMatches: analysis.strongMatches });
+      setResumes(previous => previous.map(row => row.id === request.rowId ? { ...row, analysis, status: 'completed',
+        assessment: { context: request.context!, jobSnapshot: request.jobSnapshot,
+          requestId: request.id, createdAt: request.createdAt, result: analysis } } : row));
+      setTimeout(() => { if (isCurrentRequest(request)) void refetchCredits(); }, 500);
+    } catch {
+      if (isCurrentRequest(request)) setResumes(previous => previous.map(row => row.id === request.rowId
+        ? { ...row, status: 'error', error: 'Analysis failed' } : row));
     }
-  }, [jobDescription, refetchCredits, i18n.language]);
+  }, [completeFromCache, isCurrentRequest, refetchCredits]);
 
-  // Wrapper: collect all pending resume IDs and show one confirmation modal
-  const processResume = useCallback((resumeId: string, source: ResumeSource) => {
-    if (!jobDescription) {
-      // If no job description, process without credits (just parsing)
-      processResumeActual(resumeId, source);
-      return;
-    }
-    // A known-text source (the "use my resume" seeded row) whose analysis is
-    // already cached is free by construction — skip the paid-confirm modal
-    // instead of asking the user to approve a charge that won't happen.
-    if (source.kind === 'text' && useResumeStore.getState().getCachedAnalysis(source.plainText, jobDescription, false)) {
-      processResumeActual(resumeId, source);
-      return;
-    }
-    // Accumulate pending IDs — modal shown once for the batch
-    setPendingResumeIds(prev => [...prev, resumeId]);
-    setShowConfirmModal(true);
-  }, [jobDescription, processResumeActual]);
-
-  // Handler for confirmed analysis — processes resumes sequentially to avoid API rate limits
   const handleConfirmAnalysis = async () => {
     setShowConfirmModal(false);
     const ids = [...pendingResumeIds];
     setPendingResumeIds([]);
-    const resumeById = new Map(resumes.map(r => [r.id, r]));
     for (const id of ids) {
-      const resume = resumeById.get(id);
-      if (resume?.file) {
-        await processResumeActual(id, { kind: 'file', file: resume.file });
-      } else if (resume?.plainText) {
-        await processResumeActual(id, { kind: 'text', plainText: resume.plainText });
-      }
+      const request = requests.current.get(id);
+      if (request) await runAnalysis(request);
     }
   };
 
@@ -348,13 +414,23 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       error: null
     }));
 
+    const jobSnapshot = latestInput.current.jobSnapshot;
+    const language = latestInput.current.language;
+    const rowRequests = newResumes.map(row => allocateRequest(row.id, jobSnapshot, language));
     setResumes(prev => [...prev, ...newResumes]);
-    // processResume is synchronous: it either queues the batch confirmation
-    // modal or kicks off a fire-and-forget parse, so there is nothing to await.
-    for (const resume of newResumes) {
-      processResume(resume.id, { kind: 'file', file: resume.file! });
+    const pending: string[] = [];
+    // Parsing is free and runs sequentially, so a cache hit never asks the
+    // candidate to approve a charge and multi-file uploads share one modal.
+    for (let index = 0; index < newResumes.length; index++) {
+      if (await prepareResume(rowRequests[index], { kind: 'file', file: newResumes[index].file! })) {
+        pending.push(newResumes[index].id);
+      }
     }
-  }, [resumes.length, processResume]);
+    if (pending.length && latestInput.current.jobSnapshot === jobSnapshot && latestInput.current.language === language) {
+      setPendingResumeIds(previous => [...previous, ...pending]);
+      setShowConfirmModal(true);
+    }
+  }, [resumes.length, allocateRequest, prepareResume]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -387,6 +463,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     if (!parsedResumeText || hasUploadedResumeInList || resumes.length >= MAX_FILES) return;
     const id = `uploaded-${Date.now()}`;
     const name = originalResumeName || t('sections.bulk.myResumeLabel', 'My resume');
+    const request = allocateRequest(id, latestInput.current.jobSnapshot, latestInput.current.language);
     setResumes(prev => [...prev, {
       id,
       name,
@@ -396,76 +473,183 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       analysis: null,
       error: null,
     }]);
-    processResume(id, { kind: 'text', plainText: parsedResumeText });
-  }, [parsedResumeText, hasUploadedResumeInList, resumes.length, originalResumeName, t, processResume]);
+    void prepareResume(request, { kind: 'text', plainText: parsedResumeText }).then(needsConfirmation => {
+      if (!needsConfirmation || !isCurrentRequest(request)) return;
+      setPendingResumeIds(previous => [...previous, id]);
+      setShowConfirmModal(true);
+    });
+  }, [parsedResumeText, hasUploadedResumeInList, resumes.length, originalResumeName, t, allocateRequest, prepareResume, isCurrentRequest]);
 
   const removeResume = useCallback((index: number) => {
+    const id = resumes[index]?.id;
+    if (id) requests.current.delete(id);
     setResumes(prev => prev.filter((_, i) => i !== index));
-  }, []);
+  }, [resumes]);
+
+  const validCompleted = useMemo(() => resumes.filter(row => row.status === 'completed' && row.analysis &&
+    row.assessment && verifiedRowIds.has(row.id)), [resumes, verifiedRowIds]);
+  const sortedResumes = useMemo(() => validCompleted.filter(row =>
+    row.assessment?.jobSnapshot === currentJob && row.assessment.context.language === currentLanguage)
+    .sort((a, b) => (b.analysis?.score ?? 0) - (a.analysis?.score ?? 0)),
+  [validCompleted, currentJob, currentLanguage]);
+  const reportGroups = useMemo(() => {
+    const groups = new Map<string, { jobSnapshot: string; language: 'en' | 'ar'; rows: Resume[] }>();
+    for (const row of validCompleted) {
+      const assessment = row.assessment!;
+      const key = JSON.stringify([assessment.context.jobFingerprint, assessment.context.language,
+        assessment.context.rubricVersion, assessment.jobSnapshot]);
+      const group = groups.get(key) ?? { jobSnapshot: assessment.jobSnapshot,
+        language: assessment.context.language, rows: [] };
+      group.rows.push(row);
+      groups.set(key, group);
+    }
+    return [...groups.entries()].map(([id, group]) => ({ id, ...group }));
+  }, [validCompleted]);
+  const reportGroupId = reportGroups.length === 1 ? reportGroups[0].id : selectedReportGroup;
+  const reportGroup = reportGroups.find(group => group.id === reportGroupId);
 
   const exportComparison = async () => {
+    if (!reportGroup || reportGroup.rows.length === 0) return;
+    setExportError(null);
+    // Capture one historical context before loading the PDF libraries. A job
+    // switch cannot replace the description while this export is in flight.
+    const reportJob = reportGroup.jobSnapshot;
+    const reportLanguage = reportGroup.language;
+    const reportT = i18n.getFixedT(reportLanguage);
+    const isHistoricalReport = reportJob !== currentJob || reportLanguage !== currentLanguage;
+    const sortedReportRows = [...reportGroup.rows].sort((a, b) => (b.analysis?.score ?? 0) - (a.analysis?.score ?? 0));
+    if (reportLanguage === 'ar') {
+      let popup: Window | null = null;
+      try {
+        // Open during the click, before any await, so the browser keeps the
+        // user gesture needed for the print dialog.
+        popup = window.open('', '_blank', 'width=900,height=700');
+        if (!popup) throw new Error('popup_blocked');
+        popup.opener = null;
+        renderBulkReportPrint(popup.document, {
+          title: reportT('sections.bulk.reportTitle', 'Resume Comparison Report'),
+          generated: `${reportT('sections.bulk.reportGenerated', 'Generated')}: ${new Date().toLocaleString('ar-SA')}`,
+          historical: isHistoricalReport ? reportT('sections.bulk.reportHistorical', 'Historical assessment') : undefined,
+          jobSummaryLabel: reportT('sections.bulk.reportJobSummary', 'Job Description Summary:'),
+          jobSnapshot: reportJob,
+          headings: [
+            reportT('sections.bulk.reportRank', 'Rank'),
+            reportT('sections.bulk.reportResumeName', 'Resume Name'),
+            reportT('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description'),
+            reportT('sections.bulk.reportKeywords', 'Keywords'),
+            reportT('sections.bulk.reportRelativeRank', 'Relative rank'),
+          ],
+          hiringDisclaimer: reportT('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.'),
+          missingLabel: reportT('sections.bulk.reportMissingKeywords', 'Requirements needing evidence:'),
+          realityLabel: reportT('sections.bulk.reportRealityCheck', 'Evidence and risk summary:'),
+          rows: sortedReportRows.map((row, index) => ({
+            rank: `#${index + 1}`,
+            name: row.name,
+            score: `${row.analysis?.score ?? 0}%`,
+            keywordCount: String(row.analysis?.topHits?.length || row.analysis?.matchedKeywords?.length || 0),
+            relativeRank: index === 0
+              ? reportT('sections.bulk.highestScore', 'Highest score in this comparison')
+              : reportT('sections.bulk.lowerScore', 'Lower score in this comparison'),
+            missingKeywords: row.analysis?.missingKeywords ?? [],
+            realitySummary: row.analysis?.strategicRealityCheck?.summary,
+          })),
+        });
+        popup.document.close();
+        popup.focus();
+        popup.print();
+      } catch {
+        popup?.close();
+        setExportError(reportT('sections.bulk.popupBlocked', 'Could not open the print window. Allow popups and try again.'));
+      }
+      return;
+    }
     const [{ jsPDF }, { default: autoTable }] = await Promise.all([
       import('jspdf'),
       import('jspdf-autotable'),
     ]);
 
-    const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
-    const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
-
     // Create PDF document
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const textX = 14;
+    const textAlign = 'left';
 
     // Title
     doc.setFontSize(20);
     doc.setTextColor(16, 185, 129); // Emerald color
-    doc.text('Resume Comparison Report', pageWidth / 2, 20, { align: 'center' });
+    doc.text(reportT('sections.bulk.reportTitle', 'Resume Comparison Report'), pageWidth / 2, 20, { align: 'center' });
 
     // Date
     doc.setFontSize(10);
     doc.setTextColor(107, 114, 128);
-    doc.text(`Generated: ${new Date().toLocaleDateString('en-US', {
+    doc.text(`${reportT('sections.bulk.reportGenerated', 'Generated')}: ${new Date().toLocaleDateString('en-US', {
       year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     })}`, pageWidth / 2, 28, { align: 'center' });
 
+    if (isHistoricalReport) {
+      doc.setFontSize(10);
+      doc.setTextColor(146, 64, 14);
+      doc.text(reportT('sections.bulk.reportHistorical', 'Historical assessment'), textX, 38,
+        { align: textAlign });
+    }
+
     // Job Description Summary
-    if (jobDescription) {
+    if (reportJob) {
+      const offset = isHistoricalReport ? 9 : 0;
       doc.setFontSize(12);
       doc.setTextColor(31, 41, 55);
-      doc.text('Job Description Summary:', 14, 40);
+      doc.text(reportT('sections.bulk.reportJobSummary', 'Job Description Summary:'), textX, 40 + offset,
+        { align: textAlign });
       doc.setFontSize(9);
       doc.setTextColor(75, 85, 99);
-      const jdText = jobDescription.substring(0, 300) + (jobDescription.length > 300 ? '...' : '');
+      const jdText = reportJob.substring(0, 300) + (reportJob.length > 300 ? '...' : '');
       const splitJd = doc.splitTextToSize(jdText, pageWidth - 28);
-      doc.text(splitJd, 14, 47);
+      doc.text(splitJd, textX, 47 + offset, { align: textAlign });
     }
 
     // Comparison Table
-    const tableStartY = jobDescription ? 70 : 40;
+    const tableStartY = (reportJob ? 70 : 40) + (isHistoricalReport ? 9 : 0);
 
     autoTable(doc, {
       startY: tableStartY,
-      head: [['Rank', 'Resume Name', 'Match Score', 'Keywords', 'Status']],
-      body: sortedResumes.map((r, idx) => {
+      head: [[
+        reportT('sections.bulk.reportRank', 'Rank'),
+        reportT('sections.bulk.reportResumeName', 'Resume Name'),
+        reportT('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description'),
+        reportT('sections.bulk.reportKeywords', 'Keywords'),
+        reportT('sections.bulk.reportRelativeRank', 'Relative rank'),
+      ]],
+      body: sortedReportRows.map((r, idx) => {
         const score = r.analysis?.score || 0;
         const keywordCount = r.analysis?.topHits?.length || r.analysis?.matchedKeywords?.length || 0;
-        const status = idx === 0 ? '[#1] Best Match' : score >= 70 ? '[OK] Good' : score >= 50 ? '[!] Needs Work' : '[X] Revise';
+        const status = idx === 0
+          ? reportT('sections.bulk.highestScore', 'Highest score in this comparison')
+          : reportT('sections.bulk.lowerScore', 'Lower score in this comparison');
         return [`#${idx + 1}`, r.name, `${score}%`, keywordCount.toString(), status];
       }),
       headStyles: { fillColor: [16, 185, 129], textColor: 255 },
       alternateRowStyles: { fillColor: [240, 253, 244] },
-      styles: { fontSize: 10 }
+      styles: { fontSize: 10, halign: 'left' }
     });
 
     // Missing Keywords per Resume
     let currentY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY || tableStartY + 50;
+    doc.setFontSize(9);
+    doc.setTextColor(107, 114, 128);
+    for (const line of doc.splitTextToSize(
+      reportT('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.'), pageWidth - 28)) {
+      if (currentY > 265) { doc.addPage(); currentY = 20; }
+      currentY += 5;
+      doc.text(line, textX, currentY, { align: textAlign });
+    }
 
-    sortedResumes.forEach((resume, idx) => {
+    sortedReportRows.forEach((resume, idx) => {
       const missing = resume.analysis?.missingKeywords || [];
-      if (missing.length === 0) return;
+      const realitySummary = resume.analysis?.strategicRealityCheck?.summary;
+      if (missing.length === 0 && !realitySummary) return;
 
       // Check if we need a new page
-      if (currentY > 250) {
+      if (currentY > 240) {
         doc.addPage();
         currentY = 20;
       }
@@ -473,15 +657,25 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       currentY += 15;
       doc.setFontSize(11);
       doc.setTextColor(31, 41, 55);
-      doc.text(`#${idx + 1} ${resume.name} - Missing Keywords:`, 14, currentY);
+      doc.text(`#${idx + 1} ${resume.name}`, textX, currentY, { align: textAlign });
 
+      const writeDetail = (label: string, value: string, color: [number, number, number]) => {
+        doc.setFontSize(9);
+        doc.setTextColor(...color);
+        for (const line of doc.splitTextToSize(`${label} ${value}`, pageWidth - 28)) {
+          if (currentY > 265) {
+            doc.addPage();
+            currentY = 20;
+          }
+          doc.text(line, textX, currentY, { align: textAlign });
+          currentY += 5;
+        }
+      };
       currentY += 6;
-      doc.setFontSize(9);
-      doc.setTextColor(239, 68, 68); // Red color
-      const missingText = missing.join(', ');
-      const splitMissing = doc.splitTextToSize(missingText, pageWidth - 28);
-      doc.text(splitMissing, 14, currentY);
-      currentY += splitMissing.length * 5;
+      if (missing.length > 0) writeDetail(reportT('sections.bulk.reportMissingKeywords', 'Requirements needing evidence:'),
+        missing.join(', '), [190, 55, 55]);
+      if (realitySummary) writeDetail(reportT('sections.bulk.reportRealityCheck', 'Evidence and risk summary:'),
+        realitySummary, [75, 85, 99]);
     });
 
     // Save PDF
@@ -489,8 +683,6 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
   };
 
   const canUploadMore = resumes.length < MAX_FILES;
-  const completedResumes = resumes.filter(r => r.status === 'completed' && r.analysis);
-  const sortedResumes = [...completedResumes].sort((a, b) => (b.analysis?.score || 0) - (a.analysis?.score || 0));
 
   return (
     <div className="space-y-8">
@@ -516,13 +708,26 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               <Trash2 className="w-4 h-4 me-2" />
               {t('sections.bulk.clearAll', 'Clear All')}
             </GlassButton>
-            <GlassButton variant="primary" onClick={exportComparison} className="shadow-lg shadow-primary-500/20">
+            {reportGroups.length > 1 && (
+              <select aria-label="Report assessment" value={selectedReportGroup}
+                onChange={event => setSelectedReportGroup(event.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-white/20 dark:bg-gray-900 dark:text-white">
+                <option value="">Select one assessment</option>
+                {reportGroups.map(group => <option key={group.id} value={group.id}>
+                  {group.jobSnapshot.slice(0, 80)} ({group.language})
+                </option>)}
+              </select>
+            )}
+            <GlassButton variant="primary" onClick={exportComparison} disabled={!reportGroup} className="shadow-lg shadow-primary-500/20">
               <Download className="w-4 h-4 me-2" />
-              {t('sections.bulk.export', 'Export Report')}
+              {reportGroup?.language === 'ar'
+                ? i18n.getFixedT('ar')('sections.bulk.printOrSave', 'Print / Save as PDF')
+                : t('sections.bulk.export', 'Export Report')}
             </GlassButton>
           </div>
         )}
       </GlassCard>
+      {exportError && <p role="alert" className="text-sm text-rose-700 dark:text-rose-300">{exportError}</p>}
 
       {/* Use my uploaded resume — convenience row, skips a re-upload of the
           already-parsed resume. Parsing is free either way. */}
@@ -623,7 +828,10 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       {resumes.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
           {resumes.map((resume, index) => (
-            <ResumeCard key={resume.id} resume={resume} onRemove={() => removeResume(index)} />
+            <ResumeCard key={resume.id} resume={resume} onRemove={() => removeResume(index)}
+              contextStatus={!verifiedRowIds.has(resume.id) ? 'legacy'
+                : resume.assessment?.jobSnapshot === currentJob && resume.assessment.context.language === currentLanguage
+                  ? 'current' : 'historical'} />
           ))}
         </div>
       )}
@@ -647,7 +855,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                 <tr className="bg-gray-100/50 dark:bg-white/5 backdrop-blur-sm">
                   <th className="text-left py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rank</th>
                   <th className="text-left py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
-                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Match Score</th>
+                  <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('sections.bulk.estimatedAlignment', 'Estimated alignment with this job description')}</th>
                   <th className="text-center py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Key Matches</th>
                   <th className="text-right py-4 px-6 font-semibold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 </tr>
@@ -694,19 +902,11 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
                       <td className="py-4 px-6 text-right">
                         {rank === 1 ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                            Best Match
-                          </span>
-                        ) : score >= 70 ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/5 text-emerald-500 border border-emerald-500/10">
-                            Strong
-                          </span>
-                        ) : score >= 50 ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                            Moderate
+                            {t('sections.bulk.highestScore', 'Highest score in this comparison')}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">
-                            Review
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 dark:bg-white/5 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+                            {t('sections.bulk.lowerScore', 'Lower score in this comparison')}
                           </span>
                         )}
                       </td>
@@ -716,6 +916,9 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               </tbody>
             </table>
           </div>
+          <p className="px-6 py-3 text-xs text-gray-500 dark:text-gray-400">
+            {t('sections.bulk.hiringDisclaimer', 'This assessment does not predict a hiring decision.')}
+          </p>
         </GlassCard>
       )}
 

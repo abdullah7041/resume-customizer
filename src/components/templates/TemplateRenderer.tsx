@@ -6,6 +6,7 @@ import { cn } from "../../lib/utils/cn";
 import { ExternalLink, Github, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 import { getTemplate } from "./registry";
 import type { TemplateId } from "../../types/templates";
+import type { ResumeSchema } from "../../types/resume";
 import { detectResumeDirection, type ResumeDirection } from "../../lib/utils/resumeDirection";
 
 // Helper to safely render a value (handles strings, objects, arrays, and React Elements)
@@ -326,7 +327,6 @@ const DynamicTemplateRenderer = ({ template, userData }) => {
   );
 };
 
-import { mergeResumeData } from "../../lib/utils/resumeUtils";
 import { useResumeStore } from "../../lib/stores/resumeStore";
 
 interface UserData {
@@ -340,25 +340,14 @@ interface UserData {
 interface TemplateRendererProps {
   template: { id: string; structure: unknown; formatting?: unknown };
   userData?: UserData;
-  aiAnalysisResult?: Record<string, unknown> | null;
   contentDirection?: ResumeDirection;
 }
 
 const EMPTY_USER_DATA: UserData = {};
 
-export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA, aiAnalysisResult = null, contentDirection }: TemplateRendererProps) {
+export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA, contentDirection }: TemplateRendererProps) {
   // Get display options from store (user's formatting preferences)
   const displayOptions = useResumeStore((state) => state.displayOptions);
-
-  // Memoize mergeResumeData call to avoid recomputation on every render
-  const finalData = useMemo(() => {
-    // MERGE: Ensure we have the full data set (Original + AI Suggestions)
-    const optimization = aiAnalysisResult || userData.meta?.aiAnalysisResult || {};
-    const mergedData = mergeResumeData(userData, { optimization });
-
-    // Fallback to userData if merge failed (e.g., missing basics)
-    return mergedData || userData;
-  }, [userData, aiAnalysisResult]);
 
   // Use registry to get the correct component by template ID
   // Memoize to avoid repeated map lookup
@@ -367,7 +356,7 @@ export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA,
     return getTemplate(templateId);
   }, [template.id]);
 
-  const resumeDirection = contentDirection ?? detectResumeDirection(finalData);
+  const resumeDirection = contentDirection ?? detectResumeDirection(userData);
   const textAlign = resumeDirection === 'rtl' ? 'right' : 'left';
 
   // CSS variables for formatting - applied to all templates
@@ -398,7 +387,7 @@ export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA,
           unicodeBidi: 'isolate',
         }}
       >
-        <TemplateComponent resume={finalData} displayOptions={displayOptions} contentDirection={resumeDirection} />
+        <TemplateComponent resume={userData as unknown as ResumeSchema} displayOptions={displayOptions} contentDirection={resumeDirection} />
       </div>
     );
   }
@@ -415,7 +404,7 @@ export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA,
         unicodeBidi: 'isolate',
       }}
     >
-      <DynamicTemplateRenderer template={template} userData={finalData} />
+      <DynamicTemplateRenderer template={template} userData={userData} />
     </div>
   );
 }

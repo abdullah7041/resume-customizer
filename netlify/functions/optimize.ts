@@ -9,18 +9,13 @@ import { getSupabaseClient } from "../lib/supabase-client.js";
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
-import { buildOptimizationCards, calculateScores } from "../lib/optimize-cards.js";
+import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
+import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
 import { MODELS } from "../lib/model-registry.js";
 
 initSentry();
 
 const OPTIMIZE_CACHE_TTL_SECONDS = 600;
-
-function hasRenderableCards(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  const cards = (value as { cards?: unknown }).cards;
-  return Array.isArray(cards) && cards.length > 0;
-}
 
 async function attachLiveCredits<T extends Record<string, unknown>>(
   payload: T,
@@ -162,7 +157,7 @@ const baseHandler: Handler = async (event) => {
     });
 
     const cachedResponse = await getCached<Record<string, unknown>>(cacheKey);
-    if (hasRenderableCards(cachedResponse)) {
+    if (hasCurrentEvidenceCards(cachedResponse)) {
       console.log('[optimize] Cache HIT — returning cached result, skipping Gemini call.');
       const responsePayload = await attachLiveCredits(cachedResponse, userEmail, freePreview);
       return {
@@ -204,10 +199,11 @@ const baseHandler: Handler = async (event) => {
 
     // Add timeout logging
     const startTime = Date.now();
+    const evidenceSources = buildRequestEvidenceSources(resumeText, userClarifications);
 
     // Use dedicated optimizeResume function for faster, focused optimization
     const optimization = await optimizeResume(
-      resumeText,
+      requestEvidenceResumeText(evidenceSources),
       jobText,
       language,
       vulnerabilities,
@@ -216,6 +212,7 @@ const baseHandler: Handler = async (event) => {
       {
         userRef: user?.id || null,
         jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
+        evidenceSources,
       },
     );
 
@@ -244,7 +241,8 @@ const baseHandler: Handler = async (event) => {
     }
 
     // Map to frontend expected format (Cards)
-    const cards = buildOptimizationCards(optimization, { logPrefix: '[optimize]' });
+    const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: '[optimize]', sources: evidenceSources });
+    if (cards.length === 0) throw new Error('AI optimization produced no usable evidence-backed edits');
 
     // Log processing summary
     console.log('[optimize] Processing complete:', {
@@ -296,7 +294,11 @@ const baseHandler: Handler = async (event) => {
     }
 
     const responsePayload = {
+      evidenceVersion: 2,
       cards: cards,
+      evidenceSources,
+      evidenceInputOmissions: evidenceInputOmissions(resumeText, userClarifications || '', evidenceSources),
+      evidenceDiagnostics: diagnostics,
       keywords: {
         add: addKeywords,
         neutral: optimization?.keywords_to_keep || [],
@@ -305,7 +307,7 @@ const baseHandler: Handler = async (event) => {
       // Match scoring for Results Summary
       matchScoring: {
         beforeScore: Math.round(beforeScore),
-        estimatedImprovement: Math.round(estimatedImprovement),
+        estimatedImprovement,
         jdKeywords: jdKeywords.slice(0, 20), // Cap at 20 for UI
         matchedKeywords: matchedKeywords.slice(0, 15),
         reasoning: null,

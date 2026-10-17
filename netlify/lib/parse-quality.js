@@ -377,13 +377,14 @@ function splitSkillTokens(lines) {
 // Date token used to recognize work-entry header lines and to slice a date
 // range out of them (e.g. "Mar 2021 - Present", "2017 - 2018", "Jan 2019").
 const MONTH = "(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?";
-const DATE_TOKEN_RE = new RegExp(`(?:${MONTH}\\s*)?(?:19|20)\\d{2}|\\bpresent\\b`, "i");
+const DATE = `(?:${MONTH}\\s*)?(?:19|20)\\d{2}(?:-(?:0[1-9]|1[0-2]))?|\\bpresent\\b`;
+const DATE_TOKEN_RE = new RegExp(DATE, "i");
 const DATE_RANGE_RE = new RegExp(
-  `((?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)\\s*(?:[-–—]|to)\\s*((?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)`,
+  `(${DATE})\\s*(?:[-–—]|to)\\s*(${DATE})`,
   "i",
 );
 const DATE_ONLY_RE = new RegExp(
-  `^\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present)(?:\\s*(?:[-–—]|to)\\s*(?:(?:${MONTH}\\s*)?(?:19|20)\\d{2}|present))?\\s*$`,
+  `^\\s*(?:${DATE})(?:\\s*(?:[-–—]|to)\\s*(?:${DATE}))?\\s*$`,
   "i",
 );
 const BULLET_PREFIX_RE = /^[\s•·*\-–—]+/;
@@ -507,10 +508,16 @@ export function parseWorkBlocks(lines) {
   const entries = [];
   let current = null;
 
-  // A year appearing inside an achievement is not enough to start a new job.
-  // Accept an inline header only when it has a full date range or an explicit
-  // role/company separator; standalone date lines are attached below.
-  const isHeader = (line) => DATE_RANGE_RE.test(line) || COMPANY_SEP_RE.test(line);
+  // ISO date metadata cannot establish a second job without a role/company separator.
+  // Keep the older range-only title behavior for non-ISO dates.
+  const isHeader = (line) => {
+    const range = line.match(DATE_RANGE_RE);
+    const withoutRange = range
+      ? (line.slice(0, range.index) + line.slice(range.index + range[0].length)).trim()
+      : line;
+    return COMPANY_SEP_RE.test(withoutRange)
+      || Boolean(range && (!current || !/(?:19|20)\d{2}-(?:0[1-9]|1[0-2])/.test(range[0])));
+  };
 
   for (let index = 0; index < rows.length; index++) {
     const line = rows[index];
@@ -528,6 +535,12 @@ export function parseWorkBlocks(lines) {
     if (current && !withoutDate && !current.startDate && (dateRange || singleDate)) {
       current.startDate = (dateRange?.[1] || singleDate?.[0] || "").trim();
       if (dateRange) current.endDate = dateRange[2].trim();
+      continue;
+    }
+    // ponytail: ambiguous stacked roles stay as text; require stronger role evidence before auto-recovery.
+    // Another standalone date cannot establish a new role; retain it as source text.
+    if (DATE_ONLY_RE.test(line) && (!current || current.startDate)) {
+      if (current) current.highlights.push(line);
       continue;
     }
 

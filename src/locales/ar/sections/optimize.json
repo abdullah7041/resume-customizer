@@ -112,7 +112,7 @@
         "rerun": "إعادة التشغيل",
         "continue": "متابعة",
         "breakdown": "تفصيل الدرجة",
-        "currentMatch": "التطابق الحالي",
+        "currentMatch": "تقدير التوافق مع هذا الوصف الوظيفي",
         "estimatedScore": "تقديري ~{{score}}%",
         "progressActionable": "{{applied}}/{{total}} من تعديلات السيرة مطبّقة",
         "recommendationsCount": "{{total}} توصيات",

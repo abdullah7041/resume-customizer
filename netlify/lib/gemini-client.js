@@ -144,6 +144,7 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
       vulnerabilities,
       userClarifications,
       userHardStops,
+      evidenceSources: options.evidenceSources || [],
     }, {
       ...options,
       featureName: options.featureName || 'optimize_resume',
