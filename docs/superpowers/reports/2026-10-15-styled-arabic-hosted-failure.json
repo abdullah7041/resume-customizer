@@ -768,5 +768,502 @@
     ],
     "nativeDirectionSource": "https://pdfium.googlesource.com/pdfium/+/refs/heads/chromium/8076/fpdfsdk/fpdf_text.cpp#43",
     "boundary": "The native direction input is document-wide. Tested ViewerPreferences R2L also reorders plain Latin words. A demonstrated per-paragraph/run construction or reader capability change is still needed; this does not prove all possible constructions impossible."
+  },
+  "continuedInvestigation20261017": {
+    "status": "FAILED - launch remains blocked at owner request",
+    "reviewedHead": "129aa1c07d3acd8f4340967a1ac937e26721b902",
+    "applicationChanged": false,
+    "versions": {
+      "pypdf": "6.10.0",
+      "pdfium": "156.0.8076.0",
+      "pypdfium2": "5.14.0",
+      "pdfjs": "5.7.284"
+    },
+    "comparison": "Original scalars except layout whitespace. NFC outcomes are diagnostic, not qualification.",
+    "serializationCases": 35,
+    "serializerMatrix": [
+      {
+        "serializer": "review-new-control",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 4,
+        "arabicPdfiumExact": 0,
+        "arabicPdfjsExact": 4,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      },
+      {
+        "serializer": "review-new-single-bt",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 4,
+        "arabicPdfiumExact": 0,
+        "arabicPdfjsExact": 4,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      },
+      {
+        "serializer": "review-new-single-tj-runs",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 1,
+        "arabicPdfiumExact": 1,
+        "arabicPdfjsExact": 4,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      },
+      {
+        "serializer": "review-new-single-tj-visual",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 1,
+        "arabicPdfiumExact": 0,
+        "arabicPdfjsExact": 2,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      },
+      {
+        "serializer": "review-new-single-tj-logical",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 0,
+        "arabicPdfiumExact": 0,
+        "arabicPdfjsExact": 2,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      },
+      {
+        "serializer": "review-new-actual-single-tj-runs",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 1,
+        "arabicPdfiumExact": 1,
+        "arabicPdfjsExact": 4,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      },
+      {
+        "serializer": "review-new-actual-single-tj-visual",
+        "cases": 5,
+        "arabicCases": 4,
+        "arabicPypdfExact": 1,
+        "arabicPdfiumExact": 1,
+        "arabicPdfjsExact": 2,
+        "arabicAllReadersExact": 0,
+        "englishAllReadersExact": 1
+      }
+    ],
+    "minimalConflictExamples": [
+      {
+        "id": "review-new-control-0",
+        "expected": "اسم foo",
+        "sha256": "2d2009995f9e201fef62ffcabb368454c605bb99988ac1e498080d330b056c20",
+        "checks": {
+          "pypdfExact": true,
+          "pdfiumExact": false,
+          "pypdfNFC": true,
+          "pdfiumNFC": false,
+          "queries": true,
+          "boundedBoxes": true
+        },
+        "queries": {},
+        "pypdf": "اسمfoo",
+        "pdfium": "foo اسم",
+        "pdfjs": {
+          "id": "review-new-control-0",
+          "checks": {
+            "exact": true,
+            "nfc": true,
+            "noInvalidScalars": true,
+            "links": true
+          },
+          "text": "اسم foo",
+          "links": []
+        }
+      },
+      {
+        "id": "review-new-single-tj-runs-0",
+        "expected": "اسم foo",
+        "sha256": "0860b4701246cd847787603df4dfa5a7488131ff7093fff9f77dc6a1a4352dbd",
+        "checks": {
+          "pypdfExact": false,
+          "pdfiumExact": true,
+          "pypdfNFC": false,
+          "pdfiumNFC": true,
+          "queries": true,
+          "boundedBoxes": true
+        },
+        "queries": {},
+        "pypdf": "foo",
+        "pdfium": " اسمfoo",
+        "pdfjs": {
+          "id": "review-new-single-tj-runs-0",
+          "checks": {
+            "exact": true,
+            "nfc": true,
+            "noInvalidScalars": true,
+            "links": true
+          },
+          "text": "اسم foo",
+          "links": []
+        }
+      },
+      {
+        "id": "review-new-actual-single-tj-runs-0",
+        "expected": "اسم foo",
+        "sha256": "6977637611f63f213057a09c6a90480e2b596769f626d767a0cfe9cf541bdbd8",
+        "checks": {
+          "pypdfExact": false,
+          "pdfiumExact": true,
+          "pypdfNFC": false,
+          "pdfiumNFC": true,
+          "queries": true,
+          "boundedBoxes": true
+        },
+        "queries": {},
+        "pypdf": "foo",
+        "pdfium": "اسم foo",
+        "pdfjs": {
+          "id": "review-new-actual-single-tj-runs-0",
+          "checks": {
+            "exact": true,
+            "nfc": true,
+            "noInvalidScalars": true,
+            "links": true
+          },
+          "text": "اسم foo",
+          "links": []
+        }
+      }
+    ],
+    "nativeObjectBoundary": {
+      "hostedWrappedRows": 2,
+      "current": {
+        "BT": 32,
+        "TJ": 32,
+        "nativeObjects": 32
+      },
+      "singleBT": {
+        "BT": 2,
+        "TJ": 32,
+        "nativeObjects": 32
+      },
+      "singleTJ": {
+        "BT": 2,
+        "TJ": 2,
+        "nativeObjects": 2
+      }
+    },
+    "metadataReview": "Ordinary PDFium 8076 text/search uses document-wide viewer direction and its bidi heuristic. The inspected path does not consume structure-tree reading order, MCID, Lang, WritingMode metadata or ReversedChars tag names. This does not prove every possible PDF construction impossible.",
+    "referenceControls": {
+      "scope": "Fictional controls only; no app integration, new installation or payment. Prince public web demo; Word already installed locally.",
+      "prince": {
+        "version": "16.1",
+        "sha256": "8e8ba7d4a84a635d74afd9f8fc9297083f4fe6290484327833612f684a3ad680",
+        "pageResults": [
+          {
+            "id": "reference-prince-mixed-rtl",
+            "expected": "اسم foo bar baz",
+            "direction": "rtl",
+            "pypdf": "اسمfoo bar baz",
+            "pdfium": "foo bar baz اسم",
+            "pypdfExact": true,
+            "pdfiumExact": false,
+            "queries": {}
+          },
+          {
+            "id": "reference-prince-punctuation-rtl",
+            "expected": "خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥",
+            "direction": "rtl",
+            "pypdf": "]SQL [>2020≥٥٢",
+            "pdfium": "خبرة (عن بعد) [SQL> [2020» <عربي» القيمة ≤ ٢٥",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "٢٥": true
+            }
+          },
+          {
+            "id": "reference-prince-marks-rtl",
+            "expected": "السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ",
+            "direction": "rtl",
+            "pypdf": "لآِلإ َلأ َلا ْم ُكْيَلَعُم َلاَّسال",
+            "pdfium": "ُم عَل َ ال َّسال\r\nيْك َ\r\nْم ُ\r\nِإل آل َأل َال ",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "السَّلَامُ": false
+            }
+          },
+          {
+            "id": "reference-prince-hosted-rtl",
+            "expected": "مهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. office عربي SQL عربي.",
+            "direction": "rtl",
+            "pypdf": "]SQL [>2020≥٥٢لآ.ِلإ َلأ َلا ْم ُكْيَلَعُم َلاَّسال. office\nعربيSQLعربي",
+            "pdfium": "ْم َال َأل ِإل آل. office\r\nيْكُ\r\nمهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL> [2020» <عربي» القيمة ≤ .٢٥ ال َّسَال ُم عَلَ\r\nعربي SQL عربي.",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "السَّلَامُ": false,
+              "٢٥": true,
+              "office عربي": false
+            }
+          },
+          {
+            "id": "reference-prince-english-rtl",
+            "expected": "office API SQL 25% 2024",
+            "direction": "rtl",
+            "pypdf": "office API SQL 25% 2024",
+            "pdfium": "office API SQL 25% 2024",
+            "pypdfExact": true,
+            "pdfiumExact": true,
+            "queries": {}
+          },
+          {
+            "id": "reference-prince-mixed-ltr",
+            "expected": "اسم foo bar baz",
+            "direction": "ltr",
+            "pypdf": "اسمfoo bar baz",
+            "pdfium": "اسم foo bar baz",
+            "pypdfExact": true,
+            "pdfiumExact": true,
+            "queries": {}
+          },
+          {
+            "id": "reference-prince-punctuation-ltr",
+            "expected": "خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥",
+            "direction": "ltr",
+            "pypdf": "بعد()عن خبرة[SQL] <2020> «≥٥٢",
+            "pdfium": "عربي» القيمة ≤ ٢٥» <2020> [SQL [خبرة (عن بعد)",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "٢٥": true
+            }
+          },
+          {
+            "id": "reference-prince-marks-ltr",
+            "expected": "السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ",
+            "direction": "ltr",
+            "pypdf": "لآِلإ َلأ َلا ْم ُكْيَلَعُم َلاَّسال",
+            "pdfium": "ُم عَل َ ال َّسال\r\nيْك َ\r\nْم ُ\r\nِإل آل َأل َال ",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "السَّلَامُ": false
+            }
+          },
+          {
+            "id": "reference-prince-hosted-ltr",
+            "expected": "مهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. office عربي SQL عربي.",
+            "direction": "ltr",
+            "pypdf": "بعد()عن خبرة التقارير. أنظمة تبني مهندسة[SQL] <2020> «≥٥٢لآِلإ َلأ َلا ْم ُكْيَلَعُم َلاَّسال. office\nعربيSQLعربي. ",
+            "pdfium": "ْم َال َأل ِإل آل» <2020> [SQL [مهندسة تبني أنظمة التقارير. خبرة (عن بعد)\r\nيْكُ\r\noffice .عربي» القيمة ≤ .٢٥ ال َّسَال ُم عَلَ\r\n.عربي SQL عربي",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "السَّلَامُ": false,
+              "٢٥": true,
+              "office عربي": false
+            }
+          },
+          {
+            "id": "reference-prince-english-ltr",
+            "expected": "office API SQL 25% 2024",
+            "direction": "ltr",
+            "pypdf": "office API SQL 25% 2024",
+            "pdfium": "office API SQL 25% 2024",
+            "pypdfExact": true,
+            "pdfiumExact": true,
+            "queries": {}
+          }
+        ],
+        "fullDocumentPdfjs": {
+          "version": "5.7.284",
+          "results": [
+            {
+              "id": "reference-prince-demo",
+              "checks": {
+                "exact": false,
+                "nfc": false,
+                "noInvalidScalars": true,
+                "links": true
+              },
+              "text": "اسم foo bar baz\nخبرة )عن بعد( ] SQL [ > 2020 < »عربي« القيمة ≥ ٢٥\nال َّس َال ُم َع َل ْي ُك ْم َال َأل ِإل آل\nمهندسة تبني أنظمة التقارير. خبرة )عن بعد( ] SQL [ > 2020 < »عربي« القيمة ≥ ٢٥ . ال َّس َال ُم َع َل ْي ُك ْم َال َأل ِإل آل. office  عربي SQL عربي.\noffice API SQL 25% 2024\nاسم   foo bar baz\nخبرة )عن بعد(   [SQL] <2020> «   عربي« القيمة ≥ ٢٥\nال َّس َال ُم َع َل ْي ُك ْم َال َأل ِإل آل\nمهندسة تبني أنظمة التقارير. خبرة )عن بعد(   [SQL] <2020> «   عربي« القيمة ≥ ٢٥ . ال َّس َال ُم َع َل ْي ُك ْم َال َأل ِإل آل   . office  عربي   SQL   عربي .\noffice API SQL 25% 2024",
+              "links": []
+            }
+          ]
+        }
+      },
+      "word": {
+        "version": "16.0",
+        "build": "16.0.10417",
+        "product": "Word 2019",
+        "font": "Arial",
+        "docxSourceAllTenParagraphsExact": true,
+        "sha256": "86bc59a79fa01395788bce8c5acace046dc2230e02d1b360d8f7709ad88c7167",
+        "pageResults": [
+          {
+            "id": "reference-word-mixed-rtl",
+            "expected": "اسم foo bar baz",
+            "direction": "rtl",
+            "pypdf": "اسم foo bar baz ",
+            "pdfium": "foo bar bazاسم",
+            "pypdfExact": true,
+            "pdfiumExact": false,
+            "queries": {}
+          },
+          {
+            "id": "reference-word-punctuation-rtl",
+            "expected": "خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥",
+            "direction": "rtl",
+            "pypdf": "خبرة (عن بعد [SQL] <2020> «عربي»القيمة≤٥٢ ",
+            "pdfium": "خبرة )عن بعد(» <2020> [SQL [عربي« القيمة ≥ ٢٥",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "٢٥": true
+            }
+          },
+          {
+            "id": "reference-word-marks-rtl",
+            "expected": "السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ",
+            "direction": "rtl",
+            "pypdf": "السَّلَامُ عالايْكُمْ لَا لَا لِإ  ",
+            "pdfium": "ْي ُكْم اَل اَل إِل آل\r\nال َّساَلُم اعلا",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "السَّلَامُ": false
+            }
+          },
+          {
+            "id": "reference-word-hosted-rtl",
+            "expected": "مهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. office عربي SQL عربي.",
+            "direction": "rtl",
+            "pypdf": "مهندسة تبني أنظمة التقارير. خبرة (عن بعد [SQL] <2020> «عربي»القيمة≤٥٢. السَّلَامُ عالايْكُمْ لَا لَا لِإ لآ office عربي SQL عربي. ",
+            "pdfium": "ْي ُكْم اَل اَل إِل آل office .عربي SQL عربي.\r\nمهندسة تبني أنظمة التقارير. خبرة )عن بعد(» <2020> [SQL [عربي« القيمة ≥ .٢٥ ال َّساَلُم اعلا",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "السَّلَامُ": false,
+              "٢٥": true,
+              "office عربي": false
+            }
+          },
+          {
+            "id": "reference-word-english-rtl",
+            "expected": "office API SQL 25% 2024",
+            "direction": "rtl",
+            "pypdf": "office API SQL 25% 2024 ",
+            "pdfium": "office API SQL 25% 2024",
+            "pypdfExact": true,
+            "pdfiumExact": true,
+            "queries": {}
+          },
+          {
+            "id": "reference-word-mixed-ltr",
+            "expected": "اسم foo bar baz",
+            "direction": "ltr",
+            "pypdf": "اسم foo bar baz ",
+            "pdfium": "اسم foo bar baz",
+            "pypdfExact": true,
+            "pdfiumExact": true,
+            "queries": {}
+          },
+          {
+            "id": "reference-word-punctuation-ltr",
+            "expected": "خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥",
+            "direction": "ltr",
+            "pypdf": "خبرة (عن بعد  [SQL] <2020> «عربي»القيمة≤٥٢  ",
+            "pdfium": "عربي« القيمة ≥ ٢٥» <2020> [SQL [خبرة )عن بعد(",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "٢٥": true
+            }
+          },
+          {
+            "id": "reference-word-marks-ltr",
+            "expected": "السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ",
+            "direction": "ltr",
+            "pypdf": "السَّلَامُ عالايْكُمْ لَا لَا لِإ  ",
+            "pdfium": "ْي ُكْم اَل اَل إِل آل\r\nال َّساَلُم اعلا",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "السَّلَامُ": false
+            }
+          },
+          {
+            "id": "reference-word-hosted-ltr",
+            "expected": "مهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. office عربي SQL عربي.",
+            "direction": "ltr",
+            "pypdf": "مهندسة تبني أنظمة التقارير. خبرة (عن بعد  [SQL] <2020> «عربي»القيمة≤٥٢. السَّلَامُ عالايْكُمْ لَا لَا لِإ لآ office عربي  SQL عربي.  ",
+            "pdfium": "ْي ُكْم اَل اَل إِل آل» <2020> [SQL [مهندسة تبني أنظمة التقارير. خبرة )عن بعد(\r\n.عربي SQL عربي office .عربي« القيمة ≥ .٢٥ ال َّساَلُم اعلا",
+            "pypdfExact": false,
+            "pdfiumExact": false,
+            "queries": {
+              "عن بعد": true,
+              "[SQL]": false,
+              "السَّلَامُ": false,
+              "٢٥": true,
+              "office عربي": false
+            }
+          },
+          {
+            "id": "reference-word-english-ltr",
+            "expected": "office API SQL 25% 2024",
+            "direction": "ltr",
+            "pypdf": "office API SQL 25% 2024 ",
+            "pdfium": "office API SQL 25% 2024",
+            "pypdfExact": true,
+            "pdfiumExact": true,
+            "queries": {}
+          }
+        ],
+        "fullDocumentPdfjs": {
+          "version": "5.7.284",
+          "results": [
+            {
+              "id": "reference-word",
+              "checks": {
+                "exact": false,
+                "nfc": false,
+                "noInvalidScalars": true,
+                "links": true
+              },
+              "text": "اسم foo bar baz\nخبرة (عن بعد) [SQL] <2020> « عربي » القيمة ≤ ٢٥\nِلإ آل   َلا   ْ َلا   ََّلا م ُ عالايْكُم   الس\nمهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> « عربي » القيمة ≤ ٢٥ آل   ِلإ   َلا   ْ َلا   ََّلا م ُ عالايْكُم   . الس . office عربي SQL عربي .\noffice API SQL 25% 2024\nاسم   foo bar baz\nخبرة (عن بعد)   [SQL] <2020> «   عربي » القيمة ≤ ٢٥\nِلإ آل   َلا   ْ َلا   ََّلا م ُ عالايْكُم   الس\nمهندسة تبني أنظمة التقارير. خبرة (عن بعد)   [SQL] <2020> «   عربي » القيمة ≤ ٢٥ آل   ِلإ   َلا   ْ َلا   ََّلا م ُ عالايْكُم   . الس   . office   عربي   SQL   عربي .\noffice API SQL 25% 2024",
+              "links": []
+            }
+          ]
+        }
+      },
+      "nativeSearchScope": "Automated PDFium 156.0.8076.0. These reference PDFs were not checked in the owner Brave GUI. The separate owner-confirmed Brave failure remains the saved hosted PDF."
+    },
+    "decision": "No tested replacement qualifies. Retain draft and launch hold; do not weaken checks, ship rejected prototypes, or install another renderer based only on claimed Arabic support.",
+    "upstreamPypdfNotice": {
+      "version": "6.21.1",
+      "publishedAt": "2026-10-17T10:29:50.687163Z",
+      "sourceUrl": "https://raw.githubusercontent.com/py-pdf/pypdf/6.21.1/pypdf/_text_extraction/__init__.py",
+      "sourceSha256": "08ee4beeccbae52c021c87c61eed6f9bbfeaef5a9ea1f994170921a2de15e4fb",
+      "sourceObservation": "Tagged get_display_str retains completed direction runs instead of discarding them.",
+      "installedOrExecuted": false,
+      "qualification": "Not tested with this release. Existing results remain for 6.10.0. Native punctuation, marks and searches fail independently, so this source change does not qualify a serializer."
+    }
   }
 }
