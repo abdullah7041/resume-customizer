@@ -8,6 +8,10 @@ import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
 import { summarizeErrorForLog } from "../lib/sentry.js";
+import { generateTextPdf, validateTextPdfBlocks, validateStyledPdfStyles, validateStyledPdfMargins } from '../lib/text-pdf.js';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 
 
 import { existsSync } from "fs";
@@ -22,10 +26,23 @@ const WINDOWS_CHROME_PATHS = [
   "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
 ];
 
+// NETLIFY may be absent in deployed functions; Lambda supplies runtime markers.
+// Netlify Dev can load hosted settings locally, so its marker takes precedence.
+const isServerless = !process.env.NETLIFY_DEV && !!(process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_JS_RUNTIME);
+
 // Chromium executable path varies by environment
 const getChromiumPath = async (): Promise<string> => {
-  if (process.env.NETLIFY) {
-    return await chromium.executablePath();
+  if (isServerless) {
+    const executablePath = await chromium.executablePath();
+    // The packaged fonts.conf searches /tmp/fonts. Provision after extraction:
+    // creating that directory first would make Chromium skip its font archive.
+    const font = readFileSync(resolve(process.cwd(), 'netlify/assets/fonts/DejaVuSans.ttf'));
+    if (createHash('sha256').update(font).digest('hex') !== '7da195a74c55bef988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954') {
+      throw new Error('Bundled PDF font failed integrity validation.');
+    }
+    mkdirSync('/tmp/fonts', { recursive: true });
+    writeFileSync('/tmp/fonts/DejaVuSans.ttf', font);
+    return executablePath;
   }
 
   // Local development - find available browser
@@ -45,9 +62,6 @@ const getChromiumPath = async (): Promise<string> => {
 
   return "/usr/bin/google-chrome";
 };
-
-// Check if running on Netlify (production/deploy-preview)
-const isNetlify = !!process.env.NETLIFY;
 
 // Browser connection pooling - reuse browser instance across requests
 let browserInstance: Browser | null = null;
@@ -106,7 +120,7 @@ async function getBrowser() {
   if (!browserInstance) {
     console.log('[PDF] Launching new browser instance');
     browserInstance = await puppeteer.launch({
-      args: isNetlify ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: isServerless ? chromium.args : ["--no-sandbox", "--disable-setuid-sandbox"],
       defaultViewport: { width: 794, height: 1123 }, // A4 at 96dpi: 210mm × 96/25.4 ≈ 794px, 297mm × 96/25.4 ≈ 1123px
       executablePath: await getChromiumPath(),
       headless: true, // Always headless for PDF generation
@@ -166,7 +180,8 @@ export async function hardenPageForRender(page: SandboxablePage): Promise<void> 
 }
 
 const DEFAULT_PAGE_MARGIN_MM = 19.05; // 0.75in — matches the client fallback default.
-const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom):\s*([\d.]+)(in|mm|px)/g;
+const DEFAULT_SIDE_MARGIN_MM = 15.24; // 0.6in — matches the preview default.
+const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom|side):\s*([\d.]+)(in|mm|px)/g;
 
 /**
  * Reads the `--margin-top`/`--margin-bottom` CSS custom properties that
@@ -179,8 +194,8 @@ const MARGIN_CUSTOM_PROPERTY_PATTERN = /--margin-(top|bottom):\s*([\d.]+)(in|mm|
  * deliberate SSRF/XSS guard against attacker-controlled resume HTML) —
  * `page.evaluate()` calls fail once `setJavaScriptEnabled(false)` has run.
  */
-export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: number } {
-  const values: { top?: number; bottom?: number } = {};
+export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: number; sideMm: number } {
+  const values: { top?: number; bottom?: number; side?: number } = {};
   for (const match of html.matchAll(MARGIN_CUSTOM_PROPERTY_PATTERN)) {
     const [, side, amountStr, unit] = match;
     const amount = Number.parseFloat(amountStr);
@@ -188,10 +203,12 @@ export function extractPageMarginsMm(html: string): { topMm: number; bottomMm: n
     const mm = unit === 'in' ? amount * 25.4 : unit === 'px' ? amount * (25.4 / 96) : amount;
     if (side === 'top' && values.top === undefined) values.top = mm;
     if (side === 'bottom' && values.bottom === undefined) values.bottom = mm;
+    if (side === 'side' && values.side === undefined) values.side = mm;
   }
   return {
     topMm: values.top ?? DEFAULT_PAGE_MARGIN_MM,
     bottomMm: values.bottom ?? DEFAULT_PAGE_MARGIN_MM,
+    sideMm: values.side ?? DEFAULT_SIDE_MARGIN_MM,
   };
 }
 
@@ -251,16 +268,71 @@ const baseHandler: Handler = async (event) => {
   let page: Page | null = null; // Declare outside try block for cleanup access
 
   try {
-    const { html, styles, filename, templateId, direction } = JSON.parse(event.body || "{}");
+    const textError = (status: number, code: string, message: string) => ({
+      statusCode: status,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ status, code, message, error: message }),
+    });
+    let payload: Record<string, unknown>;
+    try {
+      const parsed: unknown = JSON.parse(event.body || '{}');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error();
+      payload = parsed as Record<string, unknown>;
+    } catch {
+      return textError(400, 'pdf/invalid-request', 'Invalid PDF request.');
+    }
+    const { html, styles, filename, templateId, direction } = payload;
     const safeFilename = sanitizeFilename(filename);
     const pageDirection = direction === "rtl" ? "rtl" : "ltr";
 
-    if (!html) {
+    if (payload.format !== undefined && payload.format !== 'text' && payload.format !== 'styled') {
+      return textError(400, 'pdf/invalid-request', 'Invalid PDF request.');
+    }
+    if (payload.format === 'text' || payload.format === 'styled') {
+      let blocks;
+      let presentation;
+      let margins;
+      try {
+        const keys = ['format', 'blocks', 'templateId', 'filename', ...(payload.format === 'styled' ? ['presentation', 'margins'] : [])];
+        if (Object.keys(payload).some(key => !keys.includes(key)) ||
+            typeof templateId !== 'string' || !VALID_TEMPLATE_IDS.includes(templateId as typeof VALID_TEMPLATE_IDS[number]) ||
+            typeof filename !== 'string' || !filename.trim() || filename.length > 200) throw new Error();
+        const input = payload.blocks;
+        if (!Array.isArray(input) || input.some(block => !block || typeof block !== 'object' ||
+          Object.keys(block).some(key => !['kind', 'runs'].includes(key)) || !Array.isArray(block.runs) ||
+          block.runs.some((run: unknown) => !run || typeof run !== 'object' ||
+            Object.keys(run).some(key => !['text', 'href'].includes(key))))) throw new Error();
+        blocks = validateTextPdfBlocks(input);
+        if (payload.format === 'styled') { presentation = validateStyledPdfStyles(payload.presentation, blocks); margins = validateStyledPdfMargins(payload.margins); }
+      } catch {
+        return textError(400, 'pdf/invalid-request', 'Invalid Text PDF request.');
+      }
+      let font: Uint8Array;
+      try {
+        // included_files retains this project-relative path under the function root.
+        // Using cwd also works after esbuild moves the handler into its bundle.
+        font = readFileSync(resolve(process.cwd(), 'netlify/assets/fonts/DejaVuSans.ttf'));
+        if (createHash('sha256').update(font).digest('hex') !== '7da195a74c55bef988d0d48f9508bd5d849425c1770dba5d7bfc6ce9ed848954') throw new Error();
+      } catch {
+        return textError(503, 'pdf/text-font-unavailable', 'Text PDF is temporarily unavailable. Please try another export option.');
+      }
+      try {
+        const bytes = generateTextPdf(blocks, font, presentation, margins);
+        return {
+          statusCode: 200,
+          headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`, 'Cache-Control': 'no-store' },
+          body: Buffer.from(bytes).toString('base64'), isBase64Encoded: true,
+        };
+      } catch {
+        return textError(422, 'pdf/text-unsupported', 'Text PDF content cannot be rendered safely. Please choose another export option.');
+      }
+    }
+    if (!html || typeof html !== 'string') {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing html" }) };
     }
 
     // Validate templateId to prevent header injection
-    const _sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId)
+    const _sanitizedTemplateId = VALID_TEMPLATE_IDS.includes(templateId as typeof VALID_TEMPLATE_IDS[number])
       ? templateId
       : 'modern-professional';
 
@@ -293,7 +365,7 @@ const baseHandler: Handler = async (event) => {
     // (plain string parsing, not page.evaluate() — the page has JavaScript
     // execution disabled by hardenPageForRender above, so any evaluate() call
     // here would throw and fail the whole request).
-    const { topMm, bottomMm } = extractPageMarginsMm(html);
+    const { topMm, bottomMm, sideMm } = extractPageMarginsMm(html);
 
     // Render the final HTML string with embedded styles. setContent and the
     // explicit network-idle wait share one deadline so this migration from
@@ -326,6 +398,12 @@ const baseHandler: Handler = async (event) => {
               background: #fff !important;
             }
 
+            [data-resume-preview] {
+              width: calc(210mm - ${sideMm * 2}mm) !important;
+              max-width: 100% !important;
+              margin: 0 auto !important;
+            }
+
             /* Hide elements marked as non-printable (page break indicators, etc.) */
             [data-no-print] { display: none !important; }
 
@@ -341,11 +419,11 @@ const baseHandler: Handler = async (event) => {
 
             /* Remove template root padding to prevent double-padding on page 1 —
                the @page rule below is the sole source of page margins. */
-            [data-resume-preview] > div { padding-top: 0 !important; padding-bottom: 0 !important; }
+            [data-resume-preview] > div { padding: 0 !important; }
 
             /* Overrides index.css's @page { margin: 0 } print reset with the
                user's configured margins. */
-            @page { margin: ${topMm}mm 0 ${bottomMm}mm 0 !important; }
+            @page { margin: ${topMm}mm ${sideMm}mm ${bottomMm}mm ${sideMm}mm !important; }
 
           </style>
         </head>

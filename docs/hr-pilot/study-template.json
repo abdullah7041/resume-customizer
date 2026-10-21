@@ -1,0 +1,14 @@
+{
+  "kind": "simulation",
+  "caseSchemaVersion": 2,
+  "protocolVersion": "2026-10-04-v2",
+  "lockedAt": "2026-10-04T09:00:00+03:00",
+  "allocationLockedAt": "2026-10-04T09:01:00+03:00",
+  "targets": { "cases": 12, "reviewers": 4, "casesPerLanguage": 4, "essentialMissRate": 0.05, "correctionRate": 0.15, "disagreementRate": 0.20, "timeReduction": 0.20 },
+  "collectionAuthorized": false,
+  "authorizationReference": "",
+  "privateStorage": "",
+  "deletionDue": "",
+  "reviewers": [],
+  "cases": []
+}

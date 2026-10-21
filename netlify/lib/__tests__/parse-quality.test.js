@@ -240,6 +240,22 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
   const raw = buildRealisticResume();
   const signals = detectSectionSignals(raw);
 
+  it("does not append date fragments when ISO-dated roles are already parsed", () => {
+    const isoRaw = [
+      "Nora Example", "Experience", "Senior Engineer", "Cedar Labs", "2022-01 — 2024-06",
+      "Maintained customer reports.", "Reporting Analyst", "Harbor Works", "2020-01 — 2021-12",
+      "Maintained internal reports.",
+    ].join("\n");
+    const firstPass = { work: [
+      { position: "Senior Engineer", name: "Cedar Labs", startDate: "2022-01", endDate: "2024-06" },
+      { position: "Reporting Analyst", name: "Harbor Works", startDate: "2020-01", endDate: "2021-12" },
+    ] };
+
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(firstPass, detectSectionSignals(isoRaw), isoRaw);
+    expect(analysis.work).toEqual(firstPass.work);
+    expect(fallbackSections).not.toContain("experience");
+  });
+
   it("fills work entirely when the AI parser returned none", () => {
     const { analysis, fallbackSections } = recoverSectionsFromRawText({ work: [] }, signals, raw);
     expect(analysis.work.length).toBeGreaterThanOrEqual(3);
@@ -280,6 +296,142 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
 });
 
 describe("parseWorkBlocks — conservative header detection", () => {
+  it.each([
+    ["Junior Analyst", "2020 - 2021-06", "2020", "2021-06"],
+    ["Junior Analyst", "2020-01 - 2021", "2020-01", "2021"],
+    ["Junior Analyst", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["Junior Analyst", "2020-01 - Present", "2020-01", "Present"],
+    ["Lead Data Scientist", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["محلل بيانات", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["junior analyst", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["Software Engineer 2", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["Data Analyst (Contract)", "2020-01 - 2021-06", "2020-01", "2021-06"],
+  ])("keeps a later %s role separate for %s", (position, dates, startDate, endDate) => {
+    const raw = [
+      "Nora Example", "Experience", "Senior Data Analyst at FirstCo 2022 - Present",
+      "• Built reports for operations.", `${position} ${dates}`, "SecondCo",
+      "• Improved SQL exports.",
+    ].join("\n");
+    const firstJob = {
+      position: "Senior Data Analyst", name: "FirstCo", startDate: "2022", endDate: "Present",
+      highlights: ["Built reports for operations."],
+    };
+    const secondJob = {
+      position, name: "SecondCo", startDate, endDate,
+      highlights: ["Improved SQL exports."],
+    };
+
+    expect(buildDeterministicBaseline(raw).work).toEqual([firstJob, secondJob]);
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      { work: [firstJob] }, detectSectionSignals(raw), raw,
+    );
+    expect(analysis.work).toEqual([firstJob, secondJob]);
+    expect(fallbackSections).toContain("experience");
+  });
+
+  it("keeps ambiguous stacked text after a completed job as evidence, not a new job", () => {
+    const work = parseWorkBlocks([
+      "Senior Engineer",
+      "Cedar Labs",
+      "2022-01 — 2024-06",
+      "Maintained customer reports.",
+      "Reporting Analyst",
+      "Harbor Works",
+      "2020-01 — 2021-12",
+      "Maintained internal reports.",
+    ]);
+
+    expect(work).toEqual([{
+      position: "Senior Engineer", name: "Cedar Labs", startDate: "2022-01", endDate: "2024-06",
+      highlights: ["Maintained customer reports.", "Reporting Analyst", "Harbor Works", "2020-01 — 2021-12", "Maintained internal reports."],
+    }]);
+  });
+
+  it("does not turn unbulleted achievement headings or a later date into work", () => {
+    for (const dates of ["2022 — 2023", "2022-01 — 2023-06"]) {
+      const raw = [
+        "Nora Example", "Experience", "Engineer at Acme | 2020 - Present",
+        "Project delivery", "Platform migration", dates, "Improved reliability.",
+      ].join("\n");
+      const expectedHighlights = ["Project delivery", "Platform migration", dates, "Improved reliability."];
+      expect(parseWorkBlocks(raw.split("\n").slice(2))).toEqual([{
+        position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present",
+        highlights: expectedHighlights,
+      }]);
+      const firstPass = { work: [{ position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present" }] };
+      const { analysis, fallbackSections } = recoverSectionsFromRawText(firstPass, detectSectionSignals(raw), raw);
+      expect(analysis.work).toEqual(firstPass.work);
+      expect(fallbackSections).not.toContain("experience");
+    }
+  });
+
+  it("does not turn an ISO date range inside an achievement into work", () => {
+    for (const achievement of [
+      "Led migration from 2022-01 to 2023-06",
+      "Led migration 2022-01 - 2023-06",
+      "Led migration 2022-01 – 2023-06",
+      "Led migration 2022-01 — 2023-06",
+      "• Led migration from 2022-01 to 2023-06",
+      "Trained a junior analyst 2022-01 - 2023-06",
+      "• Junior Analyst 2022-01 - 2023-06",
+    ]) {
+      const raw = [
+        "Nora Example", "Experience", "Engineer at Acme | 2020 - Present",
+        achievement, "Improved reliability.",
+      ].join("\n");
+      expect(parseWorkBlocks(raw.split("\n").slice(2))).toEqual([{
+        position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present",
+        highlights: [achievement.replace(/^• /, ""), "Improved reliability."],
+      }]);
+      const firstPass = { work: [{ position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present" }] };
+      const { analysis, fallbackSections } = recoverSectionsFromRawText(firstPass, detectSectionSignals(raw), raw);
+      expect(analysis.work).toEqual(firstPass.work);
+      expect(fallbackSections).not.toContain("experience");
+    }
+  });
+
+  it.each([
+    ["Led migration", "using SQL and Power BI"],
+    ["Led migration", "Internal reporting"],
+    ["Delivered migration", "Internal reporting"],
+    ["Platform migration", "using SQL and Power BI"],
+    ["قدت عملية الترحيل", "باستخدام SQL وPower BI"],
+    ["Oversaw platform migration", "Internal reporting"],
+    ["قدت عملية الترحيل", "التقارير الداخلية"],
+  ])("keeps dated achievement %s and continuation %s in the current job", (achievement, continuation) => {
+    const raw = [
+      "Nora Example", "Experience", "Engineer at Acme | 2020 - Present",
+      "• Built dashboards.", `${achievement} 2022-01 - 2023-06`, continuation,
+      "• Improved reports.",
+    ].join("\n");
+    const work = [{
+      position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present",
+      highlights: ["Built dashboards.", `${achievement} 2022-01 - 2023-06`, continuation, "Improved reports."],
+    }];
+
+    expect(buildDeterministicBaseline(raw).work).toEqual(work);
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      { work }, detectSectionSignals(raw), raw,
+    );
+    expect(analysis.work).toEqual(work);
+    expect(fallbackSections).not.toContain("experience");
+  });
+
+  it("still recovers a missing ISO-dated role with an explicit role/company separator", () => {
+    const lines = ["Engineer at Acme | 2020 - Present", "Analyst at Harbor Works | 2022-01 — 2023-06"];
+    expect(parseWorkBlocks(lines)).toEqual([
+      { position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present" },
+      { position: "Analyst", name: "Harbor Works", startDate: "2022-01", endDate: "2023-06" },
+    ]);
+    const raw = ["Nora Example", "Experience", ...lines].join("\n");
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      { work: [{ position: "Engineer", name: "Acme" }] }, detectSectionSignals(raw), raw,
+    );
+    expect(analysis.work[1]).toMatchObject({ position: "Analyst", name: "Harbor Works", startDate: "2022-01", endDate: "2023-06" });
+    expect(fallbackSections).toContain("experience");
+    expect(parseWorkBlocks(["2022-01 — 2023-06"])).toEqual([]);
+  });
+
   it("keeps year-bearing achievement lines as highlights", () => {
     const work = parseWorkBlocks([
       "Senior Engineer at Acme | 2022 - Present",

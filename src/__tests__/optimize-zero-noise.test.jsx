@@ -157,8 +157,6 @@ describe('zero-improvement repro (Task 5 regression)', () => {
             },
             setOptimizationMetrics: vi.fn(),
             resetOptimizationMetrics: vi.fn(),
-            getCachedAnalysis: vi.fn(() => null),
-            setCachedAnalysis: vi.fn(),
             getActiveResume: vi.fn(() => null),
             baselineMatchScore: 10,
             jobVariants: [],

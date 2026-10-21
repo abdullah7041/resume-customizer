@@ -172,6 +172,8 @@ const baseHandler: Handler = async (event) => {
     // Map to frontend expected format
     const response = {
       score: normalizedScore,
+      // Deprecated compatibility aliases: these repeat the overall score and
+      // must never be presented as independent coverage or similarity metrics.
       coverage: normalizedScore / 100,
       similarity: normalizedScore / 100,
       missingKeywords: match.missingKeywords,

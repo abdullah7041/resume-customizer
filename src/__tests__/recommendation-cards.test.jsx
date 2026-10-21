@@ -117,8 +117,6 @@ const buildStoreState = () => ({
     },
     setOptimizationMetrics: vi.fn(),
     resetOptimizationMetrics: vi.fn(),
-    getCachedAnalysis: vi.fn(() => null),
-    setCachedAnalysis: vi.fn(),
     getActiveResume: vi.fn(() => null),
     baselineMatchScore: 40,
     jobVariants: [],

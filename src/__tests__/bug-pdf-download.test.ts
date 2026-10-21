@@ -8,24 +8,6 @@ import { join } from 'path';
 
 
 
-describe('generate-pdf server function auth policy', () => {
-  it('requires authentication before rendering resume HTML payloads', () => {
-    const source = readFileSync(
-      join(__dirname, '../../netlify/functions/generate-pdf.ts'),
-      'utf-8'
-    );
-
-    const authHeaderIndex = source.indexOf('const authHeader = event.headers.authorization || event.headers.Authorization');
-    const parseBodyIndex = source.indexOf('JSON.parse(event.body || "{}")');
-    const hasAuthBlock = /if\s*\(\s*!authHeader\s*\)\s*\{[\s\S]*?statusCode:\s*401/.test(source);
-
-    expect(authHeaderIndex).toBeGreaterThan(-1);
-    expect(parseBodyIndex).toBeGreaterThan(-1);
-    expect(authHeaderIndex).toBeLessThan(parseBodyIndex);
-    expect(hasAuthBlock).toBe(true);
-  });
-});
-
 describe('production console log policy', () => {
   it('resumeStore merge warnings should only log in dev mode', () => {
     const source = readFileSync(

@@ -9,6 +9,7 @@
 // skipped for guests) and must never mutate store applied state.
 
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { webcrypto } from 'node:crypto';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import OptimizeSection from '../components/sections/OptimizeSection';
@@ -37,7 +38,7 @@ const mockApplyOptimization = vi.fn();
 const mockRevertOptimization = vi.fn();
 const mockApplyAllOptimizations = vi.fn();
 const mockSetOptimizationMetrics = vi.fn();
-const mockSetCachedAnalysis = vi.fn();
+const mockSetCachedAssessment = vi.fn();
 
 let mockStoreState = {};
 
@@ -67,8 +68,8 @@ const buildStoreState = () => ({
     },
     setOptimizationMetrics: mockSetOptimizationMetrics,
     resetOptimizationMetrics: vi.fn(),
-    getCachedAnalysis: vi.fn(() => null),
-    setCachedAnalysis: mockSetCachedAnalysis,
+    getCachedAssessment: vi.fn(() => null),
+    setCachedAssessment: mockSetCachedAssessment,
     getActiveResume: vi.fn(() => null),
     baselineMatchScore: null,
     jobVariants: [],
@@ -220,7 +221,7 @@ beforeAll(() => {
         }),
     });
     Object.defineProperty(window, 'crypto', {
-        value: { randomUUID: () => 'test-session-id-' + Math.random() },
+        value: { randomUUID: () => 'test-session-id-' + Math.random(), subtle: webcrypto.subtle },
     });
 });
 
@@ -290,6 +291,36 @@ describe('auto-verification integrity (Task 6 regressions)', () => {
         expect(mockStoreState.optimizationMetrics.improvement).toBe(12);
         // afterScore is a frozen legacy field — verification must not write it.
         expect(mockStoreState.optimizationMetrics.afterScore).toBeNull();
+    });
+
+    it('does not store a full-set verification after the job changes', async () => {
+        setupChangedResumeScenario();
+        let resolveVerify;
+        mockAnalyzeResumeWithAI.mockReturnValueOnce(new Promise((resolve) => { resolveVerify = resolve; }));
+        const props = { isGuestMode: true, onOptimize: parentOptimizeHandler,
+            resumeText: mockStoreState.parsedResumeText };
+        const { rerender } = renderWithProviders(<OptimizeSection {...props} jobDescription="Role A" />);
+        fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
+        await waitFor(() => expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1));
+        rerender(<DirectionProvider><OptimizeSection {...props} jobDescription="Role B" /></DirectionProvider>);
+        await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
+        expect(mockStoreState.optimizationMetrics.verifiedPotential).toBeFalsy();
+        expect(mockSetCachedAssessment).not.toHaveBeenCalled();
+    });
+
+    it('does not store a full-set verification after the Optimize tab unmounts', async () => {
+        setupChangedResumeScenario();
+        let resolveVerify;
+        mockAnalyzeResumeWithAI.mockReturnValueOnce(new Promise((resolve) => { resolveVerify = resolve; }));
+        const { unmount } = renderWithProviders(<OptimizeSection isGuestMode
+            onOptimize={parentOptimizeHandler} jobDescription="Role A"
+            resumeText={mockStoreState.parsedResumeText} />);
+        fireEvent.click(screen.getByRole('button', { name: /optimize/i }));
+        await waitFor(() => expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1));
+        unmount();
+        await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
+        expect(mockStoreState.optimizationMetrics.verifiedPotential).toBeFalsy();
+        expect(mockSetCachedAssessment).not.toHaveBeenCalled();
     });
 
     it('R2: verification must not mutate store applied state', async () => {
@@ -395,10 +426,47 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         // The scored text is the APPLIED merge, not the baseline resume.
         expect(mergedText).toContain('delivering high-throughput payment APIs');
         expect(mergedText).not.toContain('five years of production API experience');
+        await advancePastDebounce();
         expect(mockStoreState.optimizationMetrics.verifiedApplied).toMatchObject({ score: 58, appliedCount: 1 });
         // Never mutates applied state.
         expect(mockApplyOptimization).not.toHaveBeenCalled();
         expect(mockApplyAllOptimizations).not.toHaveBeenCalled();
+    });
+
+    it('does not store an applied-subset verification after the job changes', async () => {
+        setupAppliedScenario();
+        let resolveVerify;
+        mockAnalyzeResumeWithAI.mockReturnValueOnce(new Promise((resolve) => { resolveVerify = resolve; }));
+        const { rerender } = renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+        await advancePastDebounce();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue|continue \(free\)/i }));
+            await Promise.resolve();
+        });
+        expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
+        rerender(<DirectionProvider><OptimizeSection jobDescription="Role B" /></DirectionProvider>);
+        await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
+        expect(mockStoreState.optimizationMetrics.verifiedApplied).toBeFalsy();
+        expect(mockSetCachedAssessment).not.toHaveBeenCalled();
+    });
+
+    it('does not store an applied-subset verification after the Optimize tab unmounts', async () => {
+        setupAppliedScenario();
+        let resolveVerify;
+        mockAnalyzeResumeWithAI.mockReturnValueOnce(new Promise((resolve) => { resolveVerify = resolve; }));
+        const { unmount } = renderWithProviders(<OptimizeSection jobDescription="Role A" />);
+        await advancePastDebounce();
+        fireEvent.click(screen.getByRole('button', { name: /recalculate updated score/i }));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: /credits\.confirm\.continue|continue \(free\)/i }));
+            await Promise.resolve();
+        });
+        expect(mockAnalyzeResumeWithAI).toHaveBeenCalledTimes(1);
+        unmount();
+        await act(async () => { resolveVerify({ score: 58, topHits: [], missingKeywords: [] }); });
+        expect(mockStoreState.optimizationMetrics.verifiedApplied).toBeFalsy();
+        expect(mockSetCachedAssessment).not.toHaveBeenCalled();
     });
 
     it('shows the free confirm copy when no prior free-verify has been recorded for this job', async () => {
@@ -452,7 +520,7 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
 
     it('R6: a client-cache hit for the merged text writes the metric without an API call', async () => {
         setupAppliedScenario();
-        mockStoreState.getCachedAnalysis = vi.fn(() => ({
+        mockStoreState.getCachedAssessment = vi.fn(() => ({
             score: 61,
             matchedKeywords: [],
             missingKeywords: [],
@@ -460,6 +528,7 @@ describe('applied-subset re-verification (genuine post-apply score)', () => {
         }));
 
         renderWithProviders(<OptimizeSection />);
+        await advancePastDebounce();
         await advancePastDebounce();
 
         expect(mockAnalyzeResumeWithAI).not.toHaveBeenCalled();

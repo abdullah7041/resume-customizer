@@ -36,7 +36,9 @@ export interface KeywordStrategy {
  */
 export interface MatchAnalysisResponse {
   score: number;
+  /** @deprecated Legacy aliases of score, not independent measurements. */
   coverage?: number;
+  /** @deprecated Legacy aliases of score, not independent measurements. */
   similarity?: number;
   reasoning?: string;
   summary_bullets?: string[];
@@ -84,6 +86,9 @@ export interface MatchResult {
    * re-score per job" free allowance (see ai-match.ts) instead of charging. */
   freeVerify?: boolean;
 }
+
+/** Request outcome metadata for the Match UI; never persisted with an assessment. */
+export type MatchRunResult = MatchResult & { reusedFromCache?: boolean };
 
 export interface StoredMatchAnalysis {
   analysis?: MatchResult;

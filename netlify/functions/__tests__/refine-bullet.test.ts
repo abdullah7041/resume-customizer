@@ -1,5 +1,6 @@
 import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildRequestEvidenceSources } from '../../lib/optimization-evidence.js';
 
 const { executeAiContractMock, getUserMock } = vi.hoisted(() => ({
   executeAiContractMock: vi.fn(),
@@ -27,7 +28,7 @@ vi.mock('../../lib/sentry.js', () => ({
 const { handler } = await import('../refine-bullet.js');
 
 const validBody = {
-  original: 'Led a team.',
+  original: 'Led a team',
   currentImproved: 'Led a cross-functional team.',
   userInstruction: 'Make the impact clearer.',
   resumeText: 'Led a team that shipped a customer portal.',
@@ -90,24 +91,30 @@ describe('refine-bullet handler', () => {
   });
 
   it('returns the refined bullet contract and passes normalized defaults', async () => {
+    const source = buildRequestEvidenceSources(validBody.resumeText)[0];
     executeAiContractMock.mockResolvedValue({
       improved: 'Led a cross-functional team to ship a customer portal.',
       issue: 'Impact was unclear.',
       rationale: 'Adds delivery context without inventing a metric.',
+      target_id: source.targetId,
+      evidence_references: [{ sourceId: source.id, quote: source.text }],
     });
 
     const response = await invoke(validBody);
 
     expect(response.statusCode).toBe(200);
-    expect(parseBody(response)).toEqual({
+    expect(parseBody(response)).toMatchObject({
       improved: 'Led a cross-functional team to ship a customer portal.',
       issue: 'Impact was unclear.',
       rationale: 'Adds delivery context without inventing a metric.',
+      evidence: { status: 'needs_review' },
+      evidenceSources: [source],
     });
     expect(executeAiContractMock).toHaveBeenCalledWith('refine_bullet', {
       ...validBody,
       jobContext: '',
       language: 'en',
+      evidenceSources: [source],
     });
   });
 

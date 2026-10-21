@@ -1,7 +1,7 @@
 import type { TemplateProps } from './BaseTemplate';
 import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
 import { useSectionLabel } from '../../hooks/useSectionLabel';
-import { normalizeUrl, resolveProfileUrl } from '@/lib/utils/profileUrl';
+import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
@@ -133,8 +133,9 @@ export function TechnicalEngineer({
                                 `, ${basics.location.region}`}
                         </span>
                     )}
-                    {(linkedInUrl || linkedInLabel) && (linkedInUrl ? <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>LinkedIn Account</a> : <span>{linkedInLabel}</span>)}
-                    {(portfolioUrl || portfolioLabel) && (portfolioUrl ? <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>Portfolio</a> : <span>{portfolioLabel}</span>)}
+                    {(linkedInUrl || linkedInLabel) && (linkedInUrl ? <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{linkedInUrl}</a> : <span>{linkedInLabel}</span>)}
+                    {(portfolioUrl || portfolioLabel) && (portfolioUrl ? <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{portfolioUrl}</a> : <span>{portfolioLabel}</span>)}
+                    {otherProfileUrls(basics.profiles).map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{url}</a>)}
                 </div>
             </header>
 
@@ -237,7 +238,7 @@ export function TechnicalEngineer({
                                             {safeString(job.position)}
                                         </h3>
                                         <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
-                                            {job.startDate} → {job.endDate || 'Present'}
+                                            {job.startDate} - {job.endDate || 'Present'}
                                         </span>
                                     </div>
                                     <p className="text-gray-500 mb-2" style={{ fontSize: fs(11) }}>
@@ -330,7 +331,7 @@ export function TechnicalEngineer({
                                             </h3>
                                             <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
                                                 {safeString(edu.studyType)}
-                                                {edu.area && ` — ${edu.area}`}
+                                                {edu.area && ` - ${edu.area}`}
                                             </p>
                                             {edu.score && (
                                                 <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
@@ -344,7 +345,7 @@ export function TechnicalEngineer({
                                             )}
                                         </div>
                                         <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
-                                            {edu.endDate || edu.startDate}
+                                            {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : (edu.endDate || edu.startDate)}
                                         </span>
                                     </div>
                                 </div>

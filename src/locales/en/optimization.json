@@ -15,6 +15,26 @@
     "before": "Before",
     "after": "After",
     "optimizedView": "Optimized View",
-    "evidenceLabel": "Grounded in your resume"
+    "evidenceLabel": "Grounded in your resume",
+    "evidenceNeedsReview": "Needs your review — source text does not verify every detail.",
+    "evidenceSourceMatched": "Matched to supplied source text; check the wording before applying.",
+    "evidenceUnavailable": "Source evidence is unavailable for this saved suggestion. Check every detail before applying.",
+    "resumeSource": "Resume text",
+    "clarificationSource": "Your answer",
+    "inputOmittedTitle": "Some input was not analyzed",
+    "inputOmitted": "Some supplied input was omitted before analysis: {{resume}} resume characters and {{clarifications}} answer characters. The suggestions did not evaluate that omitted text.",
+    "reviewTitle": "Review proposed claim",
+    "reviewChanged": "This claim changed. Edit or regenerate it before confirming.",
+    "reviewSaved": "Your statement was saved.",
+    "reviewSaveFailed": "Review could not be saved. Check browser storage and try again.",
+    "reviewArrayInvalid": "Enter a JSON array of text items.",
+    "reviewEdited": "Wording updated. Review the claim again.",
+    "reviewLegacy": "Saved source is unavailable. Check this statement yourself.",
+    "reviewConfirmed": "Confirmed by you as your statement",
+    "reviewWording": "Edit claim wording",
+    "reviewSaveWording": "Save wording",
+    "reviewConfirm": "Confirm this claim",
+    "reviewEdit": "Edit wording",
+    "reviewRevert": "Revert this claim"
   }
 }

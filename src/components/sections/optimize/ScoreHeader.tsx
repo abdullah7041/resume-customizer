@@ -98,7 +98,7 @@ export function ScoreHeader({
           <div className="flex flex-wrap items-center gap-2">
             {!showArrow && (
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                {t('sections.optimize.scoreHeader.currentMatch', 'Current match')}
+                {t('sections.optimize.scoreHeader.currentMatch', 'Estimated alignment with this job description')}
               </span>
             )}
             <span className={cn('text-2xl font-bold tabular-nums', isPlaceholderScore ? 'text-gray-500 italic' : 'text-gray-900 dark:text-white')}>
