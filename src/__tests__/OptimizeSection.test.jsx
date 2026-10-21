@@ -427,12 +427,16 @@ describe('OptimizeSection', () => {
         });
 
         it('preserves applied state only for the same assessment and identical edit', () => {
-            mockStoreState.optimizations = [{ ...sampleOptimization, sectionId: 'legacy-summary', applied: true, assessmentKey: 'job-a' }];
+            const evidence = { version: 1, targetId: 'resume:1', proposedFingerprint: 'candidate',
+                originalFingerprint: 'original', references: [], sourceFingerprints: {}, status: 'needs_review', reasons: ['semantic_review'] };
+            const confirmation = { targetId: 'resume:1', proposedFingerprint: 'candidate',
+                confirmedAt: '2026-10-21T00:00:00.000Z', statement: sampleOptimization.optimized };
+            mockStoreState.optimizations = [{ ...sampleOptimization, sectionId: 'legacy-summary', applied: true,
+                assessmentKey: 'job-a', evidence, confirmation, mergeStatus: 'mergeable' }];
             renderWithProviders(<OptimizeSection assessmentKey="job-a" jobDescription="Job A"
                 optimizations={[{ ...sampleOptimization, rationale: 'Updated explanation' }]} />);
-            expect(mockSetOptimizations).toHaveBeenCalledWith([
-                expect.objectContaining({ optimized: sampleOptimization.optimized, applied: true, assessmentKey: 'job-a' }),
-            ]);
+            expect(mockStoreState.optimizations[0]).toMatchObject({ optimized: sampleOptimization.optimized,
+                applied: true, assessmentKey: 'job-a', evidence, confirmation, mergeStatus: 'mergeable' });
         });
 
         it('renders collapsed strategy section when optimization strategy exists', () => {

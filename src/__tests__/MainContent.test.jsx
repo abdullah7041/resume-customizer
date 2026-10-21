@@ -50,7 +50,7 @@ const {
 const resumeUploadMockProps = vi.hoisted(() => ({ current: null }));
 const jobFeedMockProps = vi.hoisted(() => ({ current: null }));
 const matchSectionMockProps = vi.hoisted(() => ({ current: null }));
-const optimizeSectionMockProps = vi.hoisted(() => ({ current: null }));
+const optimizeSectionMockProps = vi.hoisted(() => ({ current: null, actual: null }));
 const auxiliarySectionMockProps = vi.hoisted(() => ({ interview: null, bulk: null, coverLetter: null }));
 const pipelineMockProps = vi.hoisted(() => ({ current: null }));
 const mobileWorkflowMockProps = vi.hoisted(() => ({ current: null }));
@@ -168,6 +168,9 @@ vi.mock("../components/sections/OptimizeSection", async () => {
       optimizeSectionMockProps.current = props;
       const scoreState = useMockResumeStore((state) => state.optimizationMetrics);
       const [optimizeStatus, setOptimizeStatus] = React.useState("idle");
+      if (optimizeSectionMockProps.actual) {
+        return React.createElement("div", { "data-testid": "optimization-mock" }, React.createElement(optimizeSectionMockProps.actual, props));
+      }
       return React.createElement(
         "div",
         { "data-testid": "optimization-mock" },
@@ -331,6 +334,7 @@ vi.mock("../hooks/useUserCredits", () => ({
 
 describe("MainContent resume parsing", () => {
   beforeEach(() => {
+    optimizeSectionMockProps.actual = null;
     resumeUploadMockProps.current = null;
     jobFeedMockProps.current = null;
     landingMockProps.current = null;
@@ -391,16 +395,18 @@ describe("MainContent resume parsing", () => {
     localStorage.setItem('watheq:lastActiveTab', 'match');
     localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Original resume', sections: [] }));
     if (job) localStorage.setItem('watheq:lastJobDescription', job);
-    render(<MainContent />);
+    const page = render(<MainContent />);
     await screen.findByTestId('job-match-mock');
+    return page;
   };
 
   const openOptimize = async (job = 'Role A') => {
     localStorage.setItem('watheq:lastActiveTab', 'optimize');
     localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Original resume', sections: [] }));
     localStorage.setItem('watheq:lastJobDescription', job);
-    render(<MainContent />);
+    const page = render(<MainContent />);
     await screen.findByTestId('optimization-mock');
+    return page;
   };
 
   const restoreJob = async (job) => {
@@ -549,6 +555,24 @@ describe("MainContent resume parsing", () => {
     expect(matchSectionMockProps.current.matchAnalysis.score).toBe(75);
   });
 
+  it('Match ownership: returning to paid Job A reuses its complete result after paid Job B', async () => {
+    await openMatch();
+    analyzeResumeMock.mockResolvedValueOnce({ score: 75, reasoning: 'Saved Job A reasoning' })
+      .mockResolvedValue({ score: 42, reasoning: 'Saved Job B reasoning' });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Job A'); });
+    await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Job B'); });
+    expect(JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis')).assessment.jobSnapshot).toBe('Job B');
+
+    act(() => matchSectionMockProps.current.onJobDescriptionChange('Job A'));
+    await waitFor(() => expect(matchSectionMockProps.current.matchAnalysis?.score).toBe(75));
+    let result;
+    await act(async () => { result = await matchSectionMockProps.current.onAnalyzeMatchAI('Job A'); });
+
+    expect(analyzeResumeMock).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ score: 75, reasoning: 'Saved Job A reasoning', origin: 'paid', reusedFromCache: true });
+    expect(useResumeStore.getState().baselineMatchScore).toBe(75);
+  });
+
   it('Match ownership: stores the full submitted job instead of a truncated display variant', async () => {
     await openMatch();
     const fullJob = `${'Requirement '.repeat(810)}final requirement`;
@@ -559,12 +583,15 @@ describe("MainContent resume parsing", () => {
   });
 
   it('Match ownership: a mismatched saved job snapshot cannot satisfy the current context', async () => {
-    await openMatch();
+    const page = await openMatch();
     analyzeResumeMock.mockResolvedValueOnce({ score: 68 }).mockResolvedValueOnce({ score: 79 });
     await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Role A'); });
     const stored = JSON.parse(localStorage.getItem('watheq:lastMatchAnalysis'));
     stored.assessment.jobSnapshot = 'Different job';
     localStorage.setItem('watheq:lastMatchAnalysis', JSON.stringify(stored));
+    page.unmount();
+    render(<MainContent />);
+    await screen.findByTestId('job-match-mock');
     await act(async () => { await matchSectionMockProps.current.onAnalyzeMatchAI('Role A'); });
     expect(analyzeResumeMock).toHaveBeenCalledTimes(2);
     expect(matchSectionMockProps.current.matchAnalysis.score).toBe(79);
@@ -1222,6 +1249,39 @@ describe("MainContent resume parsing", () => {
       optimized: 'Revised rewrite', evidence,
     }));
     expect(useResumeStore.getState().optimizeRun.data.evidenceSources).toContainEqual(source);
+  });
+
+  it("keeps candidate wording in the current assessment when Optimize remounts", async () => {
+    optimizeSectionMockProps.actual = (await vi.importActual('../components/sections/OptimizeSection')).OptimizeSection;
+    useResumeStore.setState({ originalResume: { basics: { name: 'Sara', summary: 'Original' }, work: [], skills: [] } });
+    const page = await openOptimize();
+    optimizeResumeStreamMock.mockResolvedValueOnce({
+      cards: [{ section: 'Summary', exampleBefore: 'Original', exampleAfter: 'Provider wording',
+        evidence: { version: 1, targetId: 'resume:1', originalFingerprint: 'original', proposedFingerprint: 'provider',
+          references: [], sourceFingerprints: {}, status: 'source_matched', reasons: [] } }],
+      evidenceSources: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini',
+    });
+    await act(async () => { await optimizeSectionMockProps.current.onOptimize('auto', { freePreview: true }); });
+    await waitFor(() => expect(useResumeStore.getState().optimizations[0]?.optimized).toBe('Provider wording'));
+    const card = useResumeStore.getState().optimizations[0];
+    act(() => expect(useResumeStore.getState().editOptimization(card.sectionId, 'Candidate wording', 'candidate', card)).toBe(true));
+    const confirmation = { targetId: 'resume:1', proposedFingerprint: 'candidate',
+      confirmedAt: '2026-10-21T00:00:00.000Z', statement: 'Candidate wording' };
+    act(() => expect(useResumeStore.getState().confirmOptimization(card.sectionId, confirmation)).toBe(true));
+    act(() => useResumeStore.getState().applyOptimization(card.sectionId));
+    await act(async () => { mobileWorkflowMockProps.current.onStepChange('templates'); });
+    await act(async () => { mobileWorkflowMockProps.current.onStepChange('optimize'); });
+
+    await waitFor(() => expect(optimizeSectionMockProps.current.optimizations[0]).toMatchObject({
+      optimized: 'Candidate wording', evidence: { proposedFingerprint: 'candidate', status: 'needs_review' },
+    }));
+    expect(useResumeStore.getState().optimizations[0]).toMatchObject({ optimized: 'Candidate wording', applied: true, confirmation });
+    page.unmount();
+    render(<MainContent />);
+    await waitFor(() => expect(optimizeSectionMockProps.current.optimizations[0]?.optimized).toBe('Candidate wording'));
+    expect(useResumeStore.getState().optimizations[0]).toMatchObject({ optimized: 'Candidate wording',
+      applied: true, confirmation, mergeStatus: 'mergeable', evidence: { proposedFingerprint: 'candidate', status: 'needs_review' } });
+    expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1);
   });
 
   it("does not turn unvalidated raw project rewrites into actionable cards", async () => {

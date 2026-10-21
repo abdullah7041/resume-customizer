@@ -730,8 +730,8 @@ export default function MainContent() {
    * promise keeps going and writes its cards through getState(); navigate back and
    * the new instance has already initialized empty and never sees them — the exact
    * "came back and saw nothing" symptom, now with a stored record claiming success.
-   * Only a run with no local cards is adopted, so this can never clobber what the
-   * page is currently showing.
+   * Candidate edits also update the run, so its current cards replace provider
+   * props only after the same assessment and input guards pass.
    */
   useEffect(() => {
     let active = true;
@@ -744,7 +744,7 @@ export default function MainContent() {
         useResumeStore.getState().optimizeRun !== run || run.assessment.context.key !== context.key) return;
       const cards = (run.cards ?? []) as typeof optimizations;
       if (cards.length === 0) return;
-      setOptimizations((current) => (current.length > 0 ? current : cards));
+      setOptimizations(cards);
       setOptimizationData((current) => current ?? run.data ?? null);
       setOptimizationKeywords((current) =>
         current.add.length || current.remove.length || current.neutral.length
@@ -1795,14 +1795,16 @@ export default function MainContent() {
         const context = await createAssessmentContext(input);
         if (!isCurrent()) return null;
         request.context = context;
-        const stored = loadStoredMatchAssessment(context);
+        const remembered = matchAssessments.current.get(context.key);
+        const stored = remembered ? { status: 'current' as const, assessment: remembered } : loadStoredMatchAssessment(context);
         // The store's score cache is intentionally partial. Only the complete
-        // persisted result can be displayed without a new request.
+        // saved result can be displayed without a new request.
         const restored = stored?.status === 'current' && stored.assessment.jobSnapshot === input.jobDescription
           ? stored.assessment.result : null;
         // A preview still needs the charged run when a signed-in user confirms one.
         if (restored && (restored.origin === 'paid' || (capturedOptions?.freePreview && restored.origin === 'guest_preview'))) {
           if (!isCurrent()) return null;
+          if (stored?.status === 'current') matchAssessments.current.set(context.key, stored.assessment);
           setHistoricalMatch(null);
           setMatchAnalysis(restored);
           useResumeStore.getState().setBaselineMatchScore(restored.score);

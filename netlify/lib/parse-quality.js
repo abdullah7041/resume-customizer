@@ -508,15 +508,24 @@ export function parseWorkBlocks(lines) {
   const entries = [];
   let current = null;
 
-  // ISO date metadata cannot establish a second job without a role/company separator.
+  // Later ISO ranges need a recognizable short role followed by employer metadata.
   // Keep the older range-only title behavior for non-ISO dates.
-  const isHeader = (line) => {
+  // ponytail: unknown ISO titles stay raw; expand role markers with source regressions.
+  const isHeader = (line, nextLine) => {
     const range = line.match(DATE_RANGE_RE);
     const withoutRange = range
       ? (line.slice(0, range.index) + line.slice(range.index + range[0].length)).trim()
       : line;
+    const isRoleTitle = withoutRange.length <= 60
+      && /^\p{L}[\p{L}\p{M}\d&/.'+()-]*(?:\s+[\p{L}\p{M}\d&/.'+()-]+){0,7}$/u.test(withoutRange)
+      && /\b(?:analyst|engineer|scientist|manager|developer|specialist)(?:\s+\d+|\s+\([^)]*\))*$|^(?:محلل|مهندس|عالم|مدير|مطور|أخصائي)(?:ة)?(?:\s|$)/iu.test(withoutRange)
+      && !/^(?:achieved|managed|led|developed|created|implemented|designed|improved|increased|reduced|optimized|delivered|executed|built|launched|established|directed|coordinated|analyzed|maintained|trained)\b/i.test(withoutRange)
+      && nextLine.length > 0 && nextLine.length <= 60
+      && !BULLET_PREFIX_RE.test(nextLine) && !/[.!?]$/.test(nextLine)
+      && !/^(?:using|with|via|through|by|to|for|from|and|or|while|including|باستخدام|بواسطة|عبر|من خلال|مع)\s/i.test(nextLine)
+      && !DATE_ONLY_RE.test(nextLine);
     return COMPANY_SEP_RE.test(withoutRange)
-      || Boolean(range && (!current || !/(?:19|20)\d{2}-(?:0[1-9]|1[0-2])/.test(range[0])));
+      || Boolean(range && (!current || !/(?:19|20)\d{2}-(?:0[1-9]|1[0-2])/.test(range[0]) || isRoleTitle));
   };
 
   for (let index = 0; index < rows.length; index++) {
@@ -553,7 +562,7 @@ export function parseWorkBlocks(lines) {
       && !current.name
       && !current.startDate
       && (!current.highlights || current.highlights.length === 0)
-      && !isHeader(line)
+      && !isHeader(line, nextLine)
       && DATE_ONLY_RE.test(nextLine)
     ) {
       current.name = line;
@@ -566,7 +575,7 @@ export function parseWorkBlocks(lines) {
       current
       && current.position
       && !current.name
-      && !isHeader(line)
+      && !isHeader(line, nextLine)
       && !BULLET_PREFIX_RE.test(line)
       && line.length <= 60
       && !/[.!?]$/.test(line)
@@ -592,7 +601,7 @@ export function parseWorkBlocks(lines) {
       && current.position
       && !current.name
       && (!current.highlights || current.highlights.length === 0)
-      && !isHeader(line)
+      && !isHeader(line, nextLine)
       && !BULLET_PREFIX_RE.test(line) // not an explicit achievement bullet
       && line.length <= 60         // company/location lines are short
       && !/[.!?]$/.test(line)      // achievements end in sentence punctuation
@@ -608,7 +617,7 @@ export function parseWorkBlocks(lines) {
       continue;
     }
 
-    if (isHeader(line) || !current) {
+    if (isHeader(line, nextLine) || !current) {
       let rest = line;
       const entry = {};
 

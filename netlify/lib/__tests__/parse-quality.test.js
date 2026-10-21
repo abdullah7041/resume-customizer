@@ -296,6 +296,39 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
 });
 
 describe("parseWorkBlocks — conservative header detection", () => {
+  it.each([
+    ["Junior Analyst", "2020 - 2021-06", "2020", "2021-06"],
+    ["Junior Analyst", "2020-01 - 2021", "2020-01", "2021"],
+    ["Junior Analyst", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["Junior Analyst", "2020-01 - Present", "2020-01", "Present"],
+    ["Lead Data Scientist", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["محلل بيانات", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["junior analyst", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["Software Engineer 2", "2020-01 - 2021-06", "2020-01", "2021-06"],
+    ["Data Analyst (Contract)", "2020-01 - 2021-06", "2020-01", "2021-06"],
+  ])("keeps a later %s role separate for %s", (position, dates, startDate, endDate) => {
+    const raw = [
+      "Nora Example", "Experience", "Senior Data Analyst at FirstCo 2022 - Present",
+      "• Built reports for operations.", `${position} ${dates}`, "SecondCo",
+      "• Improved SQL exports.",
+    ].join("\n");
+    const firstJob = {
+      position: "Senior Data Analyst", name: "FirstCo", startDate: "2022", endDate: "Present",
+      highlights: ["Built reports for operations."],
+    };
+    const secondJob = {
+      position, name: "SecondCo", startDate, endDate,
+      highlights: ["Improved SQL exports."],
+    };
+
+    expect(buildDeterministicBaseline(raw).work).toEqual([firstJob, secondJob]);
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      { work: [firstJob] }, detectSectionSignals(raw), raw,
+    );
+    expect(analysis.work).toEqual([firstJob, secondJob]);
+    expect(fallbackSections).toContain("experience");
+  });
+
   it("keeps ambiguous stacked text after a completed job as evidence, not a new job", () => {
     const work = parseWorkBlocks([
       "Senior Engineer",
@@ -339,6 +372,8 @@ describe("parseWorkBlocks — conservative header detection", () => {
       "Led migration 2022-01 – 2023-06",
       "Led migration 2022-01 — 2023-06",
       "• Led migration from 2022-01 to 2023-06",
+      "Trained a junior analyst 2022-01 - 2023-06",
+      "• Junior Analyst 2022-01 - 2023-06",
     ]) {
       const raw = [
         "Nora Example", "Experience", "Engineer at Acme | 2020 - Present",
@@ -353,6 +388,33 @@ describe("parseWorkBlocks — conservative header detection", () => {
       expect(analysis.work).toEqual(firstPass.work);
       expect(fallbackSections).not.toContain("experience");
     }
+  });
+
+  it.each([
+    ["Led migration", "using SQL and Power BI"],
+    ["Led migration", "Internal reporting"],
+    ["Delivered migration", "Internal reporting"],
+    ["Platform migration", "using SQL and Power BI"],
+    ["قدت عملية الترحيل", "باستخدام SQL وPower BI"],
+    ["Oversaw platform migration", "Internal reporting"],
+    ["قدت عملية الترحيل", "التقارير الداخلية"],
+  ])("keeps dated achievement %s and continuation %s in the current job", (achievement, continuation) => {
+    const raw = [
+      "Nora Example", "Experience", "Engineer at Acme | 2020 - Present",
+      "• Built dashboards.", `${achievement} 2022-01 - 2023-06`, continuation,
+      "• Improved reports.",
+    ].join("\n");
+    const work = [{
+      position: "Engineer", name: "Acme", startDate: "2020", endDate: "Present",
+      highlights: ["Built dashboards.", `${achievement} 2022-01 - 2023-06`, continuation, "Improved reports."],
+    }];
+
+    expect(buildDeterministicBaseline(raw).work).toEqual(work);
+    const { analysis, fallbackSections } = recoverSectionsFromRawText(
+      { work }, detectSectionSignals(raw), raw,
+    );
+    expect(analysis.work).toEqual(work);
+    expect(fallbackSections).not.toContain("experience");
   });
 
   it("still recovers a missing ISO-dated role with an explicit role/company separator", () => {

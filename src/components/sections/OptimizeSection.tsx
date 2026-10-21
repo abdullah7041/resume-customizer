@@ -346,7 +346,9 @@ export function OptimizeSection({
             ...normalizedOpt,
             assessmentKey,
             applied: existingOpt.applied,
+            evidence: existingOpt.evidence,
             confirmation: existingOpt.confirmation,
+            mergeStatus: existingOpt.mergeStatus,
           };
         }
 
