@@ -1,0 +1,37 @@
+[
+  {
+    "id": "minimal-marks",
+    "file": "scripts/pdf-qualification/fixtures/minimal-marks.pdf",
+    "expected": "سَّل",
+    "sha256": "cd794f04f3438a2b2f0367861f4a96093fc4ebcc0858e5a486a998bf1409643a"
+  },
+  {
+    "id": "minimal-punctuation",
+    "file": "scripts/pdf-qualification/fixtures/minimal-punctuation.pdf",
+    "expected": "ع[SQL]",
+    "sha256": "d172b2506971cb42c1f8cac0ab21597ef182d1803eb01f448d77a46f5d98ef0d"
+  },
+  {
+    "id": "minimal-mixed",
+    "file": "scripts/pdf-qualification/fixtures/minimal-mixed.pdf",
+    "expected": "اسم foo",
+    "sha256": "3c5a0e9d95b91eb9d48f64df4bbc8340d5a4df862cae1c93696648f0dbf50c58"
+  },
+  {
+    "id": "minimal-control",
+    "file": "scripts/pdf-qualification/fixtures/minimal-control.pdf",
+    "expected": "SQL",
+    "sha256": "5a92978a52feddb3a24ee66e3840352b5face123c0a4cd73df7c55df3b8791d0"
+  },
+  {
+    "id": "hosted-mixed-modern-professional",
+    "file": "scripts/pdf-qualification/fixtures/hosted-mixed-modern-professional.pdf",
+    "expected": "Nora ExampleSoftware EngineerRiyadh·nora@example.test·+966500000001·https://nora.example.testhttps://github.com/nora-exampleAboutمهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. office عربي SQL عربي.ExperienceSenior Engineer2022-01 — 2024-06Cedar LabsMaintained customer reports.Reduced API latency by 20%.Reporting Analyst2020-01 — 2021-12Harbor WorksMaintained customer reports.Maintained internal reports without a measured outcome.EducationExample UniversityBachelor in Computer Science2016 — 2020SkillsTypeScriptSQL",
+    "sha256": "218ea37a3451efcb73df3642ed89c8648bde258dc1af413f46bd50aa59c6f7e8",
+    "links": [
+      "mailto:nora@example.test",
+      "https://nora.example.test",
+      "https://github.com/nora-example"
+    ]
+  }
+]
