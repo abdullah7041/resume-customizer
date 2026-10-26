@@ -53,7 +53,12 @@ def dump(path, value):
 def brave_version():
     file = r'C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe'
     command = "(Get-Item -LiteralPath '" + file + "').VersionInfo.ProductVersion"
-    result = subprocess.run(['powershell', '-NoProfile', '-Command', command], capture_output=True, text=True)
+    try:
+        result = subprocess.run(['powershell', '-NoProfile', '-Command', command], capture_output=True, text=True)
+    except FileNotFoundError as error:
+        # GUI inventory is optional evidence; missing PowerShell must not discard
+        # the saved-byte failures or promote an untested browser to qualified.
+        return {'file': file, 'productVersion': None, 'error': str(error), 'uiQualified': False}
     return {'file': file, 'productVersion': result.stdout.strip() or None,
             'error': result.stderr.strip() or None, 'uiQualified': False}
 
