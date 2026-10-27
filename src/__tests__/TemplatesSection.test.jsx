@@ -83,7 +83,6 @@ vi.mock('../lib/utils/pdfTextCheck', () => ({
 
 vi.mock('../services/api', () => ({
     getAuthHeaders: vi.fn(() => Promise.resolve({ 'Content-Type': 'application/json', Authorization: 'Bearer test-token' })),
-    isAuthRequiredError: (error) => error?.code === 'auth/required' || error?.status === 401,
 }));
 
 vi.mock('../services/exportDocx', () => ({
@@ -170,46 +169,38 @@ beforeEach(() => {
     });
     exportResumeAsDocx.mockClear();
     checkPdfBlob.mockResolvedValue({ state: 'text_checked', missingFieldIds: [] });
-    getAuthHeaders.mockResolvedValue({ Authorization: 'Bearer test-token' });
+    getAuthHeaders.mockReset().mockResolvedValue({ Authorization: 'Bearer test-token' });
     useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
 });
 
-describe('PDF sign-in recovery', () => {
+describe('signed-out PDF downloads', () => {
     const resume = { basics: { name: 'Sara Example', summary: 'مهندسة برمجيات' }, work: [], education: [], skills: [], projects: [] };
-    it.each(['missing session', 'server 401'])('offers sign-in and local exports instead of a retry loop after %s', async (failure) => {
-        if (failure === 'missing session') {
-            getAuthHeaders.mockRejectedValueOnce(Object.assign(new Error('Sign in required'), { code: 'auth/required', status: 401 }));
-        } else {
-            globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
-        }
-        const onRequestSignIn = vi.fn();
-        renderWithProviders(<TemplateGallery resumeData={resume} onRequestSignIn={onRequestSignIn} />);
+    it.each(['Software engineer', 'مهندسة برمجيات'])('downloads checked selectable PDF without a session for %s', async summary => {
+        getAuthHeaders.mockRejectedValue(new Error('No session available'));
+        renderWithProviders(<TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary } }} />);
         fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
-        const signIn = await screen.findByRole('button', { name: 'Sign in for selectable PDF' });
-        expect(screen.getByRole('alert')).toHaveTextContent('Sign in to download a selectable PDF');
-        expect(screen.queryByRole('button', { name: 'Retry PDF' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Review Text PDF' })).not.toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Download image-only PDF' })).toBeEnabled();
-        fireEvent.click(signIn);
-        expect(onRequestSignIn).toHaveBeenCalledOnce();
-        if (failure === 'missing session') expect(globalThis.fetch).not.toHaveBeenCalled();
+        await waitFor(() => expect(saveAs).toHaveBeenCalledOnce());
+        expect(getAuthHeaders).not.toHaveBeenCalled();
+        expect(globalThis.fetch).toHaveBeenCalledWith('/.netlify/functions/generate-pdf', expect.objectContaining({ headers: { 'Content-Type': 'application/json' } }));
+        expect(screen.queryByRole('button', { name: 'Sign in for selectable PDF' })).not.toBeInTheDocument();
     });
 
-    it.each(['missing session', 'server 401'])('returns from Text PDF review to sign-in options after %s', async (failure) => {
+    it('downloads the reviewed Text PDF without consulting session state', async () => {
+        getAuthHeaders.mockRejectedValue(new Error('Session expired'));
         checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
-        renderWithProviders(<TemplateGallery resumeData={resume} onRequestSignIn={vi.fn()} />);
+        renderWithProviders(<TemplateGallery resumeData={resume} />);
         fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
         fireEvent.click(await screen.findByRole('button', { name: 'Review Text PDF' }));
         const review = await screen.findByRole('dialog', { name: 'Review Text PDF' });
-        if (failure === 'missing session') getAuthHeaders.mockRejectedValueOnce(Object.assign(new Error('Expired session'), { status: 401 }));
-        else globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
         fireEvent.click(within(review).getByRole('button', { name: 'Download Text PDF' }));
-        await screen.findByRole('button', { name: 'Sign in for selectable PDF' });
+        await waitFor(() => expect(saveAs).toHaveBeenCalledOnce());
+        expect(getAuthHeaders).not.toHaveBeenCalled();
+        expect(JSON.parse(globalThis.fetch.mock.calls[1][1].body).format).toBe('text');
         expect(screen.queryByRole('dialog', { name: 'Review Text PDF' })).not.toBeInTheDocument();
     });
 
     it('bounds image preparation when animation frames never resume', async () => {
-        getAuthHeaders.mockRejectedValueOnce(Object.assign(new Error('Sign in required'), { status: 401 }));
+        globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 503 });
         renderWithProviders(<TemplateGallery resumeData={resume} />);
         fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
         const imageButton = await screen.findByRole('button', { name: 'Download image-only PDF' });
@@ -268,7 +259,7 @@ describe('Text PDF recovery review', () => {
         await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'Noura_Example_Analyst-text.pdf'));
         const body = JSON.parse(globalThis.fetch.mock.calls[1][1].body);
         expect(body).toMatchObject({ format: 'text', templateId: 'modern-professional', filename: 'Noura_Example_Analyst-text', blocks: [{ kind: 'body', runs: [{ text: 'Template: Riyadh Noura Example Saudi analyst SQL 25%' }] }] });
-        expect(globalThis.fetch.mock.calls[1][1].headers.Authorization).toBe('Bearer test-token');
+        expect(globalThis.fetch.mock.calls[1][1].headers).toEqual({ 'Content-Type': 'application/json' });
         expect(checkPdfBlob).toHaveBeenCalledTimes(2);
         expect(screen.getByRole('status')).toHaveTextContent('Text PDF — selectable text checked');
     });
@@ -308,27 +299,24 @@ describe('Text PDF recovery review', () => {
         expect(screen.queryByRole('button', { name: 'Generating...' })).not.toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Download DOCX' })).not.toBeDisabled();
     });
-    it.each(['auth', 'render', 'blob', 'check'])('ignores stale Text PDF during %s without download or status', async boundary => {
+    it.each(['render', 'blob', 'check'])('ignores stale Text PDF during %s without download or status', async boundary => {
         const view = await setup();
         await openReview();
         let release;
         const pending = new Promise(resolve => { release = resolve; });
-        if (boundary === 'auth') getAuthHeaders.mockImplementationOnce(() => pending);
         if (boundary === 'render') globalThis.fetch.mockImplementationOnce(() => pending);
         if (boundary === 'blob') globalThis.fetch.mockResolvedValueOnce({ ok: true, blob: () => pending });
         if (boundary === 'check') checkPdfBlob.mockImplementationOnce(() => pending);
         fireEvent.click(screen.getByRole('button', { name: 'Download Text PDF' }));
         await waitFor(() => {
-            if (boundary === 'auth') expect(getAuthHeaders).toHaveBeenCalledTimes(2);
-            else if (boundary === 'check') expect(checkPdfBlob).toHaveBeenCalledTimes(2);
+            if (boundary === 'check') expect(checkPdfBlob).toHaveBeenCalledTimes(2);
             else expect(globalThis.fetch).toHaveBeenCalledTimes(2);
         });
         view.rerender(<DirectionProvider><TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary: 'Later edit' } }} /></DirectionProvider>);
-        await act(async () => release(boundary === 'auth' ? { Authorization: 'Bearer test-token' } : boundary === 'check' ? { state: 'text_checked', missingFieldIds: [] } : boundary === 'blob' ? new Blob(['pdf']) : { ok: true, blob: async () => new Blob(['pdf']) }));
+        await act(async () => release(boundary === 'check' ? { state: 'text_checked', missingFieldIds: [] } : boundary === 'blob' ? new Blob(['pdf']) : { ok: true, blob: async () => new Blob(['pdf']) }));
         expect(saveAs).not.toHaveBeenCalled();
         expect(screen.queryByRole('status')).not.toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-        if (boundary === 'auth') expect(globalThis.fetch).toHaveBeenCalledTimes(1);
     });
     it('invalidates a reviewed snapshot when formatting changes', async () => {
         const view = await setup();

@@ -39,7 +39,7 @@ beforeEach(async () => {
   readFont.mockReset();
   mkdir.mockReset();
   writeFont.mockReset();
-  getUser.mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null });
+  getUser.mockReset().mockResolvedValue({ data: { user: { id: 'test-user' } }, error: null });
   const fs = await vi.importActual<typeof import('node:fs')>('node:fs');
   readFont.mockImplementation((path: string) => fs.readFileSync(path));
   vi.useFakeTimers();
@@ -142,7 +142,7 @@ describe('serverless styled font provisioning', () => {
   });
 });
 
-describe('authenticated text layout', () => {
+describe('public PDF export', () => {
   const request = { format: 'text', blocks: [{ kind: 'title', runs: [{ text: 'Noura Example' }] }], templateId: 'modern-professional', filename: 'Noura-text' };
   const call = async (body: unknown, authenticated = true) => {
     const { handler } = await import('../generate-pdf.js');
@@ -150,10 +150,31 @@ describe('authenticated text layout', () => {
     if (!response) throw new Error('Expected a handler response');
     return response;
   };
-  it('authenticates before parsing or loading the font', async () => {
-    expect(await call('malformed', false)).toMatchObject({ statusCode: 401 });
-    getUser.mockResolvedValueOnce({ data: { user: null }, error: {} });
-    expect(await call(request)).toMatchObject({ statusCode: 401 });
+  it('validates guest requests before loading the font or browser', async () => {
+    expect(await call('malformed', false)).toMatchObject({ statusCode: 400 });
+    expect(readFont).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
+  });
+  it.each([false, true])('returns a selectable Text PDF without consulting authentication (header present: %s)', async authenticated => {
+    getUser.mockRejectedValueOnce(new Error('Authentication unavailable'));
+    const response = await call(request, authenticated);
+    expect(response).toMatchObject({ statusCode: 200, isBase64Encoded: true });
+    expect(Buffer.from(response.body, 'base64').subarray(0, 5).toString()).toBe('%PDF-');
+    expect(getUser).not.toHaveBeenCalled();
+  });
+  it('renders guest HTML and styled Arabic PDFs with the same sandbox and validation', async () => {
+    expect(await call({ html: '<p>Guest resume</p>' }, false)).toMatchObject({ statusCode: 200 });
+    expect(await call({ ...request, format: 'styled', blocks: [{ kind: 'body', runs: [{ text: 'مهندسة برمجيات SQL' }] }],
+      presentation: [{ fontSize: 11, lineHeight: 16.5, color: '#123456', bold: false, italic: false, direction: 'rtl', align: 'right', spacingAfter: 6 }] }, false)).toMatchObject({ statusCode: 200 });
+    const browser = await launch.mock.results[0].value;
+    const page = await browser.newPage();
+    expect(page.setRequestInterception).toHaveBeenCalledWith(true);
+    expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+  it('rejects oversized requests and non-text styles before rendering', async () => {
+    expect(await call({ html: 'x'.repeat(4 * 1024 * 1024) }, false)).toMatchObject({ statusCode: 413 });
+    expect(await call({ html: '<p>Resume</p>', styles: {} }, false)).toMatchObject({ statusCode: 400 });
     expect(readFont).not.toHaveBeenCalled();
     expect(launch).not.toHaveBeenCalled();
   });
@@ -187,7 +208,7 @@ describe('authenticated text layout', () => {
     expect(launch).not.toHaveBeenCalled();
     expect(network).not.toHaveBeenCalled();
   });
-  it('returns a styled Arabic PDF through the authenticated font and layout boundary without Chromium', async () => {
+  it('returns a styled Arabic PDF through the font and layout boundary without Chromium', async () => {
     const response = await call({ ...request, format: 'styled', blocks: [{ kind: 'body', runs: [{ text: 'لا تغيّر الحقائق. SQL 25% 2024 ٢٥٪ ٢٠٢٤' }] }],
       presentation: [{ fontSize: 11, lineHeight: 16.5, color: '#123456', bold: false, italic: false, direction: 'rtl', align: 'right', spacingAfter: 6 }] });
     expect(response).toMatchObject({ statusCode: 200, isBase64Encoded: true });
