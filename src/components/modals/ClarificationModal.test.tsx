@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { useLayoutEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { ClarificationModal } from '@/components/modals/ClarificationModal';
 
@@ -27,6 +28,24 @@ const question = {
 };
 
 describe('ClarificationModal', () => {
+  it('keeps a selection made as the next question round becomes visible', () => {
+    const onSubmit = vi.fn();
+    const rounds = [[question], [{ ...question, id: 'sqlExperience', theme: 'SQL',
+      options: [{ value: 'dashboards', label: 'Built SQL dashboards' }] }]];
+    function RoundBoundary({ next }: { next: boolean }) {
+      // Click at the first committed DOM, before passive initialization can run.
+      useLayoutEffect(() => {
+        if (next) screen.getByRole('button', { name: 'Built SQL dashboards' }).click();
+      }, [next]);
+      return <ClarificationModal questions={rounds[next ? 1 : 0]} isOpen onSubmit={onSubmit} onSkip={vi.fn()} />;
+    }
+    const view = render(<RoundBoundary next={false} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Built Excel dashboards' }));
+    view.rerender(<RoundBoundary next />);
+    expect(screen.getByRole('button', { name: 'Built SQL dashboards' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /submit answers/i }));
+    expect(onSubmit).toHaveBeenCalledWith({ sqlExperience: { selectedValues: ['dashboards'], otherText: '' } });
+  });
   it('never preselects model-guessed experience and allows Optimize now with multiple selected facts', () => {
     const onOptimizeNow = vi.fn();
     render(<ClarificationModal questions={[{ ...question, defaultValue: 'dashboards', options: [
