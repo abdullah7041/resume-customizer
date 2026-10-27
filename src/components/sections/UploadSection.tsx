@@ -245,7 +245,7 @@ export default function UploadSection({
                 ? t('upload.errors.unreadable', "We couldn't read selectable text from that file.")
                 : (err instanceof Error ? err.message : 'Failed to parse resume');
             const description = isUnreadable
-                ? t('upload.errors.unreadableHint', "Upload a text-based PDF/DOCX or paste your resume text. Scanned or image-only files aren't supported yet.")
+                ? t('upload.errors.unreadableHint', "Upload a text-based PDF/DOCX, TXT, or Markdown file, or paste your resume text. Scanned or image-only files aren't supported yet.")
                 : message;
             setError(message);
 

@@ -52,6 +52,7 @@ coverage
 eslint.json
 deno.lock
 scripts/benchmark-reports/
+promptfoo-eval-reports/
 src/lib/featureFlags/report/
 i18n-missing-ar.json
 i18n-translation-prompt-ar.md
@@ -62,6 +63,9 @@ i18n-translation-prompt-ar.md
 
 # Agent tooling directories (auto-generated, not source)
 .codegraph/
+.codex/
+.codex-tmp/
+.superpowers/
 .agents/*
 !.agents/skills/
 !.agents/skills/**

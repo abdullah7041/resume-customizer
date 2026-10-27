@@ -11,6 +11,8 @@ const MIME_BY_EXTENSION = new Map([
   ["pdf", PDF_MIME],
   ["docx", DOCX_MIME],
   ["txt", "text/plain"],
+  ["md", "text/markdown"],
+  ["markdown", "text/markdown"],
 ]);
 
 const normalizeExtension = (value) => {
@@ -22,13 +24,16 @@ const normalizeExtension = (value) => {
 };
 
 export const inferMimeType = ({ mimeType, fileName }: FileInfo = {}): string => {
+  const extensionMime = MIME_BY_EXTENSION.get(normalizeExtension(fileName ?? ""));
   if (typeof mimeType === "string" && mimeType.trim()) {
     const normalized = mimeType.trim().toLowerCase();
     const [primary] = normalized.split(";");
+    if (extensionMime === "text/markdown" && [FALLBACK_OCTET_STREAM, "text/plain"].includes(primary.trim())) {
+      return extensionMime;
+    }
     return primary.trim();
   }
-  const extension = normalizeExtension(fileName ?? "");
-  return MIME_BY_EXTENSION.get(extension) ?? FALLBACK_OCTET_STREAM;
+  return extensionMime ?? FALLBACK_OCTET_STREAM;
 };
 
 const toArrayBuffer = (value) => {
@@ -957,6 +962,10 @@ export const extractPlainTextFromArrayBuffer = async (input: ArrayBuffer | Array
 
   if (inferredMime === DOCX_MIME) {
     return normalizeResumeText(await extractDocxPlainText(arrayBuffer));
+  }
+
+  if (inferredMime === "text/markdown" || inferredMime === "text/x-markdown") {
+    return decodeUtf8(arrayBuffer);
   }
 
   return normalizeResumeText(decodeUtf8(arrayBuffer));

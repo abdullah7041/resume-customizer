@@ -15,7 +15,7 @@
  */
 
 import { createPortal } from 'react-dom';
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Sparkles, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassButton } from '../ui/GlassButton';
@@ -100,8 +100,8 @@ export function ClarificationModal({
     }
   }, []);
 
-  // Reset state when questions change
-  useEffect(() => {
+  // Initialize each round before it becomes interactive, so reset cannot erase an early answer.
+  useLayoutEffect(() => {
     if (isOpen) {
       setAnswers(Object.fromEntries(normalizedQuestions.map(question => [
         question.id,

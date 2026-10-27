@@ -30,6 +30,7 @@ vi.mock('@upstash/ratelimit', () => {
 
     async limit(identifier: string) {
       if (identifier.includes('throwing-user')) throw new Error('redis unavailable');
+      if (identifier.includes('timeout-user')) return { success: true, reason: 'timeout' };
       const nextCount = (limitCounts.get(identifier) ?? 0) + 1;
       limitCounts.set(identifier, nextCount);
 
@@ -144,6 +145,30 @@ describe('rate-limiter endpoint configs', () => {
     expect(blocked.statusCode).toBe(429);
     expect(blocked.headers?.['X-RateLimit-Limit']).toBe('30');
     expect(handler).toHaveBeenCalledTimes(30);
+  });
+
+  it('limits public PDF generation by the platform client IP to ten per minute', async () => {
+    const { withRateLimit } = await loadRateLimiter();
+    const handler = vi.fn().mockResolvedValue({ statusCode: 200, body: 'pdf' });
+    const wrapped = withRateLimit('generate-pdf', handler);
+    const event = buildEvent('spoofed-forwarded-ip');
+    event.headers['x-nf-client-connection-ip'] = '203.0.113.50';
+    for (let i = 0; i < 10; i += 1) expect(await wrapped(event, context)).toMatchObject({ statusCode: 200 });
+    event.headers['x-forwarded-for'] = 'another-forwarded-ip';
+    expect(await wrapped(event, context)).toMatchObject({ statusCode: 429 });
+    expect(handler).toHaveBeenCalledTimes(10);
+  });
+
+  it.each(['missing', 'throwing-user', 'timeout-user'])('does not render public PDFs when quota storage is %s', async failure => {
+    if (failure === 'missing') {
+      delete process.env.UPSTASH_REDIS_REST_URL;
+      delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    }
+    const { withRateLimit } = await loadRateLimiter();
+    const handler = vi.fn().mockResolvedValue({ statusCode: 200, body: 'pdf' });
+    const response = await withRateLimit('generate-pdf', handler)(buildEvent(failure), context);
+    expect(response).toMatchObject({ statusCode: 503 });
+    expect(handler).not.toHaveBeenCalled();
   });
 
   it('tracks feed-match quotas independently by authenticated user identifier', async () => {

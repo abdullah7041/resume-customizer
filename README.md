@@ -152,6 +152,18 @@ resume-customizer/
 
 ---
 
+## Documentation
+
+- [Repository guidance](CLAUDE.md) and [domain documentation](docs/agents/domain.md)
+- [Architecture decisions](docs/adr/ADR-job-specific-resume-builder.md) and [job-variant measurement gate](docs/adr/job-variant-phase2-gate.md)
+- [Model benchmarking](docs/AI_MODEL_BENCHMARKING.md)
+- [Owner walkthrough and HR pilot](docs/hr-pilot/README.md)
+- [Historical PDF reader regression](scripts/pdf-qualification/README.md)
+
+Completed and superseded implementation plans, design drafts and audit reports remain available in Git history rather than the active tree.
+
+---
+
 ## Credits
 
 **Created by Abdullah**, a full-stack developer who thinks the distance between a good candidate and a good resume shouldn't cost anyone a job.

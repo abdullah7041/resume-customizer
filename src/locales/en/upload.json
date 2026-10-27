@@ -4,7 +4,7 @@
     "dragDrop": "Drag and drop your file here",
     "or": "or",
     "browse": "Browse Files",
-    "supported": "Supported formats: PDF, DOCX, TXT",
+    "supported": "Supported formats: PDF, DOCX, TXT, Markdown (.md/.markdown)",
     "maxSize": "Maximum file size: 5MB",
     "library": {
       "title": "Your resumes",
@@ -27,11 +27,12 @@
     "card": {
       "step": "Step 1",
       "title": "Upload or Paste Your Resume",
-      "subtitle": "Drag a PDF, DOCX, or TXT file, or paste the text to let our AI optimize every line.",
+      "subtitle": "Drag a PDF, DOCX, TXT, or Markdown file, or paste the text to let our AI optimize every line.",
       "maxSize": "Max 5MB",
       "pdf": "PDF",
       "docx": "DOCX",
       "txt": "TXT",
+      "markdown": "Markdown",
       "and": "&",
       "dropText": "Drop your resume here or click to browse",
       "securityText": "We keep uploads private and secure.",
@@ -51,7 +52,7 @@
         "error": "We couldn't process that file."
       },
       "selectFile": "Select File",
-      "supportedFormats": "Supported formats: PDF, DOCX, TXT",
+      "supportedFormats": "Supported formats: PDF, DOCX, TXT, Markdown (.md/.markdown)",
       "maxSizeLabel": "Max size: 5MB",
       "bestPractice": "For best results, use selectable text. Scanned images are not supported.",
       "pasteLabel": "Or paste your resume text",
@@ -63,14 +64,14 @@
       }
     },
     "errors": {
-      "unsupportedType": "Only PDF, DOCX, or TXT resumes are supported.",
-      "unsupportedTypeHint": "Upload a PDF or DOCX, or paste plain text.",
+      "unsupportedType": "Only PDF, DOCX, TXT, or Markdown resumes are supported.",
+      "unsupportedTypeHint": "Upload a PDF, DOCX, TXT, or Markdown (.md/.markdown) file, or paste plain text.",
       "tooLarge": "File must be 5MB or smaller.",
       "tooLargeHint": "Compress the resume and try again.",
       "readFailed": "We couldn't read that text file.",
       "readFailedHint": "Paste the contents manually instead.",
       "unreadable": "We couldn't read selectable text from that file.",
-      "unreadableHint": "Upload a text-based PDF/DOCX or paste your resume text. Scanned or image-only files aren't supported yet."
+      "unreadableHint": "Upload a text-based PDF/DOCX, TXT, or Markdown file, or paste your resume text. Scanned or image-only files aren't supported yet."
     },
     "stage": {
       "uploading": "Uploading...",
@@ -105,7 +106,7 @@
       "incomplete_certs": "We may have missed your certifications — please review or add them.",
       "possible_missing_certs": "Your summary mentions certifications, but none were parsed into the Certificates section.",
       "incomplete_languages": "We may have missed your languages — please review or add them.",
-      "unreadable_file": "We couldn't read selectable text from that file. Upload a text-based PDF/DOCX or paste your resume text."
+      "unreadable_file": "We couldn't read selectable text from that file. Upload a text-based PDF/DOCX, TXT, or Markdown file, or paste your resume text."
     }
   }
 }

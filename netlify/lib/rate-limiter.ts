@@ -339,12 +339,19 @@ const RATE_LIMIT_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 } as const;
 
+const RATE_LIMIT_UNAVAILABLE_RESPONSE: HandlerResponse = {
+  statusCode: 503,
+  headers: { ...RATE_LIMIT_HEADERS, 'Cache-Control': 'no-store', 'Retry-After': '60' },
+  body: JSON.stringify({ error: 'Export is temporarily unavailable. Please try again shortly.', code: 'rate/unavailable' }),
+};
+
 /**
  * Rate limit configuration per endpoint
  */
 export type EndpointRateLimitConfig = {
   maxRequests: number;  // Max requests per window
   windowMs?: number;    // Window duration in ms (default: 60000 = 1 minute)
+  failClosed?: boolean;
 };
 
 /**
@@ -352,6 +359,8 @@ export type EndpointRateLimitConfig = {
  * Stricter limits for "Flash" model endpoints to prevent quota exhaustion and timeouts
  */
 export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
+  // Public PDF rendering consumes server CPU even without an AI call.
+  "generate-pdf": { maxRequests: 10, failClosed: true },
   // File processing (OCR, parsing) - INCREASED from 10 to 20 for better UX
   "parse-resume": { maxRequests: 20 },
   "extract-resume-json": { maxRequests: 20 },
@@ -486,7 +495,8 @@ function initUpstash(): void {
  */
 function getClientIdentifier(event: HandlerEvent): string {
   // Netlify provides client IP in headers
-  const ip = event.headers["x-forwarded-for"]?.split(",")[0]?.trim()
+  const ip = event.headers["x-nf-client-connection-ip"]?.split(",")[0]?.trim()
+    || event.headers["x-forwarded-for"]?.split(",")[0]?.trim()
     || event.headers["x-real-ip"]
     || event.headers["client-ip"]
     || "unknown";
@@ -538,6 +548,7 @@ export async function checkRateLimitForIdentifier(
 
   // If Upstash is not configured, allow requests through (graceful degradation)
   if (!limiter) {
+    if (config.failClosed) return { allowed: false, response: RATE_LIMIT_UNAVAILABLE_RESPONSE };
     console.warn(`[rate-limiter] Upstash not configured — allowing request to ${endpoint} (no rate limiting)`);
     return { allowed: true };
   }
@@ -546,6 +557,9 @@ export async function checkRateLimitForIdentifier(
     // Upstash rate limiter - use endpoint-specific identifier
     const identifier = `${endpoint}:${clientId}`;
     const result = await limiter.limit(identifier);
+    if (config.failClosed && result.reason === 'timeout') {
+      return { allowed: false, response: RATE_LIMIT_UNAVAILABLE_RESPONSE };
+    }
 
     if (!result.success) {
       console.log(`[rate-limiter] Rate limit exceeded for ${clientId} on ${endpoint}`);
@@ -571,6 +585,7 @@ export async function checkRateLimitForIdentifier(
   } catch (err) {
     // If rate limiting fails, log error but allow request through
     console.error("[rate-limiter] Rate limit check failed:", summarizeErrorForLog(err));
+    if (config.failClosed) return { allowed: false, response: RATE_LIMIT_UNAVAILABLE_RESPONSE };
     return { allowed: true };
   }
 }

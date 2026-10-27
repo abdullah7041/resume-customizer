@@ -53,7 +53,7 @@ const UNREADABLE_FILE_RESPONSE = {
   statusCode: 422,
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    error: "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.",
+    error: "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT/Markdown file or paste your resume text directly.",
     code: "resume/unreadable-file",
     details: "The uploaded file did not contain enough selectable text. Scanned or image-only resumes are not currently supported by this parser."
   }),

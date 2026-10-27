@@ -6,7 +6,6 @@ import type { Handler } from "@netlify/functions";
 import chromium from "@sparticuz/chromium";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter.js";
-import { getSupabaseClient } from "../lib/supabase-client.js";
 import { summarizeErrorForLog } from "../lib/sentry.js";
 import { generateTextPdf, validateTextPdfBlocks, validateStyledPdfStyles, validateStyledPdfMargins } from '../lib/text-pdf.js';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -226,43 +225,13 @@ function sanitizeFilename(value: unknown): string {
 }
 
 const baseHandler: Handler = async (event) => {
-  // First line on purpose: the gateway's clock is already running, and the auth
-  // round trip below spends real time against it. Starting the budget after auth
-  // over-estimated what was left.
+  // The gateway budget includes validation and browser startup.
   const requestStartedAt = Date.now();
   if (event.httpMethod === "HEAD") {
     return { statusCode: 200, body: "" };
   }
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
-  }
-
-  const authHeader = event.headers.authorization || event.headers.Authorization;
-  if (!authHeader) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Authentication required. Please sign in." }),
-    };
-  }
-
-  const supabase = getSupabaseClient();
-  if (!supabase) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Server configuration error. Please contact support." }),
-    };
-  }
-
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Invalid or expired authentication token" }),
-    };
   }
 
   let page: Page | null = null; // Declare outside try block for cleanup access
@@ -273,6 +242,11 @@ const baseHandler: Handler = async (event) => {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       body: JSON.stringify({ status, code, message, error: message }),
     });
+    // Public, stateless export: render only the supplied document, within a
+    // bounded request size. Account data and paid AI actions remain separate.
+    if (Buffer.byteLength(event.body || '', 'utf8') > 4 * 1024 * 1024) {
+      return textError(413, 'pdf/request-too-large', 'The PDF request is too large. Please reduce embedded images or content.');
+    }
     let payload: Record<string, unknown>;
     try {
       const parsed: unknown = JSON.parse(event.body || '{}');
@@ -329,6 +303,9 @@ const baseHandler: Handler = async (event) => {
     }
     if (!html || typeof html !== 'string') {
       return { statusCode: 400, body: JSON.stringify({ error: "Missing html" }) };
+    }
+    if (styles !== undefined && typeof styles !== 'string') {
+      return textError(400, 'pdf/invalid-request', 'Invalid PDF styles.');
     }
 
     // Validate templateId to prevent header injection

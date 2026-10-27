@@ -49,7 +49,7 @@ import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, D
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
 const DRAG_HANDLE_KEYBOARD_STEP_PX = 12;
-const RECOVERY_BUTTON_CLASS = 'rounded-md border border-current px-3 py-2 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:hover:bg-white/10';
+const RECOVERY_BUTTON_CLASS = 'rounded-md border border-line bg-surface px-3 py-2 text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50';
 const storeExportInputs = () => {
   const state = useResumeStore.getState();
   return JSON.stringify([state.originalResume, state.optimizations, state.showOptimized, state.isSaudiNational,
@@ -602,13 +602,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       }
 
       // 5. Send to Server (Netlify Function)
-      const { getAuthHeaders } = await import('../../services/api');
-      if (!isCurrentExport(attempt.id)) return;
-      const apiHeaders = await getAuthHeaders({ requireAuth: true });
-      if (!isCurrentExport(attempt.id)) return;
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
-        headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
         // Without this the client waits out the gateway's own kill, then starts a
         // second slow path on top of it.
@@ -696,13 +692,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     setExportError(null);
     try {
       if (!current()) return;
-      const { getAuthHeaders } = await import('../../services/api');
-      if (!current()) return;
-      const headers = await getAuthHeaders({ requireAuth: true });
-      if (!current()) return;
       const filename = getSmartFilename(attempt.resume, attempt.templateId, 'pdf').replace(/\.pdf$/, '-text.pdf');
       const response = await fetch('/.netlify/functions/generate-pdf', {
-        method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ format: 'text', blocks: attempt.blocks, templateId: attempt.templateId, filename: filename.replace(/\.pdf$/, '') }),
         signal: AbortSignal.timeout(SERVER_PDF_TIMEOUT_MS),
       });
@@ -808,34 +800,33 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           htmlElement.style.height = 'auto';
           htmlElement.style.minHeight = 'auto';
         });
-        await waitForPdfCaptureLayout(fallbackClone);
-        if (!isCurrentExport(attempt.id)) {
-          fallbackHost.remove();
-          return;
-        }
-
         let canvas: HTMLCanvasElement;
+        let captureTimeout: number | undefined;
+        let captureTimedOut = false;
         try {
-          // html-to-image's internal image-decode step waits on a
-          // requestAnimationFrame callback, which browsers suspend
-          // indefinitely for a backgrounded/hidden tab — with no rejection,
-          // that leaves this permanently stuck on "Generating..." with no
-          // error at all. A hard timeout turns that silent hang into a
-          // recoverable, distinctly-worded failure.
+          // Font/image/layout preparation and html-to-image can both await
+          // suspended animation frames. Bound the complete capture, then
+          // remove its isolated DOM even when preparation never resumes.
           canvas = await Promise.race([
-            toCanvas(fallbackClone, {
-              pixelRatio: 2,
-              cacheBust: true,
-              backgroundColor: '#ffffff',
-              style: {
-                transform: 'none',
-              },
+            (async () => {
+              await waitForPdfCaptureLayout(fallbackClone);
+              if (captureTimedOut || !isCurrentExport(attempt.id)) throw new Error('PDF capture expired');
+              return toCanvas(fallbackClone, {
+                pixelRatio: 2,
+                cacheBust: true,
+                backgroundColor: '#ffffff',
+                style: { transform: 'none' },
+              });
+            })(),
+            new Promise<never>((_, reject) => {
+              captureTimeout = window.setTimeout(() => {
+                captureTimedOut = true;
+                reject(new Error('CLIENT_FALLBACK_TIMEOUT'));
+              }, CLIENT_FALLBACK_TIMEOUT_MS);
             }),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('CLIENT_FALLBACK_TIMEOUT')), CLIENT_FALLBACK_TIMEOUT_MS)
-            ),
           ]);
         } finally {
+          window.clearTimeout(captureTimeout);
           fallbackHost.remove();
         }
         if (!isCurrentExport(attempt.id)) return;
@@ -941,7 +932,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
         analytics.trackExportSuccess(attempt.templateId, 'pdf_image');
         setPdfRecovery(null);
-        setPdfStatus(null);
+        setPdfStatus(t('sections.templates.export.imagePrepared', 'Image-only PDF prepared — text cannot be selected.'));
         requestValueMomentFeedbackPrompt('export_success');
         useResumeStore.getState().setHasDownloaded(true);
 
@@ -1297,7 +1288,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           )}
           {pdfStatus && <p role="status" className="text-sm text-green-700 dark:text-green-300">{pdfStatus}</p>}
           {pdfRecovery && (
-            <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
+            <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm text-ink" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
               <div className="flex flex-wrap gap-2">
                 <Dialog open={!!textPdfReview} onOpenChange={open => {
                   textReviewGenerationRef.current += 1;
@@ -1333,7 +1324,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   setPdfRecovery(null);
                   useResumeStore.getState().setHasDownloaded(true);
                 }}>{t('sections.templates.export.downloadUnverified', 'Download unverified PDF')}</button>}
-                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void downloadImageOnlyPdf(pdfRecovery)}>{t('sections.templates.export.imageOnly', 'Choose image-only PDF')}</button>
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void downloadImageOnlyPdf(pdfRecovery)}>{t('sections.templates.export.imageOnly', 'Download image-only PDF')}</button>
               </div>
               <p>{t('sections.templates.export.imageWarning', 'Image-only PDF — text cannot be selected; some systems may need OCR.')}</p>
             </div>

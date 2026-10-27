@@ -146,6 +146,29 @@ describe('BulkAnalysisSection', () => {
     vi.stubGlobal('fetch', vi.fn());
   });
 
+  it.each(['resume.md', 'resume.MARKDOWN'])('accepts %s for bulk resume parsing', async (name) => {
+    mockParseResume.mockResolvedValue({ plainText: '# أحمد علي\n## الخبرة\n- محلل بيانات' });
+    const { container } = render(<BulkAnalysisSection jobDescription="Data analyst" />);
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.accept).toContain('.md');
+    expect(input.accept).toContain('.markdown');
+    const file = new File(['# أحمد علي\n## الخبرة\n- محلل بيانات'], name, { type: 'text/markdown' });
+    await act(async () => fireEvent.change(input, { target: { files: [file] } }));
+    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(await screen.findByTestId('confirm-modal')).toBeInTheDocument();
+    expect(mockParseResume).toHaveBeenCalledWith(file);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects an image MIME disguised with a Markdown extension before parsing', async () => {
+    const { container } = render(<BulkAnalysisSection jobDescription="Data analyst" />);
+    const file = new File(['Readable resume text should not bypass the image MIME restriction.'], 'resume.md', { type: 'image/png' });
+    await act(async () => fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } }));
+    expect(mockParseResume).not.toHaveBeenCalled();
+    expect(screen.queryByText('resume.md')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('confirm-modal')).not.toBeInTheDocument();
+  });
+
   describe('Bug: 0 keywords displayed', () => {
     it('should display keyword count from strongMatches when topHits/matchedKeywords are absent', async () => {
       // The ai-match endpoint returns strongMatches + matched_keywords, NOT topHits or matchedKeywords

@@ -1,0 +1,141 @@
+{
+  "status": "known_failure_not_fixed",
+  "expectedVersions": {
+    "pypdf": "6.21.1",
+    "pypdfium2": "5.14.0",
+    "pdfjs": "6.4.299",
+    "nativePdfium": "156.0.8076.0",
+    "nativePdfiumBuild": 8076
+  },
+  "versions": {
+    "pypdf": "6.21.1",
+    "pypdfium2": "5.14.0",
+    "pdfjs": "6.4.299",
+    "nativePdfium": "156.0.8076.0",
+    "nativePdfiumBuild": 8076,
+    "nativePdfiumOrigin": "pdfium-binaries",
+    "nativePdfiumFlags": [],
+    "python": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+    "node": "v26.5.1"
+  },
+  "passed": false,
+  "results": [
+    {
+      "id": "minimal-marks",
+      "expected": "سَّل",
+      "sha256": "cd794f04f3438a2b2f0367861f4a96093fc4ebcc0858e5a486a998bf1409643a",
+      "byteLength": 5553,
+      "passed": false,
+      "checks": {
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true,
+        "noInvalidScalars": true,
+        "nativeLiteralSearch": null,
+        "expectedLinks": true,
+        "sameSavedBytes": true,
+        "expectedSavedBytes": true,
+        "pdfjsExtraction": true
+      },
+      "pypdf": "سَّل",
+      "pdfjsFirstMismatch": null,
+      "pdfium": "سَّل",
+      "nativeQueries": {}
+    },
+    {
+      "id": "minimal-punctuation",
+      "expected": "ع[SQL]",
+      "sha256": "d172b2506971cb42c1f8cac0ab21597ef182d1803eb01f448d77a46f5d98ef0d",
+      "byteLength": 7288,
+      "passed": false,
+      "checks": {
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true,
+        "noInvalidScalars": true,
+        "nativeLiteralSearch": false,
+        "expectedLinks": true,
+        "sameSavedBytes": true,
+        "expectedSavedBytes": true,
+        "pdfjsExtraction": true
+      },
+      "pypdf": "ع[SQL]",
+      "pdfjsFirstMismatch": null,
+      "pdfium": "]SQL[ع",
+      "nativeQueries": {
+        "[SQL]": false
+      }
+    },
+    {
+      "id": "minimal-mixed",
+      "expected": "اسم foo",
+      "sha256": "3c5a0e9d95b91eb9d48f64df4bbc8340d5a4df862cae1c93696648f0dbf50c58",
+      "byteLength": 7019,
+      "passed": false,
+      "checks": {
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true,
+        "noInvalidScalars": true,
+        "nativeLiteralSearch": null,
+        "expectedLinks": true,
+        "sameSavedBytes": true,
+        "expectedSavedBytes": true,
+        "pdfjsExtraction": true
+      },
+      "pypdf": " اسمfoo",
+      "pdfjsFirstMismatch": null,
+      "pdfium": "foo اسم",
+      "nativeQueries": {}
+    },
+    {
+      "id": "minimal-control",
+      "expected": "SQL",
+      "sha256": "5a92978a52feddb3a24ee66e3840352b5face123c0a4cd73df7c55df3b8791d0",
+      "byteLength": 5177,
+      "passed": true,
+      "checks": {
+        "pypdfExact": true,
+        "pdfiumExact": true,
+        "pdfjsExact": true,
+        "noInvalidScalars": true,
+        "nativeLiteralSearch": null,
+        "expectedLinks": true,
+        "sameSavedBytes": true,
+        "expectedSavedBytes": true,
+        "pdfjsExtraction": true
+      },
+      "pypdf": "SQL",
+      "pdfjsFirstMismatch": null,
+      "pdfium": "SQL",
+      "nativeQueries": {}
+    },
+    {
+      "id": "hosted-mixed-modern-professional",
+      "expected": "Nora ExampleSoftware EngineerRiyadh·nora@example.test·+966500000001·https://nora.example.testhttps://github.com/nora-exampleAboutمهندسة تبني أنظمة التقارير. خبرة (عن بعد) [SQL] <2020> «عربي» القيمة ≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ. office عربي SQL عربي.ExperienceSenior Engineer2022-01 — 2024-06Cedar LabsMaintained customer reports.Reduced API latency by 20%.Reporting Analyst2020-01 — 2021-12Harbor WorksMaintained customer reports.Maintained internal reports without a measured outcome.EducationExample UniversityBachelor in Computer Science2016 — 2020SkillsTypeScriptSQL",
+      "sha256": "218ea37a3451efcb73df3642ed89c8648bde258dc1af413f46bd50aa59c6f7e8",
+      "byteLength": 68656,
+      "passed": false,
+      "checks": {
+        "pypdfExact": true,
+        "pdfiumExact": false,
+        "pdfjsExact": true,
+        "noInvalidScalars": true,
+        "nativeLiteralSearch": false,
+        "expectedLinks": true,
+        "sameSavedBytes": true,
+        "expectedSavedBytes": true,
+        "pdfjsExtraction": true
+      },
+      "pypdf": "Nora Example\nSoftware Engineer\nRiyadh\n·\nnora@example.test\n·\n+966500000001\n·\nhttps://nora.example.test\nhttps://github.com/nora-example\nAbout\nمهندسة تبني أنظمة التقارير. خبرة (عن بعد)  [SQL] <2020> « عربي»  القيمة≤ ٢٥. السَّلَامُ عَلَيْكُمْ لَا لَأ لِإ لآ . office \nعربي SQL عربي.\nExperience\nSenior Engineer\n2022-01 — 2024-06\nCedar Labs\nMaintained customer reports.\nReduced API latency by 20%.\nReporting Analyst\n2020-01 — 2021-12\nHarbor Works\nMaintained customer reports.\nMaintained internal reports without a measured outcome.\nEducation\nExample University\nBachelor in Computer Science\n2016 — 2020\nSkills\nTypeScript\nSQL",
+      "pdfjsFirstMismatch": null,
+      "pdfium": "Nora Example\r\nSoftware Engineer\r\nRiyadh\r\n·\r\nnora@example.test\r\n·\r\n+966500000001\r\n·\r\nhttps://nora.example.test\r\nhttps://github.com/nora-example\r\nAbout\r\n office .لآ إِل أَل اَل ْمُكْيَلَع ُامَلَّالس ٢٥. ‎≤‎ القيمة« ‎عربي»‎ ‎>2020<‎ ‎]SQL[‎) ‎بعد عن)‎ خبرة .التقارير أنظمة تبني مهندسة\r\nيبرع LQS يبرع.\r\nExperience\r\nSenior Engineer\r\n2022-01 — 2024-06\r\nCedar Labs\r\nMaintained customer reports.\r\nReduced API latency by 20%.\r\nReporting Analyst\r\n2020-01 — 2021-12\r\nHarbor Works\r\nMaintained customer reports.\r\nMaintained internal reports without a measured outcome.\r\nEducation\r\nExample University\r\nBachelor in Computer Science\r\n2016 — 2020\r\nSkills\r\nTypeScript\r\nSQL",
+      "nativeQueries": {
+        "[SQL]": false,
+        "عن بعد": false,
+        "السَّلَامُ": false,
+        "٢٥": true
+      }
+    }
+  ]
+}

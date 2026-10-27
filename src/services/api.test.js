@@ -84,6 +84,24 @@ describe('importJobFromUrl', () => {
 });
 
 describe('parseResume', () => {
+  it.each([false, true])('sends literal Markdown source with file provenance for guestPreview=%s', async (guestPreview) => {
+    const actualResumeText = await vi.importActual('../lib/utils/resumeText');
+    mockResumeText.inferMimeType.mockImplementationOnce(actualResumeText.inferMimeType);
+    mockResumeText.extractPlainTextFromArrayBuffer.mockImplementationOnce(actualResumeText.extractPlainTextFromArrayBuffer);
+    const source = '# أحمد علي\n\n## الخبرة المهنية\n- محلل بيانات في الرياض يستخدم التقارير والتحليل لدعم فرق العمل واتخاذ القرارات\n  - تطوير تقارير SQL وPython وتحسين جودة البيانات بالتعاون مع الفريق\n\n\n<script>alert("resume")</script>\n';
+    const file = new File([source], 'resume.MARKDOWN', { type: 'application/octet-stream' });
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ document: { plainText: source } }) });
+    if (guestPreview) supabase.auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: null });
+
+    await expect(parseResume(file, { guestPreview })).resolves.toMatchObject({ plainText: source });
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body)).toMatchObject({
+      kind: 'text', value: source, sourceInputKind: 'file', sourceWasFile: true,
+      sourceFileSizeBytes: file.size, guestPreview,
+    });
+    if (guestPreview) expect(global.fetch.mock.calls[0][1].headers).not.toHaveProperty('Authorization');
+    else expect(global.fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer test-access-token');
+  });
+
   it('returns parsed document', async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
@@ -179,8 +197,11 @@ describe('parseResume', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('rejects oversized guest preview files before extraction or network calls', async () => {
-    const file = new File(['a'], 'large.pdf', { type: 'application/pdf' });
+  it.each([
+    ['large.pdf', 'application/pdf'],
+    ['large.md', 'text/markdown'],
+  ])('rejects oversized guest preview %s before extraction or network calls', async (name, type) => {
+    const file = new File(['a'], name, { type });
     Object.defineProperty(file, 'size', {
       value: 2 * 1024 * 1024 + 1,
       configurable: true,

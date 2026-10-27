@@ -117,6 +117,20 @@ describe('parse-resume function', () => {
     });
 
     describe('file parsing', () => {
+        it.each(['text/markdown', 'text/x-markdown'])('parses Markdown as text with MIME %s', async (mime) => {
+            const text = '# أحمد علي\n\n## Experience and skills\n- محلل بيانات يستخدم SQL وPython في تطوير التقارير وتحليل البيانات واتخاذ القرارات';
+            mockResumeText.inferMimeType.mockReturnValue(mime);
+            mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue(text);
+            mockNormalizeResume.buildResumeDocument.mockReturnValue({ plainText: text, sections: [] });
+            const event = {
+                httpMethod: 'POST', headers: TEST_HEADERS,
+                body: JSON.stringify({ kind: 'file', name: 'resume.md', mime, data: Buffer.from(text).toString('base64') }),
+            } as HandlerEvent;
+            const result = await handler(event, createMockContext()) as HandlerResponse;
+            expect(result.statusCode).toBe(200);
+            expect(JSON.parse(result.body).document.plainText).toBe(text);
+        });
+
         it('successfully parses valid PDF file', async () => {
             const mockText = "Valid resume content with significant length and keywords like experience and education.";
             mockResumeText.inferMimeType.mockReturnValue('application/pdf');

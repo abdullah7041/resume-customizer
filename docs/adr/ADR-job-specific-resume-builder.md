@@ -250,7 +250,7 @@ Do **not** advance to Phase 2 (server persistence, with its migration + export/d
 
 ## 11. Action Items
 
-1. [x] ~~Confirm the Phase-1 kill-criteria metric is queryable from current `ai_usage_events` + JD-fingerprint data before committing to build.~~ **Moot — Phase 1 was built.** That item concerned the pre-build signal (§9 "Build Phase 1 if…"), already resolved. **The live item now is the post-ship gate** in §9 ("Kill the idea (after Phase 1 ships)"), which `ai_usage_events` cannot answer (saving/reopening a variant makes no AI call). Instrumentation for that gate (`variant_saved`, `variant_opened`, `optimization_completed` analytics events) shipped via plan `plans/022-spike-instrument-job-variant-gate.md`; see **`docs/plans/job-variant-phase2-gate.md`** for how to compute the gate and when the ~4-week measurement window closes.
+1. [x] ~~Confirm the Phase-1 kill-criteria metric is queryable from current `ai_usage_events` + JD-fingerprint data before committing to build.~~ **Moot — Phase 1 was built.** That item concerned the pre-build signal (§9 "Build Phase 1 if…"), already resolved. **The live item now is the post-ship gate** in §9 ("Kill the idea (after Phase 1 ships)"), which `ai_usage_events` cannot answer (saving/reopening a variant makes no AI call). Instrumentation for that gate (`variant_saved`, `variant_opened`, `optimization_completed` analytics events) shipped in the shipped implementation; see the [measurement guide](job-variant-phase2-gate.md) for how to compute the gate and when the ~4-week measurement window closes.
 
    _Historical (pre-Phase-1 build signal, retained for reference only — this is NOT the post-ship gate query above, and does not need to be re-run for the Phase-2 decision):_
 
