@@ -4,7 +4,7 @@
       "title": "Bulk Resume Analysis",
       "subtitle": "Compare multiple versions side-by-side",
       "uploadTitle": "Upload Resume Files",
-      "uploadDesc": "Drag & drop or click to browse. Supports PDF & DOCX.",
+      "uploadDesc": "Drag & drop or click to browse. Supports PDF, DOCX, and Markdown (.md/.markdown) up to 5MB.",
       "uploaded": "Uploaded",
       "chooseFiles": "Select Files",
       "clearAll": "Clear All",

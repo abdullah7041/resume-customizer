@@ -32,9 +32,16 @@ import type { AssessmentContext, AssessmentRecord } from '@/types/assessment';
 import type { StrategicRealityCheck } from '@/types/analysis';
 import type { CachedAnalysis } from '@/types/templates';
 import { renderBulkReportPrint } from '@/lib/export/bulkReportPrint';
+import { inferMimeType } from '@/lib/utils/resumeText';
 
 const MAX_FILES = 5;
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const SUPPORTED_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/markdown',
+  'text/x-markdown',
+]);
 const STORAGE_KEY = 'watheq:bulkAnalysis';
 
 // === Types ===
@@ -398,8 +405,8 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
     const fileArray = Array.from(files).slice(0, MAX_FILES - resumes.length);
     const validFiles = fileArray.filter(file => {
       if (file.size > MAX_SIZE) return false;
-      if (!file.name.match(/\.(pdf|docx)$/i)) return false;
-      return true;
+      if (!file.name.match(/\.(pdf|docx|md|markdown)$/i)) return false;
+      return SUPPORTED_MIME_TYPES.has(inferMimeType({ mimeType: file.type, fileName: file.name }));
     });
 
     if (validFiles.length === 0) return;
@@ -781,7 +788,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               {t('sections.bulk.uploadTitle', 'Upload Resume Files')}
             </h4>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 max-w-sm mx-auto">
-              {t('sections.bulk.uploadDesc', 'Drag & drop or click to browse. Supports PDF & DOCX up to 5MB.')}
+              {t('sections.bulk.uploadDesc', 'Drag & drop or click to browse. Supports PDF, DOCX, and Markdown (.md/.markdown) up to 5MB.')}
             </p>
             <p className="text-xs text-emerald-700 dark:text-emerald-400/80 mb-6">
               {t('sections.bulk.creditCost', '2 credits per resume analysis')}
@@ -791,7 +798,7 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
               type="file"
               id="bulk-upload"
               multiple
-              accept=".pdf,.docx"
+              accept=".pdf,.docx,.md,.markdown"
               onChange={handleFileInput}
               className="hidden"
               aria-label={t('sections.bulk.uploadTitle', 'Upload Resume Files')}

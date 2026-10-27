@@ -21,9 +21,10 @@ vi.mock("react-i18next", () => ({
         "upload.card.and": "and",
         "upload.card.docx": "DOCX",
         "upload.card.txt": "TXT",
+        "upload.card.markdown": "Markdown",
         "upload.card.dropText": "Drop your resume here",
         "upload.card.securityText": "Your data is secure",
-        "upload.card.supportedFormats": "Supported formats: PDF, DOCX, TXT",
+        "upload.card.supportedFormats": "Supported formats: PDF, DOCX, TXT, Markdown (.md/.markdown)",
         "upload.card.bestPractice": "For best results, use selectable text. Scanned images are not supported.",
         "upload.card.selectFile": "Select File",
         "upload.card.uploadFileLabel": "Upload resume file",
@@ -36,8 +37,8 @@ vi.mock("react-i18next", () => ({
         "upload.card.pasteHelp": "Use either a file or pasted text. The latest input will be used.",
         "upload.card.prepareFileButton": "Prepare Selected File",
         "upload.card.preparePastedButton": "Prepare Pasted Text",
-        "upload.errors.unsupportedType": "Only PDF, DOCX, or TXT resumes are supported.",
-        "upload.errors.unsupportedTypeHint": "Upload a PDF or DOCX, or paste plain text.",
+        "upload.errors.unsupportedType": "Only PDF, DOCX, TXT, or Markdown resumes are supported.",
+        "upload.errors.unsupportedTypeHint": "Upload a PDF, DOCX, TXT, or Markdown (.md/.markdown) file, or paste plain text.",
         "upload.errors.tooLarge": "File must be 5MB or smaller.",
         "upload.errors.tooLargeHint": "Compress the resume and try again.",
         "upload.errors.readFailed": "We couldn't read that text file.",
@@ -366,7 +367,7 @@ describe("ResumeUpload", () => {
       .getAllByLabelText(/upload resume file/i)
       .find((element) => element.tagName === "INPUT");
 
-    expect(fileInput).toHaveAttribute("accept", ".pdf,.docx,.txt");
+    expect(fileInput).toHaveAttribute("accept", ".pdf,.docx,.txt,.md,.markdown");
     expect(fileInput).not.toHaveAttribute("capture");
   });
 
@@ -386,7 +387,45 @@ describe("ResumeUpload", () => {
     expect(clearButton).toHaveClass("w-full", "sm:w-auto", "min-h-[48px]");
   });
 
-  it("rejects image uploads instead of sending them to parsing", async () => {
+  it.each([
+    ["resume.md", "text/markdown", "picker"],
+    ["resume.markdown", "text/x-markdown", "drop"],
+    ["resume.MD", "", "picker"],
+    ["resume.markdown", "application/octet-stream", "drop"],
+    ["resume.md", "text/plain", "picker"],
+  ])("prepares %s (%s) through %s as a file, preserving upload limits", async (name, type, method) => {
+    const source = "# أحمد علي\n\n## الخبرة\n- **محلل بيانات**\n  - SQL وPython\n<script>alert('resume')</script>";
+    const file = new File([source], name, { type });
+    const onParseResume = vi.fn().mockResolvedValue({ plainText: source });
+    const onToast = vi.fn();
+    const { container } = render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
+
+    await act(async () => {
+      if (method === "drop") {
+        fireEvent.drop(screen.getByRole("button", { name: /upload resume file/i }), { dataTransfer: { files: [file] } });
+      } else {
+        fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });
+      }
+    });
+    expect(screen.getByText(name)).toBeInTheDocument();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /prepare selected file/i })));
+    expect(onParseResume).toHaveBeenCalledWith({ file }, expect.any(AbortSignal));
+    expect(container.querySelector("script")).toBeNull();
+    expect(onToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: "warning" }));
+  });
+
+  it("keeps the 5MB limit for Markdown uploads", async () => {
+    const onToast = vi.fn();
+    const onParseResume = vi.fn();
+    const { container } = render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
+    const file = new File(["# Resume"], "large.md", { type: "text/markdown" });
+    Object.defineProperty(file, "size", { value: 5 * 1024 * 1024 + 1 });
+    await act(async () => fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } }));
+    expect(onToast).toHaveBeenCalledWith(expect.objectContaining({ title: "File must be 5MB or smaller." }));
+    expect(onParseResume).not.toHaveBeenCalled();
+  });
+
+  it.each(["resume.png", "resume.md"])("rejects image MIME uploads named %s instead of sending them to parsing", async (name) => {
     const onToast = vi.fn();
     const onParseResume = vi.fn();
     render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} />);
@@ -398,7 +437,7 @@ describe("ResumeUpload", () => {
       throw new Error("Hidden file input not found");
     }
 
-    const file = new File(["image"], "resume.png", { type: "image/png" });
+    const file = new File(["image"], name, { type: "image/png" });
 
     await act(async () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
@@ -408,7 +447,7 @@ describe("ResumeUpload", () => {
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "warning",
-        title: "Only PDF, DOCX, or TXT resumes are supported.",
+        title: "Only PDF, DOCX, TXT, or Markdown resumes are supported.",
       })
     );
   });

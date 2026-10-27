@@ -6,47 +6,26 @@ import { cn } from "../../lib/utils/cn";
 import { GlassButton } from "./GlassButton";
 import { GlassCard } from "./GlassCard";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
+import { inferMimeType } from "@/lib/utils/resumeText";
 
 
 const DOCUMENT_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/markdown",
+  "text/x-markdown",
 ]);
-
-const DOCUMENT_EXTENSIONS = new Set(["pdf", "docx"]);
-
-const TEXT_MIME_TYPES = new Set(["text/plain"]);
-const TEXT_EXTENSIONS = new Set(["txt"]);
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
-const getExtension = (fileName) => {
-  if (typeof fileName !== "string") return "";
-  const match = fileName.match(/\.([^.]+)$/);
-  return match ? match[1].toLowerCase() : "";
-};
-
 const isDocumentFile = (file) => {
   if (!file) return false;
-  const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (normalizedType) {
-    return DOCUMENT_MIME_TYPES.has(normalizedType);
-  }
-  const extension = getExtension(file.name);
-  return DOCUMENT_EXTENSIONS.has(extension);
+  return DOCUMENT_MIME_TYPES.has(inferMimeType({ mimeType: file.type, fileName: file.name }));
 };
 
 const isPlainTextFile = (file) => {
   if (!file) return false;
-  const normalizedType = typeof file.type === "string" ? file.type.toLowerCase() : "";
-  if (normalizedType) {
-    return TEXT_MIME_TYPES.has(normalizedType);
-  }
-  if (normalizedType === "") {
-    const extension = getExtension(file.name);
-    return TEXT_EXTENSIONS.has(extension);
-  }
-  return false;
+  return inferMimeType({ mimeType: file.type, fileName: file.name }) === "text/plain";
 };
 
 // Sanitize text input to preserve UTF-8 and remove only truly problematic characters
@@ -118,8 +97,8 @@ export default function UploadCard({
       onValidationError?.(
         new AppError({
           code: "file/unsupported-type",
-          message: t('upload.errors.unsupportedType', 'Only PDF, DOCX, or TXT resumes are supported.'),
-          hint: t('upload.errors.unsupportedTypeHint', 'Upload a PDF or DOCX, or paste plain text.'),
+          message: t('upload.errors.unsupportedType', 'Only PDF, DOCX, TXT, or Markdown resumes are supported.'),
+          hint: t('upload.errors.unsupportedTypeHint', 'Upload a PDF, DOCX, TXT, or Markdown (.md/.markdown) file, or paste plain text.'),
         })
       );
       return;
@@ -231,13 +210,15 @@ export default function UploadCard({
         <span className={cn("absolute right-2 rtl:right-auto rtl:left-2 sm:right-6 sm:rtl:left-6 sm:rtl:right-auto top-3 sm:top-6 px-2 sm:px-3 py-1 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.15em] sm:tracking-[0.2em]", chipClass)}>
           {t("upload.card.maxSize")}
         </span>
-        <div className="flex items-center gap-2 rounded-pill border border-emerald-900/14 bg-white/92 px-4 py-2 text-xs font-semibold text-gray-800 shadow-soft dark:border-emerald-200/16 dark:bg-black/36 dark:text-emerald-50">
+        <div className="flex flex-wrap items-center justify-center gap-2 rounded-pill border border-emerald-900/14 bg-white/92 px-4 py-2 text-xs font-semibold text-gray-800 shadow-soft dark:border-emerald-200/16 dark:bg-black/36 dark:text-emerald-50">
           <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />
           <span>{t("upload.card.pdf")}</span>
           <span className="text-gray-600 dark:text-emerald-100/75">{t("upload.card.and")}</span>
           <span>{t("upload.card.docx")}</span>
           <span className="text-gray-600 dark:text-emerald-100/75">{t("upload.card.and")}</span>
           <span>{t("upload.card.txt", "TXT")}</span>
+          <span className="text-gray-600 dark:text-emerald-100/75">{t("upload.card.and")}</span>
+          <span>{t("upload.card.markdown", "Markdown")}</span>
         </div>
         <span className="relative inline-flex items-center justify-center">
           <span className="absolute inset-0 rounded-full bg-emerald-400/12 blur-xl" aria-hidden="true" />
@@ -256,7 +237,7 @@ export default function UploadCard({
       {/* File Type & Best Practices Info */}
       <div className="mt-4 text-center space-y-2">
         <p className="text-xs font-medium text-gray-600 dark:text-emerald-100/76">
-          {t('upload.card.supportedFormats', 'Supported formats: PDF, DOCX, TXT')} • {t('upload.card.maxSizeLabel', 'Max size: 5MB')}
+          {t('upload.card.supportedFormats', 'Supported formats: PDF, DOCX, TXT, Markdown (.md/.markdown)')} • {t('upload.card.maxSizeLabel', 'Max size: 5MB')}
         </p>
         <p className="text-xs text-gray-600 dark:text-emerald-100/70">
           {t('upload.card.bestPractice', 'For best results, use selectable text. Scanned images are not supported.')}
@@ -292,7 +273,7 @@ export default function UploadCard({
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.docx,.txt"
+        accept=".pdf,.docx,.txt,.md,.markdown"
         className="sr-only"
         name="resume-file"
         aria-label={uploadFileLabel}

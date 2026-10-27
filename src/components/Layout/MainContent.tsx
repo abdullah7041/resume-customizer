@@ -3163,6 +3163,7 @@ export default function MainContent() {
                 <TemplateGallery
                   resumeData={resumeData}
                   optimizationData={optimizationData}
+                  onRequestSignIn={() => handleGuestSignIn('guest_protected_action')}
                   onRequirePaidReoptimize={() => handleOptimize('auto', { freePreview: false })}
                   onReviewSections={(sectionIds) => {
                     setExportReviewSectionIds(sectionIds);

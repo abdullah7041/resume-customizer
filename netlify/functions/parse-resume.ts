@@ -29,6 +29,8 @@ const SUPPORTED_FILE_MIME_TYPES = new Set([
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "text/plain",
+  "text/markdown",
+  "text/x-markdown",
 ]);
 
 type ParseResumeRequest =
@@ -48,7 +50,7 @@ const MAX_BYTES = 8 * 1024 * 1024; // 8 MB safety guard
 class UnreadableResumeError extends Error {
   statusCode = 422;
 
-  constructor(message = "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.") {
+  constructor(message = "Could not extract readable text from the uploaded file. Please upload a text-based PDF/DOCX/TXT/Markdown file or paste your resume text directly.") {
     super(message);
     this.name = "UnreadableResumeError";
   }
@@ -238,7 +240,7 @@ const extractText = async (
     }
 
     if (isImage) {
-      throw new UnreadableResumeError("Scanned or image-only resumes are not currently supported. Please upload a text-based PDF/DOCX/TXT file or paste your resume text directly.");
+      throw new UnreadableResumeError("Scanned or image-only resumes are not currently supported. Please upload a text-based PDF/DOCX/TXT/Markdown file or paste your resume text directly.");
     }
 
     // Try standard text extraction first for PDFs/DOCX
@@ -354,7 +356,7 @@ const baseHandler: Handler = async (event) => {
     const userMessage = error instanceof UnreadableResumeError
       ? message
       : message.includes("Unsupported")
-      ? "Unsupported file type. Please upload a PDF, DOCX, or TXT file, or paste your resume text directly."
+      ? "Unsupported file type. Please upload a PDF, DOCX, TXT, or Markdown file, or paste your resume text directly."
       : message.includes("exceeds")
         ? "File is too large. Please use a file smaller than 8 MB."
         : `Unable to parse resume: ${message}`;

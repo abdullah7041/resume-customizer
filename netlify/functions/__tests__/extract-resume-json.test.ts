@@ -164,6 +164,27 @@ describe('extract-resume-json function', () => {
         expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(mockText, false, expect.objectContaining({ timeoutMs: expect.any(Number) }));
     });
 
+    it.each([false, true])('preserves Arabic Markdown file source with guestPreview=%s', async (guestPreview) => {
+        const actualResumeText = await vi.importActual<typeof import('../../lib/resumeText.js')>('../../lib/resumeText.js');
+        mockResumeText.inferMimeType.mockImplementationOnce(actualResumeText.inferMimeType);
+        mockResumeText.extractPlainTextFromArrayBuffer.mockImplementationOnce(actualResumeText.extractPlainTextFromArrayBuffer);
+        const source = '# أحمد علي\n\n## الخبرة المهنية\n- محلل بيانات في الرياض يستخدم التقارير والتحليل لدعم فرق العمل واتخاذ القرارات\n  - تطوير تقارير SQL وPython وتحسين جودة البيانات بالتعاون مع الفريق\n\n\n<script>alert("resume")</script>\n';
+        mockGeminiClient.parseResumeOnly.mockResolvedValue({ basics: { name: 'أحمد علي' }, meta: { raw_text: source } });
+        const event = {
+            httpMethod: 'POST',
+            headers: guestPreview ? {} : { Authorization: 'Bearer test-token' },
+            body: JSON.stringify({ kind: 'file', name: 'resume.MARKDOWN', mime: 'application/octet-stream',
+                data: Buffer.from(source).toString('base64'), guestPreview }),
+        } as HandlerEvent;
+        const result = await handler(event, mockContext) as HandlerResponse;
+        expect(result.statusCode).toBe(200);
+        expect(JSON.parse(result.body).document.plainText).toBe(source);
+        expect(mockGeminiClient.parseResumeOnly).toHaveBeenCalledWith(source, false, expect.objectContaining({ timeoutMs: expect.any(Number) }));
+        expect(mockOcrExtract.extractScannedPdfText).not.toHaveBeenCalled();
+        if (guestPreview) expect(mockSupabaseClient.auth.getUser).not.toHaveBeenCalled();
+        else expect(mockSupabaseClient.auth.getUser).toHaveBeenCalledWith('test-token');
+    });
+
     it('rejects scanned PDFs without attempting inline PDF AI fallback', async () => {
         mockResumeText.extractPlainTextFromArrayBuffer.mockResolvedValue("");
 

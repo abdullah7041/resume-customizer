@@ -43,13 +43,14 @@ import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflig
 import { checkPdfBlob, expectedPdfText } from '@/lib/utils/pdfTextCheck';
 import { captureStyledPdfSnapshot, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 import { containsArabic } from '@/lib/utils/arabicTextUtils';
+import { isAuthRequiredError } from '@/services/api';
 import type { TextPdfBlock, StyledPdfStyle } from '@/types/text-pdf';
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogClose } from '@/components/ui/shadcn/dialog';
 
 const ResumeDiffView = lazy(() => import("./ResumeDiffView"));
 
 const DRAG_HANDLE_KEYBOARD_STEP_PX = 12;
-const RECOVERY_BUTTON_CLASS = 'rounded-md border border-current px-3 py-2 hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:hover:bg-white/10';
+const RECOVERY_BUTTON_CLASS = 'rounded-md border border-line bg-surface px-3 py-2 text-ink hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50';
 const storeExportInputs = () => {
   const state = useResumeStore.getState();
   return JSON.stringify([state.originalResume, state.optimizations, state.showOptimized, state.isSaudiNational,
@@ -234,9 +235,10 @@ interface TemplateGalleryProps {
    */
   onRequirePaidReoptimize?: () => Promise<unknown>;
   onReviewSections?: (sectionIds: string[]) => void;
+  onRequestSignIn?: () => void;
 }
 
-export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate, onRequirePaidReoptimize, onReviewSections }: TemplateGalleryProps) {
+export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate, onRequirePaidReoptimize, onReviewSections, onRequestSignIn }: TemplateGalleryProps) {
   const { t } = useTranslation();
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -245,7 +247,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; blocks: TextPdfBlock[]; presentation: StyledPdfStyle[]; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; marginSide?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob } | null>(null);
+  const [pdfRecovery, setPdfRecovery] = useState<{ id: number; resume: ResumeSchema; preview: HTMLElement; blocks: TextPdfBlock[]; presentation: StyledPdfStyle[]; templateId: TemplateId; direction: 'ltr' | 'rtl'; marginTop?: number; marginBottom?: number; marginSide?: number; keywords: string[]; boldKeywords: boolean; blob?: Blob; requiresSignIn?: boolean } | null>(null);
   const [textPdfReview, setTextPdfReview] = useState<NonNullable<typeof pdfRecovery> | null>(null);
   const textReviewGenerationRef = useRef(0);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
@@ -494,6 +496,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     }
   }, [isDragging, handleDragMove, handleDragEnd]);
 
+  const showPdfSignIn = (attempt: NonNullable<typeof pdfRecovery>) => {
+    setPdfRecovery({ ...attempt, requiresSignIn: true });
+    setTextPdfReview(null);
+    textReviewGenerationRef.current += 1;
+    setExportError(t('sections.templates.export.signInRequired', 'Sign in to download a selectable PDF. You can download DOCX or choose an image-only PDF without signing in.'));
+  };
+
   // Download PDF — Server-side Puppeteer rendering
   const performDownloadPdf = async (attempt: NonNullable<typeof pdfRecovery>) => {
     const { resume: exportResume, preview: previewSnapshot } = attempt;
@@ -504,6 +513,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     const clone = previewSnapshot.cloneNode(true) as HTMLElement;
 
     try {
+      const { getAuthHeaders } = await import('../../services/api');
+      if (!isCurrentExport(attempt.id)) return;
+      const apiHeaders = await getAuthHeaders({ requireAuth: true });
+      if (!isCurrentExport(attempt.id)) return;
       const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
       const styledArabic = attempt.blocks.some(block => block.runs.some(run => containsArabic(run.text)));
       let requestBody: Record<string, unknown>;
@@ -602,10 +615,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       }
 
       // 5. Send to Server (Netlify Function)
-      const { getAuthHeaders } = await import('../../services/api');
-      if (!isCurrentExport(attempt.id)) return;
-      const apiHeaders = await getAuthHeaders({ requireAuth: true });
-      if (!isCurrentExport(attempt.id)) return;
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
         headers: { ...apiHeaders, 'Content-Type': 'application/json' },
@@ -617,6 +626,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       if (!isCurrentExport(attempt.id)) return;
 
       if (!response.ok) {
+        if (response.status === 401) { showPdfSignIn(attempt); return; }
         if (styledArabic && response.status === 422) {
           setPdfRecovery(attempt);
           setExportError(t('sections.templates.export.styledUnsupported', 'This Arabic PDF could not preserve every character safely. Choose DOCX or review the Text PDF layout.'));
@@ -678,6 +688,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     } catch (err) {
       if (!isCurrentExport(attempt.id)) return;
+      if (isAuthRequiredError(err)) { showPdfSignIn(attempt); return; }
       console.error(`[PDFDownload] Server-side generation failed: ${summarizeErrorForConsole(err).message}`);
       analytics.trackExportFailed(attempt.templateId, 'pdf', 'server_error');
       setPdfRecovery(attempt);
@@ -708,6 +719,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       });
       if (!current()) return;
       if (!response.ok) {
+        if (response.status === 401) { showPdfSignIn(attempt); return; }
         let code: unknown;
         try { code = (await response.json() as { code?: unknown }).code; } catch { /* Bounded local recovery copy. */ }
         if (!current()) return;
@@ -750,8 +762,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       analytics.trackExportSuccess(attempt.templateId, 'pdf_text_checked');
       requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
-    } catch {
-      if (current()) setExportError(exportFailureMessage);
+    } catch (error) {
+      if (current()) {
+        if (isAuthRequiredError(error)) showPdfSignIn(attempt);
+        else setExportError(exportFailureMessage);
+      }
     } finally {
       if (isCurrentExport(attempt.id)) setIsDownloading(false);
     }
@@ -808,34 +823,33 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           htmlElement.style.height = 'auto';
           htmlElement.style.minHeight = 'auto';
         });
-        await waitForPdfCaptureLayout(fallbackClone);
-        if (!isCurrentExport(attempt.id)) {
-          fallbackHost.remove();
-          return;
-        }
-
         let canvas: HTMLCanvasElement;
+        let captureTimeout: number | undefined;
+        let captureTimedOut = false;
         try {
-          // html-to-image's internal image-decode step waits on a
-          // requestAnimationFrame callback, which browsers suspend
-          // indefinitely for a backgrounded/hidden tab — with no rejection,
-          // that leaves this permanently stuck on "Generating..." with no
-          // error at all. A hard timeout turns that silent hang into a
-          // recoverable, distinctly-worded failure.
+          // Font/image/layout preparation and html-to-image can both await
+          // suspended animation frames. Bound the complete capture, then
+          // remove its isolated DOM even when preparation never resumes.
           canvas = await Promise.race([
-            toCanvas(fallbackClone, {
-              pixelRatio: 2,
-              cacheBust: true,
-              backgroundColor: '#ffffff',
-              style: {
-                transform: 'none',
-              },
+            (async () => {
+              await waitForPdfCaptureLayout(fallbackClone);
+              if (captureTimedOut || !isCurrentExport(attempt.id)) throw new Error('PDF capture expired');
+              return toCanvas(fallbackClone, {
+                pixelRatio: 2,
+                cacheBust: true,
+                backgroundColor: '#ffffff',
+                style: { transform: 'none' },
+              });
+            })(),
+            new Promise<never>((_, reject) => {
+              captureTimeout = window.setTimeout(() => {
+                captureTimedOut = true;
+                reject(new Error('CLIENT_FALLBACK_TIMEOUT'));
+              }, CLIENT_FALLBACK_TIMEOUT_MS);
             }),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('CLIENT_FALLBACK_TIMEOUT')), CLIENT_FALLBACK_TIMEOUT_MS)
-            ),
           ]);
         } finally {
+          window.clearTimeout(captureTimeout);
           fallbackHost.remove();
         }
         if (!isCurrentExport(attempt.id)) return;
@@ -941,7 +955,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
         analytics.trackExportSuccess(attempt.templateId, 'pdf_image');
         setPdfRecovery(null);
-        setPdfStatus(null);
+        setPdfStatus(t('sections.templates.export.imagePrepared', 'Image-only PDF prepared — text cannot be selected.'));
         requestValueMomentFeedbackPrompt('export_success');
         useResumeStore.getState().setHasDownloaded(true);
 
@@ -1297,8 +1311,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           )}
           {pdfStatus && <p role="status" className="text-sm text-green-700 dark:text-green-300">{pdfStatus}</p>}
           {pdfRecovery && (
-            <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
+            <div className="space-y-2 rounded-lg border border-amber-500/40 p-3 text-sm text-ink" role="group" aria-label={t('sections.templates.export.recovery', 'PDF export options')}>
               <div className="flex flex-wrap gap-2">
+                {pdfRecovery.requiresSignIn && onRequestSignIn && <button type="button" className={RECOVERY_BUTTON_CLASS} onClick={onRequestSignIn}>{t('sections.templates.export.signInPdf', 'Sign in for selectable PDF')}</button>}
+                {!pdfRecovery.requiresSignIn && <>
                 <Dialog open={!!textPdfReview} onOpenChange={open => {
                   textReviewGenerationRef.current += 1;
                   setTextPdfReview(open && isCurrentExport(pdfRecovery.id) ? pdfRecovery : null);
@@ -1325,6 +1341,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   </DialogContent>
                 </Dialog>
                 <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadPdf(pdfRecovery)}>{t('sections.templates.export.retry', 'Retry PDF')}</button>
+                </>}
                 <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void performDownloadDocx(pdfRecovery.resume, pdfRecovery)}>{t('sections.templates.export.downloadDocx', 'Download DOCX')}</button>
                 {pdfRecovery.blob && <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => {
                   if (!isCurrentExport(pdfRecovery.id)) return;
@@ -1333,7 +1350,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   setPdfRecovery(null);
                   useResumeStore.getState().setHasDownloaded(true);
                 }}>{t('sections.templates.export.downloadUnverified', 'Download unverified PDF')}</button>}
-                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void downloadImageOnlyPdf(pdfRecovery)}>{t('sections.templates.export.imageOnly', 'Choose image-only PDF')}</button>
+                <button type="button" className={RECOVERY_BUTTON_CLASS} disabled={isDownloading || isDownloadingDocx} onClick={() => void downloadImageOnlyPdf(pdfRecovery)}>{t('sections.templates.export.imageOnly', 'Download image-only PDF')}</button>
               </div>
               <p>{t('sections.templates.export.imageWarning', 'Image-only PDF — text cannot be selected; some systems may need OCR.')}</p>
             </div>

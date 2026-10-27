@@ -83,6 +83,7 @@ vi.mock('../lib/utils/pdfTextCheck', () => ({
 
 vi.mock('../services/api', () => ({
     getAuthHeaders: vi.fn(() => Promise.resolve({ 'Content-Type': 'application/json', Authorization: 'Bearer test-token' })),
+    isAuthRequiredError: (error) => error?.code === 'auth/required' || error?.status === 401,
 }));
 
 vi.mock('../services/exportDocx', () => ({
@@ -171,6 +172,61 @@ beforeEach(() => {
     checkPdfBlob.mockResolvedValue({ state: 'text_checked', missingFieldIds: [] });
     getAuthHeaders.mockResolvedValue({ Authorization: 'Bearer test-token' });
     useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
+});
+
+describe('PDF sign-in recovery', () => {
+    const resume = { basics: { name: 'Sara Example', summary: 'مهندسة برمجيات' }, work: [], education: [], skills: [], projects: [] };
+    it.each(['missing session', 'server 401'])('offers sign-in and local exports instead of a retry loop after %s', async (failure) => {
+        if (failure === 'missing session') {
+            getAuthHeaders.mockRejectedValueOnce(Object.assign(new Error('Sign in required'), { code: 'auth/required', status: 401 }));
+        } else {
+            globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+        }
+        const onRequestSignIn = vi.fn();
+        renderWithProviders(<TemplateGallery resumeData={resume} onRequestSignIn={onRequestSignIn} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        const signIn = await screen.findByRole('button', { name: 'Sign in for selectable PDF' });
+        expect(screen.getByRole('alert')).toHaveTextContent('Sign in to download a selectable PDF');
+        expect(screen.queryByRole('button', { name: 'Retry PDF' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Review Text PDF' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Download image-only PDF' })).toBeEnabled();
+        fireEvent.click(signIn);
+        expect(onRequestSignIn).toHaveBeenCalledOnce();
+        if (failure === 'missing session') expect(globalThis.fetch).not.toHaveBeenCalled();
+    });
+
+    it.each(['missing session', 'server 401'])('returns from Text PDF review to sign-in options after %s', async (failure) => {
+        checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
+        renderWithProviders(<TemplateGallery resumeData={resume} onRequestSignIn={vi.fn()} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Review Text PDF' }));
+        const review = await screen.findByRole('dialog', { name: 'Review Text PDF' });
+        if (failure === 'missing session') getAuthHeaders.mockRejectedValueOnce(Object.assign(new Error('Expired session'), { status: 401 }));
+        else globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 401 });
+        fireEvent.click(within(review).getByRole('button', { name: 'Download Text PDF' }));
+        await screen.findByRole('button', { name: 'Sign in for selectable PDF' });
+        expect(screen.queryByRole('dialog', { name: 'Review Text PDF' })).not.toBeInTheDocument();
+    });
+
+    it('bounds image preparation when animation frames never resume', async () => {
+        getAuthHeaders.mockRejectedValueOnce(Object.assign(new Error('Sign in required'), { status: 401 }));
+        renderWithProviders(<TemplateGallery resumeData={resume} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        const imageButton = await screen.findByRole('button', { name: 'Download image-only PDF' });
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
+        try {
+            fireEvent.click(imageButton);
+            await vi.waitFor(() => expect(frames).toHaveBeenCalled());
+            await act(async () => { await vi.advanceTimersByTimeAsync(20_001); });
+            expect(screen.getByRole('alert')).toHaveTextContent('bring this browser tab into focus');
+            expect(document.querySelector('[data-pdf-capture-host]')).not.toBeInTheDocument();
+            expect(imageButton).toBeEnabled();
+        } finally {
+            frames.mockRestore();
+            vi.useRealTimers();
+        }
+    });
 });
 
 describe('Text PDF recovery review', () => {
@@ -305,7 +361,7 @@ describe('Text PDF recovery review', () => {
         expect(screen.queryByRole('status')).not.toBeInTheDocument();
         fireEvent.keyDown(document.activeElement, { key: 'Escape' });
         await waitFor(() => expect(screen.getByRole('button', { name: 'Retry PDF' })).toBeInTheDocument());
-        expect(screen.getByRole('button', { name: 'Choose image-only PDF' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Download image-only PDF' })).toBeInTheDocument();
     });
 });
 
@@ -630,7 +686,7 @@ describe('TemplatesSection', () => {
 
                 fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
 
-                fireEvent.click(await screen.findByRole('button', { name: 'Choose image-only PDF' }));
+                fireEvent.click(await screen.findByRole('button', { name: 'Download image-only PDF' }));
 
                 await waitFor(() => {
                     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -694,9 +750,10 @@ describe('TemplatesSection', () => {
 
                 fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
 
-                fireEvent.click(await screen.findByRole('button', { name: 'Choose image-only PDF' }));
+                fireEvent.click(await screen.findByRole('button', { name: 'Download image-only PDF' }));
 
                 await waitFor(() => expect(pdf.save).toHaveBeenCalled());
+                expect(screen.getByRole('status')).toHaveTextContent('Image-only PDF prepared — text cannot be selected.');
                 expect(captureHost).toHaveAttribute('data-pdf-capture-host', 'true');
                 expect(capturedClone.style.left).not.toBe('-9999px');
                 expect(captureHost).not.toBeInTheDocument();

@@ -38,6 +38,8 @@
         "arabicLayout": "Arabic PDFs use DejaVu Sans with template colors, emphasis and spacing. Copied text may include standard text direction marks.",
         "styledUnsupported": "This Arabic PDF could not preserve every character safely. Choose DOCX or review the Text PDF layout.",
         "failed": "Export failed. Please try again, or switch to the ATS-friendly template and retry.",
+        "signInRequired": "Sign in to download a selectable PDF. You can download DOCX or choose an image-only PDF without signing in.",
+        "signInPdf": "Sign in for selectable PDF",
         "timeout": "Export is taking unusually long — bring this browser tab into focus (some browsers pause rendering work in background tabs) and try again.",
         "busy": "The PDF renderer was busy. Wait a few seconds and press Download again.",
         "reviewRequired": "Review the highlighted changes before downloading.",
@@ -59,7 +61,8 @@
         "textUnavailable": "Text PDF is temporarily unavailable. Try again or choose another export option.",
         "textUnverified": "Text PDF did not pass the text check. Choose another export option.",
         "textPdfChecked": "Text PDF — selectable text checked",
-        "imageOnly": "Choose image-only PDF",
+        "imageOnly": "Download image-only PDF",
+        "imagePrepared": "Image-only PDF prepared — text cannot be selected.",
         "imageWarning": "Image-only PDF — text cannot be selected; some systems may need OCR."
       },
       "pageBreak": "Page Break",

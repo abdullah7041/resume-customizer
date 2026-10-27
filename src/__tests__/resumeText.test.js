@@ -59,6 +59,21 @@ describe("resume text helpers", () => {
     expect(inferMimeType({ fileName: "resume.unknown" })).toBe("application/octet-stream");
   });
 
+  it.each([
+    ["resume.md", ""],
+    ["resume.MARKDOWN", "application/octet-stream"],
+    ["resume.md", "text/plain"],
+  ])("infers Markdown text for %s with MIME %s", (fileName, mimeType) => {
+    expect(inferMimeType({ fileName, mimeType })).toBe("text/markdown");
+  });
+
+  it("preserves Arabic Markdown source without interpreting HTML or whitespace", async () => {
+    const source = "# أحمد علي\n\n## الخبرة\n- **محلل بيانات**\n  - SQL وPython\n\n\n<script>alert('resume')</script>\n";
+    expect(await extractPlainTextFromArrayBuffer(new TextEncoder().encode(source), {
+      fileName: "resume.md", mimeType: "text/markdown",
+    })).toBe(source);
+  });
+
   it("extracts text from pdf content via pdf.js", async () => {
     const buffer = new Uint8Array([1, 2, 3]).buffer;
     const text = await extractPlainTextFromArrayBuffer(buffer, { mimeType: "application/pdf" });

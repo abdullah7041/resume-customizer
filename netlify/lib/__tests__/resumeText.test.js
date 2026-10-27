@@ -14,6 +14,20 @@ beforeEach(() => {
 // is exactly what the bug under test produces.
 const buildPdfIshBuffer = (text) => new TextEncoder().encode(`BT (${text}) Tj ET`).buffer;
 
+it.each([
+  ["resume.md", ""],
+  ["resume.MARKDOWN", "application/octet-stream"],
+  ["resume.md", "text/plain"],
+  ["resume.md", "text/x-markdown; charset=utf-8"],
+])("extracts literal Arabic Markdown on the server from %s (%s)", async (fileName, mimeType) => {
+  const { extractPlainTextFromArrayBuffer, inferMimeType } = await import("../resumeText.js");
+  const source = "# أحمد علي\n\n## الخبرة\n- **محلل بيانات**\n  - SQL وPython\n\n\n<script>alert('resume')</script>\n";
+  expect(inferMimeType({ fileName, mimeType })).toMatch(/^text\/(x-)?markdown$/);
+  expect(await extractPlainTextFromArrayBuffer(new TextEncoder().encode(source), {
+    fileName, mimeType,
+  })).toBe(source);
+});
+
 describe("resumeText.js (server) - extractPlainTextFromArrayBuffer / PDF path", () => {
   it("falls back to the raw-text parser (without crashing on a detached buffer) when pdfjs.getDocument throws", async () => {
     vi.doMock(
