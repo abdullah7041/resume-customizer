@@ -2,8 +2,8 @@
 
 **Status:** Instrumentation shipped (this doc). The 4-week measurement window has
 not started yet — see "When to check" below.
-**Related:** `docs/adr/ADR-job-specific-resume-builder.md` §9 (Kill Criteria), §11
-(Action Items); plan `plans/022-spike-instrument-job-variant-gate.md`.
+**Related:** [Job-specific resume ADR](ADR-job-specific-resume-builder.md) §9 (Kill Criteria), §11
+(Action Items); [historical implementation plan](https://github.com/abdullah7041/resume-customizer/blob/abf7a3a420e5f0a1100a927a98b758cc09cd3765/plans/022-spike-instrument-job-variant-gate.md).
 
 ## 1. The finding
 

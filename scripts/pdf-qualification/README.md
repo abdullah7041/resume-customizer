@@ -1,6 +1,6 @@
-# Arabic PDF reader regression — remaining P1
+# Historical Arabic PDF reader regression
 
-This draft follow-up separates the unresolved Arabic extraction/search defect from PR #146. It contains reproducible synthetic saved-byte fixtures and the strict qualification gate, **not a renderer fix**. The owner authorized merging #146 with this defect deferred on 2026-10-21. That decision does not establish Arabic PDF fidelity.
+This harness preserves the synthetic saved-byte fixtures and reader behavior investigated after PR #146. On 2026-10-27 the owner requested that the Arabic character-order issue be considered resolved. The historical failure receipts and exact comparison rules remain unchanged; closing the issue by owner acceptance does not represent a new renderer change or reader pass. Selectable PDF export now supports signed-out users.
 
 ## Reproduce
 
@@ -30,11 +30,11 @@ All five PDFs are synthetic controls retained from the investigation. `fixtures/
 
 The older pypdf 6.10 punctuation result is superseded for these bytes by the current 6.21.1 result; the native failure remains. Provider success, a readable screenshot, the application PDF.js badge and green CI do not qualify the defect as fixed.
 
-## Required repair and acceptance
+## Criteria for any future qualification claim
 
 1. Demonstrate a supported producer construction that passes the reduced cases and the exact résumé paragraph in all three readers, retaining original source, glyph positions and useful searches.
-2. Integrate a minimal correction behind authenticated `generate-pdf`, preserving validation, font integrity, links, reviewed snapshot identity and stale-save protection. No unqualified renderer or new application dependency is introduced by this draft.
-3. Pass both paragraph directions, inline styles/links, wrapping, multipage, every production template, actual Brave search/selection/clipboard, and authenticated saved download bytes.
+2. Preserve `generate-pdf` validation, font integrity, links, reviewed snapshot identity and stale-save protection when integrating any correction. Qualify renderer changes in isolation before application integration.
+3. Pass both paragraph directions, inline styles/links, wrapping, multipage, every production template, actual Brave search/selection/clipboard, and guest and authenticated saved download bytes.
 4. Run the appropriate application checks and report exact reader/runtime versions and saved-byte hashes. Only then describe the Arabic PDF defect as fixed.
 
-No reversed source/replacement strings, hidden duplicate text, fake selection geometry, source normalization, weaker assertions or raster substitutions. The historical tracked failure receipts remain under `docs/superpowers/reports/2026-10-15-styled-arabic-hosted-failure.json` and the repair-status report. The new draft does not claim any rejected probe as production-ready.
+No reversed source/replacement strings, hidden duplicate text, fake selection geometry, source normalization, weaker assertions or raster substitutions. Older evidence remains available in Git history: the [hosted failure receipt](https://github.com/abdullah7041/resume-customizer/blob/abf7a3a420e5f0a1100a927a98b758cc09cd3765/docs/superpowers/reports/2026-10-15-styled-arabic-hosted-failure.json) and [repair-status report](https://github.com/abdullah7041/resume-customizer/blob/abf7a3a420e5f0a1100a927a98b758cc09cd3765/docs/superpowers/reports/2026-10-12-styled-arabic-fix-status.md). Rejected probes are not production implementations.

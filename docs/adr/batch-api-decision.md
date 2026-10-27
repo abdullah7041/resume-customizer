@@ -1,6 +1,6 @@
 # Decision: is `netlify/functions/batch-api.ts` a product surface or dead weight?
 
-Spike for plan `plans/023-spike-decide-batch-api-surface.md`. Planned at commit
+Spike for the [historical batch API plan](https://github.com/abdullah7041/resume-customizer/blob/abf7a3a420e5f0a1100a927a98b758cc09cd3765/plans/023-spike-decide-batch-api-surface.md). Planned at commit
 `d2fba38`; this spike ran at the same commit (no drift).
 
 ## 1. The question
@@ -244,7 +244,5 @@ Do not delete blind. Low-risk order:
    final confirmation, especially if log retention is short.
 3. Only then remove `netlify/functions/batch-api.ts`,
    `netlify/functions/__tests__/batch-api.test.ts`, and the `"batch-api"`
-   entry in `netlify/lib/rate-limiter.ts:302`, in a dedicated removal plan
-   that also marks `plans/012-rate-limit-batch-api-fanout.md` as superseded
-   and updates the `plans/README.md:118` bullet — so a future audit doesn't
-   re-derive this finding against code that no longer exists.
+   entry in `netlify/lib/rate-limiter.ts:302`, in a dedicated change that
+   records the observed usage and final decision in this ADR.
