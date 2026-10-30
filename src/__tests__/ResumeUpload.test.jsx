@@ -173,6 +173,19 @@ describe("ResumeUpload", () => {
     );
   });
 
+  it.each([false, true])("leaves single parse notifications to the parent when configured (failure=%s)", async (failure) => {
+    const onToast = vi.fn();
+    const onParseResume = failure
+      ? vi.fn().mockRejectedValue(new Error("Parent reports this failure"))
+      : vi.fn().mockResolvedValue({ plainText: "Experienced analyst" });
+    render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} parseNotificationsHandled />);
+    fireEvent.change(screen.getByLabelText(/paste your resume text/i), { target: { value: "Experienced analyst" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /prepare pasted text/i })));
+    expect(onParseResume).toHaveBeenCalledTimes(1);
+    expect(onToast).not.toHaveBeenCalled();
+    if (failure) expect(screen.getByRole("alert")).toHaveTextContent("Parent reports this failure");
+  });
+
   it("guest can select a file and prepare it without a sign-in wall", async () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});

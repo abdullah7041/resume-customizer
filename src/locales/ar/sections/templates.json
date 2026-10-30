@@ -52,6 +52,7 @@
         "legacyConfirm": "راجعت هذا المستند",
         "textChecked": "تم فحص النص القابل للتحديد",
         "unverified": "تعذّر التحقق من النص القابل للتحديد. راجع ملف PDF قبل استخدامه.",
+        "verificationUnavailable": "التحقق من نص PDF غير متاح مؤقتًا. أعد المحاولة أو اختر طريقة تصدير أخرى.",
         "recovery": "خيارات تصدير PDF",
         "retry": "إعادة محاولة PDF",
         "downloadDocx": "تحميل DOCX",

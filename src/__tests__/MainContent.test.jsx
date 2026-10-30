@@ -1351,6 +1351,44 @@ describe("MainContent resume parsing", () => {
     });
   });
 
+  it.each([
+    Object.assign(new Error('Request cancelled'), { cancelled: true, status: 499, code: 'request/cancelled' }),
+    new DOMException('Request aborted', 'AbortError'),
+  ])('keeps the cancellation outcome when single-upload parsing rejects with %s', async (error) => {
+    let rejectParse;
+    parseResumeMock.mockReturnValueOnce(new Promise((_, reject) => { rejectParse = reject; }));
+    render(<MainContent />);
+    await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
+
+    await act(async () => {
+      const pending = resumeUploadMockProps.current.onParseResume({ plainText: 'Input resume' });
+      resumeUploadMockProps.current.onToast({ type: 'info', title: 'Upload cancelled' });
+      rejectParse(error);
+      await expect(pending).rejects.toBe(error);
+    });
+
+    const notifications = screen.getAllByTestId('toast-mock');
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0]).toHaveAttribute('data-toast-type', 'info');
+    expect(notifications[0]).toHaveTextContent('Upload cancelled');
+  });
+
+  it('shows one upload outcome when device-library saving fails after parsing', async () => {
+    localStorage.setItem('watheq:lastActiveTab', 'resume');
+    parseResumeMock.mockResolvedValueOnce({ plainText: 'Parsed resume', data: { basics: { name: 'Candidate' }, work: [], education: [], skills: [] } });
+    const originalSave = useResumeLibraryStore.getState().saveResume;
+    useResumeLibraryStore.setState({ saveResume: vi.fn().mockRejectedValue(new Error('Device storage is full')) });
+    try {
+      render(<MainContent />);
+      await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
+      await act(async () => { await resumeUploadMockProps.current.onParseResume({ plainText: 'Input resume' }); });
+      const notifications = screen.getAllByTestId('toast-mock');
+      expect(notifications).toHaveLength(1);
+      expect(notifications[0]).toHaveAttribute('data-toast-type', 'warning');
+      expect(notifications[0]).toHaveTextContent('Device storage is full');
+    } finally { useResumeLibraryStore.setState({ saveResume: originalSave }); }
+  });
+
   it("keeps optimization pending through clarification and resolves after submission", async () => {
     localStorage.setItem("watheq:lastActiveTab", "optimize");
     localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
@@ -1414,6 +1452,109 @@ describe("MainContent resume parsing", () => {
       expect(payload.userClarifications).toContain(`${topic} dashboards`);
     }
     expect(generateClarificationsMock.mock.calls[2][0].history).toHaveLength(2);
+  });
+
+  it.each(['final round', 'optimize now'])("settles a failed %s and retries with saved answers instead of reopening questions", async (exit) => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Analytics role");
+    const topics = exit === 'final round' ? ['Excel', 'SQL', 'Python'] : ['Excel'];
+    for (const topic of topics) {
+      generateClarificationsMock.mockResolvedValueOnce({ clarifications: [{
+        id: topic, theme: topic, question: `Verify ${topic}`, rationale: "Add evidence", type: "single", allowOther: false,
+        options: [{ value: "dashboards", label: `${topic} dashboards` }],
+      }] });
+    }
+    optimizeResumeStreamMock
+      .mockRejectedValueOnce(Object.assign(new Error('Could not optimize this resume'), { status: 422, isBillingStateUnknown: false }))
+      .mockResolvedValueOnce({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: "gemini" });
+
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
+    for (const topic of topics) {
+      fireEvent.click(await screen.findByRole("button", { name: `${topic} dashboards` }));
+      fireEvent.click(screen.getByRole("button", { name: exit === 'optimize now' ? /^optimize now$/i : /submit answers/i }));
+    }
+    await waitFor(() => expect(screen.getByTestId('optimization-handler-status')).toHaveTextContent('empty'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert', { name: 'Optimization failed' })).toHaveTextContent('Could not optimize this resume');
+    expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1);
+    expect(optimizeResumeMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry optimization' }));
+    await waitFor(() => expect(useResumeStore.getState().optimizeRun.status).toBe('succeeded'));
+    expect(generateClarificationsMock).toHaveBeenCalledTimes(topics.length);
+    expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(2);
+    for (const topic of topics) {
+      expect(optimizeResumeStreamMock.mock.calls[1][0].userClarifications).toContain(`${topic} dashboards`);
+    }
+    expect(screen.queryByRole('alert', { name: 'Optimization failed' })).not.toBeInTheDocument();
+  });
+
+  it("keeps a follow-up failure visible with saved answers and permits an explicit retry", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Analytics role");
+    generateClarificationsMock.mockResolvedValueOnce({ clarifications: [{
+      id: 'excel', theme: 'Excel', question: 'Verify Excel', rationale: 'Add evidence', type: 'single', allowOther: false,
+      options: [{ value: 'yes', label: 'Built dashboards' }],
+    }] }).mockResolvedValueOnce({ unavailable: true, clarifications: [] }).mockResolvedValueOnce({ complete: true, clarifications: [] });
+    optimizeResumeStreamMock.mockResolvedValueOnce({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini' });
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole('button', { name: /run optimize/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Built dashboards' }));
+    fireEvent.click(screen.getByRole('button', { name: /submit answers/i }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load follow-up questions');
+    expect(screen.getByRole('button', { name: 'Built dashboards' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: /submit answers/i }));
+    await waitFor(() => expect(screen.getByTestId('optimization-handler-status')).toHaveTextContent('completed'));
+    expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1);
+    expect(optimizeResumeStreamMock.mock.calls[0][0].userClarifications).toContain('Built dashboards');
+  });
+
+  it("resolves the pending clarification action when the workspace unmounts", async () => {
+    localStorage.setItem("watheq:lastActiveTab", "optimize");
+    localStorage.setItem("watheq:resumeData", JSON.stringify({ plainText: "Parsed resume", sections: [] }));
+    localStorage.setItem("watheq:lastJobDescription", "Analytics role");
+    generateClarificationsMock.mockResolvedValueOnce({ clarifications: [{
+      id: 'excel', theme: 'Excel', question: 'Verify Excel', rationale: 'Add evidence', type: 'single', allowOther: false,
+      options: [{ value: 'yes', label: 'Built dashboards' }],
+    }] });
+    const view = render(<MainContent />);
+    await screen.findByRole('button', { name: /run optimize/i });
+    const settled = vi.fn();
+    act(() => { void optimizeSectionMockProps.current.onOptimize('auto').then(settled); });
+    await screen.findByRole('button', { name: 'Built dashboards' });
+    view.unmount();
+    await waitFor(() => expect(settled).toHaveBeenCalledWith(null));
+    expect(optimizeResumeStreamMock).not.toHaveBeenCalled();
+  });
+
+  it('enables the new context while an old follow-up request is still pending', async () => {
+    localStorage.setItem('watheq:lastActiveTab', 'optimize');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Parsed resume', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', 'First role');
+    const question = id => ({ id, theme: id, question: `Verify ${id}`, rationale: 'Add evidence', type: 'single', allowOther: false, options: [{ value: 'yes', label: `${id} work` }] });
+    let resolveOld;
+    generateClarificationsMock.mockResolvedValueOnce({ clarifications: [question('Excel')] })
+      .mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve; }))
+      .mockResolvedValueOnce({ clarifications: [question('SQL')] });
+    optimizeResumeStreamMock.mockResolvedValueOnce({ cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini' });
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole('button', { name: /run optimize/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Excel work' }));
+    fireEvent.click(screen.getByRole('button', { name: /submit answers/i }));
+    await waitFor(() => expect(generateClarificationsMock).toHaveBeenCalledTimes(2));
+    localStorage.setItem('watheq:lastJobDescription', 'Second role');
+    act(() => { useResumeStore.setState(state => ({ variantRestoreNonce: state.variantRestoreNonce + 1 })); });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /run optimize/i }));
+    expect(await screen.findByRole('button', { name: 'SQL work' })).toBeEnabled();
+    await act(async () => resolveOld({ complete: true, clarifications: [] }));
+    expect(screen.getByRole('button', { name: 'SQL work' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: /^optimize now$/i }));
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1));
+    expect(optimizeResumeStreamMock.mock.calls[0][0].jobDesc).toBe('Second role');
   });
 
   it("respects a complete clarification response and optimizes without reopening questions", async () => {

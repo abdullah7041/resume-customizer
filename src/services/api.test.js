@@ -84,6 +84,16 @@ describe('importJobFromUrl', () => {
 });
 
 describe('parseResume', () => {
+  it('does not retry a cancelled upload', async () => {
+    vi.useFakeTimers();
+    try {
+      global.fetch.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+      const result = expect(parseResume('Readable resume text')).rejects.toMatchObject({ cancelled: true });
+      await vi.runAllTimersAsync();
+      await result;
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    } finally { vi.useRealTimers(); }
+  });
   it.each([false, true])('sends literal Markdown source with file provenance for guestPreview=%s', async (guestPreview) => {
     const actualResumeText = await vi.importActual('../lib/utils/resumeText');
     mockResumeText.inferMimeType.mockImplementationOnce(actualResumeText.inferMimeType);

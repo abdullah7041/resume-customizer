@@ -161,6 +161,158 @@ describe('ClarificationModal', () => {
     });
   });
 
+  it('replaces the questions with an in-dialog exit choice and restores focus and scroll when continuing', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    const answer = screen.getByRole('button', { name: 'Built Excel dashboards' });
+    fireEvent.click(answer);
+    answer.focus();
+    const dialog = screen.getByRole('dialog');
+    Object.defineProperty(dialog, 'scrollTop', { configurable: true, writable: true, value: 180 });
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByText(question.question)).not.toBeVisible();
+    expect(screen.getByRole('button', { name: 'Keep answering' })).toHaveFocus();
+
+    dialog.scrollTop = 0;
+    fireEvent.click(screen.getByRole('button', { name: 'Keep answering' }));
+
+    expect(screen.getByText(question.question)).toBeInTheDocument();
+    expect(answer).toHaveAttribute('aria-pressed', 'true');
+    expect(answer).toHaveFocus();
+    expect(dialog.scrollTop).toBe(180);
+  });
+
+  it('uses the X button to show the same in-dialog exit choice and optimizes at most once', () => {
+    const onOptimizeNow = vi.fn();
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+        onOptimizeNow={onOptimizeNow}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Built Excel dashboards' }));
+    fireEvent.click(screen.getByRole('button', { name: /skip and proceed without answers/i }));
+
+    expect(screen.getByText(question.question)).not.toBeVisible();
+    const optimize = screen.getByRole('button', { name: 'Optimize now' });
+    fireEvent.click(optimize);
+    fireEvent.click(optimize);
+
+    expect(onOptimizeNow).toHaveBeenCalledOnce();
+    expect(onOptimizeNow).toHaveBeenCalledWith({
+      excelExperience: { selectedValues: ['dashboards'], otherText: '' },
+    });
+  });
+
+  it('uses a backdrop click to switch to the compact exit choice', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    const backdrop = document.querySelector('[aria-hidden="true"]');
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop!);
+    expect(screen.getByText(question.question)).not.toBeVisible();
+    expect(screen.getByRole('button', { name: 'Keep answering' })).toBeInTheDocument();
+  });
+
+  it('disables confirmation actions and answers while regeneration is in progress', () => {
+    const questions = [question];
+    const view = render(
+      <ClarificationModal
+        questions={questions}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /skip and proceed without answers/i }));
+    view.rerender(
+      <ClarificationModal
+        questions={questions}
+        isOpen
+        isRegenerating
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Keep answering' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Optimize now' })).toBeDisabled();
+    expect(screen.getByText('Built Excel dashboards').closest('button')).toBeDisabled();
+  });
+
+  it('keeps a follow-up error visible in both the question and exit-choice views', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        error="Follow-up questions could not be loaded."
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Follow-up questions could not be loaded.');
+    fireEvent.click(screen.getByRole('button', { name: /skip and proceed without answers/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Follow-up questions could not be loaded.');
+  });
+
+  it('gives selected evidence and hard-stop choices a stronger visible state', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    const evidence = screen.getByRole('button', { name: 'Built Excel dashboards' });
+    fireEvent.click(evidence);
+    expect(evidence).toHaveClass('border-emerald-600', 'ring-1');
+    expect(evidence.querySelector('svg')).toBeInTheDocument();
+
+    const hardStop = screen.getByRole('button', { name: "I don't have Excel experience" });
+    fireEvent.click(hardStop);
+    expect(hardStop).toHaveClass('border-amber-600', 'bg-amber-400/25', 'ring-1');
+    expect(hardStop).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows the round and question numbers as clear badges', () => {
+    render(
+      <ClarificationModal
+        questions={[question]}
+        isOpen
+        round={3}
+        onSubmit={vi.fn()}
+        onSkip={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Round 3 / 3')).toBeInTheDocument();
+    expect(screen.getByLabelText('Question 1')).toBeInTheDocument();
+  });
+
   it('renders a localized regenerate control and invokes it on click', () => {
     const onRegenerate = vi.fn();
     render(

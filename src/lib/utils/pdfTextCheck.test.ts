@@ -10,10 +10,26 @@ const blob = new Blob(['pdf'], { type: 'application/pdf' });
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 
 describe('PDF selectable text check', () => {
+  it('distinguishes an unavailable reader from missing PDF text', async () => {
+    vi.mocked(loadPdfjs).mockResolvedValue(null);
+    expect(await checkPdfBlob(blob, expected)).toMatchObject({ state: 'unverified', reason: 'reader_unavailable' });
+  });
+
+  it('distinguishes reader exceptions without returning their potentially private messages', async () => {
+    vi.mocked(loadPdfjs).mockResolvedValue({ getDocument: () => { throw new Error('private resume text'); } } as never);
+    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', reason: 'reader_error', missingFieldIds: ['name', 'year'] });
+  });
+
+  it('distinguishes incomplete text from blank text and garbled text', () => {
+    expect(comparePdfText('ليلى', expected)).toMatchObject({ state: 'unverified', reason: 'text_mismatch', missingFieldIds: ['year'] });
+    expect(comparePdfText('', expected)).toMatchObject({ state: 'unverified', reason: 'empty_text' });
+    expect(comparePdfText('ليلى 2024\ufffd', expected)).toMatchObject({ state: 'unverified', reason: 'invalid_text' });
+  });
+
   it('normalizes whitespace, NFC and bidi controls', () => {
     expect(comparePdfText('ليلى\u200f   2024', expected)).toEqual({ state: 'text_checked', missingFieldIds: [] });
-    expect(comparePdfText('', expected)).toEqual({ state: 'unverified', missingFieldIds: ['name', 'year'] });
-    expect(comparePdfText('ليلى', expected)).toEqual({ state: 'unverified', missingFieldIds: ['year'] });
+    expect(comparePdfText('', expected)).toEqual({ state: 'unverified', reason: 'empty_text', missingFieldIds: ['name', 'year'] });
+    expect(comparePdfText('ليلى', expected)).toEqual({ state: 'unverified', reason: 'text_mismatch', missingFieldIds: ['year'] });
   });
 
   it('accepts capitalization applied by the ATS template', () => {
@@ -63,17 +79,17 @@ describe('PDF selectable text check', () => {
   });
 
   it('leaves blank and over-limit files unverified', async () => {
-    expect(await checkPdfBlob(new Blob(), expected)).toEqual({ state: 'unverified', missingFieldIds: ['name', 'year'] });
+    expect(await checkPdfBlob(new Blob(), expected)).toEqual({ state: 'unverified', reason: 'empty_file', missingFieldIds: ['name', 'year'] });
     const pdf = { numPages: 21, getPage: vi.fn(), cleanup: vi.fn(), destroy: vi.fn().mockResolvedValue(undefined) };
     vi.mocked(loadPdfjs).mockResolvedValue({ getDocument: () => ({ promise: Promise.resolve(pdf), destroy: vi.fn() }) } as never);
-    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', missingFieldIds: ['name', 'year'] });
+    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', reason: 'page_limit', missingFieldIds: ['name', 'year'] });
     expect(pdf.getPage).not.toHaveBeenCalled();
   });
 
   it('marks an image-only PDF unverified', async () => {
     const pdf = { numPages: 1, getPage: vi.fn().mockResolvedValue({ getTextContent: () => Promise.resolve({ items: [] }) }), destroy: vi.fn().mockResolvedValue(undefined) };
     vi.mocked(loadPdfjs).mockResolvedValue({ getDocument: () => ({ promise: Promise.resolve(pdf), destroy: vi.fn() }) } as never);
-    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', missingFieldIds: ['name', 'year'] });
+    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', reason: 'empty_text', missingFieldIds: ['name', 'year'] });
   });
 
   it('times out stalled extraction and destroys the task', async () => {
@@ -81,8 +97,17 @@ describe('PDF selectable text check', () => {
     const destroy = vi.fn().mockResolvedValue(undefined);
     vi.mocked(loadPdfjs).mockResolvedValue({ getDocument: () => ({ promise: new Promise(() => {}), destroy }) } as never);
     const result = checkPdfBlob(blob, expected);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(await result).toEqual({ state: 'unverified', missingFieldIds: ['name', 'year'] });
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(await result).toEqual({ state: 'unverified', reason: 'timeout', missingFieldIds: ['name', 'year'] });
     expect(destroy).toHaveBeenCalled();
+  });
+
+  it('verifies intact text when PDF worker startup takes six seconds', async () => {
+    vi.useFakeTimers();
+    const pdf = { numPages: 1, getPage: vi.fn().mockResolvedValue({ getTextContent: async () => ({ items: [{ str: 'ليلى 2024' }] }) }), destroy: vi.fn().mockResolvedValue(undefined) };
+    vi.mocked(loadPdfjs).mockResolvedValue({ getDocument: () => ({ promise: new Promise(resolve => setTimeout(() => resolve(pdf), 6000)), destroy: vi.fn().mockResolvedValue(undefined) }) } as never);
+    const result = checkPdfBlob(blob, expected);
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(await result).toEqual({ state: 'text_checked', missingFieldIds: [] });
   });
 });

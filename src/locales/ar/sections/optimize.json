@@ -1,6 +1,7 @@
 {
   "sections": {
     "optimize": {
+      "failure": { "title": "تعذّر تحسين السيرة", "retry": "إعادة محاولة التحسين" },
       "scoreDiff": {
         "title": "توقع النتيجة",
         "estimateBadge": "تقدير",

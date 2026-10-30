@@ -16,14 +16,14 @@ const DOCUMENT_MIME_TYPES = new Set([
   "text/x-markdown",
 ]);
 
-const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+export const MAX_SIZE_BYTES = 5 * 1024 * 1024;
 
-const isDocumentFile = (file) => {
+export const isDocumentFile = (file) => {
   if (!file) return false;
   return DOCUMENT_MIME_TYPES.has(inferMimeType({ mimeType: file.type, fileName: file.name }));
 };
 
-const isPlainTextFile = (file) => {
+export const isPlainTextFile = (file) => {
   if (!file) return false;
   return inferMimeType({ mimeType: file.type, fileName: file.name }) === "text/plain";
 };
@@ -55,6 +55,8 @@ export default function UploadCard({
   fileName,
   pastedText = "",
   onFileSelect,
+  onFilesSelect,
+  submitLabel,
   onFileClear,
   onSubmit,
   status = "idle",
@@ -137,6 +139,11 @@ export default function UploadCard({
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
+    if (showProgress) return;
+    if (onFilesSelect && event.dataTransfer.files?.length > 1) {
+      onFilesSelect(Array.from(event.dataTransfer.files));
+      return;
+    }
     const file = event.dataTransfer.files?.[0];
     if (file) {
       void handleFile(file);
@@ -154,6 +161,11 @@ export default function UploadCard({
   };
 
   const handleFileChange = (event) => {
+    if (onFilesSelect && event.target.files?.length > 1) {
+      onFilesSelect(Array.from(event.target.files));
+      event.target.value = '';
+      return;
+    }
     const file = event.target.files?.[0];
     if (file) {
       void handleFile(file);
@@ -273,6 +285,8 @@ export default function UploadCard({
       <input
         ref={inputRef}
         type="file"
+        multiple={Boolean(onFilesSelect)}
+        disabled={showProgress}
         accept=".pdf,.docx,.txt,.md,.markdown"
         className="sr-only"
         name="resume-file"
@@ -400,7 +414,7 @@ export default function UploadCard({
         <GlassButton
           variant="ghost"
           onClick={onFileClear}
-          disabled={!fileName && !pastedText}
+          disabled={showProgress || (!fileName && !pastedText)}
           className="w-full sm:w-auto min-h-[48px] text-gray-700 hover:text-red-700 hover:bg-red-500/8 dark:text-emerald-100/78 dark:hover:text-red-200 dark:hover:bg-red-500/10"
         >
           <XCircle className="w-4 h-4 me-2" />
@@ -430,11 +444,11 @@ export default function UploadCard({
             <><Loader2 className="w-4 h-4 me-2 animate-spin" /> {t('upload.card.processingButton', 'Processing...')}</>
           ) : (
             <>
-              {pastedText && !fileName
+              {submitLabel || (pastedText && !fileName
                 ? t('upload.card.preparePastedButton', 'Prepare Pasted Text')
                 : fileName && !pastedText
                 ? t('upload.card.prepareFileButton', 'Prepare Selected File')
-                : t("upload.card.prepareButton")}
+                : t("upload.card.prepareButton"))}
               <span className="ml-2">→</span>
             </>
           )}

@@ -78,12 +78,11 @@ describe("resume text helpers", () => {
     const buffer = new Uint8Array([1, 2, 3]).buffer;
     const text = await extractPlainTextFromArrayBuffer(buffer, { mimeType: "application/pdf" });
     expect(text).toBe("Hello Riyadh");
-    // Main-thread mode: workerSrc is still populated (pdfjs requires it even with
-    // disableWorker), but parsing runs on the main thread with no eval (CSP-safe).
+    expect(globalThis.pdfjsWorker?.WorkerMessageHandler).toEqual(expect.any(Function));
+    // The worker module supplies the main-thread handler; parsing keeps eval off.
     // `data` is a private .slice(0) copy, so match by option shape not buffer identity.
     expect(pdfGetDocument).toHaveBeenCalledWith(
       expect.objectContaining({
-        disableWorker: true,
         isEvalSupported: false,
         cMapUrl: "https://unpkg.com/pdfjs-dist@5.7.284/cmaps/",
         cMapPacked: true,

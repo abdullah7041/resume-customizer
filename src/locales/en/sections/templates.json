@@ -46,6 +46,7 @@
         "legacyConfirm": "I reviewed this document",
         "textChecked": "Selectable text checked",
         "unverified": "Selectable text could not be verified. Review this PDF before using it.",
+        "verificationUnavailable": "PDF text verification is temporarily unavailable. Retry PDF or choose another export option.",
         "recovery": "PDF export options",
         "retry": "Retry PDF",
         "downloadDocx": "Download DOCX",

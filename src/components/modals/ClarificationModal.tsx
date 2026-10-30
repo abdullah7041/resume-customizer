@@ -17,7 +17,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Sparkles, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { X, Sparkles, ChevronRight, RefreshCw, AlertCircle, Check } from 'lucide-react';
 import { GlassButton } from '../ui/GlassButton';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
@@ -40,6 +40,7 @@ interface ClarificationModalProps {
   questions: ClarificationQuestion[];
   isOpen: boolean;
   isRegenerating?: boolean;
+  error?: string | null;
   onSubmit: (answers: ClarificationAnswers) => void;
   onSkip: () => void;
   onRegenerate?: () => void;
@@ -68,6 +69,7 @@ export function ClarificationModal({
   questions,
   isOpen,
   isRegenerating = false,
+  error,
   onSubmit,
   onSkip,
   onRegenerate,
@@ -88,6 +90,13 @@ export function ClarificationModal({
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [confirmExit, setConfirmExit] = useState(false);
   const firstRef = useRef<HTMLButtonElement>(null);
+  const keepAnsweringRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lastQuestionFocusRef = useRef<HTMLElement | null>(null);
+  const savedScrollTopRef = useRef(0);
+  const restoreQuestionFocusRef = useRef(false);
+  const optimizeInvokedRef = useRef(false);
+  const initialFocusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Inject slideUp keyframe once on mount (avoids global CSS dependency)
   useEffect(() => {
@@ -109,15 +118,38 @@ export function ClarificationModal({
       ])));
       setTouched({});
       setConfirmExit(false);
+      optimizeInvokedRef.current = false;
+      lastQuestionFocusRef.current = null;
       // Focus first textarea after animation settles
-      const t = setTimeout(() => firstRef.current?.focus(), 80);
-      return () => clearTimeout(t);
+      initialFocusTimerRef.current = setTimeout(() => firstRef.current?.focus(), 80);
+      return () => {
+        if (initialFocusTimerRef.current) clearTimeout(initialFocusTimerRef.current);
+      };
     }
   }, [isOpen, normalizedQuestions, initialAnswers]);
 
   const requestExit = useCallback(() => {
+    if (isRegenerating || confirmExit) return;
+    if (initialFocusTimerRef.current) clearTimeout(initialFocusTimerRef.current);
+    savedScrollTopRef.current = panelRef.current?.scrollTop ?? 0;
+    restoreQuestionFocusRef.current = true;
     setConfirmExit(true);
-  }, []);
+  }, [confirmExit, isRegenerating]);
+
+  useLayoutEffect(() => {
+    if (confirmExit) {
+      keepAnsweringRef.current?.focus();
+      return;
+    }
+
+    if (restoreQuestionFocusRef.current) {
+      restoreQuestionFocusRef.current = false;
+      if (panelRef.current) panelRef.current.scrollTop = savedScrollTopRef.current;
+      const focusTarget = lastQuestionFocusRef.current;
+      if (focusTarget?.isConnected) focusTarget.focus();
+      else firstRef.current?.focus();
+    }
+  }, [confirmExit]);
 
   // Escape opens the same explicit exit choice as the close button.
   useEffect(() => {
@@ -186,6 +218,18 @@ export function ClarificationModal({
     return validAnswers;
   }, [answers, normalizedQuestions]);
 
+  const handleOptimizeNow = useCallback(() => {
+    if (isRegenerating || optimizeInvokedRef.current) return;
+    optimizeInvokedRef.current = true;
+    if (onOptimizeNow) onOptimizeNow(collectAnswers());
+    else onSkip();
+  }, [collectAnswers, isRegenerating, onOptimizeNow, onSkip]);
+
+  const keepAnswering = useCallback(() => {
+    if (isRegenerating) return;
+    setConfirmExit(false);
+  }, [isRegenerating]);
+
   // At least one valid answer required to enable submit
   const hasAnyValidAnswer = normalizedQuestions.some(question => {
     const answer = answers[question.id] ?? emptyAnswer();
@@ -210,6 +254,7 @@ export function ClarificationModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="clarify-modal-title"
+        ref={panelRef}
         className={cn(
           glass.elevated,
           'relative rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto',
@@ -230,8 +275,11 @@ export function ClarificationModal({
               >
                 {t('clarificationModal.title', 'Quick questions to sharpen your results')}
               </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {t('clarificationModal.round', 'Round')} {round} ·{' '}
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <span className="inline-flex min-h-7 items-center rounded-full border border-emerald-600/30 bg-emerald-500/15 px-2.5 text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-200">
+                  {t('clarificationModal.round', 'Round')} {round} / 3
+                </span>
+                <span aria-hidden="true">·</span>
                 {questions.length} {questions.length !== 1 ? t('clarificationModal.questions', 'questions') : t('clarificationModal.question', 'question')} · {t('clarificationModal.duration', '~1 min')}
               </p>
             </div>
@@ -260,15 +308,27 @@ export function ClarificationModal({
               onClick={requestExit}
               disabled={isRegenerating}
               className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-white/10 transition-colors"
-              aria-label="Skip and proceed without answers"
+              aria-label={t('clarificationModal.close', 'Skip and proceed without answers')}
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
+        {error && (
+          <div role="alert" className="mx-6 mt-4 rounded-xl border border-red-500/30 bg-red-50/80 px-4 py-3 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-200">
+            {error}
+          </div>
+        )}
+
         {/* ---- Question cards ---- */}
-        <div className="p-6 space-y-5">
+        <div
+          onFocusCapture={event => {
+            if (event.target instanceof HTMLElement) lastQuestionFocusRef.current = event.target;
+          }}
+          hidden={confirmExit}
+          className="p-6 space-y-5"
+        >
           {normalizedQuestions.map((q, idx) => {
             const answer = answers[q.id] ?? emptyAnswer();
             const selectedValueSet = new Set(answer.selectedValues);
@@ -286,8 +346,12 @@ export function ClarificationModal({
               >
                 {/* Theme badge + rationale */}
                 <div className="flex items-start gap-2">
-                  <span className="flex-shrink-0 mt-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                    {idx + 1}.
+                  <span
+                    role="img"
+                    aria-label={`${t('clarificationModal.question', 'Question')} ${idx + 1}`}
+                    className="mt-0.5 inline-flex size-7 flex-shrink-0 items-center justify-center rounded-full border border-emerald-600/30 bg-emerald-500/15 text-sm font-bold tabular-nums text-emerald-800 dark:text-emerald-200"
+                  >
+                    {idx + 1}
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
@@ -319,15 +383,19 @@ export function ClarificationModal({
                         aria-pressed={selected}
                         onClick={() => handleOptionToggle(q, option)}
                         className={cn(
-                          'w-full rounded-lg border px-3 py-2.5 text-start text-sm transition-colors',
+                          'flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-start text-sm transition-colors',
                           'focus:outline-none focus:ring-2 focus:ring-emerald-500/40',
-                          selected
-                            ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-900 dark:text-emerald-100'
-                            : 'border-gray-300 bg-gray-100/40 text-gray-800 hover:border-emerald-500/30 dark:border-white/10 dark:bg-white/5 dark:text-gray-200',
-                          option.isHardStop && 'mt-3 border-amber-500/30 text-amber-800 dark:text-amber-200',
+                          option.isHardStop
+                            ? selected
+                              ? 'mt-3 border-amber-600 bg-amber-400/25 font-semibold text-amber-950 ring-1 ring-amber-500/40 dark:text-amber-100'
+                              : 'mt-3 border-amber-500/40 bg-amber-50/50 text-amber-900 hover:border-amber-600/60 dark:bg-amber-500/5 dark:text-amber-200'
+                            : selected
+                              ? 'border-emerald-600 bg-emerald-500/20 font-semibold text-emerald-950 ring-1 ring-emerald-600/40 dark:text-emerald-100'
+                              : 'border-gray-300 bg-gray-100/40 text-gray-800 hover:border-emerald-500/50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200',
                         )}
                       >
-                        {option.label}
+                        <span>{option.label}</span>
+                        {selected && <Check aria-hidden="true" className="size-4 flex-shrink-0" />}
                       </button>
                     );
                   })}
@@ -365,18 +433,28 @@ export function ClarificationModal({
         {/* ---- Footer ---- */}
         <div className="px-6 pb-6 space-y-3">
           {confirmExit ? (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-50/80 p-3 dark:bg-amber-500/10">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-50/80 p-4 dark:bg-amber-500/10">
+              <h3 className="mb-2 text-center text-sm font-semibold text-amber-950 dark:text-amber-100">
+                {t('clarificationModal.exitTitle', 'Would you like to keep answering?')}
+              </h3>
               <p className="mb-3 text-center text-xs text-amber-900 dark:text-amber-100">
                 {t('clarificationModal.exitWarning', 'Your valid answers will be kept. Keep answering, or optimize now with what you have.')}
               </p>
               <div className="flex gap-3">
-                <GlassButton variant="secondary" onClick={() => setConfirmExit(false)} className="flex-1">
+                <GlassButton
+                  ref={keepAnsweringRef}
+                  variant="secondary"
+                  onClick={keepAnswering}
+                  disabled={isRegenerating}
+                  className="min-h-11 flex-1"
+                >
                   {t('clarificationModal.keepAnswering', 'Keep answering')}
                 </GlassButton>
                 <GlassButton
                   variant="primary"
-                  onClick={() => onOptimizeNow ? onOptimizeNow(collectAnswers()) : onSkip()}
-                  className="flex-1"
+                  onClick={handleOptimizeNow}
+                  disabled={isRegenerating}
+                  className="min-h-11 flex-1"
                 >
                   {t('clarificationModal.optimizeNow', 'Optimize now')}
                 </GlassButton>
@@ -391,7 +469,7 @@ export function ClarificationModal({
               <div className="flex gap-3">
                 <GlassButton
                   variant="secondary"
-                  onClick={() => onOptimizeNow ? onOptimizeNow(collectAnswers()) : onSkip()}
+                  onClick={handleOptimizeNow}
                   disabled={isRegenerating}
                   className="flex-1"
                   id="clarify-skip-btn"

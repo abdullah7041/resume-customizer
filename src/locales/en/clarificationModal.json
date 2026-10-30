@@ -5,6 +5,8 @@
     "selectOne": "Select one",
     "optimizeNow": "Optimize now",
     "keepAnswering": "Keep answering",
+    "exitTitle": "Would you like to keep answering?",
+    "close": "Skip and proceed without answers",
     "exitWarning": "Your valid answers will be kept. Keep answering, or optimize now with what you have.",
     "continueQuestions": "Continue questions",
     "followupFailed": "Could not load follow-up questions. Your answers are saved; retry or optimize now.",

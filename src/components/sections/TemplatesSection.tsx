@@ -639,8 +639,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       if (!isCurrentExport(attempt.id)) return;
       if (quality.state === 'unverified') {
         setPdfRecovery({ ...attempt, blob });
-        setExportError(t('sections.templates.export.unverified', 'Selectable text could not be verified. Review this PDF before using it.'));
-        analytics.trackExportFailed(attempt.templateId, 'pdf_unverified', 'text_check');
+        const readerUnavailable = ['reader_unavailable', 'reader_error', 'timeout'].includes(quality.reason ?? '');
+        setExportError(readerUnavailable
+          ? t('sections.templates.export.verificationUnavailable', 'PDF text verification is temporarily unavailable. Retry PDF or choose another export option.')
+          : t('sections.templates.export.unverified', 'Selectable text could not be verified. Review this PDF before using it.'));
+        analytics.trackExportFailed(attempt.templateId, 'pdf_unverified', quality.reason ?? 'text_check');
         return;
       }
 

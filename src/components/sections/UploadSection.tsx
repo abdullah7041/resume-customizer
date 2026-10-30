@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
-import UploadCard from '../ui/UploadCard';
-import { isAuthRequiredError } from '../../services/api.js';
+import UploadCard, { isDocumentFile, isPlainTextFile, MAX_SIZE_BYTES } from '../ui/UploadCard';
+import { isAuthRequiredError, parseResume } from '../../services/api.js';
 import { AppError } from '../../services/supabase.js';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
@@ -29,6 +29,8 @@ interface ParsedResumeResult {
 }
 
 interface UploadSectionProps {
+    parseNotificationsHandled?: boolean;
+    isGuestMode?: boolean;
     onParseResume: (resumeInput: { file?: File; plainText?: string }, signal?: AbortSignal) => Promise<ParsedResumeResult>;
     onBeforeParseResume?: () => void;
     resumeDocument: ResumeDocument | null;
@@ -37,6 +39,8 @@ interface UploadSectionProps {
 }
 
 export default function UploadSection({
+    parseNotificationsHandled = false,
+    isGuestMode = false,
     onParseResume,
     onBeforeParseResume,
     resumeDocument,
@@ -45,6 +49,9 @@ export default function UploadSection({
 }: UploadSectionProps) {
     const { t } = useTranslation();
     const [file, setFile] = useState<File | null>(null);
+    const [batchFiles, setBatchFiles] = useState<File[]>([]);
+    const [batchRows, setBatchRows] = useState<Array<{ name: string; state: 'pending' | 'reading' | 'saved' | 'failed' | 'skipped'; message?: string }>>([]);
+    const batchRunning = useRef(false);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
@@ -61,6 +68,8 @@ export default function UploadSection({
     const removeResume = useResumeLibraryStore((state) => state.removeResume);
 
     const handleFileSelect = useCallback((selectedFile: File) => {
+        setBatchFiles([]);
+        setBatchRows([]);
         setFile(selectedFile);
         setPastedText('');
         setError(null);
@@ -68,11 +77,16 @@ export default function UploadSection({
     }, []);
 
     const handleFileClear = useCallback(() => {
+        if (batchRunning.current) return;
+        const pendingInput = Boolean(file || pastedText || batchFiles.length);
+        setBatchFiles([]);
+        setBatchRows([]);
         setFile(null);
         setPastedText('');
         setError(null);
         setStatus('idle');
         setProgress(0);
+        if (pendingInput) return;
         if (activeResumeId && resumeDocument?.plainText) {
             void removeResume(activeResumeId);
             return;
@@ -80,9 +94,11 @@ export default function UploadSection({
         // Clear unsaved input and legacy state.
         clearAll();
         onClear();
-    }, [activeResumeId, clearAll, onClear, removeResume, resumeDocument?.plainText]);
+    }, [activeResumeId, batchFiles.length, clearAll, file, onClear, pastedText, removeResume, resumeDocument?.plainText]);
 
     const handleTextChange = useCallback((text: string) => {
+        setBatchFiles([]);
+        setBatchRows([]);
         setPastedText(text);
         setFile(null);
         setError(null);
@@ -99,6 +115,10 @@ export default function UploadSection({
     }, [onToast]);
 
     const handleCancel = useCallback(() => {
+        if (batchRunning.current) {
+            abortControllerRef.current?.abort();
+            return;
+        }
         if (status === 'uploading' || status === 'parsing') {
             // Abort the fetch request
             if (abortControllerRef.current) {
@@ -115,6 +135,73 @@ export default function UploadSection({
             });
         }
     }, [status, onToast]);
+
+    const handleBatchImport = async () => {
+        if (batchRunning.current) return;
+        batchRunning.current = true;
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        const rows = batchFiles.map(selected => ({ name: selected.name, state: 'pending' as 'pending' | 'reading' | 'saved' | 'failed' | 'skipped', message: '' }));
+        const update = () => setBatchRows(rows.map(row => ({ ...row })));
+        let authStopped = false;
+        setStatus('parsing');
+        setError(null);
+        try {
+            for (let index = 0; index < batchFiles.length; index += 1) {
+                const selected = batchFiles[index];
+                const row = rows[index];
+                if (controller.signal.aborted || authStopped || useResumeLibraryStore.getState().entries.length >= MAX_RESUME_LIBRARY_SIZE) {
+                    row.state = 'skipped';
+                    row.message = controller.signal.aborted ? t('upload.batch.cancelled', 'Cancelled')
+                        : authStopped ? t('toasts.signInRequiredDesc', 'Please sign in to securely process your resume.')
+                            : t('upload.library.limitDescription', 'Remove one of your five saved resumes before adding another.');
+                    update();
+                    continue;
+                }
+                row.state = 'reading';
+                update();
+                try {
+                    if (!isDocumentFile(selected) && !isPlainTextFile(selected)) throw Object.assign(new Error(t('upload.errors.unsupportedType', 'Only PDF, DOCX, TXT, or Markdown resumes are supported.')), { code: 'file/unsupported-type', status: 415 });
+                    if (selected.size > MAX_SIZE_BYTES) throw Object.assign(new Error(t('upload.errors.tooLarge', 'File must be 5MB or smaller.')), { code: 'file/too-large', status: 413 });
+                    const result = await parseResume(selected, {
+                        signal: controller.signal,
+                        guestPreview: isGuestMode,
+                        onOcrFallback: () => {
+                            row.message = isGuestMode
+                                ? t('upload.batch.ocrGuest', 'Paste text or sign in to read scanned documents.')
+                                : t('upload.batch.ocr', 'Reading scanned document; this may take a little longer.');
+                            update();
+                        },
+                    });
+                    if (controller.signal.aborted) { row.state = 'skipped'; row.message = t('upload.batch.cancelled', 'Cancelled'); update(); continue; }
+                    const data = result?.data ?? result;
+                    if (!data?.basics || typeof result?.plainText !== 'string' || !result.plainText.trim()) throw Object.assign(new Error(t('upload.batch.empty', 'No readable resume was returned.')), { code: 'resume/unreadable-file', status: 422 });
+                    await useResumeLibraryStore.getState().saveResume({ parsedResume: data, plainText: result.plainText, sourceFileName: selected.name }, { activate: false });
+                    row.state = 'saved';
+                    row.message = t('upload.batch.saved', 'Saved to your library');
+                } catch (failure) {
+                    row.state = controller.signal.aborted ? 'skipped' : 'failed';
+                    authStopped = isAuthRequiredError(failure);
+                    row.message = controller.signal.aborted ? t('upload.batch.cancelled', 'Cancelled')
+                        : authStopped ? t('toasts.signInRequiredDesc', 'Please sign in to securely process your resume.')
+                            : failure instanceof Error ? failure.message : t('upload.batch.failed', 'Could not import this resume.');
+                }
+                setProgress(Math.round((index + 1) / batchFiles.length * 100));
+                update();
+            }
+        } finally {
+            batchRunning.current = false;
+            abortControllerRef.current = null;
+            setStatus('idle');
+            setProgress(0);
+            setBatchFiles([]);
+            const saved = rows.filter(row => row.state === 'saved').length;
+            const failed = rows.filter(row => row.state === 'failed').length;
+            const skipped = rows.filter(row => row.state === 'skipped').length;
+            onToast({ type: failed || skipped ? 'warning' : 'success', title: t('upload.batch.complete', 'Resume import complete'),
+                description: t('upload.batch.summary', '{{saved}} saved, {{failed}} failed, {{skipped}} skipped.', { saved, failed, skipped }) });
+        }
+    };
 
     const handleSubmit = useCallback(async () => {
         if (!file && !pastedText) {
@@ -204,7 +291,7 @@ export default function UploadSection({
             const parseTime = performance.now() - startTime;
             analytics.trackUpload(fileType, true, parseTime);
 
-            onToast({
+            if (!parseNotificationsHandled) onToast({
                 type: 'success',
                 title: 'Resume parsed successfully',
             });
@@ -225,7 +312,7 @@ export default function UploadSection({
                 setStatus('error');
                 setProgress(0);
                 setError(authRequiredMessage);
-                onToast({
+                if (!parseNotificationsHandled) onToast({
                     type: 'warning',
                     title: authRequiredTitle,
                     description: authRequiredMessage,
@@ -252,7 +339,7 @@ export default function UploadSection({
             // Track failed upload
             analytics.trackUpload(fileType, false, undefined, message);
 
-            onToast({
+            if (!parseNotificationsHandled) onToast({
                 type: 'danger',
                 title: isUnreadable
                     ? t('upload.errors.unreadable', "We couldn't read selectable text from that file.")
@@ -260,13 +347,13 @@ export default function UploadSection({
                 description,
             });
         }
-    }, [file, libraryEntries.length, onBeforeParseResume, onParseResume, onToast, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);
+    }, [file, libraryEntries.length, onBeforeParseResume, onParseResume, onToast, parseNotificationsHandled, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);
 
-    const fileName = file?.name || resumeDocument?.fileName || '';
+    const fileName = batchFiles.length ? batchFiles.map(selected => selected.name).join(', ') : file?.name || resumeDocument?.fileName || '';
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
 
     // Resume is saved only if we have a successful new upload OR we have an existing document and haven't selected a new file
-    const isSaved = status === 'success' || (!file && !!resumeDocument?.fileName);
+    const isSaved = !batchFiles.length && (status === 'success' || (!file && !!resumeDocument?.fileName));
 
     return (
         <div data-tour="upload" className="space-y-6">
@@ -327,15 +414,20 @@ export default function UploadSection({
             )}
 
             <UploadCard
+                onFilesSelect={(files: File[]) => {
+                    setBatchFiles(files); setBatchRows(files.map(selected => ({ name: selected.name, state: 'pending' })));
+                    setFile(null); setPastedText(''); setStatus('idle'); setError(null);
+                }}
+                submitLabel={batchFiles.length ? t('upload.batch.import', 'Import selected resumes') : undefined}
                 fileName={fileName}
                 pastedText={pastedText}
                 onFileSelect={handleFileSelect}
                 onFileClear={handleFileClear}
-                onSubmit={handleSubmit}
+                onSubmit={batchFiles.length ? handleBatchImport : handleSubmit}
                 status={status}
                 progress={progress}
                 error={error}
-                disabled={disabled}
+                disabled={batchFiles.length ? false : disabled}
                 onValidationError={handleValidationError}
                 onTextChange={handleTextChange}
                 isSaved={isSaved}
@@ -343,6 +435,11 @@ export default function UploadSection({
                 isSaudiNational={isSaudiNational}
                 onSaudiNationalChange={setSaudiNational}
             />
+            {batchRows.length > 0 && <ul aria-live="polite" className="space-y-2 rounded-xl border border-line bg-surface p-4 text-sm text-ink">
+                {batchRows.map((row, index) => <li key={index} className="break-words">
+                    <span className="font-semibold">{row.name}</span> · {row.message || t(`upload.batch.${row.state}`, row.state === 'reading' ? 'Reading…' : 'Waiting')}
+                </li>)}
+            </ul>}
         </div>
     );
 }

@@ -174,6 +174,16 @@ beforeEach(() => {
 });
 
 describe('signed-out PDF downloads', () => {
+    it.each(['reader_unavailable', 'reader_error', 'timeout'])('explains %s without claiming PDF text is missing', async reason => {
+        checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', reason, missingFieldIds: ['preview.0'] });
+        renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Noura Example', summary: 'Saudi analyst' }, work: [], education: [], skills: [], projects: [] }} />);
+        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        expect(await screen.findByRole('alert')).toHaveTextContent('PDF text verification is temporarily unavailable. Retry PDF or choose another export option.');
+        expect(saveAs).not.toHaveBeenCalled();
+        expect(analytics.trackExportFailed).toHaveBeenCalledWith('modern-professional', 'pdf_unverified', reason);
+        expect(screen.getByRole('button', { name: 'Download unverified PDF' })).toBeInTheDocument();
+    });
+
     const resume = { basics: { name: 'Sara Example', summary: 'مهندسة برمجيات' }, work: [], education: [], skills: [], projects: [] };
     it.each(['Software engineer', 'مهندسة برمجيات'])('downloads checked selectable PDF without a session for %s', async summary => {
         getAuthHeaders.mockRejectedValue(new Error('No session available'));

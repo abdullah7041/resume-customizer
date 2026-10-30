@@ -1,5 +1,12 @@
 {
   "upload": {
+    "batch": {
+      "import": "Import selected resumes", "complete": "Resume import complete",
+      "summary": "{{saved}} saved, {{failed}} failed, {{skipped}} skipped.",
+      "cancelled": "Cancelled", "saved": "Saved to your library", "failed": "Could not import this resume.",
+      "pending": "Waiting", "reading": "Reading…", "skipped": "Skipped", "empty": "No readable resume was returned.",
+      "ocrGuest": "Paste text or sign in to read scanned documents.", "ocr": "Reading scanned document; this may take a little longer."
+    },
     "title": "Upload Your Resume",
     "dragDrop": "Drag and drop your file here",
     "or": "or",

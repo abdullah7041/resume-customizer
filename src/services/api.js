@@ -163,6 +163,7 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
       return await fn();
     } catch (error) {
       lastError = error;
+      if (error.cancelled || error.name === 'AbortError') throw error;
 
       // Don't retry on 4xx errors EXCEPT 429 (rate limit)
       // 401, 403, 404, 400 are client errors and should not be retried

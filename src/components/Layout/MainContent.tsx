@@ -787,6 +787,10 @@ export default function MainContent() {
   const [extractedMetadata, setExtractedMetadata] = useState<ExtractedJobMetadata | null>(null);
   // Clarification interrogation state
   const [isInterrogating, setIsInterrogating] = useState(false);
+  const [optimizationFailure, setOptimizationFailure] = useState<string | null>(null);
+  const [clarificationError, setClarificationError] = useState<string | null>(null);
+  const completedClarificationContext = useRef('');
+  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean } | null>(null);
   const [isCheckingClarifications, setIsCheckingClarifications] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
@@ -810,12 +814,18 @@ export default function MainContent() {
     latestOptimizeContext.current = null;
     setIsOptimizing(false);
     setIsCheckingClarifications(false);
+    setIsRegenerating(false);
     setFlowProgress(0);
     setOptimizations([]);
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     setOptimizeAssessmentCurrent(false);
     setOptimizeAssessmentKey(null);
+    setOptimizationFailure(null);
+    setClarificationError(null);
+    completedClarificationContext.current = '';
+    retryOptimizeArgs.current = null;
+    clarificationBusy.current = false;
     pendingOptimizeContinuation.current?.resolve(null);
     pendingOptimizeContinuation.current = null;
   }, [optimizeInput.resumeText, optimizeInput.jobDescription, optimizeInput.language]);
@@ -826,6 +836,8 @@ export default function MainContent() {
       setClarificationQuestions([]);
       setClarificationDraft({});
       setClarificationRound(1);
+      completedClarificationContext.current = '';
+      setClarificationError(null);
       setIsInterrogating(false);
       setPendingOptimizeArgs(null);
       pendingOptimizeContinuation.current?.resolve(null);
@@ -833,6 +845,11 @@ export default function MainContent() {
     }
     clarificationContext.current = context;
   }, [resumeData?.plainText, jobDescription, i18n.language]);
+  useEffect(() => () => {
+    optimizeRequest.current = null;
+    pendingOptimizeContinuation.current?.resolve(null);
+    pendingOptimizeContinuation.current = null;
+  }, []);
   const toastTimers = useRef(new Map());
   const isDev = import.meta.env.DEV;
 
@@ -1683,6 +1700,7 @@ export default function MainContent() {
           : enriched?.basics
             ? enriched
             : null;
+        let librarySaveFailure: string | null = null;
         if (parsedResume && typeof enriched?.plainText === 'string' && enriched.plainText.trim()) {
           try {
             const saved = await useResumeLibraryStore.getState().saveResume({
@@ -1693,11 +1711,8 @@ export default function MainContent() {
             projectedResumeId.current = saved.id;
             preUploadSnapshotKey.current = null;
           } catch (libraryError) {
-            pushToast({
-              type: 'warning',
-              title: t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.'),
-              description: libraryError instanceof Error ? libraryError.message : undefined,
-            });
+            librarySaveFailure = libraryError instanceof Error && libraryError.message
+              ? libraryError.message : t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.');
           }
         }
         setResumeData(enriched);
@@ -1716,9 +1731,9 @@ export default function MainContent() {
         emitHRSuperSaudEvent('resume.uploaded');
         pushToast(
           {
-            type: "success",
-            title: t("toasts.resumeParsed"),
-            description: t("toasts.resumeParsedDesc"),
+            type: librarySaveFailure ? "warning" : "success",
+            title: librarySaveFailure ? t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.') : t("toasts.resumeParsed"),
+            description: librarySaveFailure ?? t("toasts.resumeParsedDesc"),
           },
           { id: TOAST_IDS.upload }
         );
@@ -1727,6 +1742,7 @@ export default function MainContent() {
         return enriched;
       } catch (error) {
         setFlowProgress(0);
+        if (signal?.aborted || error?.cancelled || error?.name === 'AbortError') throw error;
         if (isGuestMode) {
           const telemetry = getGuestPreviewLimitTelemetry(error);
           if (telemetry) {
@@ -2298,6 +2314,7 @@ export default function MainContent() {
         return result;
       } catch (error: any) {
         if (!isCurrentOptimize(request)) return null;
+        setOptimizationFailure(error?.message ?? 'Optimization failed');
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
           finishedAt: new Date().toISOString(),
@@ -2352,6 +2369,9 @@ export default function MainContent() {
 
       // Guard against double-clicks or re-entrant calls while already processing
       if (optimizeRequest.current?.inFlight || isOptimizing || isInterrogating || isCheckingClarifications) return null;
+      setOptimizationFailure(null);
+      setClarificationError(null);
+      retryOptimizeArgs.current = { mode, freePreview: options?.freePreview };
 
       const input: AssessmentInput = { resumeText: resumeData.plainText, jobDescription,
         language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'optimize',
@@ -2409,7 +2429,7 @@ export default function MainContent() {
       //
       // E1: only call the clarification endpoint when deterministic evidence says
       // this is not already a known strong match without career vulnerabilities.
-      if (shouldRequestClarifications(matchAnalysis?.score, workHistory) && clarificationHistory.current.length < 30) {
+      if (completedClarificationContext.current !== context && shouldRequestClarifications(matchAnalysis?.score, workHistory) && clarificationHistory.current.length < 30) {
         try {
           // ---- Clarification Step (free, non-fatal) ----
           // Show a lightweight toast while we call the gap-analysis endpoint
@@ -2477,6 +2497,7 @@ export default function MainContent() {
       // "Optimization failed" toast before re-throwing, so returning null here is
       // what keeps the rejection from escaping into an un-awaited caller.
       try {
+        completedClarificationContext.current = context;
         return await handleOptimizeActual({
           request,
           mode,
@@ -2497,6 +2518,7 @@ export default function MainContent() {
   const handleClarificationSubmit = useCallback(async (answers: ClarificationAnswers, optimizeNow = false) => {
     if (clarificationBusy.current || !pendingOptimizeArgs || !isCurrentOptimize(pendingOptimizeArgs.request)) return;
     clarificationBusy.current = true;
+    setClarificationError(null);
     const requestContext = clarificationContext.current;
     setIsRegenerating(true);
     setClarificationDraft(answers);
@@ -2526,7 +2548,7 @@ export default function MainContent() {
         });
         if (!isCurrentOptimize(request) || clarificationContext.current !== requestContext) return;
         if (next.unavailable) {
-          pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
+          setClarificationError(t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.'));
           return;
         }
         const unanswered = filterClarificationQuestionsByHardStops(next.clarifications ?? [], allHardStops)
@@ -2540,14 +2562,15 @@ export default function MainContent() {
       }
     } catch {
       if (!isCurrentOptimize(request)) return;
-      pushToast({ type: 'warning', title: t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.') });
+      setClarificationError(t('clarificationModal.followupFailed', 'Could not load follow-up questions. Your answers are saved; retry or optimize now.'));
       return;
     } finally {
       if (isCurrentOptimize(request)) setIsRegenerating(false);
-      clarificationBusy.current = false;
+      if (isCurrentOptimize(request)) clarificationBusy.current = false;
     }
     if (!isCurrentOptimize(request)) return;
     clarificationBusy.current = true;
+    completedClarificationContext.current = requestContext;
     setIsInterrogating(false);
     const outcome = clarificationHistory.current.length ? 'answered' : 'skipped';
     analytics.trackClarificationOutcome({
@@ -2572,15 +2595,16 @@ export default function MainContent() {
       setPendingOptimizeArgs(null);
       setClarificationQuestions([]);
     } catch {
-      // The actual handler has already surfaced the failure. Resolve the
-      // original UI action as incomplete so it neither spends a preview nor
-      // verifies stale cards.
-      // Keep the current questions and draft available to explicitly retry.
-      if (isCurrentOptimize(request) && clarificationContext.current === requestContext) setIsInterrogating(true);
+      // A failed optimization is a terminal result, not another question round.
+      if (isCurrentOptimize(request)) {
+        pendingOptimizeContinuation.current?.resolve(null);
+        pendingOptimizeContinuation.current = null;
+        setPendingOptimizeArgs(null);
+      }
     } finally {
-      clarificationBusy.current = false;
+      if (isCurrentOptimize(request)) clarificationBusy.current = false;
     }
-  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, isCurrentOptimize, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, pushToast, t]);
+  }, [clarificationQuestions, clarificationRound, handleOptimizeActual, isCurrentOptimize, pendingOptimizeArgs, resumeData?.plainText, jobDescription, i18n.language, t]);
 
   const handleClarificationSkip = useCallback(() => {
     if (clarificationBusy.current) return;
@@ -3042,6 +3066,8 @@ export default function MainContent() {
             <>
               <UploadSection
                 onParseResume={handleParseResume}
+                parseNotificationsHandled={true}
+                isGuestMode={isGuestMode}
                 onBeforeParseResume={() => snapshotActiveResumeResults(true)}
                 resumeDocument={resumeData}
                 onToast={handleUploadToast}
@@ -3123,6 +3149,16 @@ export default function MainContent() {
           )}
           {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
+              {optimizationFailure && (
+                <div role="alert" aria-label={t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
+                  <p className="font-semibold">{t('sections.optimize.failure.title', 'Optimization failed')}</p>
+                  <p className="mt-1 text-sm">{optimizationFailure}</p>
+                  <GlassButton variant="secondary" className="mt-3" disabled={isOptimizing || isCheckingClarifications} onClick={() => {
+                    const args = retryOptimizeArgs.current;
+                    if (args) void handleOptimize(args.mode, { freePreview: args.freePreview });
+                  }}>{t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                </div>
+              )}
               <Suspense fallback={<SectionSkeleton />}>
                 <OptimizeSection
                   isPremium={isPremium}
@@ -3330,6 +3366,7 @@ export default function MainContent() {
             questions={clarificationQuestions}
             isOpen={isInterrogating}
             isRegenerating={isRegenerating}
+            error={clarificationError}
             round={clarificationRound}
             initialAnswers={clarificationDraft}
             onOptimizeNow={answers => { void handleClarificationSubmit(answers, true); }}

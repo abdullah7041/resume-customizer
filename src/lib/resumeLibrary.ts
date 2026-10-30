@@ -141,7 +141,7 @@ interface ResumeLibraryState {
   activeResumeId: string | null;
   initialized: boolean;
   initialize: (legacy?: ResumeLibraryInput | null) => Promise<void>;
-  saveResume: (input: ResumeLibraryInput) => Promise<ResumeLibraryEntry>;
+  saveResume: (input: ResumeLibraryInput, options?: { activate?: boolean }) => Promise<ResumeLibraryEntry>;
   activateResume: (id: string) => void;
   renameResume: (id: string, name: string) => Promise<void>;
   removeResume: (id: string) => Promise<void>;
@@ -165,14 +165,15 @@ export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
       try {
         let entries = await libraryDb.getAll();
         const migrated = migrateLegacyResume(entries, legacy);
-        if (migrated !== entries) {
+        const migratedLegacy = migrated !== entries;
+        if (migratedLegacy) {
           entries = migrated;
           await libraryDb.put(entries[0]);
         }
         const storedActive = typeof window === 'undefined' ? null : window.localStorage.getItem(ACTIVE_KEY);
         const activeResumeId = entries.some(entry => entry.id === storedActive)
           ? storedActive
-          : [...entries].sort((a, b) => b.updatedAt - a.updatedAt)[0]?.id ?? null;
+          : migratedLegacy ? entries[0]?.id ?? null : null;
         persistActiveId(activeResumeId);
         set({ entries, activeResumeId, initialized: true });
       } catch (error) {
@@ -186,12 +187,16 @@ export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
       initializationPromise = null;
     }
   },
-  saveResume: async (input) => {
+  saveResume: async (input, { activate = true } = {}) => {
     if (initializationPromise) await initializationPromise;
+    if (!activate) {
+      const existing = get().entries.find(entry => entry.fingerprint === fingerprintResume(input.plainText));
+      if (existing) return existing;
+    }
     const result = addResumeToLibrary(get().entries, input);
     await libraryDb.put(result.entry);
-    persistActiveId(result.entry.id);
-    set({ entries: result.entries, activeResumeId: result.entry.id });
+    if (activate) persistActiveId(result.entry.id);
+    set({ entries: result.entries, ...(activate ? { activeResumeId: result.entry.id } : {}) });
     return result.entry;
   },
   activateResume: (id) => {

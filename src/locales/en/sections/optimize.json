@@ -1,6 +1,7 @@
 {
   "sections": {
     "optimize": {
+      "failure": { "title": "Optimization failed", "retry": "Retry optimization" },
       "scoreDiff": {
         "title": "Score projection",
         "estimateBadge": "Estimate",
