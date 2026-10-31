@@ -29,4 +29,8 @@ Tooling: `RTK.md` is absent. CodeGraph's stale/omitted source required narrow di
 
 ## Live repair
 
-Pending deployment and explicit editor repair. The complete pre-repair preview was backed up locally as `watheq-resume-before-duplicate-repair.html`; the original uploaded PDF is retained. Live persistence and merge-preview verification remain required before claiming the saved resume is repaired.
+- Main commit `6f67d3413ab5245abbc51c5efa44dd0f457adff0` was published in Netlify deploy `6ae5dcbcfb95dca8ef8fb30d` at `2026-10-31T12:20:38.409Z`.
+- Reloaded the existing signed-in Brave tab, opened the native editor, and explicitly removed the three malformed recovery copies. Saved successfully through the new library persistence path.
+- A comparison of the complete rendered previews confirmed six jobs became three, all three complete jobs remained text-identical, and every other resume section remained text-identical. The complete pre-repair preview is backed up locally as `watheq-resume-before-duplicate-repair.html`; the original PDF is retained.
+- Reloaded again and reopened Experience: the three complete roles and their original employment dates remained. No duplicate employer-as-position rows returned.
+- The existing four edits passed the local merge qualification against this corrected content. Saving the baseline correctly invalidated the previous assessments in the live app, so a new live score-preview calculation was not claimed. No additional optimization was requested or credits used; the browser balance remained 11/20.

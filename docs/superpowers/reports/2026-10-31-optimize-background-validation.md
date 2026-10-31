@@ -28,4 +28,6 @@ No dependencies, database migrations, model substitutions, or relaxed evidence a
 
 ## Separate issue observed during live verification
 
+Resolved in the [duplicate work-entry follow-up](2026-10-31-duplicate-work-validation.md), including the saved resume's explicit repair and reload verification.
+
 The automatic score-preview simulation logged four merge failures. The template preview shows the same three employers twice: three complete roles followed by three partial recovery-style entries containing repeated bullets and wrapped fragments. `findMergeTarget` conservatively rejects multiple matching employers; that protection was preserved. The recovery path in `parse-quality.js:recoverSectionsFromRawText` compares populated positions before considering company identity, which warrants a separate parser reproduction with the original source and parse metadata. The stored resume was inspected without editing or saving it. Applying the cards and exporting the resulting resume have not been qualified by this repair.
