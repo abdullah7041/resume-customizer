@@ -11,6 +11,7 @@ import { GlassButton } from './GlassButton';
 import { GlassInput } from './GlassInput';
 import { useResumeStore } from '../../lib/stores/resumeStore';
 import type { ResumeSchema } from '../../types/resume';
+import { useResumeLibraryStore } from '@/lib/resumeLibrary';
 import { cn } from '../../lib/utils/cn';
 
 interface ManualDataEditorProps {
@@ -57,6 +58,8 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
     const [localResume, setLocalResume] = useState<ResumeSchema | null>(null);
     const [localFontSize, setLocalFontSize] = useState(1);
     const [hasChanges, setHasChanges] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState(false);
 
     // State for list management
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -67,6 +70,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
             setLocalResume(structuredClone(originalResume));
             setLocalFontSize(displayOptions.fontSize);
             setHasChanges(false);
+            setSaveError(false);
             setEditingIndex(null);
             setIsAddingNew(false);
         }
@@ -80,13 +84,23 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
 
     if (!isOpen) return null;
 
-    const handleSave = () => {
-        if (localResume) {
+    const handleSave = async () => {
+        if (!localResume || isSaving) return;
+        setIsSaving(true);
+        setSaveError(false);
+        try {
+            const library = useResumeLibraryStore.getState();
+            const active = library.entries.find(entry => entry.id === library.activeResumeId);
+            if (active) await library.saveResume({ ...active, parsedResume: localResume });
             setOriginalResume(localResume);
+            setDisplayOptions({ fontSize: localFontSize });
+            setHasChanges(false);
+            onClose();
+        } catch {
+            setSaveError(true);
+        } finally {
+            setIsSaving(false);
         }
-        setDisplayOptions({ fontSize: localFontSize });
-        setHasChanges(false);
-        onClose();
     };
 
     const updateNestedState = (path: string, value: any) => {
@@ -804,6 +818,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                                 <button
                                     key={tab.id}
                                     type="button"
+                                    disabled={isSaving}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-6 py-3 transition-colors relative",
@@ -825,7 +840,7 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                     </div>
 
                     <div className="p-4 border-t border-gray-200 dark:border-white/10 md:hidden flex justify-center">
-                        <button type="button" onClick={onClose} className="p-2 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white" aria-label={isArabic ? 'إغلاق' : 'Close'}>
+                        <button type="button" onClick={onClose} disabled={isSaving} className="p-2 text-gray-500 dark:text-white/50 hover:text-gray-900 dark:hover:text-white" aria-label={isArabic ? 'إغلاق' : 'Close'}>
                             <X className="w-6 h-6" />
                         </button>
                     </div>
@@ -846,29 +861,32 @@ export function ManualDataEditor({ isOpen, onClose }: ManualDataEditorProps) {
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <GlassButton variant="ghost" onClick={onClose} className="hidden md:flex">
+                            <GlassButton variant="ghost" onClick={onClose} disabled={isSaving} className="hidden md:flex">
                                 {isArabic ? 'إلغاء' : 'Cancel'}
                             </GlassButton>
                             <GlassButton
                                 variant="primary"
                                 onClick={handleSave}
-                                disabled={!hasChanges}
+                                disabled={!hasChanges || isSaving}
                                 className={cn(
                                     "min-w-[100px] transition-[color,background-color,border-color,opacity]",
                                     hasChanges ? "opacity-100 translate-y-0" : "opacity-50"
                                 )}
                             >
                                 <Save className="w-4 h-4 me-2" />
-                                {isArabic ? 'حفظ' : 'Save'}
+                                {isSaving ? (isArabic ? 'جارٍ الحفظ…' : 'Saving…') : (isArabic ? 'حفظ' : 'Save')}
                             </GlassButton>
                         </div>
                     </div>
 
                     {/* Scrollable Form Content */}
                     <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                        <div className="max-w-3xl mx-auto">
+                        <fieldset disabled={isSaving} className="max-w-3xl mx-auto min-w-0">
+                            {saveError && <p role="alert" className="mb-4 text-red-700 dark:text-red-300">
+                                {isArabic ? 'تعذر حفظ التغييرات. حاول مرة أخرى.' : 'Could not save your changes. Please try again.'}
+                            </p>}
                             {renderContent()}
-                        </div>
+                        </fieldset>
                     </div>
                 </div>
             </GlassCard>

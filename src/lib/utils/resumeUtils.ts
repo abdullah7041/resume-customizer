@@ -6,11 +6,11 @@
  */
 
 import { fuzzyTextMatch } from './textMatcher';
-import type { ResumeSchema } from '@/types/resume';
+import type { ResumeSchema, Work } from '@/types/resume';
 
 /**
  * Deduplicates an array of objects by their name property.
- * Used to prevent duplicate projects/work entries.
+ * Used to prevent duplicate projects.
  */
 export const deduplicateByName = <T extends { name?: string }>(arr: T[]): T[] => {
     if (!Array.isArray(arr)) return [];
@@ -18,6 +18,19 @@ export const deduplicateByName = <T extends { name?: string }>(arr: T[]): T[] =>
     return arr.filter(item => {
         const key = item.name?.toLowerCase().trim();
         if (!key) return true; // Keep items without names
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
+/** Compare complete content, ignoring empty defaults and property order. */
+export const deduplicateWork = (entries: Work[]): Work[] => {
+    const seen = new Set<string>();
+    return entries.filter(entry => {
+        const key = JSON.stringify(Object.entries(entry)
+            .filter(([, value]) => value != null && value !== '' && (!Array.isArray(value) || value.length > 0))
+            .sort(([left], [right]) => left.localeCompare(right)));
         if (seen.has(key)) return false;
         seen.add(key);
         return true;

@@ -21,7 +21,7 @@ import {
   OptimizationResultSchema,
   validateSearchIntent,
 } from '../validation/store-schemas';
-import { deduplicateByName, formatResumeToText } from '../utils/resumeUtils';
+import { deduplicateByName, deduplicateWork, formatResumeToText } from '../utils/resumeUtils';
 import { canMergeOptimization, mergeOptimizedResume } from '@/lib/optimize/mergeResume';
 import { isRecommendationOnly } from '@/lib/optimize/actionability';
 import { isConfirmationCurrent, proposalStatement } from '@/lib/optimize/evidenceReview';
@@ -82,7 +82,7 @@ const mergeProfilePatch = (base: ResumeSchema, patch: PartialResumeSchema): Resu
   }
 
   if (patch.work?.length) {
-    merged.work = deduplicateByName([...(merged.work ?? []), ...patch.work]);
+    merged.work = deduplicateWork([...(merged.work ?? []), ...patch.work]);
   }
   if (patch.projects?.length) {
     merged.projects = deduplicateByName([...(merged.projects ?? []), ...patch.projects]);
@@ -257,7 +257,7 @@ export const useResumeStore = create<ResumeState>()(
           validatedResume.projects = deduplicateByName(validatedResume.projects);
         }
         if (validatedResume.work) {
-          validatedResume.work = deduplicateByName(validatedResume.work);
+          validatedResume.work = deduplicateWork(validatedResume.work);
         }
 
         set((state) => {

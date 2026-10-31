@@ -518,13 +518,14 @@ export function parseWorkBlocks(lines) {
       : line;
     const isRoleTitle = withoutRange.length <= 60
       && /^\p{L}[\p{L}\p{M}\d&/.'+()-]*(?:\s+[\p{L}\p{M}\d&/.'+()-]+){0,7}$/u.test(withoutRange)
-      && /\b(?:analyst|engineer|scientist|manager|developer|specialist)(?:\s+\d+|\s+\([^)]*\))*$|^(?:محلل|مهندس|عالم|مدير|مطور|أخصائي)(?:ة)?(?:\s|$)/iu.test(withoutRange)
+      && /\b(?:analyst|engineer|scientist|manager|developer|specialist|technician)(?:\s+\d+|\s+\([^)]*\))*$|^(?:محلل|مهندس|عالم|مدير|مطور|أخصائي|فني)(?:ة)?(?:\s|$)/iu.test(withoutRange)
       && !/^(?:achieved|managed|led|developed|created|implemented|designed|improved|increased|reduced|optimized|delivered|executed|built|launched|established|directed|coordinated|analyzed|maintained|trained)\b/i.test(withoutRange)
       && nextLine.length > 0 && nextLine.length <= 60
       && !BULLET_PREFIX_RE.test(nextLine) && !/[.!?]$/.test(nextLine)
       && !/^(?:using|with|via|through|by|to|for|from|and|or|while|including|باستخدام|بواسطة|عبر|من خلال|مع)\s/i.test(nextLine)
       && !DATE_ONLY_RE.test(nextLine);
-    return COMPANY_SEP_RE.test(withoutRange)
+    return (isRoleTitle && Boolean(splitTrailingLocation(nextLine).location))
+      || COMPANY_SEP_RE.test(withoutRange)
       || Boolean(range && (!current || !/(?:19|20)\d{2}-(?:0[1-9]|1[0-2])/.test(range[0]) || isRoleTitle));
   };
 
@@ -541,6 +542,18 @@ export function parseWorkBlocks(lines) {
       : singleDate
         ? (line.slice(0, singleDate.index) + line.slice(singleDate.index + singleDate[0].length)).trim()
         : line;
+    // A stacked employer/location line belongs to the preceding role. Treating
+    // its separator as a new role swapped company/city into position/name and
+    // made recovery append a duplicate of an already complete AI-parsed job.
+    if (current?.position && !current.name && !current.highlights.length && !dateRange && !singleDate
+      && line.length <= 100 && !BULLET_PREFIX_RE.test(line) && !/[.!?)]$/.test(line)) {
+      const employer = splitTrailingLocation(withoutDate);
+      if (employer.location && !COMPANY_SEP_RE.test(employer.name)) {
+        current.name = employer.name;
+        current.location = employer.location;
+        continue;
+      }
+    }
     if (current && !withoutDate && !current.startDate && (dateRange || singleDate)) {
       current.startDate = (dateRange?.[1] || singleDate?.[0] || "").trim();
       if (dateRange) current.endDate = dateRange[2].trim();
@@ -1149,15 +1162,18 @@ export function recoverSectionsFromRawText(analysis = {}, signals, rawText) {
   const baselineWork = Array.isArray(baseline.work) ? baseline.work : [];
   if (sig.experience && baselineWork.length > 0) {
     const existingWork = Array.isArray(recovered.work) ? recovered.work.map((e) => ({ ...e })) : [];
-    const norm = (value) => String(value || "").toLowerCase().trim();
+    const norm = (value) => String(value || "").toLowerCase().replace(/\s+/g, " ").trim();
     const overlaps = (a, b) => a.length > 0 && b.length > 0 && (a.includes(b) || b.includes(a));
     // Compare by position when both sides have one (multiple roles at the same
     // company are distinct); fall back to company only when a position is absent.
     const isRepresented = (block) => existingWork.some((entry) => {
       const ep = norm(entry.position);
       const bp = norm(block.position);
+      const en = norm(entry.name);
+      const bn = norm(block.name);
+      if (en && bn && !overlaps(en, bn)) return false;
       if (ep && bp) return overlaps(ep, bp);
-      return overlaps(norm(entry.name), norm(block.name));
+      return overlaps(en, bn);
     });
 
     if (existingWork.length === 0) {

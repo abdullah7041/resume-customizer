@@ -65,6 +65,24 @@ describe('resumeStore merge integrity (Task 6 regressions)', () => {
     useResumeStore.getState().setOriginalResume(resumeWithContent());
   });
 
+  it('keeps distinct roles, employment periods, and bullet content at the same employer', () => {
+    const resume = resumeWithContent();
+    resume.work.push({ ...resume.work[0], position: 'Senior Backend Engineer', startDate: '2023-01',
+      highlights: ['Led the reliability programme'] });
+    resume.work.push({ ...resume.work[0], startDate: '2016-01', endDate: '2019-12' });
+    resume.work.push({ ...resume.work[0], highlights: ['Maintained a separately documented service'] });
+    useResumeStore.getState().setOriginalResume(resume);
+    expect(useResumeStore.getState().originalResume?.work).toHaveLength(4);
+    expect(useResumeStore.getState().originalResume?.work).toMatchObject(resume.work);
+  });
+
+  it('keeps a repeated onboarding work patch idempotent after store defaults are filled', () => {
+    const work = resumeWithContent().work;
+    useResumeStore.getState().patchProfile({ work });
+    useResumeStore.getState().patchProfile({ work });
+    expect(useResumeStore.getState().originalResume?.work).toHaveLength(1);
+  });
+
   // R7: an actionable card whose original text matches nothing in the resume must
   // NOT be marked applied — "marked applied" has to mean "changed resume content".
   it('R7: applyOptimization refuses an unmergeable actionable card (mergeStatus failed)', () => {

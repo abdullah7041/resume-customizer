@@ -240,6 +240,48 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
   const raw = buildRealisticResume();
   const signals = detectSectionSignals(raw);
 
+  it("does not append employer/location headers as new jobs after a complete parse", () => {
+    // Physical lines observed in the affected resume's recovery entries.
+    const source = [
+      "Experience", "Founder & Al Product Engineer", "Watheq | Riyadh, Saudi Arabia",
+      "Arabic-first Al resume and job-matching SaaS, live in production.",
+      "Aug 2025 Present",
+      "Instrumented production monitoring with Sentry and real-time Telegram alerting.",
+      "Data Analyst / Senior Sales Specialist", "Alghalia | Al-Ahsa, Saudi Arabia",
+      "Mar 2020 Present",
+      "Cut expired-unit waste 60% year-over-year through quantitative analysis of product expiration cycles.",
+      "Pipefitting Technician", "CB&I | Dammam, Saudi Arabia",
+      "Industrial pipefitting and field quality/safety inspection under international audit standards.",
+    ].join("\n");
+    const firstPass = { work: [
+      { name: "Watheq", position: "Founder & Al Product Engineer", startDate: "2025-08", endDate: "Present", highlights: [
+        "Instrumented production monitoring with Sentry and real-time Telegram alerting.",
+      ] },
+      { name: "Alghalia", position: "Data Analyst / Senior Sales Specialist", startDate: "2020-03", endDate: "Present", highlights: [
+        "Cut expired-unit waste 60% year-over-year through quantitative analysis of product expiration cycles.",
+      ] },
+      { name: "CB&I", position: "Pipefitting Technician", startDate: "2018-06", endDate: "2019-06", summary:
+        "Industrial pipefitting and field quality/safety inspection under international audit standards." },
+    ] };
+    const recovered = recoverSectionsFromRawText(firstPass, detectSectionSignals(source), source);
+    expect(recovered.analysis.work).toEqual(firstPass.work);
+    expect(recovered.fallbackSections).not.toContain("experience");
+  });
+
+  it("recovers the same role at a different employer without conflating employers", () => {
+    const source = "Experience\nEngineer at FirstCo 2020 - 2021\nBuilt reports.\nEngineer at SecondCo 2022 - Present\nMaintained pipelines.";
+    const firstPass = { work: [{ name: "FirstCo", position: "Engineer", startDate: "2020", endDate: "2021" }] };
+    const recovered = recoverSectionsFromRawText(firstPass, detectSectionSignals(source), source);
+    expect(recovered.analysis.work.map(entry => entry.name)).toEqual(["FirstCo", "SecondCo"]);
+  });
+
+  it("compares employer identity across PDF whitespace differences", () => {
+    const source = "Experience\nEngineer at First  Co 2020 - 2021\nBuilt reports.";
+    const firstPass = { work: [{ name: "First Co", position: "Engineer", startDate: "2020", endDate: "2021" }] };
+    const recovered = recoverSectionsFromRawText(firstPass, detectSectionSignals(source), source);
+    expect(recovered.analysis.work).toEqual(firstPass.work);
+  });
+
   it("does not append date fragments when ISO-dated roles are already parsed", () => {
     const isoRaw = [
       "Nora Example", "Experience", "Senior Engineer", "Cedar Labs", "2022-01 — 2024-06",
@@ -296,6 +338,15 @@ describe("recoverSectionsFromRawText — work recovery when AI drops entries", (
 });
 
 describe("parseWorkBlocks — conservative header detection", () => {
+  it.each(["2023 - Present", ""])("keeps an explicit new role when the previous employer is missing (%s)", dates => {
+    const work = parseWorkBlocks([
+      "Senior Engineer 2021 - 2022", `Junior Analyst at BetaCo | Riyadh, Saudi Arabia ${dates}`,
+      "Built reports.",
+    ]);
+    expect(work).toHaveLength(2);
+    expect(work[0]).toMatchObject({ position: "Senior Engineer", startDate: "2021", endDate: "2022" });
+    expect(work[1]).toMatchObject({ position: "Junior Analyst", name: "BetaCo", location: "Riyadh, Saudi Arabia" });
+  });
   it.each([
     ["Junior Analyst", "2020 - 2021-06", "2020", "2021-06"],
     ["Junior Analyst", "2020-01 - 2021", "2020-01", "2021"],
