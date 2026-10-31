@@ -4,6 +4,11 @@ import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceRes
 const mocks = vi.hoisted(() => ({
   optimizeResume: vi.fn(), executeAiContract: vi.fn(), getCached: vi.fn(), setCached: vi.fn(),
   checkCredits: vi.fn(), consumeCredits: vi.fn(), getUser: vi.fn(),
+  readJob: vi.fn(), claimWorker: vi.fn(), finishJob: vi.fn(), previewLimit: vi.fn(),
+}));
+vi.mock('../optimization-jobs.js', async importOriginal => ({
+  ...await importOriginal<typeof import('../optimization-jobs.js')>(),
+  readOptimizationJob: mocks.readJob, claimOptimizationWorker: mocks.claimWorker, finishOptimizationJob: mocks.finishJob,
 }));
 vi.mock('../gemini-client.js', () => ({ optimizeResume: mocks.optimizeResume }));
 vi.mock('../ai-contracts/executor.js', () => ({ executeAiContract: mocks.executeAiContract }));
@@ -12,12 +17,13 @@ vi.mock('../credit-manager.js', () => ({ FEATURE_COSTS: { optimize: 5 }, checkCr
   consumeCredits: mocks.consumeCredits, addCredits: vi.fn(), isEmailVerified: () => true }));
 vi.mock('../supabase-client.js', () => ({ getSupabaseClient: () => ({ auth: { getUser: mocks.getUser } }) }));
 vi.mock('../rate-limiter.js', () => ({ withRateLimit: (_: string, handler: unknown) => handler,
-  checkRateLimitForRequest: async () => ({ allowed: true }), checkFreePreviewRateLimitForRequest: async () => ({ allowed: true }) }));
+  checkFreePreviewRateLimit: mocks.previewLimit, checkRateLimitForRequest: async () => ({ allowed: true }), checkFreePreviewRateLimitForRequest: async () => ({ allowed: true }) }));
 vi.mock('../sentry.js', () => ({ initSentry: vi.fn(), captureError: vi.fn(), summarizeErrorForLog: () => 'error' }));
 vi.mock('../vulnerability-detector.js', () => ({ detectVulnerabilities: () => [] }));
 
-const { handler: ordinary } = await import('../../functions/optimize.js');
-const { default: streaming } = await import('../../functions/optimize-stream.js');
+const { runOptimization: ordinary } = await import('../../functions/optimize.js');
+const { default: background } = await import('../../functions/optimize-background.js');
+const { newOptimizationJob, optimizationEnvelope } = await import('../optimization-jobs.js');
 const { handler: refine } = await import('../../functions/refine-bullet.js');
 const resumeText = 'Maintained customer reports.\nBuilt Excel dashboards at Example A.';
 const jobText = 'Reporting analyst';
@@ -41,7 +47,7 @@ beforeEach(() => {
 describe('evidence at editing endpoints', () => {
   it('keeps one valid ordinary edit and rejects its invalid sibling before billing', async () => {
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number; body: string };
+      body: JSON.stringify({ resumeText, jobText }) } as never) as { statusCode: number; body: string };
     const body = JSON.parse(response.body);
     expect(response.statusCode).toBe(200);
     expect(body.cards).toHaveLength(1);
@@ -52,16 +58,35 @@ describe('evidence at editing endpoints', () => {
     expect(mocks.optimizeResume.mock.calls[0][6].evidenceSources[0]).toEqual(source);
   });
 
-  it('returns the same evidence from the streaming result', async () => {
-    const response = await streaming(new Request('http://localhost/api/optimize-stream', { method: 'POST',
-      headers: { authorization: 'Bearer token' }, body: JSON.stringify({ resumeText, jobText }) }));
-    const text = await response.text();
-    const result = JSON.parse(text.match(/event: result\ndata: ([^\n]+)/)?.[1] || '{}');
+  it('delivers the same validated evidence through the background worker', async () => {
+    const body = JSON.stringify({ resumeText, jobText });
+    const job = newOptimizationJob(body);
+    mocks.readJob.mockResolvedValue(job);
+    mocks.claimWorker.mockResolvedValue(true);
+    mocks.finishJob.mockResolvedValue(true);
+    await background(new Request('https://watheqai.app/.netlify/functions/optimize-background', {
+      method: 'POST', body: JSON.stringify(optimizationEnvelope(`watheq:optimize:${'a'.repeat(64)}:job`, job, body, { authorization: 'Bearer token' })),
+    }));
+    const result = mocks.finishJob.mock.calls[0][1].result;
     expect(result.cards).toHaveLength(1);
     expect(result.cards[0].evidence.status).toBe('needs_review');
     expect(result.evidenceDiagnostics).toMatchObject([{ status: 422, code: 'EVIDENCE_INVALID' }]);
     expect(result.evidenceInputOmissions).toEqual({ resumeCharacters: 0, clarificationCharacters: 0 });
     expect(mocks.consumeCredits).toHaveBeenCalledTimes(1);
+  });
+
+  it('reserves one guest preview for one claimed worker, including duplicate deliveries', async () => {
+    const body = JSON.stringify({ resumeText, jobText, freePreview: true });
+    const job = newOptimizationJob(body);
+    mocks.readJob.mockResolvedValue(job);
+    mocks.claimWorker.mockResolvedValueOnce(true).mockResolvedValue(false);
+    mocks.finishJob.mockResolvedValue(true);
+    mocks.previewLimit.mockResolvedValue({ allowed: true });
+    const envelope = optimizationEnvelope(`watheq:optimize:${'a'.repeat(64)}:job`, job, body, {});
+    for (let attempt = 0; attempt < 2; attempt += 1) await background(new Request('https://watheqai.app/.netlify/functions/optimize-background', { method: 'POST', body: JSON.stringify(envelope) }));
+    expect(mocks.previewLimit).toHaveBeenCalledTimes(1);
+    expect(mocks.optimizeResume).toHaveBeenCalledTimes(1);
+    expect(mocks.consumeCredits).not.toHaveBeenCalled();
   });
 
   it('rejects unsupported refinement without returning or billing an edit', async () => {
@@ -87,8 +112,9 @@ describe('evidence at editing endpoints', () => {
   it('does not charge when all proposed edits lack evidence', async () => {
     mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [invalid] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number };
+      body: JSON.stringify({ resumeText, jobText }) } as never) as { statusCode: number; body: string };
     expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body)).toMatchObject({ billingStateUnknown: false });
     expect(mocks.consumeCredits).not.toHaveBeenCalled();
     expect(mocks.setCached).not.toHaveBeenCalled();
   });
@@ -96,7 +122,7 @@ describe('evidence at editing endpoints', () => {
   it('regenerates a legacy cache without evidence before charging', async () => {
     mocks.getCached.mockResolvedValue({ cards: [{ section: 'Experience', exampleAfter: 'Old edit' }] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number; body: string; headers: Record<string, string> };
+      body: JSON.stringify({ resumeText, jobText }) } as never) as { statusCode: number; body: string; headers: Record<string, string> };
     expect(response.statusCode).toBe(200);
     expect(response.headers['X-Cache']).not.toBe('HIT');
     expect(JSON.parse(response.body)).toMatchObject({ evidenceVersion: 2 });
@@ -109,7 +135,7 @@ describe('evidence at editing endpoints', () => {
       version: 1, status: 'needs_review', references: [{ sourceId: source.id, quote: source.text }],
     } }] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText, jobText }) } as never, {} as never) as { statusCode: number; headers: Record<string, string> };
+      body: JSON.stringify({ resumeText, jobText }) } as never) as { statusCode: number; headers: Record<string, string> };
     expect(response.headers['X-Cache']).toBe('HIT');
     expect(mocks.optimizeResume).not.toHaveBeenCalled();
     expect(mocks.consumeCredits).not.toHaveBeenCalled();
@@ -135,7 +161,7 @@ describe('evidence at editing endpoints', () => {
     expect(evidenceInputOmissions(normalResume, userClarifications, sources)).toEqual({ resumeCharacters: 0, clarificationCharacters: 0 });
     mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [invalid] });
     await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText: normalResume, jobText, userClarifications }) } as never, {} as never);
+      body: JSON.stringify({ resumeText: normalResume, jobText, userClarifications }) } as never);
     expect(mocks.optimizeResume.mock.calls[0][0]).toContain('Role 99:');
     expect(mocks.optimizeResume.mock.calls[0][6].evidenceSources).toEqual(sources);
   });
@@ -143,7 +169,7 @@ describe('evidence at editing endpoints', () => {
   it('discloses input omitted beyond the provider limit', async () => {
     const longResume = `${source.text}\n${'A'.repeat(40000)}`;
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText: longResume, jobText }) } as never, {} as never) as { statusCode: number; body: string };
+      body: JSON.stringify({ resumeText: longResume, jobText }) } as never) as { statusCode: number; body: string };
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body).evidenceInputOmissions).toMatchObject({ clarificationCharacters: 0 });
     expect(JSON.parse(response.body).evidenceInputOmissions.resumeCharacters).toBeGreaterThan(25000);
@@ -153,7 +179,7 @@ describe('evidence at editing endpoints', () => {
     const longResume = `Unique achievement ${'A'.repeat(14000)}\nTrailing role`;
     mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [invalid] });
     await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText: longResume, jobText }) } as never, {} as never);
+      body: JSON.stringify({ resumeText: longResume, jobText }) } as never);
     const sent = mocks.optimizeResume.mock.calls[0][0] as string;
     const sentSources = mocks.optimizeResume.mock.calls[0][6].evidenceSources;
     expect(sentSources.length).toBeGreaterThan(0);
@@ -176,7 +202,7 @@ describe('evidence at editing endpoints', () => {
       evidence_references: [{ sourceId: clarification.id, quote: clarification.text }],
     }] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
-      body: JSON.stringify({ resumeText, jobText, userClarifications }) } as never, {} as never) as { statusCode: number; body: string };
+      body: JSON.stringify({ resumeText, jobText, userClarifications }) } as never) as { statusCode: number; body: string };
     const body = JSON.parse(response.body);
     expect(response.statusCode).toBe(200);
     expect(body.cards[0].evidence).toMatchObject({ status: 'needs_review', targetId: source.targetId, reasons: ['semantic_review'] });

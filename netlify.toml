@@ -45,11 +45,8 @@
 [functions."feed-match"]
   timeout = 90  # One 65s match attempt per request + auth/cache/response headroom
 
-[functions."optimize"]
-  timeout = 60  # 40s AI deadline leaves time for validation, credits and delivery
-
-[functions."optimize-stream"]
-  timeout = 60  # Streaming functions have the same platform execution limit
+# Optimization HTTP routes only dispatch/poll. The native optimize-background
+# function performs generation under its 15-minute background execution limit.
 
 [functions."generate-cover-letter"]
   timeout = 60  # Increased: OpenRouter timeout 50s + 10s buffer

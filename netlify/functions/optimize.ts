@@ -1,7 +1,8 @@
-import { Handler } from '@netlify/functions';
+import type { Handler, HandlerEvent } from '@netlify/functions';
 import { createHash } from 'crypto';
 import { optimizeResume } from "../lib/gemini-client.js";
-import { checkFreePreviewRateLimit, withRateLimit } from "../lib/rate-limiter.js";
+import { checkFreePreviewRateLimit } from "../lib/rate-limiter.js";
+import dispatchOptimization from './optimize-stream.js';
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
 import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
 import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
@@ -31,7 +32,8 @@ async function attachLiveCredits<T extends Record<string, unknown>>(
   }
 }
 
-const baseHandler: Handler = async (event) => {
+export const runOptimization = async (event: HandlerEvent) => {
+  let billingStateUnknown = false;
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -275,6 +277,7 @@ const baseHandler: Handler = async (event) => {
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
     // Consume credits AFTER successful optimization
+    billingStateUnknown = !freePreview && Boolean(userEmail);
     const creditResult = freePreview || !userEmail
       ? { success: true, creditsRemaining: null }
       : await consumeCredits(userEmail, 'optimize');
@@ -426,11 +429,20 @@ const baseHandler: Handler = async (event) => {
         error: isTimeout
           ? 'Optimization timed out. Retrying automatically...'
           : 'Failed to optimize resume',
-        retryable: isTimeout
+        retryable: isTimeout,
+        billingStateUnknown,
       }),
     };
   }
 };
 
-// Export handler with rate limiting applied
-export const handler = withRateLimit("optimize", baseHandler);
+// Legacy callers share the same durable job ownership as the modern endpoint.
+export const handler: Handler = async (event) => {
+  const origin = process.env.DEPLOY_URL || process.env.URL || 'https://watheqai.app';
+  const response = await dispatchOptimization(new Request(new URL('/api/optimize-stream', origin), {
+    method: event.httpMethod,
+    headers: Object.fromEntries(Object.entries(event.headers).filter((entry): entry is [string, string] => typeof entry[1] === 'string')),
+    ...(event.httpMethod === 'POST' ? { body: event.isBase64Encoded ? Buffer.from(event.body || '', 'base64') : event.body || '{}' } : {}),
+  }));
+  return { statusCode: response.status, headers: Object.fromEntries(response.headers), body: await response.text() };
+};

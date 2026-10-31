@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const mockJobs = {
+  readOptimizationJob: vi.fn(), claimOptimizationJob: vi.fn(), dispatchOptimizationJob: vi.fn(),
+};
+vi.mock('../../lib/optimization-jobs.js', async importOriginal => ({
+  ...await importOriginal<typeof import('../../lib/optimization-jobs.js')>(), ...mockJobs,
+}));
+
 const mockGeminiClient = {
   optimizeResume: vi.fn(),
 };
@@ -78,6 +85,9 @@ const buildRequest = (headers: Record<string, string> = {}, body: Record<string,
 describe('optimize-stream function', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockJobs.readOptimizationJob.mockResolvedValue(null);
+    mockJobs.claimOptimizationJob.mockResolvedValue(true);
+    mockJobs.dispatchOptimizationJob.mockResolvedValue(undefined);
     mockRateLimiter.checkRateLimitForRequest.mockResolvedValue({ allowed: true });
     mockSupabase.auth.getUser.mockResolvedValue({
       data: {
@@ -157,7 +167,8 @@ describe('optimize-stream function', () => {
     mockRedisCache.getCached.mockResolvedValue({ cards: [{ section: 'Experience', exampleAfter: 'Old edit' }] });
     const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
     expect(response.headers.get('X-Cache')).not.toBe('HIT');
-    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledTimes(1);
+    expect(response.status).toBe(202);
+    expect(mockJobs.dispatchOptimizationJob).toHaveBeenCalledTimes(1);
   });
 
   it('does not return a cached empty card payload as a successful optimization', async () => {
@@ -166,27 +177,13 @@ describe('optimize-stream function', () => {
       keywords: { add: [], neutral: [], remove: [] },
       source: 'gemini',
     });
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 5,
-    });
-
     const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
+    expect(response.status).toBe(202);
     expect(response.headers.get('X-Cache')).not.toBe('HIT');
-    expect(streamText).toContain('event: result');
-    expect(streamText).toContain('React');
+    expect(await response.json()).toEqual({ pending: true });
     expect(mockCreditManager.checkCredits).toHaveBeenCalled();
-    expect(mockGeminiClient.optimizeResume).toHaveBeenCalled();
+    expect(mockJobs.dispatchOptimizationJob).toHaveBeenCalledTimes(1);
+    expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
   });
 
   it('does not charge or regenerate when cache-only recovery misses', async () => {
@@ -216,222 +213,58 @@ describe('optimize-stream function', () => {
     );
   });
 
-  it('stores cache misses with a short optimization TTL', async () => {
+  it('queues exactly one background request without generating or charging in HTTP', async () => {
     mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 5,
-    });
-
     const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get('Content-Type')).toContain('text/event-stream');
-    expect(streamText).toContain('event: result');
-    expect(mockRedisCache.setCached).toHaveBeenCalledWith(
-      'mock-cache-key',
-      expect.objectContaining({
-        source: 'gemini',
-      }),
-      600
-    );
-    expect(mockRedisCache.setCached.mock.calls[0][1]).not.toHaveProperty('creditsRemaining');
-  });
-
-  it('restores consumed credits when result delivery fails', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 5,
-    });
-    mockCreditManager.addCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 10,
-    });
-
-    const originalEnqueue = ReadableStreamDefaultController.prototype.enqueue;
-    vi.spyOn(ReadableStreamDefaultController.prototype, 'enqueue').mockImplementation(function (chunk) {
-      const eventText = chunk instanceof Uint8Array
-        ? new TextDecoder().decode(chunk)
-        : '';
-      if (eventText.includes('event: result')) {
-        throw new Error('Result delivery failed');
-      }
-      return originalEnqueue.call(this, chunk);
-    });
-
-    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(streamText).toContain('event: error');
-    expect(mockCreditManager.addCredits).toHaveBeenCalledWith(
-      'user@example.com',
-      5,
-      'refund',
-      expect.objectContaining({
-        feature: 'optimize',
-        reason: 'result_delivery_failed',
-      }),
-    );
-    expect(streamText).toContain('"billingStateUnknown":false');
-  });
-
-  it('threads pseudonymous attribution without passing content in options', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 5,
-    });
-
-    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    await response.text();
-
-    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledWith(
-      'Resume text with enough detail',
-      'Job description with enough detail',
-      'en',
-      [],
-      undefined,
-      undefined,
-      expect.objectContaining({
-        featureName: 'optimize_stream',
-        userRef: '11111111-1111-4111-8111-111111111111',
-        jdFingerprint: '4199a1957ebd4e07',
-        evidenceSources: expect.any(Array),
-      })
-    );
-    const options = mockGeminiClient.optimizeResume.mock.calls[0][6];
-    expect(options).not.toHaveProperty('resumeText');
-    expect(options).not.toHaveProperty('jobText');
-    expect(options).not.toHaveProperty('messages');
-  });
-
-  it('includes user hard stops in the cache key and optimize contract options', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: [],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({ success: true, creditsRemaining: 5 });
-
-    const response = await handler(buildRequest(
-      { Authorization: 'Bearer test-token' },
-      { userHardStops: ['Excel'] },
-    ));
-    await response.text();
-
-    expect(mockRedisCache.buildOptimizeCacheKey).toHaveBeenCalledWith(
-      expect.objectContaining({ userHardStops: ['Excel'] }),
-    );
-    expect(mockGeminiClient.optimizeResume).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      'en',
-      [],
-      undefined,
-      ['Excel'],
-      expect.objectContaining({ featureName: 'optimize_stream' }),
-    );
-  });
-
-  it('does not cache a fake zero score when the AI omits score data', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 5,
-    });
-
-    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(response.status).toBe(200);
-    expect(streamText).toContain('event: error');
-    expect(streamText).toContain('Failed to optimize resume');
-    expect(mockRedisCache.setCached).not.toHaveBeenCalled();
-  });
-
-  it('emits an error and no result when credit consumption loses the race', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: false,
-      creditsRemaining: 0,
-    });
-
-    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(streamText).toContain('event: error');
-    expect(streamText).toContain('Insufficient credits');
-    expect(streamText).not.toContain('event: result');
-    expect(mockRedisCache.setCached).not.toHaveBeenCalled();
-  });
-
-  it('marks post-charge cache failures as billing-state unknown when the refund is unconfirmed', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockResolvedValue({
-      match_score: 60,
-      missing_keywords: ['React'],
-      keywords_to_keep: [],
-      keywords_to_avoid: [],
-    });
-    mockCreditManager.consumeCredits.mockResolvedValue({
-      success: true,
-      creditsRemaining: 5,
-    });
-    mockCreditManager.addCredits.mockResolvedValue({
-      success: false,
-      creditsRemaining: 5,
-    });
-    mockRedisCache.setCached.mockRejectedValue(new Error('Redis unavailable'));
-
-    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(streamText).toContain('event: error');
-    expect(streamText).toContain('"billingStateUnknown":true');
-  });
-
-  it('marks pre-charge AI failures as billing-state known safe', async () => {
-    mockRedisCache.getCached.mockResolvedValue(null);
-    mockGeminiClient.optimizeResume.mockRejectedValue(new Error('AI unavailable'));
-
-    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
-    const streamText = await response.text();
-
-    expect(streamText).toContain('event: error');
-    expect(streamText).toContain('"billingStateUnknown":false');
+    expect(response.status).toBe(202);
+    expect(await response.json()).toEqual({ pending: true });
+    expect(mockJobs.dispatchOptimizationJob).toHaveBeenCalledTimes(1);
+    expect(mockGeminiClient.optimizeResume).not.toHaveBeenCalled();
     expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+  });
+  it('polls a running job without generation, credit checks or another handoff', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockJobs.readOptimizationJob.mockResolvedValue({ state: 'running' });
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }, { cacheOnly: true }));
+    expect(response.status).toBe(202);
+    expect(mockCreditManager.checkCredits).not.toHaveBeenCalled();
+    expect(mockJobs.dispatchOptimizationJob).not.toHaveBeenCalled();
+    expect(mockJobs.claimOptimizationJob).not.toHaveBeenCalled();
+    expect(mockRateLimiter.checkRateLimitForRequest).toHaveBeenCalledWith(expect.any(Request), 'optimize-status');
+  });
+  it('does not redispatch when an existing worker is running, even with no remaining credits', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockJobs.readOptimizationJob.mockResolvedValue({ state: 'running' });
+    mockJobs.claimOptimizationJob.mockResolvedValue(false);
+    mockCreditManager.checkCredits.mockResolvedValue({ hasCredits: false, required: 5, available: 0 });
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    expect(response.status).toBe(202);
+    expect(mockJobs.dispatchOptimizationJob).not.toHaveBeenCalled();
+  });
+  it('blocks redispatch after an uncertain billing failure', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockJobs.readOptimizationJob.mockResolvedValue({ state: 'failed', error: { error: 'Unknown debit', status: 503, billingStateUnknown: true } });
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ billingStateUnknown: true });
+    expect(mockJobs.claimOptimizationJob).not.toHaveBeenCalled();
+  });
+  it('fails closed when required job storage is unavailable', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    mockJobs.readOptimizationJob.mockRejectedValue(new Error('Redis unavailable'));
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
+    expect(response.status).toBe(503);
+    expect(mockJobs.dispatchOptimizationJob).not.toHaveBeenCalled();
+    expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
+  });
+  it('rejects an oversized UTF-8 envelope before claiming a job', async () => {
+    mockRedisCache.getCached.mockResolvedValue(null);
+    const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }, {
+      resumeText: 'ع'.repeat(49000), jobText: 'ع'.repeat(29000), userClarifications: 'ع'.repeat(49000),
+    }));
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ billingStateUnknown: false });
+    expect(mockJobs.claimOptimizationJob).not.toHaveBeenCalled();
+    expect(mockJobs.dispatchOptimizationJob).not.toHaveBeenCalled();
   });
 });

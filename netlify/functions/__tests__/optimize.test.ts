@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/functions';
+import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
 
 // Mock dependencies BEFORE importing handler
 vi.mock('../../lib/gemini-client', () => ({
@@ -74,27 +74,10 @@ import { buildOptimizeCacheKey, getCached, setCached } from '../../lib/redis-cac
 import { checkCredits, consumeCredits } from '../../lib/credit-manager.js';
 
 // Import handler after mocks
-const { handler } = await import('../optimize.js');
+const { runOptimization: handler } = await import('../optimize.js');
 
 // Test auth header
 const TEST_HEADERS = { 'Authorization': 'Bearer test-token' };
-
-// Helper to create mock context
-const createMockContext = (): HandlerContext => ({
-    callbackWaitsForEmptyEventLoop: true,
-    functionName: 'optimize',
-    functionVersion: '$LATEST',
-    invokedFunctionArn: 'arn:aws:lambda:us-east-1:123456789:function:optimize',
-    memoryLimitInMB: '128',
-    awsRequestId: 'test-request-id',
-    logGroupName: '/aws/lambda/optimize',
-    logStreamName: '2024/01/01/[$LATEST]test',
-    getRemainingTimeInMillis: () => 30000,
-    done: () => { },
-    fail: () => { },
-    succeed: () => { },
-    clientContext: undefined
-});
 
 describe('optimize function', () => {
     beforeEach(() => {
@@ -112,10 +95,22 @@ describe('optimize function', () => {
         });
     });
 
+    it('keeps billing unknown if the debit operation fails after it starts', async () => {
+        vi.mocked(optimizeResume).mockResolvedValue({ match_score: 55 });
+        vi.mocked(consumeCredits).mockRejectedValueOnce(new Error('Debit response lost'));
+        const event: HandlerEvent = { httpMethod: 'POST', headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'Resume text', jobText: 'Target job' }),
+            rawUrl: 'https://watheqai.app/.netlify/functions/optimize', rawQuery: '', path: '/.netlify/functions/optimize',
+            multiValueHeaders: {}, queryStringParameters: null, multiValueQueryStringParameters: null, isBase64Encoded: false };
+        const response = await handler(event);
+        expect(response.statusCode).toBe(500);
+        expect(JSON.parse(response.body)).toMatchObject({ billingStateUnknown: true });
+    });
+
     describe('HTTP method validation', () => {
         it('rejects GET requests with 405', async () => {
             const event = { httpMethod: 'GET', body: null } as Partial<HandlerEvent>;
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(405);
         });
 
@@ -127,7 +122,7 @@ describe('optimize function', () => {
                 headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test', jobText: 'test job' })
             } as Partial<HandlerEvent>;
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(200);
         });
     });
@@ -139,7 +134,7 @@ describe('optimize function', () => {
                 headers: TEST_HEADERS,
                 body: JSON.stringify({ jobText: 'test job' })
             } as Partial<HandlerEvent>;
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(400);
             expect(JSON.parse(result.body).error).toContain('resumeText');
         });
@@ -150,7 +145,7 @@ describe('optimize function', () => {
                 headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: 'test resume' })
             } as Partial<HandlerEvent>;
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(400);
             expect(JSON.parse(result.body).error).toContain('jobText');
         });
@@ -161,7 +156,7 @@ describe('optimize function', () => {
                 headers: TEST_HEADERS,
                 body: JSON.stringify({ resumeText: '', jobText: '' })
             } as Partial<HandlerEvent>;
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(400);
         });
 
@@ -171,7 +166,7 @@ describe('optimize function', () => {
                 headers: TEST_HEADERS,
                 body: 'not json'
             } as Partial<HandlerEvent>;
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(400);
             expect(JSON.parse(result.body).error).toBe('Invalid JSON body');
         });
@@ -189,7 +184,7 @@ describe('optimize function', () => {
             }),
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+        const result = await handler(event as HandlerEvent) as HandlerResponse;
 
         expect(result.statusCode).toBe(200);
         expect(buildOptimizeCacheKey).toHaveBeenCalledWith(expect.objectContaining({
@@ -228,7 +223,7 @@ describe('optimize function', () => {
             body: JSON.stringify({ resumeText: 'test resume', jobText: 'React job' }),
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+        const result = await handler(event as HandlerEvent) as HandlerResponse;
         const body = JSON.parse(result.body);
 
         expect(result.statusCode).toBe(200);
@@ -264,7 +259,7 @@ describe('optimize function', () => {
             body: JSON.stringify({ resumeText: 'test resume', jobText: 'React job' }),
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+        const result = await handler(event as HandlerEvent) as HandlerResponse;
         const body = JSON.parse(result.body);
 
         expect(result.statusCode).toBe(200);
@@ -293,7 +288,7 @@ describe('optimize function', () => {
             body: JSON.stringify({ resumeText: 'test resume', jobText: 'React job' }),
         } as Partial<HandlerEvent>;
 
-        const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+        const result = await handler(event as HandlerEvent) as HandlerResponse;
 
         expect(result.statusCode).toBe(403);
         expect(JSON.parse(result.body).error).toBe('Insufficient credits');
@@ -314,7 +309,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             const body = JSON.parse(result.body);
 
             expect(body.cards).toContainEqual(
@@ -338,7 +333,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             const body = JSON.parse(result.body);
 
             expect(body.cards).toContainEqual(
@@ -363,7 +358,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             const body = JSON.parse(result.body);
 
             expect(body.cards.filter((c: any) => c.section === 'Experience')).toHaveLength(1);
@@ -378,7 +373,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             const body = JSON.parse(result.body);
 
             // With no optimizations, fallback card should be generated
@@ -398,7 +393,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             const body = JSON.parse(result.body);
 
             expect(result.statusCode).toBe(200);
@@ -422,7 +417,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(500);
             expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
         });
@@ -438,7 +433,7 @@ describe('optimize function', () => {
                 body: JSON.stringify({ resumeText: 'test', jobText: 'job' })
             } as Partial<HandlerEvent>;
 
-            const result = await handler(event as HandlerEvent, createMockContext()) as HandlerResponse;
+            const result = await handler(event as HandlerEvent) as HandlerResponse;
             expect(result.statusCode).toBe(500);
             expect(JSON.parse(result.body).error).toBe('Failed to optimize resume');
         });

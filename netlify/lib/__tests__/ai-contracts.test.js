@@ -123,9 +123,9 @@ describe('AI contract layer', () => {
       expect(prompt).not.toMatch(/<resume_text>\n/);
     }
   });
-  it('keeps Optimize within Netlify’s 60-second execution window without a second provider attempt', () => {
+  it('bounds background Optimize to one provider attempt within the worker lifetime', () => {
     for (const id of ['optimize', 'optimize_stream']) {
-      expect(aiContracts[id].timeoutMs).toBeLessThanOrEqual(40000);
+      expect(aiContracts[id].timeoutMs).toBeLessThan(900000);
       expect(aiContracts[id].disableFallback).toBe(true);
     }
   });

@@ -214,6 +214,55 @@ describe('optimizeResumeStream billing-state errors', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls.slice(1).every(([, init]) => JSON.parse(init.body).cacheOnly)).toBe(true);
   });
+
+  it('waits beyond 30 seconds for a background result without starting another paid request', async () => {
+    vi.useFakeTimers();
+    const started = Date.now();
+    const fetchMock = vi.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (!body.cacheOnly || Date.now() - started < 35000) {
+        return new Response(JSON.stringify({ pending: true }), {
+          status: 202, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ cards: [{ id: 'background-result' }] }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const assertion = expect(optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' }))
+      .resolves.toMatchObject({ cards: [{ id: 'background-result' }] });
+    await vi.advanceTimersByTimeAsync(45000);
+    await assertion;
+    expect(fetchMock.mock.calls.filter(([, init]) => !JSON.parse(init.body).cacheOnly)).toHaveLength(1);
+  });
+
+  it.each(['network', 'rate limit'])('continues the same pending job after a temporary poll %s failure', async kind => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('{"pending":true}', { status: 202 }))
+      .mockImplementationOnce(async () => {
+        if (kind === 'network') throw new TypeError('Connection lost');
+        return new Response('{"error":"Too many requests"}', { status: 429 });
+      })
+      .mockResolvedValueOnce(new Response('{"cards":[{"id":"same-job"}]}', { headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+    const assertion = expect(optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' })).resolves.toMatchObject({ cards: [{ id: 'same-job' }] });
+    const observed = assertion.then(() => true, error => error);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(await observed).toBe(true);
+    expect(fetchMock.mock.calls.filter(([, init]) => !JSON.parse(init.body).cacheOnly)).toHaveLength(1);
+  });
+  it('keeps billing unknown when authentication expires while a background job is running', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response('{"pending":true}', { status: 202 }))
+      .mockResolvedValueOnce(new Response('{"error":"Session expired"}', { status: 401 })));
+    const assertion = expect(optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' })).rejects.toMatchObject({ status: 401, isBillingStateUnknown: true });
+    const observed = assertion.then(() => true, error => error);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(await observed).toBe(true);
+  });
 });
 
 it('preserves refinement evidence and omission counts from the API', async () => {

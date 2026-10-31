@@ -1386,9 +1386,9 @@ export const aiContracts = {
     // cap in the prompt bounds growth; this gives headroom. Latency stays well under
     // timeoutMs (worst observed ~46s).
     maxTokens: 24576,
-    // Netlify streaming and synchronous functions stop at 60s. Leave time for
-    // auth, output validation, credit handling and delivery; no stacked fallback.
-    timeoutMs: 40000,
+    // Generation runs in a native background worker; HTTP routes only dispatch/poll.
+    // One bounded provider attempt, leaving ample room within the 15-minute worker.
+    timeoutMs: 90000,
     disableFallback: true,
     temperature: 0,
     reasoningBudget: 2048,
@@ -1404,7 +1404,7 @@ export const aiContracts = {
     featureName: 'optimize_stream',
     // 24576 (was 16384): headroom for the source_span evidence field. See optimize.
     maxTokens: 24576,
-    timeoutMs: 40000,
+    timeoutMs: 90000,
     disableFallback: true,
     temperature: 0,
     reasoningBudget: 2048,

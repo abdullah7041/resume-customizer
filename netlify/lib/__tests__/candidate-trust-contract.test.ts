@@ -3,8 +3,12 @@ import { trustResume } from '../../../src/__tests__/fixtures/candidate-trust.js'
 import { buildRequestEvidenceSources } from '../optimization-evidence.js';
 
 const mocks = vi.hoisted(() => ({ optimizeResume: vi.fn(), getCached: vi.fn(), setCached: vi.fn(),
-  checkCredits: vi.fn(), consumeCredits: vi.fn(), getUser: vi.fn() }));
-vi.mock('../gemini-client.js', () => ({ optimizeResume: mocks.optimizeResume }));
+  checkCredits: vi.fn(), consumeCredits: vi.fn(), getUser: vi.fn(), readJob: vi.fn(), claimWorker: vi.fn(), finishJob: vi.fn() }));
+vi.mock('../optimization-jobs.js', async importOriginal => ({
+  ...await importOriginal<typeof import('../optimization-jobs.js')>(),
+  readOptimizationJob: mocks.readJob, claimOptimizationWorker: mocks.claimWorker, finishOptimizationJob: mocks.finishJob,
+}));
+vi.mock('../gemini-client.js' , () => ({ optimizeResume: mocks.optimizeResume }));
 vi.mock('../redis-cache.js', () => ({ buildOptimizeCacheKey: () => 'candidate-trust', getCached: mocks.getCached, setCached: mocks.setCached }));
 vi.mock('../credit-manager.js', () => ({ FEATURE_COSTS: { optimize: 5 }, checkCredits: mocks.checkCredits,
   consumeCredits: mocks.consumeCredits, addCredits: vi.fn(), isEmailVerified: () => true }));
@@ -14,8 +18,9 @@ vi.mock('../rate-limiter.js', () => ({ withRateLimit: (_name: string, handler: u
 vi.mock('../sentry.js', () => ({ initSentry: vi.fn(), captureError: vi.fn(), summarizeErrorForLog: () => 'error' }));
 vi.mock('../vulnerability-detector.js', () => ({ detectVulnerabilities: () => [] }));
 
-const { handler: ordinary } = await import('../../functions/optimize.js');
-const { default: streaming } = await import('../../functions/optimize-stream.js');
+const { runOptimization: ordinary } = await import('../../functions/optimize.js');
+const { default: background } = await import('../../functions/optimize-background.js');
+const { newOptimizationJob, optimizationEnvelope } = await import('../optimization-jobs.js');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -27,7 +32,7 @@ beforeEach(() => {
 });
 
 describe.each(['en', 'ar'] as const)('%s candidate trust endpoint contract', language => {
-  it.each(['ordinary', 'streaming'] as const)('%s keeps a sourced metric, rejects an invented number and ambiguous employer', async endpoint => {
+  it.each(['ordinary', 'background'] as const)('%s keeps a sourced metric, rejects an invented number and ambiguous employer', async endpoint => {
     const resume = trustResume(language);
     const resumeText = resume.work.flatMap(role => role.highlights).join('\n');
     const sources = buildRequestEvidenceSources(resumeText);
@@ -45,14 +50,19 @@ describe.each(['en', 'ar'] as const)('%s candidate trust endpoint contract', lan
     const payload = JSON.stringify({ resumeText, jobText: language === 'ar' ? 'مهندسة برمجيات' : 'Software Engineer' });
     let body: { cards: Array<{ evidence: { status: string; targetId: string }; exampleAfter: string }>; evidenceDiagnostics: unknown[]; evidenceSources: unknown[] };
     if (endpoint === 'ordinary') {
-      const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' }, body: payload } as never, {} as never) as { statusCode: number; body: string };
+      const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' }, body: payload } as never) as { statusCode: number; body: string };
       expect(response.statusCode).toBe(200);
       body = JSON.parse(response.body);
     } else {
-      const response = await streaming(new Request('http://localhost/api/optimize-stream', { method: 'POST',
-        headers: { authorization: 'Bearer token' }, body: payload }));
-      expect(response.status).toBe(200);
-      body = JSON.parse((await response.text()).match(/event: result\ndata: ([^\n]+)/)?.[1] || '{}');
+      const job = newOptimizationJob(payload);
+      mocks.readJob.mockResolvedValue(job);
+      mocks.claimWorker.mockResolvedValue(true);
+      mocks.finishJob.mockResolvedValue(true);
+      await background(new Request('https://watheqai.app/.netlify/functions/optimize-background', {
+        method: 'POST', body: JSON.stringify(optimizationEnvelope(`watheq:optimize:${'a'.repeat(64)}:job`, job, payload, { authorization: 'Bearer token' })),
+      }));
+      expect(mocks.finishJob.mock.calls[0][1].state).toBe('succeeded');
+      body = mocks.finishJob.mock.calls[0][1].result;
     }
     expect(body.cards).toHaveLength(1);
     expect(body.cards[0]).toMatchObject({ exampleAfter: metric.text,

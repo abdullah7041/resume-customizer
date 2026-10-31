@@ -1,56 +1,26 @@
 /**
- * optimize-stream.ts — Netlify Functions v2 SSE Endpoint
- * 
- * Streams resume optimization progress to the client via Server-Sent Events.
- * Uses the standard Web Request/Response API (Functions v2 syntax).
- * 
- * Stream order:
- *   1. event: status  → { phase: "validating" }
- *   2. event: status  → { phase: "detecting_vulnerabilities", count: N }
- *   3. event: status  → { phase: "ai_processing" }
- *   4. event: result  → Full optimization JSON payload
- *   5. event: done    → { success: true, durationMs }
- *   6. event: error   → { error, retryable } (on failure)
+ * Authenticated optimization dispatcher and read-only result lookup.
+ * Retains the existing route while generation runs in a native background worker.
+ * Returns 202 while pending, validated JSON on success, or a billing-aware error.
  */
 
-import { createHash } from 'crypto';
-import { optimizeResume } from "../lib/gemini-client.js";
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
-import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
+import { initSentry, captureError } from "../lib/sentry.js";
 import {
-  FEATURE_COSTS,
-  addCredits,
   checkCredits,
-  consumeCredits,
   isEmailVerified,
 } from "../lib/credit-manager.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
-import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
+import { buildOptimizeCacheKey, getCached } from "../lib/redis-cache.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
-import { checkFreePreviewRateLimitForRequest, checkRateLimitForRequest } from "../lib/rate-limiter.js";
-import { buildEvidenceBackedOptimizationCards, calculateScores, hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
-import { buildRequestEvidenceSources, evidenceInputOmissions, requestEvidenceResumeText } from "../lib/optimization-evidence.js";
-import { MODELS } from "../lib/model-registry.js";
+import { checkRateLimitForRequest } from "../lib/rate-limiter.js";
+import { hasCurrentEvidenceCards } from "../lib/optimize-cards.js";
+import { claimOptimizationJob, dispatchOptimizationJob, newOptimizationJob, optimizationJobPayload, readOptimizationJob } from "../lib/optimization-jobs.js";
 
 // NOTE: Previously used an inline require("@supabase/supabase-js") which fails
 // in esbuild production bundles. Now uses the shared static import instead.
 
 initSentry();
-
-const OPTIMIZE_CACHE_TTL_SECONDS = 600;
-
-const SSE_HEADERS = {
-  "Content-Type": "text/event-stream",
-  "Cache-Control": "no-cache",
-  "Connection": "keep-alive",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
-
-/** Format a single SSE event */
-function sseEvent(event: string, data: unknown): string {
-  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-}
 
 /**
  * Extract client IP from standard Request headers.
@@ -106,11 +76,6 @@ export default async function handler(request: Request): Promise<Response> {
     });
   }
 
-  const rateLimit = await checkRateLimitForRequest(request, "optimize-stream");
-  if (!rateLimit.allowed && rateLimit.response) {
-    return rateLimit.response;
-  }
-
   // --- Parse & validate body ---
   let rawBody: any;
   try {
@@ -122,6 +87,8 @@ export default async function handler(request: Request): Promise<Response> {
     );
   }
   const freePreviewRequested = rawBody.freePreview === true;
+  const rateLimit = await checkRateLimitForRequest(request, rawBody.cacheOnly === true ? 'optimize-status' : 'optimize-stream');
+  if (!rateLimit.allowed && rateLimit.response) return rateLimit.response;
 
   // --- Auth ---
   const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
@@ -182,13 +149,7 @@ export default async function handler(request: Request): Promise<Response> {
   const ipAddress = getClientIPFromRequest(request);
   const emailVerified = isEmailVerified(user);
 
-  if (freePreview && rawBody.cacheOnly !== true) {
-    const previewLimit = await checkFreePreviewRateLimitForRequest(request, "optimize-free-preview", user?.id || userEmail);
-    if (!previewLimit.allowed && previewLimit.response) {
-      return previewLimit.response;
-    }
-  }
-
+  // The claimed worker reserves guest quota exactly once, immediately before AI.
   const parseResult = OptimizeRequestSchema.safeParse(rawBody);
   if (!parseResult.success) {
     return new Response(
@@ -249,27 +210,29 @@ export default async function handler(request: Request): Promise<Response> {
   if (cachedResponse) {
     console.warn('[optimize-stream] Cache HIT had no renderable cards — regenerating.');
   }
-  if (cacheOnly) {
-    console.log('[optimize-stream] Cache-only recovery MISS — no credit deduction.');
-    return new Response(
-      JSON.stringify({
-        error: 'No cached optimization result is available yet.',
-        cacheOnlyMiss: true,
-      }),
-      {
-        status: 409,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      },
-    );
+  const jobKey = `${cacheKey}:job`;
+  let job: Awaited<ReturnType<typeof readOptimizationJob>> = null;
+  try {
+    job = await readOptimizationJob(jobKey);
+  } catch {
+    return new Response(JSON.stringify({ error: 'Optimization storage is unavailable. Please try again later.', billingStateUnknown: true }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } });
   }
-  console.log('[optimize-stream] Cache MISS — running credit check and SSE stream.');
+  if (job?.state === 'succeeded' && hasCurrentEvidenceCards(job.result)) {
+    return Response.json(await attachLiveCredits(job.result, userEmail, freePreview));
+  }
+  if (job?.state === 'failed' && (cacheOnly || job.error?.billingStateUnknown)) {
+    return Response.json({ ...job.error, jobFailed: true }, { status: job.error?.status || 500 });
+  }
+  if (cacheOnly) {
+    return job && (job.state === 'queued' || job.state === 'running')
+      ? Response.json({ pending: true }, { status: 202 })
+      : Response.json({ error: 'No cached optimization result is available yet.', cacheOnlyMiss: true }, { status: 409 });
+  }
+  console.log('[optimize-stream] Cache MISS — preparing background optimization.');
 
   // --- Credit check (after cache check so cached retries bypass this) ---
-  const creditCheck = freePreview || !userEmail
+  const creditCheck = job?.state === 'queued' || job?.state === 'running' || freePreview || !userEmail
     ? { hasCredits: true, required: 0, available: 0 }
     : await checkCredits(userEmail, "optimize", { ipAddress, emailVerified });
   if (!creditCheck.hasCredits) {
@@ -285,234 +248,32 @@ export default async function handler(request: Request): Promise<Response> {
   }
   // -----------------------------------------------------------------------
 
-  // --- Stream the optimization ---
-  const encoder = new TextEncoder();
-  const startTime = Date.now();
-  const evidenceSources = buildRequestEvidenceSources(resumeText, userClarifications);
-
-  const stream = new ReadableStream({
-    async start(controller) {
-      let creditsConsumed = false;
-      let resultDelivered = false;
-      try {
-        // Phase 1: Validating
-        controller.enqueue(encoder.encode(sseEvent("status", { phase: "validating" })));
-
-        // Phase 2: Vulnerability detection (already done above, just emit status)
-        controller.enqueue(
-          encoder.encode(
-            sseEvent("status", {
-              phase: "detecting_vulnerabilities",
-              count: vulnerabilities.length,
-              types: vulnerabilities.map((v: any) => v.type),
-            })
-          )
-        );
-
-        // Phase 3: AI Processing (this is the long step)
-        controller.enqueue(encoder.encode(sseEvent("status", { phase: "ai_processing" })));
-
-        const optimization = await optimizeResume(requestEvidenceResumeText(evidenceSources), jobText, language, vulnerabilities, userClarifications, userHardStops, {
-          featureName: "optimize_stream",
-          userRef: user?.id || null,
-          jdFingerprint: createHash('sha256').update(jobText).digest('hex').slice(0, 16),
-          evidenceSources,
-        });
-
-        const aiDuration = Date.now() - startTime;
-        console.log(`[optimize-stream] AI call took ${aiDuration}ms`);
-
-        if (!optimization) {
-          controller.enqueue(
-            encoder.encode(
-              sseEvent("error", {
-                error: "AI optimization failed to generate suggestions. Please try with a shorter resume or job description.",
-                retryable: true,
-              })
-            )
-          );
-          controller.close();
-          return;
-        }
-
-        // Phase 4: Build response (reuses the same card-mapping logic as optimize.ts)
-        controller.enqueue(encoder.encode(sseEvent("status", { phase: "building_response" })));
-
-        const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: "[optimize-stream]", sources: evidenceSources });
-        if (cards.length === 0) throw new Error('AI optimization produced no usable evidence-backed edits');
-        const { beforeScore, estimatedImprovement } = calculateScores(optimization, {
-          cards,
-          logPrefix: "[optimize-stream]",
-        });
-
-        const addKeywords = optimization?.missing_keywords || [];
-        const matchedKeywords = optimization?.keywords_to_keep || [];
-        const jdKeywords = [...matchedKeywords, ...addKeywords]
-          .filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i);
-
-        // Consume credits after successful optimization
-        const creditResult = freePreview || !userEmail
-          ? { success: true, creditsRemaining: null }
-          : await consumeCredits(userEmail, "optimize");
-        if (!freePreview && userEmail) {
-          creditsConsumed = creditResult.success;
-        }
-
-        if (!freePreview && userEmail && creditResult.success === false) {
-          console.warn('[optimize-stream] Credit consumption failed post-generation - balance raced to insufficient');
-          controller.enqueue(
-            encoder.encode(
-              sseEvent("error", {
-                error: "Insufficient credits",
-                retryable: false,
-                billingStateUnknown: false,
-              })
-            )
-          );
-          return;
-        }
-        if (!freePreview && userEmail) {
-          creditsConsumed = true;
-        }
-
-        const resultPayload = {
-          evidenceVersion: 2,
-          cards,
-          evidenceSources,
-          evidenceInputOmissions: evidenceInputOmissions(resumeText, userClarifications || '', evidenceSources),
-          evidenceDiagnostics: diagnostics,
-          keywords: {
-            add: addKeywords,
-            neutral: optimization?.keywords_to_keep || [],
-            remove: optimization?.keywords_to_avoid || [],
-          },
-          matchScoring: {
-            beforeScore: Math.round(beforeScore),
-            estimatedImprovement,
-            jdKeywords: jdKeywords.slice(0, 20),
-            matchedKeywords: matchedKeywords.slice(0, 15),
-            reasoning: null,
-          },
-          creditsRemaining: creditResult.creditsRemaining,
-          freePreview,
-          gapAnalysis: (optimization?.gap_analysis || []).map((gap: any) => ({
-            requirement: gap.requirement || "",
-            currentState: gap.current_state || "",
-            severity: gap.gap_severity || "minor",
-            recommendation: gap.recommendation || "",
-          })),
-          keywordStrategy: { mirroredPhrases: [], structuralChanges: [], hiddenMatches: [] },
-          categoryScores: optimization?.category_scores || null,
-          positionSuggestion: optimization?.position_name_suggestion
-            ? {
-                ...optimization.position_name_suggestion,
-                positionChanges: (optimization.position_name_suggestion.position_changes || []).map(
-                  (c: { original: string; suggested: string; change_needed: boolean }) => ({
-                    original: c.original,
-                    suggested: c.suggested,
-                    change_needed: c.change_needed,
-                  })
-                ),
-              }
-            : null,
-          projectImprovements: (optimization?.project_improvements || []).map((proj: any) => ({
-            project_name: proj.project_name || "",
-            original: proj.original || "",
-            improved: proj.improved || "",
-            issue: proj.issue || "",
-            rationale: proj.rationale || "",
-          })),
-          certificationRecommendations: (optimization?.certification_recommendations || []).map(
-            (cert: any) => ({
-              name: cert.name || "",
-              issuer: cert.issuer || "",
-              relevance: cert.relevance || "",
-            })
-          ),
-          scoreBreakdown: null,
-          source: "gemini",
-          debug: {
-            totalCards: cards.length,
-            hasOptimization: !!optimization,
-            hadBulletImprovements: (optimization?.bullet_improvements?.length || 0) > 0,
-            hasJobDescription: Boolean(jobText?.trim()),
-            streamed: true,
-            model: MODELS.flash,
-            latencyMs: Date.now() - startTime,
-          },
-        };
-
-        // Cache briefly because optimization cards can include resume snippets.
-        const { creditsRemaining: _omittedCreditsRemaining, ...cacheablePayload } = resultPayload;
-        void _omittedCreditsRemaining;
-        await setCached(cacheKey, cacheablePayload, OPTIMIZE_CACHE_TTL_SECONDS);
-        console.log('[optimize-stream] Cache SET for key:', cacheKey.substring(0, 50));
-
-        // Send the full result as a single SSE event
-        controller.enqueue(encoder.encode(sseEvent("result", resultPayload)));
-        resultDelivered = true;
-
-        // Signal completion
-        controller.enqueue(
-          encoder.encode(
-            sseEvent("done", { success: true, durationMs: Date.now() - startTime })
-          )
-        );
-      } catch (error: any) {
-        console.error("[optimize-stream] Error:", summarizeErrorForLog(error));
-
-        if (creditsConsumed && !resultDelivered && userEmail) {
-          try {
-            const refundResult = await addCredits(userEmail, FEATURE_COSTS.optimize, "refund", {
-              feature: "optimize",
-              reason: "result_delivery_failed",
-            });
-            if (refundResult?.success === true) {
-              creditsConsumed = false;
-            }
-          } catch (refundError) {
-            console.error(
-              "[optimize-stream] Failed to restore credits:",
-              summarizeErrorForLog(refundError)
-            );
-            captureError(refundError, {
-              function: "optimize-stream-credit-refund",
-            });
-          }
-        }
-
-        captureError(error, {
-          function: "optimize-stream",
-          payload: {
-            resumeTextLength: resumeText?.length || 0,
-            jobTextLength: jobText?.length || 0,
-          },
-        });
-
-        const isTimeout =
-          error?.name === "TimeoutError" || error?.status === 504;
-
-        controller.enqueue(
-          encoder.encode(
-            sseEvent("error", {
-              error: isTimeout
-                ? "Optimization timed out. Retrying automatically..."
-                : "Failed to optimize resume",
-              retryable: isTimeout,
-              billingStateUnknown: creditsConsumed,
-            })
-          )
-        );
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, { headers: SSE_HEADERS });
+  // Generation runs in a native background function, outside this route's 30s limit.
+  // Both ordinary retries and interrupted handoffs retain the same worker ownership.
+  try {
+    if (job?.state === 'running') return Response.json({ pending: true }, { status: 202 });
+    const body = JSON.stringify({ ...parseResult.data, freePreview: freePreviewRequested });
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (authHeader) headers.authorization = authHeader;
+    if (ipAddress) headers['x-nf-client-connection-ip'] = ipAddress;
+    const candidate = job?.state === 'queued' ? job : newOptimizationJob(body);
+    optimizationJobPayload(jobKey, candidate, headers);
+    if (await claimOptimizationJob(jobKey, candidate)) job = candidate;
+    else job = await readOptimizationJob(jobKey);
+    if (!job) throw Object.assign(new Error('Optimization job could not be read.'), { status: 503, code: 'optimize/job-unavailable' });
+    if (job.state === 'succeeded' && hasCurrentEvidenceCards(job.result)) {
+      return Response.json(await attachLiveCredits(job.result, userEmail, freePreview));
+    }
+    if (job.state === 'failed') return Response.json({ ...job.error, jobFailed: true }, { status: job.error?.status || 500 });
+    if (job.state === 'queued') await dispatchOptimizationJob(jobKey, job, headers);
+    return Response.json({ pending: true }, { status: 202 });
+  } catch (error) {
+    if (error instanceof Error && 'status' in error && error.status === 413) {
+      return Response.json({ error: error.message, billingStateUnknown: job?.state === 'queued' }, { status: 413 });
+    }
+    captureError(error, { function: 'optimize-dispatch' });
+    return Response.json({ error: 'Could not queue optimization. Please retry without changing your inputs.', billingStateUnknown: true }, { status: 503 });
+  }
 }
 
-// Export config for Netlify Functions v2
-export const config = {
-  path: "/api/optimize-stream",
-};
+export const config = { path: '/api/optimize-stream' };

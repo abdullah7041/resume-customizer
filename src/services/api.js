@@ -603,6 +603,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
         body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, ...(freePreview ? { freePreview } : {}) }),
       });
 
+      if (response.status === 202) return await waitForOptimization({ resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview });
       const data = await handleResponse(response);
       recordSuccess('openrouter-ai');
       return data;
@@ -767,6 +768,27 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
  * @param {function} onStatus - Callback for status events: (phase: string, extra?: object) => void
  * @returns {Promise<object>} - Same response shape as optimizeResume
  */
+async function waitForOptimization(params, onStatus) {
+  onStatus?.('ai_processing');
+  const deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      return await optimizeResumeStream({ ...params, cacheOnly: true }, onStatus);
+    } catch (error) {
+      if (error.jobPending) continue;
+      if (error.jobFailed) throw error;
+      // A failed status lookup says nothing about the running worker's debit.
+      if (error.status == null || [429, 500, 502, 503, 504].includes(error.status)) continue;
+      error.isBillingStateUnknown = true;
+      throw error;
+    }
+  }
+  throw Object.assign(new Error('Optimization is still running. Retry to retrieve this same request.'), {
+    status: 504, code: 'OPTIMIZE_JOB_PENDING', isBillingStateUnknown: true,
+  });
+}
+
 export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false }, onStatus) => {
   if (!cacheOnly && isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
@@ -792,6 +814,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         }, onStatus);
         return recovered;
       } catch (recoveryErr) {
+        if (recoveryErr.jobPending) return waitForOptimization({ resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
         // Only a cache miss can become a hit while the original request finishes.
         if (!recoveryErr.cacheOnlyMiss) break;
       }
@@ -809,10 +832,17 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   }).catch(async error => {
     const recovered = await recoverFromCacheOnly();
     if (recovered) return new Response(JSON.stringify(recovered), { headers: { 'Content-Type': 'application/json' } });
-    error.isBillingStateUnknown = !cacheOnly;
+    error.isBillingStateUnknown = true;
     error.code ||= 'STREAM_INTERRUPTED';
     throw error;
   });
+
+  if (response.status === 202) {
+    if (cacheOnly) throw Object.assign(new Error('Optimization is still running.'), {
+      cacheOnlyMiss: true, jobPending: true, isBillingStateUnknown: true,
+    });
+    return waitForOptimization({ resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
+  }
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
   // processing started, so billing state is known-safe: no credits consumed.
@@ -822,8 +852,9 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     error.status = response.status;
     error.code = data.code;
     error.cacheOnlyMiss = data.cacheOnlyMiss === true;
+    error.jobFailed = data.jobFailed === true;
     // Gateway failures can occur after processing: never start a paid fallback.
-    error.isBillingStateUnknown = response.status >= 500;
+    error.isBillingStateUnknown = typeof data.billingStateUnknown === 'boolean' ? data.billingStateUnknown : response.status >= 500;
     if (error.isBillingStateUnknown) {
       const recovered = await recoverFromCacheOnly();
       if (recovered) return recovered;
@@ -831,7 +862,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     if (data.creditsRequired) error.creditsRequired = data.creditsRequired;
     if (data.creditsAvailable != null) error.creditsAvailable = data.creditsAvailable;
     attachErrorDebug(error, response, data);
-    if (!data.cacheOnlyMiss) {
+    if (!data.cacheOnlyMiss && !cacheOnly) {
       recordFailure('openrouter-ai');
     }
     throw error;
