@@ -21,4 +21,11 @@ No dependencies, database migrations, model substitutions, or relaxed evidence a
 
 ## Production verification
 
-Pending deployment and a repeat of the existing signed-in Brave case. Local checks and a published deployment alone do not establish a successful live optimization.
+- Main commit `cb5f230ca6edb212cec280a71cdfeecdb435098f` was published by Netlify deploy `6ae5cb847f3f5dd85b925d12` at `2026-10-31T11:07:20.593Z`. The deployed function inventory reports `optimize-background` with invocation mode `background`.
+- Reloaded the user's existing signed-in Brave tab at `https://watheqai.app/` and retried its current 3,892-character resume and 1,988-character job description. Selected “Optimize now” without adding clarification answers.
+- The real worker logged a 39,641 ms AI call and a 47,463.35 ms total invocation, completing beyond the measured old 30-second cutoff. The original model and evidence contract validated. Four experience cards were returned and displayed in the browser.
+- The worker logged one five-credit debit, `16 → 11`; the browser showed the matching balance. No second optimization was requested during this successful test. Suggestions remain pending for the user to review.
+
+## Separate issue observed during live verification
+
+The automatic score-preview simulation logged four merge failures. The template preview shows the same three employers twice: three complete roles followed by three partial recovery-style entries containing repeated bullets and wrapped fragments. `findMergeTarget` conservatively rejects multiple matching employers; that protection was preserved. The recovery path in `parse-quality.js:recoverSectionsFromRawText` compares populated positions before considering company identity, which warrants a separate parser reproduction with the original source and parse metadata. The stored resume was inspected without editing or saving it. Applying the cards and exporting the resulting resume have not been qualified by this repair.
