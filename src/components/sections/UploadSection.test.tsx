@@ -12,13 +12,14 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('../ui/UploadCard', () => ({ default: () => <div data-testid="upload-card" /> }));
 
-it('keeps the saved-resume manager collapsed and leaves switching to the workspace selector', () => {
+it('offers immediate selection from saved resumes before one is active', () => {
   const parsedResume = { basics: { name: 'Candidate' } } as ResumeSchema;
   const entries = [
     { id: 'one', name: 'Resume A.pdf', parsedResume, plainText: 'Resume A text', fingerprint: 'a', createdAt: 1, updatedAt: 1 },
     { id: 'two', name: 'Resume B.pdf', parsedResume, plainText: 'Resume B text', fingerprint: 'b', createdAt: 2, updatedAt: 2 },
   ] as ResumeLibraryEntry[];
-  useResumeLibraryStore.setState({ entries, activeResumeId: 'one', initialized: true });
+  useResumeLibraryStore.setState({ entries, activeResumeId: null, initialized: true });
+  const activate = vi.fn();
 
   const { container } = render(
     <UploadSection
@@ -26,15 +27,15 @@ it('keeps the saved-resume manager collapsed and leaves switching to the workspa
       resumeDocument={{ fileName: 'Resume A.pdf', plainText: 'Resume A text' }}
       onToast={vi.fn()}
       onClear={vi.fn()}
+      onActivateResume={activate}
     />,
   );
 
   const manager = container.querySelector('details');
   expect(manager).not.toBeNull();
-  expect(manager).not.toHaveAttribute('open');
-  fireEvent.click(screen.getByText('Manage saved resumes'));
   expect(manager).toHaveAttribute('open');
-  expect(screen.queryByRole('button', { name: 'Use resume' })).not.toBeInTheDocument();
-  expect(screen.getAllByRole('textbox', { name: 'Resume name' })).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Use Resume B.pdf' }));
+  expect(activate).toHaveBeenCalledWith('two');
+  expect(screen.getByRole('button', { name: 'Rename Resume B.pdf' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Remove Resume B.pdf' })).toBeInTheDocument();
 });

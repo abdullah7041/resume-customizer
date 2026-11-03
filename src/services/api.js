@@ -274,11 +274,9 @@ const fileToBase64 = async (file) => {
 };
 
 export const parseResume = async (resumeInput, options = {}) => {
-  if (isCircuitOpen('openrouter-ai')) {
-    throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
-  }
+  let payload;
 
-  // The retry wrapper below re-runs the whole payload build on every attempt.
+  // Reuse the extracted payload across network retries.
   // Notify the UI about the low-selectable-text fallback at most ONCE per
   // upload — repeating the same toast on each retry attempt is pure noise.
   let ocrFallbackNotified = false;
@@ -290,59 +288,76 @@ export const parseResume = async (resumeInput, options = {}) => {
 
   return retryWithBackoff(async () => {
     try {
-      let payload;
-      if (resumeInput instanceof File) {
-        if (options.guestPreview && resumeInput.size > GUEST_MAX_FILE_BYTES) {
-          const error = new Error(GUEST_FILE_TOO_LARGE_MESSAGE);
-          error.status = 413;
-          error.code = 'file/guest-too-large';
-          throw error;
-        }
+      if (!payload) {
+        options.onStage?.('reading');
+        if (resumeInput instanceof File) {
+          if (options.guestPreview && resumeInput.size > GUEST_MAX_FILE_BYTES) {
+            const error = new Error(GUEST_FILE_TOO_LARGE_MESSAGE);
+            error.status = 413;
+            error.code = 'file/guest-too-large';
+            throw error;
+          }
 
-        const sourceFileMetadata = {
-          sourceInputKind: 'file',
-          sourceWasFile: true,
-          sourceFileSizeBytes: resumeInput.size,
-        };
-
-        // CLIENT-SIDE TEXT EXTRACTION: Extract text from PDF/DOCX in the browser
-        // This saves 5-8s of serverless execution time by avoiding server-side PDF parsing
-        let clientExtractedText = '';
-        try {
-          const arrayBuffer = await resumeInput.arrayBuffer();
-          const mimeType = inferMimeType({ mimeType: resumeInput.type, fileName: resumeInput.name });
-          clientExtractedText = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: resumeInput.name });
-          console.log(`[API] Client-side extraction: ${clientExtractedText.length} chars from ${resumeInput.name}`);
-        } catch (extractError) {
-          console.warn('[API] Client-side extraction failed, falling back to server-side:', summarizeErrorForConsole(extractError));
-        }
-
-        if (clientExtractedText.length >= 100) {
-          // QUALITY CHECK: pdf.js can return binary garbage from CID-font PDFs.
-          // CID fonts missing a ToUnicode CMap produce raw glyph indices that land in
-          // the Latin-1 Supplement block (ö, ü, ã, ÿ…) — these are real Unicode letters,
-          // so both printable-char and \p{L} ratio checks are defeated (ratio 50–72%).
-          //
-          // Word-level analysis discriminates correctly: real resume text (English/Arabic)
-          // has ≥5 whitespace-delimited pure-letter tokens; CID garbage has almost none
-          // because its "letters" are isolated between symbol fragments.
-          const isReadableText = (text) => {
-            const sample = text.substring(0, 500);
-            const words = sample
-              .split(/[\s,;:.!?(){}\[\]|/\\]+/) // eslint-disable-line no-useless-escape
-              .filter(w => /^[\p{L}]{2,}$/u.test(w));
-            return words.length >= 5 && words.length / sample.length > 0.02;
+          const sourceFileMetadata = {
+            sourceInputKind: 'file',
+            sourceWasFile: true,
+            sourceFileSizeBytes: resumeInput.size,
           };
 
-          if (isReadableText(clientExtractedText)) {
-            // Client extraction succeeded — send plain text (no base64 file transfer)
-            console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
-            payload = { kind: "text", value: clientExtractedText, ...sourceFileMetadata };
-          } else {
-            // Text looks like binary garbage (CID-font PDF, image-based, etc.).
-            // Send the file so the server can classify the failure consistently.
-            console.warn(`[API] Client extraction returned non-readable text (binary/encoded glyphs). Sending file for server-side validation.`);
+          // CLIENT-SIDE TEXT EXTRACTION: Extract text from PDF/DOCX in the browser
+          // This saves 5-8s of serverless execution time by avoiding server-side PDF parsing
+          let clientExtractedText = '';
+          try {
+            const arrayBuffer = await resumeInput.arrayBuffer();
+            const mimeType = inferMimeType({ mimeType: resumeInput.type, fileName: resumeInput.name });
+            clientExtractedText = await extractPlainTextFromArrayBuffer(arrayBuffer, { mimeType, fileName: resumeInput.name });
+            console.log(`[API] Client-side extraction: ${clientExtractedText.length} chars from ${resumeInput.name}`);
+          } catch (extractError) {
+            console.warn('[API] Client-side extraction failed, falling back to server-side:', summarizeErrorForConsole(extractError));
+          }
 
+          if (clientExtractedText.length >= 100) {
+            // QUALITY CHECK: pdf.js can return binary garbage from CID-font PDFs.
+            // CID fonts missing a ToUnicode CMap produce raw glyph indices that land in
+            // the Latin-1 Supplement block (ö, ü, ã, ÿ…) — these are real Unicode letters,
+            // so both printable-char and \p{L} ratio checks are defeated (ratio 50–72%).
+            //
+            // Word-level analysis discriminates correctly: real resume text (English/Arabic)
+            // has ≥5 whitespace-delimited pure-letter tokens; CID garbage has almost none
+            // because its "letters" are isolated between symbol fragments.
+            const isReadableText = (text) => {
+              const sample = text.substring(0, 500);
+              const words = sample
+                .split(/[\s,;:.!?(){}\[\]|/\\]+/) // eslint-disable-line no-useless-escape
+                .filter(w => /^[\p{L}]{2,}$/u.test(w));
+              return words.length >= 5 && words.length / sample.length > 0.02;
+            };
+
+            if (isReadableText(clientExtractedText)) {
+              // Client extraction succeeded — send plain text (no base64 file transfer)
+              console.log('[API] Using client-extracted text (saving server-side PDF parsing time)');
+              payload = { kind: "text", value: clientExtractedText, ...sourceFileMetadata };
+            } else {
+              // Text looks like binary garbage (CID-font PDF, image-based, etc.).
+              // Send the file so the server can classify the failure consistently.
+              console.warn(`[API] Client extraction returned non-readable text (binary/encoded glyphs). Sending file for server-side validation.`);
+
+              notifyOcrFallback();
+
+              const base64 = await fileToBase64(resumeInput);
+              payload = {
+                kind: "file",
+                data: base64,
+                name: resumeInput.name,
+                mime: resumeInput.type,
+                ...sourceFileMetadata,
+              };
+            }
+          } else {
+            // Fallback: scanned PDF or extraction failure — send file to server for validation
+            console.log('[API] Client extraction insufficient, sending file for server-side validation');
+
+            // Notify the UI that the document may need a text-based re-upload.
             notifyOcrFallback();
 
             const base64 = await fileToBase64(resumeInput);
@@ -355,29 +370,21 @@ export const parseResume = async (resumeInput, options = {}) => {
             };
           }
         } else {
-          // Fallback: scanned PDF or extraction failure — send file to server for validation
-          console.log('[API] Client extraction insufficient, sending file for server-side validation');
-
-          // Notify the UI that the document may need a text-based re-upload.
-          notifyOcrFallback();
-
-          const base64 = await fileToBase64(resumeInput);
-          payload = {
-            kind: "file",
-            data: base64,
-            name: resumeInput.name,
-            mime: resumeInput.type,
-            ...sourceFileMetadata,
-          };
+          payload = { kind: "text", value: resumeInput };
         }
-      } else {
-        payload = { kind: "text", value: resumeInput };
+
+        const guestPreview = !!options.guestPreview;
+        payload.guestPreview = guestPreview;
       }
+      if (options.signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
+      if (payload.kind === 'text') {
+        const saved = options.findSavedResume?.(payload.value);
+        if (saved) return saved;
+      }
+      if (isCircuitOpen('openrouter-ai')) throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
+      options.onStage?.('preparing');
 
-      const guestPreview = !!options.guestPreview;
-      payload.guestPreview = guestPreview;
-
-      const headers = guestPreview
+      const headers = options.guestPreview
         ? await getAuthHeaders({ requireAuth: false })
         : await getAuthHeaders({
           requireAuth: true,

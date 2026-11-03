@@ -30,6 +30,9 @@ vi.mock("react-i18next", () => ({
         "upload.card.uploadFileLabel": "Upload resume file",
         "upload.card.removeFileLabel": "Remove selected file",
         "upload.card.readyTitle": "Ready to prepare",
+        "upload.card.reading": "Read file",
+        "upload.card.preparing": "Prepare resume",
+        "upload.card.progress": "Resume preparation",
         "upload.card.savedTitle": "Resume ready and saved",
         "upload.card.processingButton": "Processing...",
         "upload.card.pasteLabel": "Or paste your resume text",
@@ -79,6 +82,7 @@ vi.mock("../services/supabase.js", () => ({
 
 import ResumeUpload from "../components/sections/UploadSection";
 import { useResumeStore } from "@/lib/stores/resumeStore";
+import { useResumeLibraryStore } from "@/lib/resumeLibrary";
 import { uploadResumeFile } from "../services/supabase.js";
 
 describe("ResumeUpload", () => {
@@ -86,6 +90,7 @@ describe("ResumeUpload", () => {
     uploadResumeFile.mockReset();
     i18nMock.language = "en";
     useResumeStore.setState({ originalResume: null });
+    useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: true });
   });
 
   const setViewportWidth = (width) => {
@@ -103,8 +108,8 @@ describe("ResumeUpload", () => {
       screen.getByRole("heading", { name: /upload your resume/i })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /prepare resume/i })
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /prepare resume/i })
+    ).not.toBeInTheDocument();
     expect(
       screen.getByText(/drop your resume here/i)
     ).toBeInTheDocument();
@@ -155,22 +160,56 @@ describe("ResumeUpload", () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
     });
 
-    const submitButton = screen.getByRole("button", { name: /prepare selected file/i });
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    expect(screen.queryByRole("button", { name: /prepare selected file/i })).not.toBeInTheDocument();
 
     // UploadSection passes { file } and AbortSignal to onParseResume
     expect(onParseResume).toHaveBeenCalledWith(
       expect.objectContaining({
         file,
       }),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      expect.any(Function)
     );
     expect(onToast).toHaveBeenCalledWith(
       expect.objectContaining({ type: "success", title: "Resume parsed successfully" })
     );
+  });
+
+  it('starts after one file choice, shows two real stages, and supports cancellation', async () => {
+    let stage;
+    let complete;
+    const parse = vi.fn((_input, _signal, onStage) => {
+      stage = onStage;
+      return new Promise(resolve => { complete = resolve; });
+    });
+    const toast = vi.fn();
+    const { container } = render(<ResumeUpload onParseResume={parse} onToast={toast} onClear={vi.fn()} />);
+    const file = new File(['resume'], 'cv.pdf', { type: 'application/pdf' });
+    await act(async () => fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } }));
+    expect(parse).toHaveBeenCalledOnce();
+    act(() => stage('reading'));
+    expect(screen.getByText('Read file').closest('li')).toHaveAttribute('aria-current', 'step');
+    act(() => stage('preparing'));
+    expect(screen.getByText('Prepare resume').closest('li')).toHaveAttribute('aria-current', 'step');
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(parse.mock.calls[0][1].aborted).toBe(true);
+    await act(async () => complete({ plainText: 'Cancelled result' }));
+    expect(toast).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+  });
+
+  it('lets a selected file retry after space is made in a full library', async () => {
+    const entries = Array.from({ length: 5 }, (_, index) => ({ id: String(index), name: `CV ${index}`,
+      parsedResume: { basics: { name: 'Candidate' } } }));
+    useResumeLibraryStore.setState({ entries });
+    const parse = vi.fn().mockResolvedValue({});
+    const { container } = render(<ResumeUpload onParseResume={parse} onToast={vi.fn()} onClear={vi.fn()} />);
+    await act(async () => fireEvent.change(container.querySelector('input[type="file"]'), {
+      target: { files: [new File(['resume'], 'cv.pdf', { type: 'application/pdf' })] },
+    }));
+    expect(parse).not.toHaveBeenCalled();
+    act(() => useResumeLibraryStore.setState({ entries: entries.slice(0, 4) }));
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: /prepare selected file/i })));
+    expect(parse).toHaveBeenCalledOnce();
   });
 
   it.each([false, true])("leaves single parse notifications to the parent when configured (failure=%s)", async (failure) => {
@@ -205,15 +244,12 @@ describe("ResumeUpload", () => {
       fireEvent.change(fileInput, { target: { files: [file] } });
     });
 
-    const submitButton = screen.getByRole("button", { name: /prepare selected file/i });
-
-    await act(async () => {
-      fireEvent.click(submitButton);
-    });
+    expect(screen.queryByRole("button", { name: /prepare selected file/i })).not.toBeInTheDocument();
 
     expect(onParseResume).toHaveBeenCalledWith(
       expect.objectContaining({ file }),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      expect.any(Function)
     );
     expect(onToast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "Sign in required" })
@@ -238,7 +274,8 @@ describe("ResumeUpload", () => {
 
     expect(onParseResume).toHaveBeenCalledWith(
       expect.objectContaining({ plainText: "Experienced analyst" }),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      expect.any(Function)
     );
     expect(onToast).not.toHaveBeenCalledWith(
       expect.objectContaining({ title: "Sign in required" })
@@ -361,7 +398,8 @@ describe("ResumeUpload", () => {
       expect.objectContaining({
         plainText: "Experienced analyst",
       }),
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      expect.any(Function)
     );
   });
 
@@ -391,7 +429,8 @@ describe("ResumeUpload", () => {
     const dropzone = screen.getByRole("button", { name: /upload resume file/i });
     expect(dropzone).toBeInTheDocument();
 
-    const prepareButton = screen.getByRole("button", { name: /prepare resume/i });
+    fireEvent.change(screen.getByLabelText(/paste your resume text/i), { target: { value: "Experienced analyst" } });
+    const prepareButton = screen.getByRole("button", { name: /prepare pasted text/i });
     const actionBar = prepareButton.closest("div");
     expect(actionBar).toHaveClass("flex-col-reverse", "sm:flex-row");
     expect(prepareButton).toHaveClass("w-full", "sm:w-auto", "min-h-[48px]");
@@ -421,8 +460,8 @@ describe("ResumeUpload", () => {
       }
     });
     expect(screen.getByText(name)).toBeInTheDocument();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: /prepare selected file/i })));
-    expect(onParseResume).toHaveBeenCalledWith({ file }, expect.any(AbortSignal));
+    expect(onParseResume).toHaveBeenCalledWith({ file }, expect.any(AbortSignal), expect.any(Function));
+    expect(onParseResume).toHaveBeenCalledTimes(1);
     expect(container.querySelector("script")).toBeNull();
     expect(onToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: "warning" }));
   });

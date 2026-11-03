@@ -82,8 +82,9 @@ function setup(files: File[], props = {}, method = 'picker') {
   return { ...view, onToast, onParseResume, onBeforeParseResume, onClear };
 }
 
-async function submit() {
-  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Import selected resumes/i })); });
+async function settleImport() {
+  // Picking or dropping the files starts the queue; no preparation click.
+  await act(async () => {});
 }
 
 describe('device library batch import', () => {
@@ -130,7 +131,7 @@ describe('device library batch import', () => {
     const before = useResumeStore.getState();
     const view = setup([file('first.pdf'), file('second.md', 'text/markdown')], { isGuestMode: true }, method);
     expect(view.container.querySelector('input[type="file"]')).toHaveAttribute('multiple');
-    await submit();
+    await settleImport();
     expect(mockParse).toHaveBeenCalledTimes(1);
     expect(mockParse).toHaveBeenCalledWith(expect.any(File), expect.objectContaining({ guestPreview: true, signal: expect.any(AbortSignal) }));
     expect(screen.getByText(/Paste text or sign in to read scanned documents/i)).toBeInTheDocument();
@@ -152,7 +153,7 @@ describe('device library batch import', () => {
     localStorage.removeItem('watheq:activeResumeId');
     mockParse.mockResolvedValueOnce(document('First', 'same text')).mockResolvedValueOnce(document('Duplicate', 'SAME   text'));
     const view = setup([file('first.pdf'), file('duplicate.pdf')]);
-    await submit();
+    await settleImport();
     expect(useResumeLibraryStore.getState().entries).toHaveLength(1);
     expect(useResumeLibraryStore.getState().activeResumeId).toBeNull();
     expect(localStorage.getItem('watheq:activeResumeId')).toBeNull();
@@ -174,7 +175,7 @@ describe('device library batch import', () => {
       return document('Storage failure');
     }).mockResolvedValueOnce(document('Last'));
     const view = setup([file('first.pdf'), file('image.png', 'image/png'), oversized, file('broken.pdf'), file('storage.pdf'), file('last.txt', 'text/plain')]);
-    await submit();
+    await settleImport();
     expect(mockParse).toHaveBeenCalledTimes(4);
     expect(useResumeLibraryStore.getState().entries.map(entry => entry.parsedResume.basics.name)).toEqual(['First', 'Last']);
     expect(screen.getByText(/Only PDF, DOCX, TXT, or Markdown resumes are supported/)).toBeInTheDocument();
@@ -190,7 +191,7 @@ describe('device library batch import', () => {
     useResumeLibraryStore.setState({ entries });
     mockParse.mockResolvedValue(document('Fifth'));
     const view = setup([file('fifth.pdf'), file('sixth.pdf'), file('seventh.pdf')]);
-    await submit();
+    await settleImport();
     expect(mockParse).toHaveBeenCalledTimes(1);
     expect(useResumeLibraryStore.getState().entries).toHaveLength(5);
     expect(view.onToast).toHaveBeenCalledWith(expect.objectContaining({ description: '1 saved, 0 failed, 2 skipped.' }));
@@ -200,7 +201,7 @@ describe('device library batch import', () => {
     let finishPending: (value: ReturnType<typeof document>) => void = () => {};
     mockParse.mockResolvedValueOnce(document('First')).mockImplementationOnce(() => new Promise(resolve => { finishPending = resolve; }));
     const view = setup([file('first.pdf'), file('pending.pdf'), file('remaining.pdf')]);
-    await submit();
+    await settleImport();
     await waitFor(() => expect(mockParse).toHaveBeenCalledTimes(2));
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await act(async () => finishPending(document('Cancelled')));
@@ -213,7 +214,7 @@ describe('device library batch import', () => {
   it('stops after auth failure and reports remaining files inline', async () => {
     mockParse.mockResolvedValueOnce(document('First')).mockRejectedValueOnce(Object.assign(new Error('Sign in required'), { status: 401 }));
     const view = setup([file('first.pdf'), file('auth.pdf'), file('skipped.pdf')]);
-    await submit();
+    await settleImport();
     expect(mockParse).toHaveBeenCalledTimes(2);
     expect(useResumeLibraryStore.getState().entries).toHaveLength(1);
     expect(view.onToast).toHaveBeenCalledTimes(1);

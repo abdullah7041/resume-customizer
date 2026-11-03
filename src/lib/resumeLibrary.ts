@@ -32,6 +32,16 @@ export function fingerprintResume(text: string): string {
   return (hash >>> 0).toString(36);
 }
 
+/** Reopen a complete device-local parse instead of repeating AI for the same text. */
+export function findSavedResume(text: string) {
+  if (!text.trim()) return null;
+  const normalize = (value: string) => value.normalize('NFKC').replace(/\s+/g, ' ').trim();
+  const entry = useResumeLibraryStore.getState().entries.find(item => normalize(item.plainText) === normalize(text)
+    && !item.parsedResume.meta?.parseQuality?.aiParseFailed
+    && !item.parsedResume.meta?.parseQuality?.incompleteSections?.length);
+  return entry?.parsedResume.basics ? { data: structuredClone(entry.parsedResume), plainText: entry.plainText } : null;
+}
+
 function defaultResumeName(input: ResumeLibraryInput, entries: ResumeLibraryEntry[], now: number): string {
   if (input.sourceFileName?.trim() && !/^pasted (resume text|text)$/i.test(input.sourceFileName.trim())) return input.sourceFileName.trim();
   const candidate = input.parsedResume.basics?.name?.trim() || 'Resume';

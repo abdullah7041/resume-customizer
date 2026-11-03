@@ -3,6 +3,8 @@ import type { ResumeSchema } from '@/types/resume';
 import {
   MAX_RESUME_LIBRARY_SIZE,
   addResumeToLibrary,
+  findSavedResume,
+  useResumeLibraryStore,
   migrateLegacyResume,
   removeResumeFromLibrary,
 } from './resumeLibrary';
@@ -13,6 +15,19 @@ const resume = (name: string): ResumeSchema => ({
 });
 
 describe('resume library', () => {
+  it('reuses the saved structured resume only for matching, complete source text', () => {
+    const data = resume('Saved');
+    const { entries } = addResumeToLibrary([], { parsedResume: data, plainText: 'Software engineer\nResume' });
+    useResumeLibraryStore.setState({ entries });
+    const cached = findSavedResume('Software engineer  Resume');
+    expect(cached?.data).toEqual(data);
+    cached!.data.basics.name = 'Mutated';
+    expect(entries[0].parsedResume.basics.name).toBe('Saved');
+    expect(findSavedResume('Different resume')).toBeNull();
+    useResumeLibraryStore.setState({ entries: [{ ...entries[0], parsedResume: { ...data,
+      meta: { parseQuality: { aiParseFailed: true } } } }] });
+    expect(findSavedResume('Software engineer Resume')).toBeNull();
+  });
   it('migrates the existing resume once only when the library is empty', () => {
     const migrated = migrateLegacyResume([], { parsedResume: resume('Universal'), plainText: 'universal resume', sourceFileName: 'universal.pdf' }, 10);
     expect(migrated).toHaveLength(1);

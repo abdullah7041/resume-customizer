@@ -31,18 +31,18 @@ export function ResumeSelector({ entries, activeResumeId, onActivate }: ResumeSe
     return () => { document.removeEventListener('keydown', onKeyDown); document.removeEventListener('pointerdown', onPointerDown); };
   }, [open]);
 
-  if (!active) return null;
+  if (!entries.length) return null;
   const duplicateCounts = new Map<string, number>();
   entries.forEach(entry => duplicateCounts.set(entry.name, (duplicateCounts.get(entry.name) ?? 0) + 1));
 
   return (
     <div ref={containerRef} className="relative min-w-0">
       <button ref={triggerRef} type="button" aria-expanded={open} aria-haspopup="dialog"
-        aria-label={t('upload.library.select', 'Select resume') + ': ' + active.name}
+        aria-label={t('upload.library.select', 'Select resume') + (active ? ': ' + active.name : '')}
         onClick={() => setOpen(value => !value)}
         className="flex min-h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-start text-ink shadow-sm transition-[background-color,scale] hover:bg-ink/5 active:scale-[0.96] sm:max-w-72">
         <FileText className="h-4 w-4 shrink-0 text-ink-accent" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={active.name}>{active.name}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={active?.name}>{active?.name || t('upload.library.select', 'Select resume')}</span>
         <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
       </button>
       {open && (

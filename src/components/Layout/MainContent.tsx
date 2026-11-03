@@ -30,7 +30,7 @@ import { useAuth } from "../../hooks/useAuth";
 import UploadSection from "../sections/UploadSection";
 import { isIntentPrompted, markIntentPrompted } from "../../lib/onboarding/intentPromptFlag";
 import { isOnboarded } from "../../lib/onboarding/onboardedFlag";
-import { fingerprintResume, useResumeLibraryStore } from "@/lib/resumeLibrary";
+import { fingerprintResume, findSavedResume, useResumeLibraryStore } from "@/lib/resumeLibrary";
 import { ResumeSelector } from "@/components/ui/ResumeSelector";
 // KeywordsSection removed from MVP navigation - functionality merged into Optimize section
 
@@ -1638,7 +1638,7 @@ export default function MainContent() {
   }, []);
 
   const handleParseResume = useCallback(
-    async (resumeInput, signal?: AbortSignal) => {
+    async (resumeInput, signal?: AbortSignal, onStage?: (stage: 'reading' | 'preparing') => void) => {
       const { parseInput, storage, fileName } = normalizeResumePayload(resumeInput);
 
       // Clear old localStorage data to prevent corruption issues
@@ -1648,18 +1648,12 @@ export default function MainContent() {
 
       try {
         setFlowProgress(18);
-        pushToast(
-          {
-            type: "info",
-            title: t("toasts.parsingResume"),
-            description: t("toasts.parsingResumeDesc"),
-          },
-          { id: TOAST_IDS.upload }
-        );
 
         setFlowProgress(48);
         const parsed = await parseResume(parseInput, {
           signal,
+          onStage,
+          findSavedResume,
           guestPreview: isGuestMode,
           // Notify the user when the browser cannot extract enough selectable
           // text. parseResume fires this at most once per upload (not per retry
@@ -1683,6 +1677,7 @@ export default function MainContent() {
             );
           },
         });
+        if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
         setFlowProgress(88);
         const enriched =
           parsed
@@ -3066,6 +3061,7 @@ export default function MainContent() {
             <>
               <UploadSection
                 onParseResume={handleParseResume}
+                onActivateResume={activateLibraryResume}
                 parseNotificationsHandled={true}
                 isGuestMode={isGuestMode}
                 onBeforeParseResume={() => snapshotActiveResumeResults(true)}

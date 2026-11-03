@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, FileText } from 'lucide-react';
 import UploadCard, { isDocumentFile, isPlainTextFile, MAX_SIZE_BYTES } from '../ui/UploadCard';
 import { isAuthRequiredError, parseResume } from '../../services/api.js';
 import { AppError } from '../../services/supabase.js';
@@ -8,7 +8,7 @@ import { useResumeStore } from '../../lib/stores/resumeStore';
 import { analytics } from '../../services/analytics';
 import type { ResumeSchema } from '../../types/resume';
 import { ParsingWarningsBanner } from '../ui/ParsingWarningsBanner';
-import { MAX_RESUME_LIBRARY_SIZE, useResumeLibraryStore } from '@/lib/resumeLibrary';
+import { findSavedResume, MAX_RESUME_LIBRARY_SIZE, useResumeLibraryStore } from '@/lib/resumeLibrary';
 
 interface Toast {
     type: 'success' | 'warning' | 'danger' | 'info';
@@ -31,7 +31,8 @@ interface ParsedResumeResult {
 interface UploadSectionProps {
     parseNotificationsHandled?: boolean;
     isGuestMode?: boolean;
-    onParseResume: (resumeInput: { file?: File; plainText?: string }, signal?: AbortSignal) => Promise<ParsedResumeResult>;
+    onParseResume: (resumeInput: { file?: File; plainText?: string }, signal?: AbortSignal, onStage?: (stage: 'reading' | 'preparing') => void) => Promise<ParsedResumeResult>;
+    onActivateResume?: (id: string) => void;
     onBeforeParseResume?: () => void;
     resumeDocument: ResumeDocument | null;
     onToast: (toast: Toast) => void;
@@ -42,6 +43,7 @@ export default function UploadSection({
     parseNotificationsHandled = false,
     isGuestMode = false,
     onParseResume,
+    onActivateResume,
     onBeforeParseResume,
     resumeDocument,
     onToast,
@@ -56,9 +58,11 @@ export default function UploadSection({
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [pastedText, setPastedText] = useState('');
+    const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     // Ref for tracking active parse request to support cancellation
     const parseRequestActive = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
+    useEffect(() => () => abortControllerRef.current?.abort(), []);
 
     // Get store actions
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
@@ -136,19 +140,20 @@ export default function UploadSection({
         }
     }, [status, onToast]);
 
-    const handleBatchImport = async () => {
+    const handleBatchImport = async (selectedFiles: File[]) => {
         if (batchRunning.current) return;
         batchRunning.current = true;
         const controller = new AbortController();
         abortControllerRef.current = controller;
-        const rows = batchFiles.map(selected => ({ name: selected.name, state: 'pending' as 'pending' | 'reading' | 'saved' | 'failed' | 'skipped', message: '' }));
+        setBatchFiles(selectedFiles);
+        const rows = selectedFiles.map(selected => ({ name: selected.name, state: 'pending' as 'pending' | 'reading' | 'saved' | 'failed' | 'skipped', message: '' }));
         const update = () => setBatchRows(rows.map(row => ({ ...row })));
         let authStopped = false;
         setStatus('parsing');
         setError(null);
         try {
-            for (let index = 0; index < batchFiles.length; index += 1) {
-                const selected = batchFiles[index];
+            for (let index = 0; index < selectedFiles.length; index += 1) {
+                const selected = selectedFiles[index];
                 const row = rows[index];
                 if (controller.signal.aborted || authStopped || useResumeLibraryStore.getState().entries.length >= MAX_RESUME_LIBRARY_SIZE) {
                     row.state = 'skipped';
@@ -166,6 +171,12 @@ export default function UploadSection({
                     const result = await parseResume(selected, {
                         signal: controller.signal,
                         guestPreview: isGuestMode,
+                        findSavedResume,
+                        onStage: (stage) => {
+                            setStatus(stage === 'reading' ? 'uploading' : 'parsing');
+                            row.message = t(stage === 'reading' ? 'upload.card.reading' : 'upload.card.preparing', stage === 'reading' ? 'Reading file' : 'Preparing resume');
+                            update();
+                        },
                         onOcrFallback: () => {
                             row.message = isGuestMode
                                 ? t('upload.batch.ocrGuest', 'Paste text or sign in to read scanned documents.')
@@ -186,7 +197,7 @@ export default function UploadSection({
                         : authStopped ? t('toasts.signInRequiredDesc', 'Please sign in to securely process your resume.')
                             : failure instanceof Error ? failure.message : t('upload.batch.failed', 'Could not import this resume.');
                 }
-                setProgress(Math.round((index + 1) / batchFiles.length * 100));
+                setProgress(Math.round((index + 1) / selectedFiles.length * 100));
                 update();
             }
         } finally {
@@ -203,8 +214,10 @@ export default function UploadSection({
         }
     };
 
-    const handleSubmit = useCallback(async () => {
-        if (!file && !pastedText) {
+    const handleSubmit = useCallback(async (selectedFile?: File) => {
+        if (parseRequestActive.current || batchRunning.current) return;
+        const inputFile = selectedFile ?? file;
+        if (!inputFile && !pastedText) {
             onToast({
                 type: 'warning',
                 title: 'No resume provided',
@@ -213,6 +226,8 @@ export default function UploadSection({
             return;
         }
         if (libraryEntries.length >= MAX_RESUME_LIBRARY_SIZE) {
+            setStatus('error');
+            setError(t('upload.library.limitDescription', 'Remove one of your five saved resumes before adding another.'));
             onToast({
                 type: 'warning',
                 title: t('upload.library.limitTitle', 'Resume library is full'),
@@ -222,7 +237,8 @@ export default function UploadSection({
         }
 
         const startTime = performance.now();
-        const fileType = file?.type || 'text/plain';
+        const fileType = inputFile?.type || 'text/plain';
+        const controller = new AbortController();
 
         // Track upload started
         analytics.track('resume_upload_started', { file_type: fileType });
@@ -231,8 +247,8 @@ export default function UploadSection({
             parseRequestActive.current = true;
 
             // Create new AbortController for this upload
-            abortControllerRef.current = new AbortController();
-            const signal = abortControllerRef.current.signal;
+            abortControllerRef.current = controller;
+            const signal = controller.signal;
 
             // Preserve the active resume's export context before clearing its store state.
             onBeforeParseResume?.();
@@ -241,15 +257,19 @@ export default function UploadSection({
             setStatus('uploading');
             setProgress(30);
 
-            const input = file ? { file } : { plainText: pastedText };
+            const input = inputFile ? { file: inputFile } : { plainText: pastedText };
 
             setStatus('parsing');
             setProgress(60);
 
-            const result = await onParseResume(input, signal);
+            const result = await onParseResume(input, signal, stage => {
+                if (signal.aborted) return;
+                setStatus(stage === 'reading' ? 'uploading' : 'parsing');
+                setProgress(stage === 'reading' ? 30 : 60);
+            });
 
             // Check if request was cancelled
-            if (!parseRequestActive.current) {
+            if (!parseRequestActive.current || signal.aborted) {
                 return;
             }
 
@@ -346,6 +366,11 @@ export default function UploadSection({
                     : 'Parse failed',
                 description,
             });
+        } finally {
+            if (abortControllerRef.current === controller) {
+                parseRequestActive.current = false;
+                abortControllerRef.current = null;
+            }
         }
     }, [file, libraryEntries.length, onBeforeParseResume, onParseResume, onToast, parseNotificationsHandled, pastedText, resetForNewUpload, setOriginalResume, setParsedResumeText, t]);
 
@@ -362,7 +387,7 @@ export default function UploadSection({
 
             {libraryEntries.length > 0 && (
                 <section className="rounded-2xl border border-emerald-900/10 bg-white/70 p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04]" aria-labelledby="resume-library-title">
-                    <details className="group">
+                    <details className="group" open={!activeResumeId || undefined}>
                         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 [&::-webkit-details-marker]:hidden">
                             <span>
                                 <span id="resume-library-title" className="block font-semibold text-gray-900 dark:text-white">
@@ -380,24 +405,37 @@ export default function UploadSection({
                                 return (
                                     <div key={entry.id} className={`flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center ${active ? 'border-emerald-500/50 bg-emerald-50/80 dark:bg-emerald-500/10' : 'border-gray-200 bg-white/70 dark:border-white/10 dark:bg-black/20'}`}>
                                         <div className="min-w-0 flex-1">
-                                            <input
+                                            <div className="flex items-start gap-3">
+                                                <FileText aria-hidden="true" className="mt-1 h-5 w-5 shrink-0 text-ink-accent" />
+                                                <div className="min-w-0">
+                                                    <p className="break-words font-semibold text-ink">{entry.name}</p>
+                                                    <p className="mt-1 text-sm text-ink-muted">{entry.parsedResume.basics?.name}</p>
+                                                    {entry.parsedResume.basics?.label && <p className="mt-1 text-sm text-ink-soft">{entry.parsedResume.basics.label}</p>}
+                                                </div>
+                                            </div>
+                                            {editingResumeId === entry.id ? <input
                                                 key={`${entry.id}:${entry.name}`}
                                                 defaultValue={entry.name}
                                                 maxLength={80}
                                                 aria-label={t('upload.library.nameLabel', 'Resume name')}
-                                                onBlur={(event) => void renameResume(entry.id, event.target.value)}
+                                                autoFocus
+                                                onBlur={(event) => { void renameResume(entry.id, event.target.value); setEditingResumeId(null); }}
                                                 className="min-h-11 w-full rounded-lg border border-line bg-surface px-3 py-2 text-base font-medium text-ink outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 sm:text-sm"
-                                            />
-                                            <p className="mt-1 break-words text-sm text-ink-muted">{entry.parsedResume.basics?.name}</p>
+                                            /> : <button type="button" disabled={status === 'uploading' || status === 'parsing'} onClick={() => setEditingResumeId(entry.id)}
+                                                aria-label={t('upload.library.rename', 'Rename {{name}}', { name: entry.name })}
+                                                className="mt-1 min-h-11 rounded-lg px-2 text-sm text-ink-muted hover:bg-ink/5">{t('upload.library.renameButton', 'Rename')}</button>}
                                         </div>
                                         <div className="flex gap-2">
-                                            {active && (
-                                                <span className="inline-flex min-h-11 items-center rounded-lg bg-emerald-500/10 px-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                                                    {t('upload.library.active', 'Active')}
-                                                </span>
-                                            )}
+                                            <button type="button" aria-pressed={active} disabled={active || status === 'uploading' || status === 'parsing'}
+                                                aria-label={t('upload.library.useNamed', 'Use {{name}}', { name: entry.name })}
+                                                onClick={() => onActivateResume ? onActivateResume(entry.id) : useResumeLibraryStore.getState().activateResume(entry.id)}
+                                                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition-[background-color,scale] hover:bg-emerald-800 active:scale-[0.96] disabled:cursor-default disabled:bg-emerald-100 disabled:text-emerald-900 dark:bg-emerald-500 dark:text-emerald-950 dark:hover:bg-emerald-400 dark:disabled:bg-emerald-400/20 dark:disabled:text-emerald-100">
+                                                {active && <Check className="h-4 w-4" aria-hidden="true" />}
+                                                {active ? t('upload.library.active', 'Active') : t('upload.library.use', 'Use resume')}
+                                            </button>
                                             <button
                                                 type="button"
+                                                disabled={status === 'uploading' || status === 'parsing'}
                                                 onClick={() => void removeResume(entry.id)}
                                                 aria-label={t('upload.library.remove', 'Remove {{name}}', { name: entry.name })}
                                                 className="min-h-11 rounded-lg px-3 text-sm font-medium text-red-700 transition-[background-color,scale] hover:bg-red-50 active:scale-[0.96] dark:text-red-300 dark:hover:bg-red-500/10"
@@ -414,16 +452,19 @@ export default function UploadSection({
             )}
 
             <UploadCard
+                autoProcess
                 onFilesSelect={(files: File[]) => {
-                    setBatchFiles(files); setBatchRows(files.map(selected => ({ name: selected.name, state: 'pending' })));
+                    if (batchRunning.current || parseRequestActive.current) return;
+                    setBatchRows(files.map(selected => ({ name: selected.name, state: 'pending' })));
                     setFile(null); setPastedText(''); setStatus('idle'); setError(null);
+                    void handleBatchImport(files);
                 }}
                 submitLabel={batchFiles.length ? t('upload.batch.import', 'Import selected resumes') : undefined}
                 fileName={fileName}
                 pastedText={pastedText}
-                onFileSelect={handleFileSelect}
+                onFileSelect={(selected: File) => { handleFileSelect(selected); void handleSubmit(selected); }}
                 onFileClear={handleFileClear}
-                onSubmit={batchFiles.length ? handleBatchImport : handleSubmit}
+                onSubmit={() => void handleSubmit()}
                 status={status}
                 progress={progress}
                 error={error}

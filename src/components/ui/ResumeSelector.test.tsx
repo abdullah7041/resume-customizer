@@ -10,6 +10,14 @@ const entries = [
   { id: 'two', name: 'Customer Success Resume.pdf', sourceFileName: 'Customer Success Resume.pdf', parsedResume: { basics: { name: 'Same Candidate' } }, updatedAt: 2 },
 ] as ResumeLibraryEntry[];
 
+it('lets a user select a saved resume when none is active', () => {
+  const activate = vi.fn();
+  render(<ResumeSelector entries={entries} activeResumeId={null} onActivate={activate} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Select resume' }));
+  fireEvent.click(screen.getByRole('button', { name: /Engineering Resume.pdf, Same Candidate/ }));
+  expect(activate).toHaveBeenCalledWith('one');
+});
+
 it('shows the active filename and allows switching between versions with the same candidate name', () => {
   const activate = vi.fn();
   render(<ResumeSelector entries={entries} activeResumeId="one" onActivate={activate} />);

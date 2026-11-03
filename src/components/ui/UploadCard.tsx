@@ -52,6 +52,7 @@ const chipClass =
 
 
 export default function UploadCard({
+  autoProcess = false,
   fileName,
   pastedText = "",
   onFileSelect,
@@ -74,12 +75,6 @@ export default function UploadCard({
   const saudiToggleEnabled = useFeatureFlag("saudiNationalityToggle");
   const inputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-
-  // Import CheckCircle dynamically or assume it's available. 
-  // Since I can't change the import lines in `replace_file_content` easily if they are at the top,
-  // I will use a separate `edit` for imports or just use an existing icon if CheckCircle isn't there?
-  // Wait, I can't import inside the function.
-  // I will assume I need to do a multi_replace to handle imports as well.
 
   const statusCopy = {
     uploading: t("upload.card.status.uploading"),
@@ -117,7 +112,7 @@ export default function UploadCard({
       return;
     }
 
-    if (plainTextFile) {
+    if (plainTextFile && !autoProcess) {
       try {
         const text = await file.text();
         onTextChange?.(sanitizeTextInput(text));
@@ -186,9 +181,6 @@ export default function UploadCard({
       className="mx-auto w-full max-w-full sm:max-w-5xl relative overflow-hidden bg-surface"
     >
       <header data-tour="upload-header" className="space-y-1.5 sm:space-y-2 text-center sm:text-left mb-6 sm:mb-8">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em] sm:tracking-[0.32em] text-gold-500">{t("upload.card.step")}</p>
-        </div>
         <h3 className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white leading-tight">{t("upload.card.title")}</h3>
         <p className="text-[11px] sm:text-sm text-gray-600 dark:text-emerald-100/90 leading-relaxed">
           {t("upload.card.subtitle")}
@@ -200,12 +192,15 @@ export default function UploadCard({
         tabIndex={0}
         aria-label={uploadFileLabel}
         title={uploadFileLabel}
+        aria-disabled={showProgress}
         onClick={() => {
+          if (showProgress) return;
           inputRef.current?.click();
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
+            if (showProgress) return;
             inputRef.current?.click();
           }
         }}
@@ -213,7 +208,7 @@ export default function UploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "group relative flex flex-col items-center justify-center gap-2.5 sm:gap-4 overflow-hidden rounded-lg sm:rounded-xl border-2 border-dashed border-emerald-700/30 bg-emerald-50/80 px-3 pt-12 pb-6 sm:px-6 sm:py-12 text-center transition-[border-color,background-color,scale,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--workspace-surface)] dark:border-emerald-200/24 dark:bg-black/24 dark:focus-visible:ring-offset-[#082b23] cursor-pointer",
+          "group relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed border-emerald-700/30 bg-emerald-50/80 px-4 pt-12 pb-6 sm:px-6 sm:pt-12 sm:pb-8 text-center transition-[border-color,background-color,scale,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--workspace-surface)] dark:border-emerald-200/24 dark:bg-black/24 dark:focus-visible:ring-offset-[#082b23] cursor-pointer",
           "hover:border-emerald-600/50 hover:bg-emerald-50 dark:hover:border-emerald-200/35 dark:hover:bg-black/32",
           isDragging &&
           "border-emerald-500/70 bg-emerald-100/90 dark:border-emerald-300/50 dark:bg-emerald-500/12 scale-[1.01]"
@@ -241,6 +236,7 @@ export default function UploadCard({
         <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white px-2">
           {t("upload.card.dropText")}
         </p>
+        {autoProcess && <p className="text-sm text-ink-muted">{t('upload.card.automatic', 'Choose files — we’ll read and save them automatically.')}</p>}
         <p className="text-xs sm:text-sm text-gray-700 dark:text-emerald-100/88 px-2">
           <span className="inline-flex items-center gap-1.5"><Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-600 dark:text-emerald-300" /> {t("upload.card.securityText")}</span>
         </p>
@@ -259,7 +255,9 @@ export default function UploadCard({
         </p>
       </div>
 
-      <div className="mt-5 space-y-2">
+      <details className="mt-5" open={Boolean(pastedText) || undefined}>
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink">{t('upload.card.pasteLabel', 'Or paste your resume text')}</summary>
+      <div className="space-y-2">
         <label
           htmlFor="resume-paste-text"
           className="block text-sm font-semibold text-gray-800 dark:text-emerald-100"
@@ -281,6 +279,7 @@ export default function UploadCard({
           {t('upload.card.pasteHelp', 'Use either a file or pasted text. The latest input will be used.')}
         </p>
       </div>
+      </details>
 
       <input
         ref={inputRef}
@@ -322,7 +321,7 @@ export default function UploadCard({
       )}
 
       {/* File Selected Indicator (Not Saved Yet) */}
-      {fileName && !isSaved && (
+      {fileName && !isSaved && !showProgress && (
         <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-600/25 bg-emerald-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(16,185,129,0.35)] animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out dark:border-emerald-300/22 dark:bg-emerald-400/12 dark:text-emerald-50">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
@@ -349,6 +348,13 @@ export default function UploadCard({
 
       {showProgress && (
         <div className="mt-6 space-y-2" aria-live="assertive">
+          {autoProcess && <ol aria-label={t('upload.card.progress', 'Resume preparation')} className="grid grid-cols-2 gap-3 text-sm">
+            {[t('upload.card.reading', 'Read file'), t('upload.card.preparing', 'Prepare resume')].map((label, index) => <li key={index}
+              aria-current={(status === 'uploading' ? 0 : 1) === index ? 'step' : undefined}
+              className="flex items-center gap-2 rounded-xl border border-line bg-surface p-3 text-ink aria-[current=step]:border-emerald-500 aria-[current=step]:bg-emerald-500/10">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink/10 font-semibold tabular-nums">{index + 1}</span>{label}
+            </li>)}
+          </ol>}
           <div className="relative h-2 w-full overflow-hidden rounded-full bg-[color:color-mix(in_oklab,var(--surface-glass),transparent_50%)]">
             <div
               className="h-full w-full origin-left rtl:origin-right bg-[image:var(--gradient-primary-value)] transition-transform duration-breathe ease-snappy"
@@ -410,7 +416,7 @@ export default function UploadCard({
         </div>
       )}
 
-      <div className="mt-6 pt-6 border-t border-emerald-900/10 dark:border-white/10 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
+      {(!autoProcess || pastedText || fileName || showProgress) && <div className="mt-6 pt-6 border-t border-emerald-900/10 dark:border-white/10 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
         <GlassButton
           variant="ghost"
           onClick={onFileClear}
@@ -433,7 +439,7 @@ export default function UploadCard({
           </GlassButton>
         )}
 
-        {!isSaved && <GlassButton
+        {!isSaved && (!autoProcess || pastedText || status === 'error') && <GlassButton
           onClick={onSubmit}
           disabled={disabled || status === "uploading" || status === "parsing"}
           variant="primary"
@@ -453,7 +459,7 @@ export default function UploadCard({
             </>
           )}
         </GlassButton>}
-      </div>
+      </div>}
     </GlassCard>
   );
 }
