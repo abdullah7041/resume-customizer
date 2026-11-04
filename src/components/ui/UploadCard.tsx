@@ -256,16 +256,11 @@ export default function UploadCard({
       </div>
 
       <details className="mt-5" open={Boolean(pastedText) || undefined}>
-        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink">{t('upload.card.pasteLabel', 'Or paste your resume text')}</summary>
+        <summary id="resume-paste-label" className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-ink">{t('upload.card.pasteLabel', 'Or paste your resume text')}</summary>
       <div className="space-y-2">
-        <label
-          htmlFor="resume-paste-text"
-          className="block text-sm font-semibold text-gray-800 dark:text-emerald-100"
-        >
-          {t('upload.card.pasteLabel', 'Or paste your resume text')}
-        </label>
         <textarea
           id="resume-paste-text"
+          aria-labelledby="resume-paste-label"
           value={pastedText}
           onChange={(event) => {
             onTextChange?.(sanitizeTextInput(event.target.value));
@@ -293,32 +288,6 @@ export default function UploadCard({
         title={uploadFileLabel}
         onChange={handleFileChange}
       />
-
-      {isSaved && fileName && (
-        <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-600/28 bg-emerald-50/92 px-5 py-4 text-sm text-gray-900 shadow-[0_8px_22px_-18px_rgba(16,185,129,0.4)] animate-in fade-in slide-in-from-bottom-2 duration-200 ease-out dark:border-emerald-300/24 dark:bg-emerald-400/12 dark:text-emerald-50">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 border border-emerald-500/30">
-              <svg className="h-5 w-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-emerald-700 dark:text-emerald-100">{t('upload.card.savedTitle', 'Resume ready and saved')}</span>
-              <span className="text-xs text-emerald-600 dark:text-emerald-200/80 font-mono break-all line-clamp-2">{fileName}</span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onFileClear}
-            className="group ml-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-emerald-200/70 transition-colors hover:bg-red-500/20 hover:text-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/50"
-            aria-label={removeFileLabel}
-            title={removeFileLabel}
-          >
-            <XCircle className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-      )}
 
       {/* File Selected Indicator (Not Saved Yet) */}
       {fileName && !isSaved && !showProgress && (

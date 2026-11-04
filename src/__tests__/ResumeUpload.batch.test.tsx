@@ -122,7 +122,7 @@ describe('device library batch import', () => {
     expect(useResumeLibraryStore.getState().activeResumeId).toBe(active.id);
   });
 
-  it.each(['picker', 'drop'])('imports sequentially via %s and preserves the active workspace with one terminal toast', async (method) => {
+  it.each(['picker', 'drop'])('imports sequentially via %s and preserves the active workspace without a success toast', async (method) => {
     let completeFirst: (result: ReturnType<typeof document>) => void = () => {};
     mockParse.mockImplementationOnce((_input, options) => {
       options.onOcrFallback();
@@ -144,8 +144,7 @@ describe('device library batch import', () => {
     expect(view.onParseResume).not.toHaveBeenCalled();
     expect(view.onBeforeParseResume).not.toHaveBeenCalled();
     expect(view.onClear).not.toHaveBeenCalled();
-    expect(view.onToast).toHaveBeenCalledTimes(1);
-    expect(view.onToast).toHaveBeenCalledWith(expect.objectContaining({ title: 'Resume import complete', description: '2 saved, 0 failed, 0 skipped.' }));
+    expect(view.onToast).not.toHaveBeenCalled();
   });
 
   it('leaves no active resume when importing into an empty workspace and deduplicates fingerprints', async () => {
@@ -157,7 +156,7 @@ describe('device library batch import', () => {
     expect(useResumeLibraryStore.getState().entries).toHaveLength(1);
     expect(useResumeLibraryStore.getState().activeResumeId).toBeNull();
     expect(localStorage.getItem('watheq:activeResumeId')).toBeNull();
-    expect(view.onToast).toHaveBeenCalledTimes(1);
+    expect(view.onToast).not.toHaveBeenCalled();
     // Reopening the device library must still wait for an explicit selection.
     useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
     await useResumeLibraryStore.getState().initialize();

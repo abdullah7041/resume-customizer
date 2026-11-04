@@ -209,7 +209,7 @@ export default function UploadSection({
             const saved = rows.filter(row => row.state === 'saved').length;
             const failed = rows.filter(row => row.state === 'failed').length;
             const skipped = rows.filter(row => row.state === 'skipped').length;
-            onToast({ type: failed || skipped ? 'warning' : 'success', title: t('upload.batch.complete', 'Resume import complete'),
+            if (failed || skipped) onToast({ type: 'warning', title: t('upload.batch.complete', 'Resume import complete'),
                 description: t('upload.batch.summary', '{{saved}} saved, {{failed}} failed, {{skipped}} skipped.', { saved, failed, skipped }) });
         }
     };
@@ -310,11 +310,6 @@ export default function UploadSection({
             // Track successful upload
             const parseTime = performance.now() - startTime;
             analytics.trackUpload(fileType, true, parseTime);
-
-            if (!parseNotificationsHandled) onToast({
-                type: 'success',
-                title: 'Resume parsed successfully',
-            });
         } catch (err) {
             // Handle user-initiated cancellation silently
             if (err && (err as Error & { cancelled?: boolean }).cancelled) {

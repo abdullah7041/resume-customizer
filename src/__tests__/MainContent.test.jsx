@@ -828,6 +828,7 @@ describe("MainContent resume parsing", () => {
       storageFileName: "resume.pdf",
       storageUserId: "user-123",
     });
+    expect(screen.queryByTestId('toast-mock')).not.toBeInTheDocument();
   });
 
   it("supports text payloads", async () => {

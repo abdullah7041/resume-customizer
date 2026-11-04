@@ -1724,11 +1724,11 @@ export default function MainContent() {
         useResumeStore.getState().setOptimizeRun(null);
         resetPipelineContext();
         emitHRSuperSaudEvent('resume.uploaded');
-        pushToast(
+        if (librarySaveFailure) pushToast(
           {
-            type: librarySaveFailure ? "warning" : "success",
-            title: librarySaveFailure ? t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.') : t("toasts.resumeParsed"),
-            description: librarySaveFailure ?? t("toasts.resumeParsedDesc"),
+            type: "warning",
+            title: t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.'),
+            description: librarySaveFailure,
           },
           { id: TOAST_IDS.upload }
         );

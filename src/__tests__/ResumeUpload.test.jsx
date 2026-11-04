@@ -142,7 +142,7 @@ describe("ResumeUpload", () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it("uploads PDFs and shows a success toast", async () => {
+  it("uploads PDFs without a success toast", async () => {
     const onToast = vi.fn();
     const onParseResume = vi.fn().mockResolvedValue({});
 
@@ -170,9 +170,7 @@ describe("ResumeUpload", () => {
       expect.any(AbortSignal),
       expect.any(Function)
     );
-    expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "success", title: "Resume parsed successfully" })
-    );
+    expect(onToast).not.toHaveBeenCalled();
   });
 
   it('starts after one file choice, shows two real stages, and supports cancellation', async () => {
@@ -459,7 +457,7 @@ describe("ResumeUpload", () => {
         fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });
       }
     });
-    expect(screen.getByText(name)).toBeInTheDocument();
+    expect(screen.queryByText('Resume ready and saved')).not.toBeInTheDocument();
     expect(onParseResume).toHaveBeenCalledWith({ file }, expect.any(AbortSignal), expect.any(Function));
     expect(onParseResume).toHaveBeenCalledTimes(1);
     expect(container.querySelector("script")).toBeNull();

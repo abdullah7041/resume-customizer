@@ -65,7 +65,7 @@ describe('UploadCard Arabic localization', () => {
     language = 'ar';
     const { rerender } = render(<UploadCard {...baseProps} fileName="cv.pdf" isSaved />);
 
-    expect(screen.getByText('السيرة جاهزة ومحفوظة')).toBeInTheDocument();
+    expect(screen.queryByText('السيرة جاهزة ومحفوظة')).not.toBeInTheDocument();
     expect(screen.queryByText('Resume Ready & Saved')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /prepare/i })).not.toBeInTheDocument();
 
@@ -75,5 +75,13 @@ describe('UploadCard Arabic localization', () => {
     expect(screen.getByRole('button', { name: 'إلغاء' })).toBeInTheDocument();
     expect(screen.queryByText('Processing...')).not.toBeInTheDocument();
     expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
+  });
+
+  it('shows one paste heading and keeps the text box labelled', () => {
+    language = 'en';
+    render(<UploadCard {...baseProps} pastedText="Resume text" />);
+
+    expect(screen.getAllByText('Or paste your resume text')).toHaveLength(1);
+    expect(screen.getByRole('textbox', { name: 'Or paste your resume text' })).toBeInTheDocument();
   });
 });
