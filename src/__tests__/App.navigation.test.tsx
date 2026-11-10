@@ -208,6 +208,18 @@ describe('App compliance navigation', () => {
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 
+  it('routes sandbox payments to the restricted page outside onboarding', async () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    window.localStorage.setItem('watheq:landingSeen', 'true');
+    setPath('/dev/payments');
+    render(<App />);
+
+    expect(await screen.findByText('Sandbox checkout is restricted to administrators.')).toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /complete onboarding/i })).not.toBeInTheDocument();
+    expect(headerProps.calls.at(-1)?.showMarketingNav).toBe(false);
+  });
+
   it('keeps the normal app shell visible after signed-out onboarding enters guest mode', async () => {
     window.localStorage.removeItem('watheq:onboarded');
     // Signed-out onboarding now opens only after the visitor enters from the landing
