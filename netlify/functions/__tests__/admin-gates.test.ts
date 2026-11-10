@@ -86,6 +86,20 @@ describe('protected Netlify function gates', () => {
     expect(getSupabaseClientMock).not.toHaveBeenCalled();
   });
 
+  it('resets only the free allowance through the atomic reset operation', async () => {
+    process.env.ALLOW_DEV_RESET = 'true';
+    process.env.ADMIN_SECRET = 'strong-secret';
+    const rpc = vi.fn().mockResolvedValue({ data: { credits_remaining: 120 }, error: null });
+    getSupabaseClientMock.mockReturnValue({ rpc });
+    const response = await runHandler(resetCreditsHandler, buildEvent({
+      headers: { 'x-admin-secret': 'strong-secret' },
+      queryStringParameters: { email: 'user@example.com' },
+    }));
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? '{}').data.credits_remaining).toBe(120);
+    expect(rpc).toHaveBeenCalledWith('reset_free_credits', { p_email: 'user@example.com', p_amount: 20 });
+  });
+
   it('requires both the allow flag and admin secret before celebration credit mutation', async () => {
     process.env.NODE_ENV = 'production';
     process.env.ALLOW_CELEBRATION_BONUS = 'true';

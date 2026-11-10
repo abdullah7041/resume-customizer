@@ -1,6 +1,6 @@
 # GEIDEA KSA sandbox integration
 
-Implemented on `codex/geidea-integration` from the GEIDEA integration email dated 10 November 2026. **This is sandbox qualification, not a paid-plan launch.** The customer-facing pricing waitlist and existing credits remain unchanged. See the [pricing decision](research/2026-11-10-pricing-decision.md).
+Implemented on `codex/geidea-integration` from the GEIDEA integration email dated 10 November 2026. The user subsequently approved **SAR 29 once for 100 nonexpiring purchased credits**. Customer checkout and paid accounting are implemented behind `GEIDEA_PAYMENTS_ENABLED`. See [customer checkout setup](application-credits.md). The SAR 1 administrator sandbox qualification below remains available independently.
 
 ## Setup
 

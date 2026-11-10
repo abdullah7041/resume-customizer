@@ -1,5 +1,7 @@
 # Watheq launch offer — decision version
 
+**Superseded after user review.** The approved offer is SAR 29 once for 100 nonexpiring purchased credits. See [the implementation and activation guide](../application-credits.md). The earlier SAR 9 proposal below is retained as research history.
+
 Prepared 10 November 2026. **Proposal, not a published offer.** The GEIDEA branch enables sandbox qualification only. Source detail: [regional competitors](2026-11-10-regional-resume-competitors.md) and [product, credit and cost analysis](2026-11-10-watheq-pricing-options.md).
 
 ## Recommended decision

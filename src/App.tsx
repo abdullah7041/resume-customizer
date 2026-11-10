@@ -49,9 +49,11 @@ const ENTER_ONBOARDING_EVENT = "watheq:enter-onboarding";
 // Lazy so it stays out of the initial chunk.
 const DevFlagsPage = lazy(() => import("./pages/DevFlagsPage"));
 const GeideaSandboxPage = lazy(() => import("@/pages/GeideaSandboxPage"));
+const CheckoutPage = lazy(() => import("@/pages/CheckoutPage"));
 
 const getCurrentPath = () => {
   if (typeof window === "undefined") return "/";
+  if (window.location.pathname === "/" && sessionStorage.getItem("watheq:checkoutReturn")) return "/checkout";
   return window.location.pathname;
 };
 
@@ -151,7 +153,7 @@ export default function App() {
 
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
-  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/refund" || currentPath === "/admin/feedback" || currentPath === "/dev/flags" || currentPath === "/dev/payments";
+  const isStaticPage = currentPath === "/privacy" || currentPath === "/terms" || currentPath === "/refund" || currentPath === "/admin/feedback" || currentPath === "/dev/flags" || currentPath === "/dev/payments" || currentPath === "/checkout";
   const isSignedOutLanding = !user && !needsOnboarding && !guestModeActive && currentPath === "/";
   // In-app landing overlay for signed-in / guest users (header marketing links).
   // Not applicable on static pages, during onboarding, or when the signed-out
@@ -190,6 +192,8 @@ export default function App() {
                 <DevFlagsPage />
               ) : currentPath === "/dev/payments" ? (
                 <GeideaSandboxPage />
+              ) : currentPath === "/checkout" ? (
+                <CheckoutPage />
               ) : needsOnboarding ? (
                 <main className="relative z-10 flex flex-1 items-start justify-center px-4 py-8 sm:items-center sm:py-12">
                   <OnboardingChat

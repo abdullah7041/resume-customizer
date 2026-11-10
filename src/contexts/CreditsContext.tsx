@@ -33,6 +33,8 @@ const CreditsContext = createContext<CreditsContextValue | undefined>(undefined)
 const CREDITS_CACHE_TTL_MS = 1000;
 
 interface UserCreditsRow {
+    free_credits_remaining?: number;
+    purchased_credits_remaining?: number;
     credits_remaining: number;
     credits_total: number;
     feedback_credits_earned: number;
@@ -42,6 +44,8 @@ interface UserCreditsRow {
 }
 
 interface UserCreditsApiResponse {
+    freeCreditsRemaining?: number;
+    purchasedCreditsRemaining?: number;
     creditsRemaining: number;
     creditsTotal: number;
     feedbackCreditsEarned: number;
@@ -58,6 +62,10 @@ const inFlightCreditsFetches = new Map<string, Promise<UserCredits>>();
 const recentCreditsByEmail = new Map<string, CreditsCacheEntry>();
 
 const mapCreditsRow = (data: UserCreditsRow): UserCredits => ({
+    ...(typeof data.purchased_credits_remaining === 'number' ? {
+        freeRemaining: data.free_credits_remaining,
+        purchasedRemaining: data.purchased_credits_remaining,
+    } : {}),
     remaining: data.credits_remaining,
     total: data.credits_total,
     feedbackCreditsEarned: data.feedback_credits_earned,
@@ -99,6 +107,10 @@ const resolvePendingInitialGrant = async (fallback: UserCredits): Promise<UserCr
         const data = await response.json() as UserCreditsApiResponse;
         return {
             remaining: data.creditsRemaining,
+            ...(typeof data.purchasedCreditsRemaining === 'number' ? {
+                freeRemaining: data.freeCreditsRemaining,
+                purchasedRemaining: data.purchasedCreditsRemaining,
+            } : {}),
             total: data.creditsTotal,
             feedbackCreditsEarned: data.feedbackCreditsEarned,
             referralCreditsEarned: data.referralCreditsEarned,
@@ -123,7 +135,7 @@ const fetchCreditsForEmail = (email: string, options: { forceRefresh?: boolean }
 
     const request = Promise.resolve(supabase
         .from('user_credits')
-        .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
+        .select('*')
         .eq('email', email)
         .single())
         .then(({ data, error: fetchError }) => {
@@ -331,7 +343,12 @@ export function CreditsProvider({ children }: CreditsProviderProps) {
 
     const applyCreditsRemaining = useCallback((remaining: number) => {
         if (!Number.isFinite(remaining) || remaining < 0) return;
-        setCredits((current) => (current ? { ...current, remaining } : current));
+        setCredits((current) => {
+            if (!current) return current;
+            if (typeof current.freeRemaining !== 'number' || remaining > current.remaining) return { ...current, remaining };
+            const freeRemaining = Math.max(0, current.freeRemaining - (current.remaining - remaining));
+            return { ...current, remaining, freeRemaining, purchasedRemaining: remaining - freeRemaining };
+        });
     }, []);
 
     const value: CreditsContextValue = {

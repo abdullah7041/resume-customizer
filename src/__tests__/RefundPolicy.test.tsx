@@ -27,3 +27,4 @@ describe('RefundPolicy', () => {
     expect(screen.queryByText(/within 1 business day/i)).not.toBeInTheDocument();
   });
 });
+vi.mock('@/hooks/usePaymentConfig', () => ({ usePaymentConfig: () => ({ enabled: false, priceSar: 29, credits: 100, environment: 'sandbox' }) }));

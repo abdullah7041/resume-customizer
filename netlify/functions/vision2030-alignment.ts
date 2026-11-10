@@ -130,6 +130,7 @@ const baseHandler: Handler = async (event) => {
     } catch (deliveryError) {
       try {
         await addCredits(userEmail, creditCheck.required, 'refund', {
+          debitId: creditResult.debitId,
           feature: 'vision2030',
           reason: 'result_delivery_failed',
         });

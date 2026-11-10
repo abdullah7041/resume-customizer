@@ -6,6 +6,8 @@
  */
 
 export interface UserCredits {
+  freeRemaining?: number;
+  purchasedRemaining?: number;
   remaining: number;
   total: number;
   feedbackCreditsEarned: number;

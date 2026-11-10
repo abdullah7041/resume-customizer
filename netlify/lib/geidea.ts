@@ -3,6 +3,15 @@ import { z } from 'zod';
 
 const API_ORIGIN = 'https://api.ksamerchant.geidea.net';
 export const GEIDEA_TEST_AMOUNT = 1;
+export const GEIDEA_PACK_PRICE_SAR = 29;
+export const GEIDEA_PACK_CREDITS = 100;
+export const geideaGuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+export type PaymentEnvironment = 'sandbox' | 'live';
+export function getPaymentEnvironment(): PaymentEnvironment {
+  const environment = process.env.GEIDEA_ENVIRONMENT ?? 'sandbox';
+  if (environment !== 'sandbox' && environment !== 'live') throw new GeideaError(503, 'payment/not-configured', 'Invalid payment environment');
+  return environment;
+}
 export const GEIDEA_CHECKOUT_ORIGIN = 'https://www.ksamerchant.geidea.net';
 // GEIDEA/.NET GUIDs are not always RFC-variant UUIDs. Keep the exact signed
 // spelling while validating the hexadecimal shape before building API paths.
@@ -55,20 +64,22 @@ async function request(config: GeideaConfig, path: string, body?: unknown): Prom
 }
 
 const successCodes = { responseCode: z.literal('000'), detailedResponseCode: z.literal('000') };
-export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en') {
+export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string }) {
   uuid.parse(reference);
+  const amount = customerPack ? GEIDEA_PACK_PRICE_SAR : GEIDEA_TEST_AMOUNT;
   const timestamp = new Date().toISOString();
   const result = await request(config, '/payment-intent/api/v2/direct/session', {
-    amount: GEIDEA_TEST_AMOUNT,
+    amount,
     currency: 'SAR',
     timestamp,
     merchantReferenceId: reference,
-    signature: signature(config, `${config.publicKey}${GEIDEA_TEST_AMOUNT.toFixed(2)}SAR${reference}${timestamp}`),
-    callbackUrl: `${config.siteUrl}/.netlify/functions/geidea-webhook`,
-    returnUrl: `${config.siteUrl}/dev/payments?payment=${reference}`,
+    signature: signature(config, `${config.publicKey}${amount.toFixed(2)}SAR${reference}${timestamp}`),
+    callbackUrl: `${config.siteUrl}/.netlify/functions/${customerPack ? 'payment-webhook' : 'geidea-webhook'}`,
+    returnUrl: `${config.siteUrl}/${customerPack ? 'checkout' : 'dev/payments'}?payment=${reference}`,
     paymentOperation: 'Pay',
     cardOnFile: false,
     language,
+    ...(customerPack ? { customer: { email: customerPack.email } } : {}),
   });
   const parsed = z.object({ ...successCodes, session: z.object({ id: uuid }) }).safeParse(result);
   if (!parsed.success) throw new GeideaError(502, 'payment/session-failed', 'Unable to create checkout session');
@@ -112,6 +123,30 @@ const orderSchema = signedOrderSchema.extend({
   totalRefundedAmount: z.number().nonnegative(),
   paymentMethod: z.object({ brand: z.string().max(64).nullable().optional() }).nullable().optional(),
 });
+
+// The authenticated order, never browser/callback claims, determines credit grants.
+export async function verifyCreditOrder(config: GeideaConfig, orderId: string, reference: string, environment: PaymentEnvironment) {
+  uuid.parse(orderId);
+  uuid.parse(reference);
+  const result = await request(config, `/pgw/api/v1/direct/order/${orderId}`);
+  const parsed = z.object({ ...successCodes, order: orderSchema.extend({ isTest: z.boolean() }) }).safeParse(result);
+  if (!parsed.success) throw new GeideaError(502, 'payment/invalid-order', 'Unable to verify payment order');
+  const order = parsed.data.order;
+  const equalGuid = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const refundedMinor = Math.round(order.totalRefundedAmount * 100);
+  if (!equalGuid(order.orderId, orderId) || !equalGuid(order.merchantReferenceId, reference) || !equalGuid(order.merchantPublicKey, config.publicKey) ||
+    order.amount !== GEIDEA_PACK_PRICE_SAR || order.currency !== 'SAR' || order.isTest !== (environment === 'sandbox') ||
+    order.totalCapturedAmount > GEIDEA_PACK_PRICE_SAR || refundedMinor > GEIDEA_PACK_PRICE_SAR * 100 ||
+    Math.abs(order.totalRefundedAmount * 100 - refundedMinor) > 0.000001 || order.totalRefundedAmount > order.totalCapturedAmount) {
+    throw new GeideaError(409, 'payment/order-mismatch', 'Payment does not match the checkout');
+  }
+  const captured = order.totalCapturedAmount === GEIDEA_PACK_PRICE_SAR;
+  const status = captured && refundedMinor === GEIDEA_PACK_PRICE_SAR * 100 ? 'refunded'
+    : captured && (refundedMinor > 0 || (order.status === 'Success' && order.detailedStatus === 'Paid')) ? 'succeeded'
+    : order.status === 'Failed' ? 'failed'
+    : ['Cancelled', 'Canceled', 'Expired'].includes(order.status) ? 'cancelled' : 'pending';
+  return { orderId: order.orderId, status, refundedMinor };
+}
 
 export async function verifyOrder(config: GeideaConfig, orderId: string, reference: string) {
   uuid.parse(orderId);

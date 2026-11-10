@@ -6,6 +6,8 @@ import { GlassButton } from '../ui/GlassButton';
 import { GlassCircle } from '../ui/GlassCircle';
 import { cn } from '../../lib/utils/cn';
 import { PricingWaitlistModal } from '../Credits/PricingWaitlistModal';
+import { usePaymentConfig } from '@/hooks/usePaymentConfig';
+import { CreditPack } from '@/components/Credits/CreditPack';
 
 interface PlanConfig {
     key: 'free' | 'pro';
@@ -25,6 +27,7 @@ const plans: PlanConfig[] = [
 
 export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
     const { t, i18n } = useTranslation();
+    const paymentConfig = usePaymentConfig();
     const [showWaitlistModal, setShowWaitlistModal] = useState(false);
 
     const openWaitlist = () => {
@@ -42,13 +45,14 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                         </span>
                     </h2>
                     <p className="text-lg sm:text-xl font-medium text-slate-600 dark:text-white/80 max-w-2xl mx-auto dark:drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">
-                        {t('pricing.subtitle')}
+                        {paymentConfig?.enabled ? t('pricing.pack.subtitle', 'Start free. Add credits whenever you need them.') : t('pricing.subtitle')}
                     </p>
                 </div>
 
                 {/* Pricing Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto items-stretch">
                     {plans.map((plan) => {
+                        if (plan.key === 'pro' && paymentConfig?.enabled) return <div key={plan.key} className="h-full rounded-3xl border border-line bg-surface p-6 sm:p-8"><CreditPack /></div>;
                         const features = t(`pricing.plans.${plan.key}.features`, { returnObjects: true }) as string[];
 
                         return (
@@ -163,9 +167,9 @@ export function PricingSection({ onGetStarted }: PricingSectionProps = {}) {
                     })}
                 </div>
 
-                <p className="text-center text-xs text-slate-500 dark:text-white/40">
+                {!paymentConfig?.enabled && <p className="text-center text-xs text-slate-500 dark:text-white/40">
                     {t('pricing.waitlist.notLiveNote', 'Paid plans are not live yet — joining the waitlist helps us shape launch pricing.')}
-                </p>
+                </p>}
             </div>
 
             <PricingWaitlistModal

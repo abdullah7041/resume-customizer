@@ -136,6 +136,9 @@ export function CreditBalance({ onClick, variant = 'default', iconOnly = false }
               {balanceDisplay}
             </span>
           </span>
+          {typeof credits.purchasedRemaining === 'number' && <span className="text-[10px] text-ink-muted">
+            {t('pricing.pack.balanceSplit', { free: credits.freeRemaining ?? 0, purchased: credits.purchasedRemaining, defaultValue: 'Free: {{free}} · Purchased: {{purchased}}' })}
+          </span>}
           {!isCompact && resetInfo.dateText && (
             <span className={cn(
               "text-[10px] uppercase tracking-wider font-bold opacity-80",

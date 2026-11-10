@@ -1,5 +1,7 @@
 # Watheq pricing options for decision
 
+**Subsequent decision:** the user approved SAR 29 once for 100 nonexpiring purchased credits after reviewing the independent GPT Work report. See [Application Credits](../application-credits.md). Recommendations below describe the earlier research.
+
 Research date: 10 November 2026. Branch inspected: `codex/geidea-integration`.
 Status: recommendation only. No paid benefits, checkout package, subscription, or production entitlement is authorized or implemented by this report.
 

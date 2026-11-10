@@ -109,7 +109,9 @@ const handler: Handler = async (event) => {
 
         // Reset to the free-tier allowance — must always match the signup grant
         const newCredits = FREE_TIER_CREDITS;
-        const { error: updateError } = await supabase
+        const reset = await supabase.rpc('reset_free_credits', { p_email: email, p_amount: newCredits });
+        const useLegacyReset = reset.error?.code === '42883' && process.env.GEIDEA_PAYMENTS_ENABLED !== 'true';
+        const { error: updateError } = useLegacyReset ? await supabase
           .from('user_credits')
           .update({
             credits_remaining: newCredits,
@@ -117,7 +119,7 @@ const handler: Handler = async (event) => {
             last_reset_date: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
-          .eq('email', email);
+          .eq('email', email) : reset;
 
         if (updateError) {
           console.error(`[cron-reset-credits] Failed to reset credits for user ${redactForLog(email)}:`, summarizeErrorForLog(updateError));
@@ -126,7 +128,7 @@ const handler: Handler = async (event) => {
         }
 
         // Log transaction
-        const { error: logError } = await supabase.from('credit_transactions').insert({
+        const { error: logError } = useLegacyReset ? await supabase.from('credit_transactions').insert({
           email: email,
           feature: 'monthly_reset',
           amount: newCredits - (userCredit.credits_remaining || 0),
@@ -137,7 +139,7 @@ const handler: Handler = async (event) => {
             timestamp: new Date().toISOString(),
             reason: 'monthly_credit_reset',
           },
-        });
+        }) : { error: null };
 
         if (logError) {
           console.warn(`[cron-reset-credits] Failed to log transaction for user ${redactForLog(email)}:`, summarizeErrorForLog(logError));
