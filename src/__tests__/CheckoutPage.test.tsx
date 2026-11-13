@@ -57,6 +57,15 @@ describe('customer checkout', () => {
     expect(screen.queryByText('Payment verified. Your 100 purchased credits have been added.')).not.toBeInTheDocument();
   });
 
+  it('confirms a verified sandbox payment without claiming credits were granted', async () => {
+    window.history.replaceState({}, '', `/checkout?payment=${paymentId}`);
+    readPaymentStatus.mockResolvedValue({ paymentId, status: 'succeeded', environment: 'sandbox', creditsGranted: false, refundedMinor: 0 });
+    render(<CheckoutPage />);
+    expect(await screen.findByText('Test payment verified. No spendable credits were added.')).toBeInTheDocument();
+    expect(screen.queryByText('Payment verified. Your 100 purchased credits have been added.')).not.toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
   it('requires sign-in and prevents checkout creation while disabled', () => {
     config.mockReturnValue({ enabled: false, environment: 'sandbox' });
     auth.mockReturnValue({ user: null, loading: false });

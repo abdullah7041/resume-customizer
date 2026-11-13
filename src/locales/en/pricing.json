@@ -12,6 +12,7 @@
       "balanceSplit": "Free: {{free}} · Purchased: {{purchased}}"
     },
     "checkout": {
+      "sandboxSuccess": "Test payment verified. No spendable credits were added.",
       "title": "Buy credits",
       "sandbox": "Test mode. Use GEIDEA test cards. Test purchases do not add spendable credits.",
       "loading": "Loading checkout…",

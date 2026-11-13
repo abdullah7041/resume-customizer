@@ -104,6 +104,8 @@ export default function CheckoutPage() {
           <p role="status" aria-live="polite">{result && result.refundedMinor > 0
             ? t('pricing.checkout.refunded', 'This payment has been refunded. Check your current credit balance.') : confirmed
             ? t('pricing.checkout.success', 'Payment verified. Your 100 purchased credits have been added.')
+            : result?.status === 'succeeded' && result.environment === 'sandbox'
+              ? t('pricing.checkout.sandboxSuccess', 'Test payment verified. No spendable credits were added.')
             : result?.status === 'failed' ? t('pricing.checkout.failed', 'Payment failed. No credits were added. You can start a new checkout.')
               : result?.status === 'cancelled' ? t('pricing.checkout.cancelled', 'Payment cancelled. No credits were added. You can start a new checkout.')
                 : result?.status === 'refunded' ? t('pricing.checkout.refunded', 'This payment has been refunded. Check your current credit balance.')
