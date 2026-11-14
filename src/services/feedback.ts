@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 import { supabase } from './supabase';
 import type {
   FeedbackContext,
@@ -18,12 +19,14 @@ function getContextFeature(pagePath: string): string {
 }
 
 async function getFeedbackAuthHeaders() {
+  const revision = getPrivateSessionRevision();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   const {
     data: { session },
     error,
   } = await supabase.auth.getSession();
 
+  assertPrivateSession(revision, session?.user?.id ?? null);
   if (error) {
     console.warn('[FeedbackService] Failed to retrieve auth session:', {
       message: error.message,

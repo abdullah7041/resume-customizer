@@ -1,3 +1,5 @@
+import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
+import { privateStorage } from '@/lib/auth/privateSession';
 /**
  * Vision2030Section Component
  *
@@ -6,7 +8,7 @@
  * Results are persisted in localStorage to survive tab navigation.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Target, Sparkles, Info, FileText, Trash2 } from 'lucide-react';
 import { analyzeVision2030 } from '@/services/api';
@@ -44,20 +46,22 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const { credits: _credits, isLoading: creditsLoading, refetch: refreshCredits } = useUserCredits();
+  const requestRef = useRef<AbortController | null>(null);
+  useEffect(() => () => requestRef.current?.abort(), [resumeText]);
   const isArabic = i18n.language === 'ar';
 
   // Initialize analysis from localStorage
   const [analysis, setAnalysis] = useState<Vision2030AnalysisResponse | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
-      const stored = localStorage.getItem(VISION2030_STORAGE_KEY);
+      const stored = privateStorage.getItem(VISION2030_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        const currentHash = resumeText?.slice(0, 100);
+        const currentHash = resumeText;
         if (currentHash && parsed?.resumeHash === currentHash && isUsableVision2030Analysis(parsed.analysis)) {
           return normalizeVision2030Analysis(parsed.analysis);
         }
-        localStorage.removeItem(VISION2030_STORAGE_KEY);
+        privateStorage.removeItem(VISION2030_STORAGE_KEY);
       }
     } catch (err) {
       console.warn('[Vision2030Section] Failed to load cached analysis:', err);
@@ -69,7 +73,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   const [isAnalyzing, setIsAnalyzing] = useState(() => {
     if (typeof window === 'undefined') return false;
     try {
-      return localStorage.getItem(VISION2030_ANALYZING_KEY) === 'true';
+      return privateStorage.getItem(VISION2030_ANALYZING_KEY) === 'true';
     } catch {
       return false;
     }
@@ -83,9 +87,9 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
     if (typeof window === 'undefined') return;
     if (analysis && resumeText) {
       try {
-        localStorage.setItem(VISION2030_STORAGE_KEY, JSON.stringify({
+        privateStorage.setItem(VISION2030_STORAGE_KEY, JSON.stringify({
           analysis,
-          resumeHash: resumeText.slice(0, 100), // Store hash for resume matching
+          resumeHash: resumeText, // Store hash for resume matching
           timestamp: new Date().toISOString(),
         }));
       } catch (err) {
@@ -103,7 +107,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
       console.warn('[Vision2030Section] Clearing stale analyzing state (timeout)');
       setIsAnalyzing(false);
       try {
-        localStorage.removeItem(VISION2030_ANALYZING_KEY);
+        privateStorage.removeItem(VISION2030_ANALYZING_KEY);
       } catch {
         // Ignore
       }
@@ -135,13 +139,18 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
   // Execute analysis after credit confirmation
   const executeAnalysis = useCallback(async () => {
     if (!resumeText) return;
+    const controller = new AbortController();
+    requestRef.current?.abort();
+    requestRef.current = controller;
+    const revision = getPrivateSessionRevision();
+    const isCurrent = () => !controller.signal.aborted && revision === getPrivateSessionRevision();
 
     setShowConfirmModal(false);
     setIsAnalyzing(true);
 
     // Persist analyzing state so it survives tab switches
     try {
-      localStorage.setItem(VISION2030_ANALYZING_KEY, 'true');
+      privateStorage.setItem(VISION2030_ANALYZING_KEY, 'true');
     } catch {
       // Ignore storage errors
     }
@@ -153,7 +162,8 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         description: t('vision2030.section.analyzingDesc', 'Analyzing your resume against Vision 2030 sectors...'),
       });
 
-      const rawResult = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', null);
+      const rawResult = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', controller.signal);
+      if (!isCurrent()) return;
       if (!isUsableVision2030Analysis(rawResult)) {
         throw new Error(t(
           'vision2030.section.incompleteResult',
@@ -165,9 +175,9 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
       // Save to storage immediately to persist result even if component unmounts (tab switch)
       try {
-        localStorage.setItem(VISION2030_STORAGE_KEY, JSON.stringify({
+        privateStorage.setItem(VISION2030_STORAGE_KEY, JSON.stringify({
           analysis: result,
-          resumeHash: resumeText.slice(0, 100),
+          resumeHash: resumeText,
           timestamp: new Date().toISOString(),
         }));
       } catch (err) {
@@ -182,21 +192,20 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
 
       // Refresh credits after consumption
       await refreshCredits();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (!isCurrent()) return;
       console.error('[Vision2030Section] Analysis failed:', error);
 
       onToast?.({
         type: 'danger',
         title: t('vision2030.section.failed', 'Analysis Failed'),
-        description: error?.message || t('vision2030.section.failedDesc', 'Failed to analyze Vision 2030 alignment. Please try again.'),
+        description: (error instanceof Error ? error.message : '') || t('vision2030.section.failedDesc', 'Failed to analyze Vision 2030 alignment. Please try again.'),
       });
     } finally {
-      setIsAnalyzing(false);
-      // Clear analyzing state from storage
-      try {
-        localStorage.removeItem(VISION2030_ANALYZING_KEY);
-      } catch {
-        // Ignore storage errors
+      if (revision === getPrivateSessionRevision()) {
+        setIsAnalyzing(false);
+        try { privateStorage.removeItem(VISION2030_ANALYZING_KEY); }
+        catch { /* Preserve the current owner's state if storage is unavailable. */ }
       }
     }
   }, [resumeText, isArabic, onToast, t, refreshCredits]);
@@ -311,8 +320,8 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
                 setAnalysis(null);
                 setIsAnalyzing(false);
                 try {
-                  localStorage.removeItem(VISION2030_STORAGE_KEY);
-                  localStorage.removeItem(VISION2030_ANALYZING_KEY);
+                  privateStorage.removeItem(VISION2030_STORAGE_KEY);
+                  privateStorage.removeItem(VISION2030_ANALYZING_KEY);
                 } catch (err) {
                   console.warn('[Vision2030Section] Failed to clear storage:', err);
                 }

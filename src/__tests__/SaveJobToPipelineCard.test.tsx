@@ -1,8 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SaveJobToPipelineCard } from '@/components/sections/SaveJobToPipelineCard';
-import { createJobApplication, updateJobApplication } from '@/services/pipeline';
+import { createJobApplication, updateJobApplication, listJobApplications } from '@/services/pipeline';
 import type { JobApplication } from '@/types/pipeline';
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -20,6 +20,7 @@ vi.mock('@/services/analytics', () => ({
 vi.mock('@/services/pipeline', () => ({
   createJobApplication: vi.fn(),
   updateJobApplication: vi.fn(),
+  listJobApplications: vi.fn(),
 }));
 
 vi.mock('@/components/Feedback/FeedbackPromptController', () => ({
@@ -27,6 +28,46 @@ vi.mock('@/components/Feedback/FeedbackPromptController', () => ({
 }));
 
 describe('SaveJobToPipelineCard', () => {
+  it('recovers an interrupted update after reload without a parent application ID', async () => {
+    const row = { id: 'pending-id', user_id: 'user-123', job_description: 'Pending job' } as JobApplication;
+    vi.mocked(listJobApplications).mockResolvedValue({ data: [row], error: null });
+    vi.mocked(updateJobApplication).mockResolvedValue({ data: row, error: null });
+    localStorage.setItem('watheq:jobSaveDraft', JSON.stringify({ userId: 'user-123', jobDescription: 'Pending job', applicationId: 'pending-id', fields: { company_name: 'Draft Company', notes: 'Recover me' } }));
+    render(<SaveJobToPipelineCard jobDescription="Pending job" />);
+    const user = userEvent.setup();
+    const update = await screen.findByRole('button', { name: /Update saved job/ });
+    expect(screen.getByLabelText('Notes')).toHaveValue('Recover me');
+    await user.click(update);
+    expect(updateJobApplication).toHaveBeenCalledWith('pending-id', expect.objectContaining({ notes: 'Recover me' }));
+    expect(createJobApplication).not.toHaveBeenCalled();
+  });
+  beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); });
+  it('does not attach a completed save after the current job changes', async () => {
+    let finish!: (value: Awaited<ReturnType<typeof updateJobApplication>>) => void;
+    vi.mocked(updateJobApplication).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const onSaved = vi.fn();
+    const view = render(<SaveJobToPipelineCard jobDescription="Job A" savedApplicationId="a" onSaved={onSaved} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Update saved job/ }));
+    view.rerender(<SaveJobToPipelineCard jobDescription="Job B" onSaved={onSaved} />);
+    await act(async () => { finish({ data: { id: 'a' } as JobApplication, error: null }); });
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(localStorage.getItem('watheq:jobSaveDraft')).toContain('Job A');
+  });
+  it('restores edits when reloaded while an update is still pending', async () => {
+    vi.mocked(updateJobApplication).mockImplementationOnce(() => new Promise(() => {}));
+    const props = { jobDescription: 'QA pending job', savedApplicationId: 'pending-id', extractedMetadata: null };
+    const first = render(<SaveJobToPipelineCard {...props} />);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Company'), 'Pending QA Company');
+    await user.click(screen.getByRole('button', { name: /Update saved job/ }));
+    expect(screen.getByLabelText('Company')).toBeDisabled();
+    expect(screen.getByLabelText('Notes')).toBeDisabled();
+    first.unmount();
+    render(<SaveJobToPipelineCard {...props} />);
+    expect(screen.getByLabelText('Company')).toHaveValue('Pending QA Company');
+    expect(screen.getByRole('status')).toHaveTextContent(/restored/i);
+  });
   const savedApplication: JobApplication = {
     id: 'app-123',
     user_id: 'user-123',

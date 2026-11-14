@@ -387,6 +387,7 @@ export default function UploadCard({
 
       {(!autoProcess || pastedText || fileName || showProgress) && <div className="mt-6 pt-6 border-t border-emerald-900/10 dark:border-white/10 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 w-full">
         <GlassButton
+          type="button"
           variant="ghost"
           onClick={onFileClear}
           disabled={showProgress || (!fileName && !pastedText)}
@@ -399,6 +400,7 @@ export default function UploadCard({
         {/* Show Cancel button during processing */}
         {(status === 'uploading' || status === 'parsing') && (
           <GlassButton
+          type="button"
             variant="ghost"
             onClick={onCancel}
             className="w-full sm:w-auto min-h-[48px] text-red-300 hover:text-red-200 hover:bg-red-500/10"
@@ -409,6 +411,7 @@ export default function UploadCard({
         )}
 
         {!isSaved && (!autoProcess || pastedText || status === 'error') && <GlassButton
+          type="button"
           onClick={onSubmit}
           disabled={disabled || status === "uploading" || status === "parsing"}
           variant="primary"

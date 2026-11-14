@@ -1,3 +1,5 @@
+import { formatEducationLabel, formatSourceDateRange } from '@/lib/utils/resumeFormatting';
+import { containsArabic } from '@/lib/utils/arabicTextUtils';
 /**
  * Shared DOCX section builder functions.
  * Each builder faithfully reproduces the layout from the corresponding
@@ -45,12 +47,19 @@ function paragraphDirection(opts: BuilderOptions, D: DocxModule, configuredAlign
 
     return {
         bidirectional: true,
-        alignment: configuredAlignment === 'CENTER' ? D.AlignmentType.CENTER : D.AlignmentType.RIGHT,
+        alignment: configuredAlignment === 'CENTER' ? D.AlignmentType.CENTER : D.AlignmentType.START,
     };
 }
 
-function textDirection(opts: BuilderOptions) {
-    return opts.direction === 'rtl' ? { rightToLeft: true } : {};
+function textFormatting(opts: BuilderOptions, text: string) {
+    // Mixed runs use Unicode ordering; Word's RTL override is unsuitable for LTR letters.
+    const hasOtherLetters = /\p{Letter}/u.test(text.replace(/\p{Script=Arabic}/gu, ''));
+    const arabic = containsArabic(text);
+    return {
+        ...(opts.direction === 'rtl' && arabic && !hasOtherLetters ? { rightToLeft: true } : {}),
+        // Native Writer drops Arabic glyphs in some italic runs; keep that script upright.
+        ...(arabic ? { italics: false } : {}),
+    };
 }
 
 function ls(cfg: DocxTemplateConfig, D: DocxModule) {
@@ -84,14 +93,14 @@ function textRuns(
 ) {
     const applyBolding = shouldApplyBolding(opts.keywords, opts.boldKeywords);
     if (!applyBolding) {
-        return [new D.TextRun({ text, ...fontCfg, ...textDirection(opts) })];
+        return [new D.TextRun({ text, ...fontCfg, ...textFormatting(opts, text) })];
     }
     const segments = splitTextWithKeywords(text, opts.keywords, 15);
     return segments.map((seg: { text: string; bold: boolean }) =>
         new D.TextRun({
             text: seg.text,
             ...fontCfg,
-            ...textDirection(opts),
+            ...textFormatting(opts, seg.text),
             bold: seg.bold || (fontCfg.bold === true),
         }),
     );
@@ -110,7 +119,7 @@ function sectionHeading(label: string, cfg: DocxTemplateConfig, D: DocxModule, o
                 size: cfg.headingSize,
                 bold: true,
                 color: cfg.accentColor,
-                ...textDirection(opts),
+                ...textFormatting(opts, text),
             }),
         ],
         heading: D.HeadingLevel.HEADING_2,
@@ -138,12 +147,15 @@ function bulletParagraph(
                 font: cfg.fontFamily,
                 size: cfg.baseFontSize,
                 color: cfg.bodyColor,
-                ...textDirection(opts),
+                ...textFormatting(opts, cfg.bulletChar),
             }),
             ...runs,
         ],
         ...paragraphDirection(opts, D),
-        indent: { left: D.convertInchesToTwip(0.25), hanging: D.convertInchesToTwip(0.2) },
+        indent: {
+            [opts.direction === 'rtl' ? 'right' : 'left']: D.convertInchesToTwip(0.25),
+            hanging: D.convertInchesToTwip(0.2),
+        },
         spacing: { after: spacingAfter, ...ls(cfg, D) },
     });
 }
@@ -182,7 +194,7 @@ export function buildHeader(
                     color: cfg.accentColor,
                     allCaps: cfg.nameUppercase,
                     characterSpacing: cfg.nameLetterSpacing ? 80 : undefined,
-                    ...textDirection(opts),
+                    ...textFormatting(opts, basics.name || ''),
                 }),
             ],
             ...paragraphDirection(opts, D, cfg.headerAlignment),
@@ -201,7 +213,7 @@ export function buildHeader(
                         size: cfg.baseFontSize + 3,
                         bold: true,
                         color: cfg.accentColor,
-                        ...textDirection(opts),
+                        ...textFormatting(opts, basics.label),
                     }),
                 ],
                 ...paragraphDirection(opts, D, cfg.headerAlignment),
@@ -382,9 +394,10 @@ export function buildExperience(
                             ...body,
                             italics: cfg.experienceCompanyItalic,
                             color: cfg.experienceCompanyAccentColor ? cfg.accentColor : body.color,
+                            ...textFormatting(opts, job.name),
                         }),
                         ...(job.location
-                            ? [new D.TextRun({ text: ` | ${job.location}`, ...body, italics: true })]
+                            ? [new D.TextRun({ text: ` | ${job.location}`, ...body, italics: true, ...textFormatting(opts, job.location) })]
                             : []),
                     ],
                     ...paragraphDirection(opts, D),
@@ -396,7 +409,7 @@ export function buildExperience(
         if (job.description) {
             children.push(
                 new D.Paragraph({
-                    children: [new D.TextRun({ text: job.description, ...body, ...textDirection(opts) })],
+                    children: [new D.TextRun({ text: job.description, ...body, ...textFormatting(opts, job.description) })],
                     ...paragraphDirection(opts, D),
                     spacing: { after: 40, ...spacing },
                 }),
@@ -431,7 +444,7 @@ export function buildProjects(
             new D.Paragraph({
                 children: [
                     new D.TextRun({
-                        text: project.name || '',
+                        text: `${project.name || ''}${formatSourceDateRange(project.startDate, project.endDate) ? ` (${formatSourceDateRange(project.startDate, project.endDate)})` : ''}`,
                         ...body,
                         bold: true,
                         color: cfg.accentColor,
@@ -479,7 +492,7 @@ export function buildSkills(
             if (typeof skillItem === 'string') {
                 children.push(
                     new D.Paragraph({
-                        children: [new D.TextRun({ text: skillItem, ...body, ...textDirection(opts) })],
+                        children: [new D.TextRun({ text: skillItem, ...body, ...textFormatting(opts, skillItem) })],
                         ...paragraphDirection(opts, D),
                         spacing: { after: 30, ...spacing },
                     }),
@@ -529,7 +542,7 @@ export function buildSkills(
                         new D.TextRun({
                             text: i < allSkills.length - 1 ? `${skill}  ·  ` : skill,
                             ...body,
-                            ...textDirection(opts),
+                            ...textFormatting(opts, skill),
                         }),
                 ),
                 ...paragraphDirection(opts, D),
@@ -554,10 +567,8 @@ export function buildEducation(
     const rt = rightTab(cfg, D);
 
     for (const edu of education) {
-        const degreeText = `${edu.studyType || ''}${edu.area ? ` in ${edu.area}` : ''}`;
-        const dateText = cfg.educationDateRange && edu.startDate && edu.endDate
-            ? `${edu.startDate}${cfg.dateSeparator}${edu.endDate}`
-            : edu.endDate || edu.startDate || '';
+        const degreeText = formatEducationLabel(edu);
+        const dateText = formatSourceDateRange(edu.startDate, edu.endDate, cfg.dateSeparator);
 
         // Line 1: Degree <TAB> Date (same line)
         children.push(
@@ -579,7 +590,7 @@ export function buildEducation(
         if (edu.institution) {
             children.push(
                 new D.Paragraph({
-                    children: [new D.TextRun({ text: edu.institution, ...body, italics: true, ...textDirection(opts) })],
+                    children: [new D.TextRun({ text: edu.institution, ...body, italics: true, ...textFormatting(opts, edu.institution) })],
                     ...paragraphDirection(opts, D),
                     spacing: { after: 20, ...spacing },
                 }),
@@ -591,7 +602,7 @@ export function buildEducation(
             children.push(
                 new D.Paragraph({
                     children: [
-                        new D.TextRun({ text: `GPA: ${edu.score}`, ...body, size: body.size - 1, color: '6B7280', ...textDirection(opts) }),
+                        new D.TextRun({ text: `GPA: ${edu.score}`, ...body, size: body.size - 1, color: '6B7280', ...textFormatting(opts, `GPA: ${edu.score}`) }),
                     ],
                     ...paragraphDirection(opts, D),
                     spacing: { after: 20, ...spacing },
@@ -610,7 +621,7 @@ export function buildEducation(
                             size: body.size - 1,
                             italics: true,
                             color: '6B7280',
-                            ...textDirection(opts),
+                            ...textFormatting(opts, `Relevant Coursework: ${edu.courses.join(' · ')}`),
                         }),
                     ],
                     ...paragraphDirection(opts, D),
@@ -623,7 +634,7 @@ export function buildEducation(
         if (edu.highlights) {
             for (const h of edu.highlights) {
                 children.push(
-                    bulletParagraph([new D.TextRun({ text: h, ...body, ...textDirection(opts) })], cfg, D, opts),
+                    bulletParagraph([new D.TextRun({ text: h, ...body, ...textFormatting(opts, h) })], cfg, D, opts),
                 );
             }
         }

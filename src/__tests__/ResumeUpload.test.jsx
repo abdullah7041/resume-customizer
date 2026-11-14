@@ -144,7 +144,7 @@ describe("ResumeUpload", () => {
 
   it("uploads PDFs without a success toast", async () => {
     const onToast = vi.fn();
-    const onParseResume = vi.fn().mockResolvedValue({});
+    const onParseResume = vi.fn().mockResolvedValue({ data: { basics: { name: "Synthetic Candidate" } }, plainText: "Synthetic resume text" });
 
     render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
 
@@ -225,7 +225,7 @@ describe("ResumeUpload", () => {
 
   it("guest can select a file and prepare it without a sign-in wall", async () => {
     const onToast = vi.fn();
-    const onParseResume = vi.fn().mockResolvedValue({});
+    const onParseResume = vi.fn().mockResolvedValue({ data: { basics: { name: "Synthetic Candidate" } }, plainText: "Synthetic resume text" });
 
     render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
 
@@ -257,7 +257,7 @@ describe("ResumeUpload", () => {
 
   it("guest can paste text and prepare it without a sign-in wall", async () => {
     const onToast = vi.fn();
-    const onParseResume = vi.fn().mockResolvedValue({});
+    const onParseResume = vi.fn().mockResolvedValue({ data: { basics: { name: "Synthetic Candidate" } }, plainText: "Synthetic resume text" });
 
     render(<ResumeUpload onParseResume={onParseResume} onToast={onToast} onClear={vi.fn()} />);
 

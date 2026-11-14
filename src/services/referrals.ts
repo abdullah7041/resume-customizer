@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 import { supabase } from './supabase';
 
 export interface ReferralSummary {
@@ -41,6 +42,7 @@ export const clearReferralSummaryCache = () => {
 };
 
 export async function fetchReferralSummary(): Promise<ReferralSummary> {
+  const revision = getPrivateSessionRevision();
   const {
     data: { session },
   } = await getReferralSession();
@@ -49,6 +51,7 @@ export async function fetchReferralSummary(): Promise<ReferralSummary> {
     throw new Error('Authentication required');
   }
 
+  assertPrivateSession(revision, session.user?.id);
   const sessionKey = getReferralSessionKey(session);
   const recentReferralSummary = recentReferralSummaries.get(sessionKey);
   if (

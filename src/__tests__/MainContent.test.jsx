@@ -390,6 +390,23 @@ describe("MainContent resume parsing", () => {
     const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
     return { promise, resolve, reject };
   };
+  it('advances with the Continue callback captured before the first resume finished preparing', async () => {
+    const parsed = { basics: { name: 'First candidate' } };
+    parseResumeMock.mockResolvedValueOnce({ data: parsed, plainText: 'First candidate resume text' });
+    const originalSave = useResumeLibraryStore.getState().saveResume;
+    useResumeLibraryStore.setState({ saveResume: vi.fn().mockResolvedValue({ id: 'new-resume' }) });
+    try {
+      render(<MainContent />);
+      await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
+      const captured = resumeUploadMockProps.current;
+      await act(async () => {
+        await captured.onParseResume({ plainText: 'First candidate resume text' });
+        useResumeStore.getState().setOriginalResume(parsed);
+        captured.onContinue();
+      });
+      expect(localStorage.getItem('watheq:lastActiveTab')).toBe('truth-check');
+    } finally { useResumeLibraryStore.setState({ saveResume: originalSave }); }
+  });
   const openMatch = async (job = '') => {
     useResumeStore.setState({ parsedResumeText: '', analysisCache: {}, baselineMatchScore: null });
     localStorage.setItem('watheq:lastActiveTab', 'match');
@@ -1326,7 +1343,8 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "I don't have Excel experience" }));
+    // Context fingerprints use real asynchronous crypto, which can exceed 1s in the full suite.
+    fireEvent.click(await screen.findByRole("button", { name: "I don't have Excel experience" }, { timeout: 5000 }));
     fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
 
     await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
@@ -1382,12 +1400,22 @@ describe("MainContent resume parsing", () => {
     try {
       render(<MainContent />);
       await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
-      await act(async () => { await resumeUploadMockProps.current.onParseResume({ plainText: 'Input resume' }); });
+      await act(async () => { await expect(resumeUploadMockProps.current.onParseResume({ plainText: 'Input resume' })).rejects.toThrow('Device storage is full'); });
       const notifications = screen.getAllByTestId('toast-mock');
       expect(notifications).toHaveLength(1);
-      expect(notifications[0]).toHaveAttribute('data-toast-type', 'warning');
+      expect(notifications[0]).toHaveAttribute('data-toast-type', 'danger');
       expect(notifications[0]).toHaveTextContent('Device storage is full');
     } finally { useResumeLibraryStore.setState({ saveResume: originalSave }); }
+  });
+  it('preserves the previous durable document when a replacement parse fails', async () => {
+    const original = { plainText: 'Existing resume source', fileName: 'existing.pdf', data: { basics: { name: 'Original Candidate' } } };
+    localStorage.setItem('watheq:resumeData', JSON.stringify(original));
+    parseResumeMock.mockRejectedValueOnce(new Error('Synthetic parse failure'));
+    render(<MainContent />);
+    await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
+    const bytes = localStorage.getItem('watheq:resumeData');
+    await act(async () => { await expect(resumeUploadMockProps.current.onParseResume({ plainText: 'Replacement' })).rejects.toThrow('Synthetic parse failure'); });
+    expect(localStorage.getItem('watheq:resumeData')).toBe(bytes);
   });
 
   it("keeps optimization pending through clarification and resolves after submission", async () => {
@@ -2643,6 +2671,18 @@ describe("MainContent final export review", () => {
     expect(exportPdfMock).not.toHaveBeenCalled();
     expect(exportToSupabaseMock).not.toHaveBeenCalled();
     expect(optimizeSectionMockProps.current.reviewSectionIds).toEqual(["summary-1"]);
+  });
+  it('does not send an earlier owner’s rendered resume to the account that replaced it', async () => {
+    let finish;
+    exportPdfMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    supabaseAvailableMock.mockReturnValue(true);
+    await openExport({ optimizations: [] });
+    let pending;
+    await act(async () => { pending = optimizeSectionMockProps.current.onExport('styled', 'supabase'); });
+    await waitFor(() => expect(exportPdfMock).toHaveBeenCalled());
+    localStorage.setItem('watheq:privateOwner', 'user:b');
+    await act(async () => { finish('<html>Private A resume</html>'); await pending; });
+    expect(exportToSupabaseMock).not.toHaveBeenCalled();
   });
 
   it("exports the captured composition when the store changes during review hashing", async () => {

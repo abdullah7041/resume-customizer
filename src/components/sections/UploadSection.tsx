@@ -1,3 +1,4 @@
+import { privateStorage } from '@/lib/auth/privateSession';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, FileText } from 'lucide-react';
@@ -34,6 +35,8 @@ interface UploadSectionProps {
     onParseResume: (resumeInput: { file?: File; plainText?: string }, signal?: AbortSignal, onStage?: (stage: 'reading' | 'preparing') => void) => Promise<ParsedResumeResult>;
     onActivateResume?: (id: string) => void;
     onBeforeParseResume?: () => void;
+    onContinue?: () => void;
+    onPendingInputChange?: (pending: boolean) => void;
     resumeDocument: ResumeDocument | null;
     onToast: (toast: Toast) => void;
     onClear: () => void;
@@ -45,6 +48,8 @@ export default function UploadSection({
     onParseResume,
     onActivateResume,
     onBeforeParseResume,
+    onContinue,
+    onPendingInputChange,
     resumeDocument,
     onToast,
     onClear,
@@ -57,12 +62,19 @@ export default function UploadSection({
     const [status, setStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
-    const [pastedText, setPastedText] = useState('');
+    const [pastedText, setPastedText] = useState(() => {
+        try { return privateStorage.getItem('watheq:pasteDraft') || ''; } catch { return ''; }
+    });
     const [editingResumeId, setEditingResumeId] = useState<string | null>(null);
     // Ref for tracking active parse request to support cancellation
     const parseRequestActive = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
     useEffect(() => () => abortControllerRef.current?.abort(), []);
+
+    useEffect(() => {
+        onPendingInputChange?.(Boolean(file || pastedText.trim() || batchFiles.length));
+        return () => onPendingInputChange?.(false);
+    }, [file, pastedText, batchFiles.length, onPendingInputChange]);
 
     // Get store actions
     const { setOriginalResume, setParsedResumeText, clearAll, resetForNewUpload, isSaudiNational, setSaudiNational } = useResumeStore();
@@ -76,6 +88,7 @@ export default function UploadSection({
         setBatchRows([]);
         setFile(selectedFile);
         setPastedText('');
+        privateStorage.removeItem('watheq:pasteDraft');
         setError(null);
         setStatus('idle');
     }, []);
@@ -87,6 +100,7 @@ export default function UploadSection({
         setBatchRows([]);
         setFile(null);
         setPastedText('');
+        privateStorage.removeItem('watheq:pasteDraft');
         setError(null);
         setStatus('idle');
         setProgress(0);
@@ -104,10 +118,12 @@ export default function UploadSection({
         setBatchFiles([]);
         setBatchRows([]);
         setPastedText(text);
+        try { privateStorage.setItem('watheq:pasteDraft', text); }
+        catch { onToast({ type: 'warning', title: t('upload.draftSaveFailed', 'Your draft could not be saved. Keep a copy before leaving this page.') }); }
         setFile(null);
         setError(null);
         setStatus('idle');
-    }, []);
+    }, [onToast, t]);
 
     const handleValidationError = useCallback((err: AppError) => {
         setError(err.message);
@@ -252,7 +268,6 @@ export default function UploadSection({
 
             // Preserve the active resume's export context before clearing its store state.
             onBeforeParseResume?.();
-            resetForNewUpload();
 
             setStatus('uploading');
             setProgress(30);
@@ -273,6 +288,7 @@ export default function UploadSection({
                 return;
             }
 
+            if (!result || !(result.data || result)?.basics) throw new Error(t('upload.batch.empty', 'No readable resume was returned.'));
             setProgress(100);
             setStatus('success');
 
@@ -291,6 +307,7 @@ export default function UploadSection({
                 // Save to store
                 if (parsedResume && typeof parsedResume === 'object' && 'basics' in parsedResume) {
                     const resumeData = parsedResume as ResumeSchema;
+                    resetForNewUpload();
                     setOriginalResume(resumeData);
                 }
 
@@ -310,6 +327,10 @@ export default function UploadSection({
             // Track successful upload
             const parseTime = performance.now() - startTime;
             analytics.trackUpload(fileType, true, parseTime);
+            setPastedText('');
+            setFile(null);
+            privateStorage.removeItem('watheq:pasteDraft');
+            return true;
         } catch (err) {
             // Handle user-initiated cancellation silently
             if (err && (err as Error & { cancelled?: boolean }).cancelled) {
@@ -373,10 +394,16 @@ export default function UploadSection({
     const disabled = !file && !pastedText && !resumeDocument?.plainText;
 
     // Resume is saved only if we have a successful new upload OR we have an existing document and haven't selected a new file
-    const isSaved = !batchFiles.length && (status === 'success' || (!file && !!resumeDocument?.fileName));
+    const isSaved = !batchFiles.length && !pastedText.trim() && !file && (status === 'success' || !!resumeDocument?.fileName);
 
     return (
-        <div data-tour="upload" className="space-y-6">
+        <form id="resume-upload-form" data-tour="upload" className="space-y-6" onSubmit={async event => {
+            event.preventDefault();
+            if (file || pastedText.trim()) {
+                if (!await handleSubmit()) return;
+            } else if (!resumeDocument?.plainText) return;
+            onContinue?.();
+        }}>
             {/* Validation Warnings — rendered from store via shared banner component */}
             <ParsingWarningsBanner className="mb-4" />
 
@@ -476,6 +503,6 @@ export default function UploadSection({
                     <span className="font-semibold">{row.name}</span> · {row.message || t(`upload.batch.${row.state}`, row.state === 'reading' ? 'Reading…' : 'Waiting')}
                 </li>)}
             </ul>}
-        </div>
+        </form>
     );
 }
