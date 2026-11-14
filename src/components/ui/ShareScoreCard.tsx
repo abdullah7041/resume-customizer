@@ -79,6 +79,7 @@ function HiddenCanvasCard({
         >
             <div
                 ref={cardRef}
+                data-preserve-export-font
                 style={{
                     ...canvasCardBaseStyle,
                     direction: isArabic ? 'rtl' : 'ltr',

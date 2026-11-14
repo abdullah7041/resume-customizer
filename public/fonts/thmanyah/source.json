@@ -1,0 +1,24 @@
+{
+  "officialPage": "https://font.thmanyah.com/",
+  "license": "https://font.thmanyah.com/licenses",
+  "files": [
+    {
+      "originalFamily": "Thmanyah sans 1.2 Regular",
+      "weight": 400,
+      "url": "https://framerusercontent.com/assets/Ej0k3h4Mi5O7TSo2w2JaDCPRgvo.woff2",
+      "sha256": "04cc86486a11b2ad6b51cacc61f24e73cca790995b20ba38161226c4f3f2f287"
+    },
+    {
+      "originalFamily": "Thmanyah sans 1.2 Medium",
+      "weight": 500,
+      "url": "https://framerusercontent.com/assets/3XGelYpTgxSxBXN4Oieg9Dt3bc.woff2",
+      "sha256": "96f1b43cf1bd6de04a067d06476bd1cb3e7e38e57d39e56f6c813b2a453f1989"
+    },
+    {
+      "originalFamily": "Thmanyah sans 1.2 Bold",
+      "weight": 700,
+      "url": "https://framerusercontent.com/assets/JUv6rms2ye2kYL3UI3O9YyExQcQ.woff2",
+      "sha256": "608406b3100cf6742c530d55540a82f315f8186be89f2c568b2d270371178659"
+    }
+  ]
+}
