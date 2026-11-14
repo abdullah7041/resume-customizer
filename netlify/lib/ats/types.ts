@@ -17,6 +17,8 @@ export interface RawPosting {
   applyUrl: string;
   /** ISO date, or null when the board publishes none (Pinpoint, Workday). */
   postedAt: string | null;
+  publicationKind?: 'published' | 'unknown';
+  publicationPrecision?: 'timestamp' | 'date' | 'unknown';
   /** Empty when the board does not ship it in the list payload — fetched lazily. */
   description: string;
 }
@@ -34,6 +36,7 @@ export interface FetchOutcome {
   status: number | null;
   postings: RawPosting[];
   error?: string;
+  retryAt?: string;
 }
 
 export interface CompanyRef {

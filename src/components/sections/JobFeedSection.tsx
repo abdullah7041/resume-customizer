@@ -1,3 +1,4 @@
+import { JobAlertSettings } from '@/components/sections/JobAlertSettings';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -51,17 +52,10 @@ const MAX_TRACKED_COMPANIES = 25;
 /** How many company chips fit before the row is collapsed behind a "show all". */
 const COLLAPSED_COMPANY_CHIPS = 8;
 
-/**
- * The age windows offered, in days. `null` is "any time".
- *
- * A one-week default is what makes the feed read as current, but it cannot be a
- * hard rule: half the boards publish no posting date at all, so the window only
- * ever tests a real one (see `age.ts`), and this control exists so a user who
- * finds the week too narrow can widen it rather than conclude the feed is empty.
- */
+/** The strict default never widens automatically; broader views are explicit. */
 const AGE_OPTIONS: { days: number | null; key: string; fallback: string }[] = [
-  { days: 1, key: 'jobFeed.filters.ageDay', fallback: '24 hours' },
-  { days: DEFAULT_MAX_AGE_DAYS, key: 'jobFeed.filters.ageWeek', fallback: '7 days' },
+  { days: 1, key: 'jobFeed.filters.ageDay', fallback: 'Past 24 hours' },
+  { days: 7, key: 'jobFeed.filters.ageWeek', fallback: '7 days' },
   { days: 30, key: 'jobFeed.filters.ageMonth', fallback: '30 days' },
   { days: null, key: 'jobFeed.filters.ageAll', fallback: 'Any time' },
 ];
@@ -107,12 +101,15 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const [lastLoadedAt, setLastLoadedAt] = useState<number | null>(null);
   const resumeVerificationKey = activeLibraryResume ? `${activeLibraryResume.id}:${activeLibraryResume.fingerprint}:${language}:${lastLoadedAt ?? 0}` : '';
   const verificationLimit = verificationLimitState.key === resumeVerificationKey ? verificationLimitState.count : 10;
+  const [requestedResumeKey, setRequestedResumeKey] = useState<string | null>(null);
+  const verificationRequested = Boolean(resumeVerificationKey && requestedResumeKey === resumeVerificationKey);
   const verificationKey = useCallback((postingId: string) => `${postingId}:${resumeVerificationKey}`, [resumeVerificationKey]);
   const evidenceInput = JSON.stringify({ sources: candidateEvidence(resume), claimedSkills: (resume?.skills ?? []).flatMap((skill) => [skill.name, ...skill.keywords ?? []]).filter(Boolean).slice(0, 100) });
   const [profileResult, setProfileResult] = useState<{ input: string; profile: CandidateProfile | null } | null>(null);
   const [requirements, setRequirements] = useState<Record<string, JobRequirements>>({});
-  const profile = profileResult?.input === evidenceInput ? profileResult.profile : null;
+  const profile = verificationRequested && profileResult?.input === evidenceInput ? profileResult.profile : null;
   useEffect(() => {
+    if (!verificationRequested) return;
     let cancelled = false;
     const input = JSON.parse(evidenceInput) as Parameters<typeof loadCandidateProfile> extends [infer S, infer C] ? { sources: S; claimedSkills: C } : never;
     if (input.sources.length === 0) return;
@@ -120,7 +117,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       if (!cancelled) setProfileResult({ input: evidenceInput, profile: result ? groundProfile(result, input.sources) : null });
     });
     return () => { cancelled = true; };
-  }, [evidenceInput]);
+  }, [evidenceInput, verificationRequested]);
 
   const [companies, setCompanies] = useState<TrackedCompany[]>([]);
   const [postings, setPostings] = useState<FeedPosting[]>([]);
@@ -175,9 +172,6 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, []);
 
   const [maxAgeDays, setMaxAgeDays] = useState<number | null>(DEFAULT_MAX_AGE_DAYS);
-  /** Once the user picks a window themselves, nothing widens it behind their back. */
-  const [ageChosenByUser, setAgeChosenByUser] = useState(false);
-  const [autoWidened, setAutoWidened] = useState(false);
   const [selectedCompanyIds, setSelectedCompanyIds] = useState<Set<string>>(new Set());
   const [showAllCompanyChips, setShowAllCompanyChips] = useState(false);
   /**
@@ -489,10 +483,10 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   }, [postings, feedState, intent, maxAgeDays, now, profile, requirements]);
 
   const verificationCandidates = useMemo(
-    () => activeLibraryResume
+    () => verificationRequested && activeLibraryResume
       ? (feed?.kept ?? []).slice(0, verificationLimit)
       : [],
-    [feed, activeLibraryResume, verificationLimit],
+    [feed, activeLibraryResume, verificationLimit, verificationRequested],
   );
   // Relative-time refreshes rebuild `feed` every minute; IDs, not array identity,
   // determine whether the verification batch actually changed.
@@ -562,7 +556,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
       const allMatches = [...(verifiedByPosting[verificationKey(scored.posting.id)]?.matches ?? [])]
         .sort((a, b) => bandRank[b.band] - bandRank[a.band] || b.match.score - a.match.score);
       const qualifying = allMatches.filter(match => match.band !== 'low');
-      return qualifying.length ? [{ ...scored, verifiedMatches: allMatches, bestMatch: qualifying[0] }] : [];
+      return [{ ...scored, verifiedMatches: allMatches, bestMatch: qualifying[0] }];
     }).sort((a, b) => {
       const aBest = a.bestMatch;
       const bBest = b.bestMatch;
@@ -652,31 +646,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     [visibleDropped],
   );
 
-  /**
-   * Widen the window once rather than open on an empty feed.
-   *
-   * Measured against the live starter boards on 2026-08-31: Careem had 20 open
-   * roles and none posted in the last seven days; HALA 4 of 16, Tamara 3 of 36,
-   * Salla 3 of 27, Lean 1 of 4. So a hard seven-day default shows a first-time
-   * follower of one company nothing at all, which reads as a broken feature
-   * rather than a narrow filter. A week stays the default because it is the
-   * honest answer when there is one; when there is not, the feed widens itself
-   * once and says so, and the user's own choice is never overridden.
-   */
-  useEffect(() => {
-    if (ageChosenByUser || autoWidened) return;
-    // Widening changes the window for every company. Doing it because a company
-    // filter emptied the view announces "nothing was posted in the last week"
-    // about a feed that was showing this week's roles until the user narrowed it.
-    // An emptied filter has its own way out; only an empty feed earns this one.
-    if (selectedCompanyIds.size > 0) return;
-    if (!feed || visibleKept.length > 0 || agedOut === 0) return;
-    setMaxAgeDays(30);
-    setAutoWidened(true);
-  }, [feed, visibleKept, agedOut, selectedCompanyIds, ageChosenByUser, autoWidened]);
-
   const chooseAge = useCallback((days: number | null) => {
-    setAgeChosenByUser(true);
     setMaxAgeDays(days);
   }, []);
 
@@ -968,6 +938,11 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
 
   return (
     <div className="space-y-4">
+      <JobAlertSettings persistIntent={async () => {
+        if (!intent?.targetRoles.length || !companies.length) throw new Error('Set a role and follow a company');
+        const result = await saveSearchIntent({ ...intent, meta: { confidence: 'high', completeness: 100, updatedAt: new Date().toISOString() } });
+        if (result.error) throw new Error(result.error);
+      }} />
       <GlassCard className="p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
@@ -975,14 +950,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             <p className="text-sm text-muted-foreground">
               {t('jobFeed.subtitle', 'New roles from the company boards you follow, matched against your target role.')}
             </p>
-            {activeLibraryResume && (
+            {activeLibraryResume && !verificationRequested && (feed?.kept.length ?? 0) > 0 && (
+              <GlassButton variant="secondary" className="mt-2" onClick={() => setRequestedResumeKey(resumeVerificationKey)}>
+                {t('jobFeed.verification.start', 'Check jobs against my CV')}
+              </GlassButton>
+            )}
+            {verificationRequested && activeLibraryResume && (
               <div className="mt-2 space-y-1 text-sm text-muted-foreground" role="status" aria-live="polite">
                 <p className="tabular-nums">
                   {t('jobFeed.verification.progress', '{{checked}} of {{total}} checked against {{name}}', {
                     checked: verificationChecked, total: verificationCandidates.length, name: activeLibraryResume.name,
                   })}
                 </p>
-                <p className="tabular-nums">{t('jobFeed.verification.verifiedCount', '{{count}} medium/high matches confirmed', { count: verifiedKept.filter(row => verificationCandidates.some(candidate => candidate.posting.id === row.posting.id)).length })}</p>
+                <p className="tabular-nums">{t('jobFeed.verification.verifiedCount', '{{count}} medium/high matches confirmed', { count: verifiedKept.filter(row => row.bestMatch && verificationCandidates.some(candidate => candidate.posting.id === row.posting.id)).length })}</p>
                 {verificationPending > 0 && verificationSlow && (
                   <p>{t('jobFeed.verification.slow', 'Verification is taking longer than usual. Results appear as each check finishes.')}</p>
                 )}
@@ -1298,11 +1278,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
             </div>
           </div>
 
-          {autoWidened && !ageChosenByUser && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {t('jobFeed.filters.widened', 'Nothing was posted in the last week, so this is the last 30 days.')}
-            </p>
-          )}
+
 
           {/* The row exists whenever a company is followed — it is the only place
               a company is shown, so a single follow still needs it. */}
@@ -1569,7 +1545,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           setRetryRevision(revision => revision + 1);
         }}>{t('jobFeed.verification.retry', 'Retry failed checks')}</button>
       )}
-      {activeLibraryResume && verificationPending === 0 && (feed?.kept.length ?? 0) > verificationLimit && !verificationQuotaReached && (
+      {verificationRequested && activeLibraryResume && verificationPending === 0 && (feed?.kept.length ?? 0) > verificationLimit && !verificationQuotaReached && (
         <button type="button" className="min-h-11 rounded-xl border border-line bg-surface px-4 text-sm font-medium text-ink transition-[background-color,scale] active:scale-[0.96]" onClick={() => setVerificationLimitState({ key: resumeVerificationKey, count: verificationLimit + 10 })}>
           {t('jobFeed.verification.more', 'Check 10 more')}
         </button>

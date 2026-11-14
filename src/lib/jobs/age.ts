@@ -11,10 +11,10 @@
 // So `kind` travels with the number. A first sighting is never presented as a
 // posting date, and the age window never tests one.
 
-import type { FeedPosting } from './types';
+import type { FeedPosting } from './types.js';
 
-/** The feed's default window: recent enough to act on, wide enough to be non-empty. */
-export const DEFAULT_MAX_AGE_DAYS = 7;
+/** The default is an exact, verified 24-hour publication window. */
+export const DEFAULT_MAX_AGE_DAYS = 1;
 
 export type PostingAgeKind = 'posted' | 'seen' | 'unknown';
 
@@ -42,7 +42,7 @@ function elapsedDays(from: number, now: number): number {
 
 export function postingAge(posting: FeedPosting, now: number = Date.now()): PostingAge {
   const posted = parse(posting.postedAt);
-  if (posted !== null) {
+  if (posted !== null && posting.publicationKind !== 'unknown') {
     return { kind: 'posted', iso: posting.postedAt as string, days: elapsedDays(posted, now) };
   }
 
@@ -61,6 +61,13 @@ export function postingAge(posting: FeedPosting, now: number = Date.now()): Post
  * outcome answers the question the window is asking.
  */
 export function withinAgeWindow(posting: FeedPosting, maxAgeDays: number, now: number = Date.now()): boolean {
+  if (maxAgeDays === 1) {
+    const published = parse(posting.postedAt);
+    return posting.publicationKind === 'published'
+      && posting.publicationPrecision === 'timestamp'
+      && /T.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(posting.postedAt ?? '')
+      && published !== null && published <= now && now - published < 86_400_000;
+  }
   const age = postingAge(posting, now);
   if (age.kind !== 'posted') return true;
   return age.days <= maxAgeDays;

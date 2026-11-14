@@ -85,7 +85,7 @@
 # 30s and run only on published production deploys.
 [functions."cron-job-crawl"]
   timeout = 30
-  schedule = "0 3 * * *"  # 06:00 Riyadh
+  schedule = "0 * * * *"  # Hourly; shared company crawl
 
 [functions."cron-monthly-summary"]
   timeout = 30
@@ -117,3 +117,5 @@
     # Cache Control (Long cache for hashed assets)
     Cache-Control = "public, max-age=31536000, immutable"
 
+[functions."cron-job-alerts"]
+  schedule = "20 * * * *"

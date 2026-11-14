@@ -437,7 +437,7 @@ export default function MainContent() {
     user?.app_metadata?.plan === "premium"
   );
 
-  const [activeTab, setActiveTab] = useState("resume");
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") === "job-feed" ? "job-feed" : "resume");
   const [exportReviewSectionIds, setExportReviewSectionIds] = useState<string[]>([]);
   const [legacyExportConfirmation, setLegacyExportConfirmation] = useState<{ documentFingerprint: string; confirmedAt: string }>();
   const [pendingLegacyExport, setPendingLegacyExport] = useState<{ variant: string; exportMethod: string; documentFingerprint: string; documentText: string } | null>(null);

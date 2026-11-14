@@ -66,20 +66,7 @@ const RecrawlSchema = z.object({
 const RequirementsSchema = z.object({ action: z.literal('requirements'), postingIds: z.array(z.string().uuid()).max(500) });
 const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema, RequirementsSchema]);
 
-/**
- * How stale a company must be before a user-pressed check will re-read its board.
- *
- * Reload in the UI re-reads the DATABASE; only the daily cron ever re-read the
- * boards, so a user watching for a new posting had no way to ask for one. This adds
- * that ask without handing anyone a button that hammers employer job boards.
- *
- * The ONLY guard on this path is last_fetched_at: a company read within the last
- * hour is skipped. `claim_job_crawl_batch` does NOT apply here — it is called solely
- * by cron-job-crawl.ts, and the explicit-companyIds branch of crawl-jobs-background
- * takes no lease. Since last_fetched_at is stamped only after a crawl COMPLETES,
- * requests inside one rate-limit window can still overlap on the same board. Do not
- * drop the last_fetched_at check believing a lease backs it up.
- */
+/** Keep manual refreshes on the same company lease as scheduled collection. */
 const MIN_MINUTES_BETWEEN_MANUAL_CRAWLS = 60;
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
@@ -235,7 +222,7 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
   // Cold start: without an immediate crawl the feed sits empty until the next cron
   // run and the feature reads as broken on first use.
   const requestedAt = new Date().toISOString();
-  const crawlDispatched = await dispatchImmediateCrawl(company.id, Boolean(company.last_fetched_at));
+  const crawlDispatched = await dispatchImmediateCrawl(supabase, company.id, requestedAt);
 
   return {
     statusCode: 200,
@@ -342,9 +329,18 @@ async function handleRecrawl(supabase: Supabase, userId: string) {
 }
 
 /** Fire-and-forget handoff. A failure here costs freshness, never the tracking itself. */
-async function dispatchImmediateCrawl(companyId: string, alreadyCrawled: boolean): Promise<boolean> {
-  if (alreadyCrawled) return false;
-  return dispatchCrawl([companyId]);
+async function dispatchImmediateCrawl(supabase: Supabase, companyId: string, requestedAt: string): Promise<boolean> {
+  const leaseUntil = new Date(Date.now() + 16 * 60_000).toISOString();
+  const claim = await supabase.from('ats_companies').update({ crawl_lease_until: leaseUntil })
+    .eq('id', companyId).is('last_fetched_at', null)
+    .or(`crawl_lease_until.is.null,crawl_lease_until.lt.${requestedAt}`)
+    .select('id').maybeSingle();
+  if (claim.error || !claim.data) return false;
+  const dispatched = await dispatchCrawl([companyId]);
+  if (!dispatched) {
+    await supabase.from('ats_companies').update({ crawl_lease_until: null }).eq('id', companyId).eq('crawl_lease_until', leaseUntil);
+  }
+  return dispatched;
 }
 
 async function dispatchCrawl(companyIds: string[]): Promise<boolean> {

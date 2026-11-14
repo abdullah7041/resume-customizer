@@ -1,3 +1,4 @@
+import { publication } from './publication.js';
 // Workable v3 board API: POST, 10 jobs per page, cursor returned as `nextPage` and
 // echoed back as `{"token": ...}`. There is no apply URL in the payload, so the
 // canonical one is built from the shortcode.
@@ -47,7 +48,7 @@ export const workable: AtsProvider = {
     do {
       const response = await postJson(listUrl(ref.token), cursor ? { token: cursor } : {});
       if (!response.ok) {
-        return { ok: false, status: response.status, postings: [], error: response.error };
+        return { ok: false, status: response.status, postings: [], error: response.error, ...(response.retryAt ? { retryAt: response.retryAt } : {}) };
       }
 
       const page = response.body as WorkablePage;
@@ -69,7 +70,7 @@ export const workable: AtsProvider = {
       applyUrl: job.shortcode
         ? `https://apply.workable.com/${ref.token}/j/${job.shortcode}/`
         : '',
-      postedAt: normalizeDate(job.published),
+      ...publication(job.published),
       description: descriptions.get(String(job.shortcode ?? '')) ?? '',
     }));
 
@@ -109,10 +110,4 @@ async function fetchDescriptions(token: string): Promise<Map<string, string>> {
     map.set(job.shortcode, boundDescription(stripHtml(job.description ?? '')));
   }
   return map;
-}
-
-function normalizeDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }

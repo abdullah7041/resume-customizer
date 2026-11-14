@@ -154,7 +154,7 @@ async function crawlCompanyAttempt(supabase: Supabase, company: CompanyRow): Pro
         last_fetched_at: new Date().toISOString(),
         last_status: 'failed',
         last_error: outcome.error ?? 'unknown error',
-        crawl_lease_until: null,
+        crawl_lease_until: outcome.retryAt ?? null,
       })
       .eq('id', company.id);
 
@@ -172,6 +172,8 @@ async function crawlCompanyAttempt(supabase: Supabase, company: CompanyRow): Pro
     location: posting.location,
     apply_url: posting.applyUrl,
     posted_at: posting.postedAt,
+    publication_kind: posting.publicationKind ?? 'unknown',
+    publication_precision: posting.publicationPrecision ?? 'unknown',
     description: posting.description,
     description_sha256: sha256(posting.description),
     last_seen_at: now,

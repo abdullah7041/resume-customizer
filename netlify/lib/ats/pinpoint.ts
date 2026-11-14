@@ -29,7 +29,7 @@ export const pinpoint: AtsProvider = {
   async fetchPostings(ref: CompanyRef): Promise<FetchOutcome> {
     const response = await getJson(postingsUrl(ref.token));
     if (!response.ok) {
-      return { ok: false, status: response.status, postings: [], error: response.error };
+      return { ok: false, status: response.status, postings: [], error: response.error, ...(response.retryAt ? { retryAt: response.retryAt } : {}) };
     }
 
     const jobs = (response.body as { data?: PinpointJob[] })?.data;

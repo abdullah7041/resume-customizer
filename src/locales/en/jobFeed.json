@@ -3,9 +3,10 @@
     "title": "Job feed",
     "subtitle": "New roles from the company boards you follow, matched against your target role.",
     "verification": {
+      "start": "Check jobs against my CV",
       "checking": "Checking {{count}} shortlisted roles against your saved resumes…",
-        "progress": "{{checked}} of {{total}} checked against {{name}}",
-        "verifiedCount": "{{count}} medium/high matches confirmed",
+      "progress": "{{checked}} of {{total}} checked against {{name}}",
+      "verifiedCount": "{{count}} medium/high matches confirmed",
       "slow": "Verification is taking longer than usual. Results appear as each check finishes.",
       "quota": "Daily verification limit reached. Cached results remain available.",
       "timeouts": "{{count}} checks timed out. You can retry them.",
@@ -56,7 +57,7 @@
     },
     "empty": {
       "noCompanies": "Follow a company to start seeing roles.",
-      "noCompaniesHelp": "Add the employers you actually want to work for. Watheq checks their job boards once a day.",
+      "noCompaniesHelp": "Add the employers you actually want to work for. Watheq checks their job boards hourly.",
       "suggestions": "From your CV",
       "suggestionsHelp": "Companies you have worked at — a quick place to start.",
       "noIntent": "Set your target role first.",
@@ -86,7 +87,7 @@
     },
     "filters": {
       "ageLegend": "Posted within",
-      "ageDay": "24 hours",
+      "ageDay": "Past 24 hours",
       "ageWeek": "7 days",
       "ageMonth": "30 days",
       "ageAll": "Any time",
@@ -161,6 +162,12 @@
       "unknown": "Experience fit not yet verified",
       "explain": "Discovery relevance. Run Match for a full assessment.",
       "gaps": "Requirements to verify"
+    },
+    "alerts": {
+      "label": "Free hourly job emails",
+      "hint": "Only new jobs published within 24 hours matching your saved roles and followed companies. No credits used. Unsubscribe anytime.",
+      "loadError": "Could not load alerts. Sign in or try again.",
+      "saveError": "Could not save. Verify your email, save a target role, and follow a company; then try again."
     }
   }
 }

@@ -1,3 +1,4 @@
+import { publication } from './publication.js';
 // Ashby job-board API. `descriptionPlain` ships in the board payload, so the JD
 // costs nothing extra. Unlisted jobs must be skipped — they are still in the feed.
 
@@ -27,7 +28,7 @@ export const ashby: AtsProvider = {
   async fetchPostings(ref: CompanyRef): Promise<FetchOutcome> {
     const response = await getJson(boardUrl(ref.token));
     if (!response.ok) {
-      return { ok: false, status: response.status, postings: [], error: response.error };
+      return { ok: false, status: response.status, postings: [], error: response.error, ...(response.retryAt ? { retryAt: response.retryAt } : {}) };
     }
 
     const jobs = (response.body as { jobs?: AshbyJob[] })?.jobs;
@@ -43,7 +44,7 @@ export const ashby: AtsProvider = {
         // Ashby's location is a plain string, not an object.
         location: (job.location ?? '').trim(),
         applyUrl: job.jobUrl ?? job.applyUrl ?? '',
-        postedAt: job.publishedAt ? new Date(job.publishedAt).toISOString() : null,
+        ...publication(job.publishedAt),
         description: boundDescription(
           (job.descriptionPlain ?? stripHtml(job.descriptionHtml ?? '')).trim(),
         ),

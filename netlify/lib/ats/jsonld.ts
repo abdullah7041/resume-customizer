@@ -1,3 +1,4 @@
+import { publication } from './publication.js';
 // Tier 2: the company's own careers site.
 //
 // For employers with no public board API — stc on SuccessFactors, NEOM's SPA,
@@ -122,14 +123,13 @@ function toPosting(node: JsonLdNode, pageUrl: string): RawPosting | null {
 
   const applyUrl = node.url ?? pageUrl;
   const externalId = readIdentifier(node) || applyUrl;
-  const posted = node.datePosted ? new Date(node.datePosted) : null;
 
   return {
     externalId: String(externalId).slice(0, 300),
     title,
     location: readLocation(node.jobLocation),
     applyUrl,
-    postedAt: posted && !Number.isNaN(posted.getTime()) ? posted.toISOString() : null,
+    ...publication(node.datePosted),
     description: boundDescription(stripHtml(node.description ?? '')),
   };
 }

@@ -1,5 +1,5 @@
 /**
- * Daily dispatcher for the Job Feed crawl.
+ * Hourly dispatcher for the Job Feed crawl.
  *
  * Scheduled functions get 30 seconds and cannot stream or be invoked by URL, so
  * this one does no fetching at all: it picks the stalest tracked companies, takes
@@ -18,7 +18,7 @@ initSentry();
 const LEASE_MINUTES = 20;
 
 /** Do not re-crawl a company more often than this. */
-const MIN_HOURS_BETWEEN_CRAWLS = 20;
+const MIN_HOURS_BETWEEN_CRAWLS = 1;
 
 const BATCH_SIZE = 60;
 
@@ -53,41 +53,24 @@ export const handler: Handler = async () => {
     // way it reads — a leased company could be dispatched again, defeating the lease
     // this was all built for. The RPC does it in one statement with
     // FOR UPDATE SKIP LOCKED, and only ever sets a lease, never a completion.
-    const { data: claimed, error } = await supabase.rpc('claim_job_crawl_batch', {
-      p_lease_until: leaseUntil,
-      p_stale_before: staleBefore,
-      p_limit: BATCH_SIZE,
-    });
-
-    if (error) {
-      console.error('[JobCrawlCron] Claim failed:', summarizeErrorForLog(error));
-      return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Claim failed' }) };
-    }
-
-    const companyIds = [...new Set(((claimed ?? []) as CompanyIdRow[]).map((row) => row.id))];
-    if (companyIds.length === 0) {
-      console.log('[JobCrawlCron] Nothing due');
-      return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ dispatched: 0 }) };
-    }
-
-    // Background functions answer 202 and keep running; this call is the handoff,
-    // not the work, so it must not be awaited for a result beyond the ack.
-    const response = await fetch(`${siteUrl}/.netlify/functions/crawl-jobs-background`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-watheq-crawl-secret': secret },
-      body: JSON.stringify({ companyIds }),
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!response.ok && response.status !== 202) {
-      console.error(`[JobCrawlCron] Handoff rejected: HTTP ${response.status}`);
-      // Release the lease so the next run retries rather than waiting it out.
-      await supabase.from('ats_companies').update({ crawl_lease_until: null }).in('id', companyIds);
-      return { statusCode: 502, headers: jsonHeaders, body: JSON.stringify({ error: 'Handoff failed' }) };
-    }
-
-    console.log(`[JobCrawlCron] Dispatched ${companyIds.length} companies`);
-    return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ dispatched: companyIds.length }) };
+    let dispatched = 0;
+    const deadline = Date.now() + 18_000;
+    do {
+      const { data: claimed, error } = await supabase.rpc('claim_job_crawl_batch', {
+        p_lease_until: leaseUntil, p_stale_before: staleBefore, p_limit: BATCH_SIZE,
+      });
+      if (error) throw error;
+      const companyIds = [...new Set(((claimed ?? []) as CompanyIdRow[]).map(row => row.id))];
+      if (!companyIds.length) break;
+      const response = await fetch(`${siteUrl}/.netlify/functions/crawl-jobs-background`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-watheq-crawl-secret': secret },
+        body: JSON.stringify({ companyIds }), signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) throw new Error('Crawl handoff failed; lease expires for retry');
+      dispatched += companyIds.length;
+    } while (Date.now() < deadline);
+    console.log('[JobCrawlCron] Dispatched', { dispatched });
+    return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ dispatched }) };
   } catch (error) {
     captureError(error, { function: 'cron-job-crawl' });
     console.error('[JobCrawlCron] Unhandled error:', summarizeErrorForLog(error));

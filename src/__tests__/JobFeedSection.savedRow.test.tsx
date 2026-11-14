@@ -99,7 +99,9 @@ function posting(overrides: Record<string, unknown> = {}) {
     title: 'Senior AI Engineer',
     location: 'Riyadh, Saudi Arabia',
     applyUrl: 'https://apply.workable.com/salla/j/ABC/',
-    postedAt: daysAgo(2),
+    postedAt: daysAgo(0.1),
+    publicationKind: 'published',
+    publicationPrecision: 'timestamp',
     firstSeenAt: daysAgo(2),
     ...overrides,
   };

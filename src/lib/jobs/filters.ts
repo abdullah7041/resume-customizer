@@ -1,8 +1,8 @@
 // Hard filters, ported from the job-search-digest engine (digest.py:655-684).
 // Each rule here is a bug that pipeline already paid for once.
 
-import { containsAny, matchedRoleTerms, normalizeTerms, normalizeText } from './normalize';
-import type { FeedIntent, FeedDropReason, FeedPosting, Seniority } from './types';
+import { containsAny, matchedRoleTerms, normalizeTerms, normalizeText } from './normalize.js';
+import type { FeedIntent, FeedDropReason, FeedPosting, Seniority } from './types.js';
 
 /** Saudi locations, English and Arabic. Normalized at load, so ة/ه folding is already applied. */
 export const SAUDI_LOCATIONS = normalizeTerms([
