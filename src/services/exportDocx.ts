@@ -35,7 +35,15 @@ export async function exportResumeAsDocx(
   const D: DocxModule = await import('docx');
 
   // Get template-specific style config
-  const cfg = getTemplateConfig(templateId);
+  const cfg = { ...getTemplateConfig(templateId) };
+  if (direction === 'rtl') {
+    // Use a portable Arabic face instead of relying on web fonts or Consolas fallback.
+    if (['Inter', 'Consolas'].includes(cfg.fontFamily)) cfg.fontFamily = 'Arial';
+    if (['Inter', 'Consolas'].includes(cfg.headingFont)) cfg.headingFont = 'Arial';
+    cfg.nameLetterSpacing = false;
+    cfg.nameUppercase = false;
+    if (cfg.bulletChar === '▸') cfg.bulletChar = '•';
+  }
 
   // Build all sections in template-defined order
   const children = buildAllSections(

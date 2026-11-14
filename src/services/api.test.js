@@ -49,6 +49,17 @@ afterEach(() => {
   delete global.localStorage;
 });
 
+it('does not replay a paid verification after an ambiguous transport failure', async () => {
+  vi.useFakeTimers();
+  try {
+    global.fetch.mockRejectedValue(new Error('offline'));
+    const result = expect(analyzeResume('resume', 'job', 'en', { mode: 'verify' })).rejects.toThrow();
+    await vi.runAllTimersAsync();
+    await result;
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  } finally { vi.useRealTimers(); }
+});
+
 describe('importJobFromUrl', () => {
   it('preserves the server failure contract', async () => {
     global.fetch.mockResolvedValueOnce({

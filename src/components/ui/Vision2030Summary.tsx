@@ -1,3 +1,4 @@
+import { privateStorage } from '@/lib/auth/privateSession';
 // src/components/ui/Vision2030Summary.tsx
 // Quick-access Vision 2030 summary card for the main workspace
 
@@ -72,7 +73,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
 
         try {
             const storageKey = 'watheq:vision2030_state';
-            const savedState = localStorage.getItem(storageKey);
+            const savedState = privateStorage.getItem(storageKey);
             const currentHash = resumeText ? resumeText.slice(0, 50) : 'demo';
 
             if (savedState) {
@@ -82,7 +83,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                 // Auto-expand because analysis is "needed"
                 if (hash !== currentHash && currentHash !== 'demo') {
                     setExpanded(true);
-                    localStorage.setItem(storageKey, JSON.stringify({ isExpanded: true, hash: currentHash }));
+                    privateStorage.setItem(storageKey, JSON.stringify({ isExpanded: true, hash: currentHash }));
                 } else {
                     // Otherwise respect the user's last preference
                     setExpanded(isExpanded);
@@ -92,7 +93,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
                 // This ensures new users see the feature, but it doesn't annoy demo users
                 const initialExpanded = !!resumeText;
                 setExpanded(initialExpanded);
-                localStorage.setItem(storageKey, JSON.stringify({ isExpanded: initialExpanded, hash: currentHash }));
+                privateStorage.setItem(storageKey, JSON.stringify({ isExpanded: initialExpanded, hash: currentHash }));
             }
         } catch (e) {
             console.warn('Failed to restore Vision 2030 state', e);
@@ -107,7 +108,7 @@ export function Vision2030Summary({ resumeText, className = '' }: Vision2030Summ
         if (typeof window !== 'undefined') {
             try {
                 const currentHash = resumeText ? resumeText.slice(0, 50) : 'demo';
-                localStorage.setItem('watheq:vision2030_state', JSON.stringify({
+                privateStorage.setItem('watheq:vision2030_state', JSON.stringify({
                     isExpanded: newState,
                     hash: currentHash
                 }));

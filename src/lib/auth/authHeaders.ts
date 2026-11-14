@@ -1,4 +1,5 @@
 import { supabase } from '../../services/supabase';
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 
 /**
  * Get authenticated headers for API requests.
@@ -11,6 +12,7 @@ import { supabase } from '../../services/supabase';
  * @throws Error if user is not authenticated
  */
 export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const revision = getPrivateSessionRevision();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -18,6 +20,7 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   const {
     data: { session },
   } = await supabase.auth.getSession();
+  assertPrivateSession(revision, session?.user?.id ?? null);
 
   if (!session?.access_token) {
     throw new Error('Authentication required. Please sign in to continue.');

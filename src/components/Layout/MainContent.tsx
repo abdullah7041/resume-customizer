@@ -1,3 +1,5 @@
+import { privateStorage } from '@/lib/auth/privateSession';
+import { getPrivateSessionRevision } from "@/lib/auth/privateSession";
 import { lazy, Suspense, Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, Lock, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
@@ -275,7 +277,7 @@ const loadCachedTruthCheck = (
 ): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
-    const stored = window.localStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
+    const stored = privateStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as {
       contractVersion?: number;
@@ -299,7 +301,7 @@ const loadCachedTruthCheck = (
       : null;
   } catch (error) {
     console.warn("[MainContent] Failed to load cached Truth Check:", error);
-    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     return null;
   }
 };
@@ -425,10 +427,12 @@ const buildAiDebugSnapshot = (
 export default function MainContent() {
   const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
+  const sessionRevision = useRef(getPrivateSessionRevision()).current;
+  const [hasPendingResumeInput, setHasPendingResumeInput] = useState(false);
   const { refetch: refetchCredits, applyCreditsRemaining } = useUserCredits();
   const [guestMode, setGuestMode] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
+    return privateStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
   });
   const isGuestMode = !user && guestMode;
   const isPremium = Boolean(
@@ -462,7 +466,7 @@ export default function MainContent() {
   const [storedResumeData, setResumeData] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
-      const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
+      const stored = privateStorage.getItem(RESUME_STORAGE_KEY);
       if (!stored) return "";
 
       const parsed = JSON.parse(stored);
@@ -479,7 +483,7 @@ export default function MainContent() {
 
         if (isBinary) {
           console.warn("Detected corrupted resume data in localStorage, clearing it");
-          window.localStorage.removeItem(RESUME_STORAGE_KEY);
+          privateStorage.removeItem(RESUME_STORAGE_KEY);
           return "";
         }
       }
@@ -487,7 +491,7 @@ export default function MainContent() {
       return parsed;
     } catch (error) {
       console.warn("Failed to parse resume data from localStorage:", error);
-      window.localStorage.removeItem(RESUME_STORAGE_KEY);
+      privateStorage.removeItem(RESUME_STORAGE_KEY);
       return "";
     }
   });
@@ -586,7 +590,7 @@ export default function MainContent() {
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescriptionState] = useState(() => {
     if (typeof window === "undefined") return "";
-    return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
+    return privateStorage.getItem(JOB_STORAGE_KEY) || "";
   });
   const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(null);
   const [historicalMatch, setHistoricalMatch] = useState<{ status: 'legacy' | 'outdated'; result: MatchResult } | null>(null);
@@ -772,11 +776,11 @@ export default function MainContent() {
   latestOptimizeInput.current = optimizeInput;
   const previousOptimizeInput = useRef(optimizeInput);
   const isCurrentOptimize = useCallback((request: OptimizeRequest) =>
-    optimizeRequest.current === request &&
+    getPrivateSessionRevision() === sessionRevision && optimizeRequest.current === request &&
     sameMatchInput(request.input, latestOptimizeInput.current) &&
     Boolean(request.context && latestOptimizeContext.current &&
       canAcceptAssessment(optimizeRequest.current?.id ?? null, request.id,
-        request.context, latestOptimizeContext.current)), []);
+        request.context, latestOptimizeContext.current)), [sessionRevision]);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
@@ -855,15 +859,15 @@ export default function MainContent() {
 
   useEffect(() => {
     if (!user || !guestMode || typeof window === "undefined") return;
-    window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+    privateStorage.removeItem(GUEST_MODE_STORAGE_KEY);
     window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     setGuestMode(false);
   }, [guestMode, user]);
 
   const enterGuestMode = useCallback(() => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
-      window.localStorage.setItem("watheq:landingSeen", "true");
+      privateStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
+      privateStorage.setItem("watheq:landingSeen", "true");
       window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     }
     analytics.trackGuestPreviewStarted("landing_preview");
@@ -878,7 +882,7 @@ export default function MainContent() {
   const handleLandingGetStarted = useCallback(() => {
     if (flags.onboardingChat && !isOnboarded()) {
       if (typeof window !== "undefined") {
-        window.localStorage.setItem("watheq:landingSeen", "true");
+        privateStorage.setItem("watheq:landingSeen", "true");
         window.dispatchEvent(new Event("watheq:enter-onboarding"));
       }
       analytics.trackGuestPreviewStarted("landing_preview");
@@ -889,7 +893,7 @@ export default function MainContent() {
 
   const exitGuestMode = useCallback(() => {
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+      privateStorage.removeItem(GUEST_MODE_STORAGE_KEY);
       window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     }
     setGuestMode(false);
@@ -982,17 +986,21 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     resumeStore.setOptimizeRun(restored?.optimizeRun ?? null);
-    if (typeof window !== 'undefined') window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    if (typeof window !== 'undefined') privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     resetPipelineContext();
     confirmResumeSwitch(active.name);
   }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData, snapshotActiveResumeResults, jobDescription, setJobDescription, i18n.language, t, confirmResumeSwitch]);
 
+  const savedJobContext = JSON.stringify([user?.id, jobDescription, currentLibraryResumeKey()]);
+  const latestSavedJobContext = useRef(savedJobContext);
+  latestSavedJobContext.current = savedJobContext;
   const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
+    if (savedJobContext !== latestSavedJobContext.current || getPrivateSessionRevision() !== sessionRevision) return;
     setActiveJobApplicationId(application.id);
     setActiveJobApplication(application);
     setPendingAttachment(null);
     setExportedJobApplicationId(null);
-  }, []);
+  }, [savedJobContext, sessionRevision]);
 
   // Silent pipeline automation: every successfully analyzed job for a signed-in
   // user lands in the pipeline as 'saved' (createJobApplication dedupes
@@ -1199,7 +1207,7 @@ export default function MainContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const storedTab = window.localStorage.getItem(TAB_STORAGE_KEY);
+    const storedTab = privateStorage.getItem(TAB_STORAGE_KEY);
     if (storedTab && tabs.some((tab) => tab.value === storedTab)) {
       setActiveTab(storedTab);
     }
@@ -1208,7 +1216,7 @@ export default function MainContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setPreviewUsed(window.localStorage.getItem("watheq:previewQuotaUsed") === "true");
+    setPreviewUsed(privateStorage.getItem("watheq:previewQuotaUsed") === "true");
   }, []);
 
   // Persist resume data to localStorage
@@ -1216,7 +1224,7 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
     if (resumeData && resumeData.plainText) {
       try {
-        window.localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resumeData));
+        privateStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resumeData));
       } catch (error) {
         console.warn("Failed to save resume to localStorage:", error);
       }
@@ -1231,13 +1239,13 @@ export default function MainContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (jobDescription) {
-      window.localStorage.setItem(JOB_STORAGE_KEY, jobDescription);
+      privateStorage.setItem(JOB_STORAGE_KEY, jobDescription);
     }
   }, [jobDescription]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setJobDescription(window.localStorage.getItem(JOB_STORAGE_KEY) || "");
+    setJobDescription(privateStorage.getItem(JOB_STORAGE_KEY) || "");
   }, [variantRestoreNonce, setJobDescription]);
 
   // Warn user before closing tab with unsaved changes
@@ -1289,7 +1297,7 @@ export default function MainContent() {
 
     setActiveTab(value);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(TAB_STORAGE_KEY, value);
+      privateStorage.setItem(TAB_STORAGE_KEY, value);
     }
   }, [hasResume, pushToast, resumeGateReason, t, tabs]);
 
@@ -1324,7 +1332,7 @@ export default function MainContent() {
 
       setJobDescription(trimmed);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
+        privateStorage.setItem(JOB_STORAGE_KEY, trimmed);
       }
 
       // Reuse the feed's verified comparison for the selected resume. This is the
@@ -1381,7 +1389,7 @@ export default function MainContent() {
     if (!hasResume && !isReachableWithoutResume(activeTab)) {
       setActiveTab("resume");
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+        privateStorage.setItem(TAB_STORAGE_KEY, "resume");
       }
     }
   }, [activeTab, hasResume]);
@@ -1394,7 +1402,7 @@ export default function MainContent() {
     if (activeTabConfig && !isFlagEnabled(activeTabConfig) && activeTab !== "resume") {
       setActiveTab("resume");
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+        privateStorage.setItem(TAB_STORAGE_KEY, "resume");
       }
     }
   }, [activeTab, isFlagEnabled, t]);
@@ -1407,6 +1415,11 @@ export default function MainContent() {
   }, [activeNavValue, tabs]);
 
   const handleContinue = useCallback(() => {
+    if (activeNavValue === 'resume' && useResumeStore.getState().originalResume?.basics) {
+      setActiveTab('truth-check');
+      privateStorage.setItem(TAB_STORAGE_KEY, 'truth-check');
+      return;
+    }
     const index = tabs.findIndex((tab) => tab.value === activeNavValue);
     if (index >= 0 && index < tabs.length - 1) {
       handleTabChange(tabs[index + 1].value);
@@ -1486,7 +1499,7 @@ export default function MainContent() {
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem("watheq:previewQuotaUsed", "true");
+    privateStorage.setItem("watheq:previewQuotaUsed", "true");
     setPreviewUsed(true);
   }, []);
 
@@ -1502,9 +1515,9 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
 
     // Clear all stored data
-    window.localStorage.removeItem(RESUME_STORAGE_KEY);
-    window.localStorage.removeItem(JOB_STORAGE_KEY);
-    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    privateStorage.removeItem(RESUME_STORAGE_KEY);
+    privateStorage.removeItem(JOB_STORAGE_KEY);
+    privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     clearStoredMatchAnalysis();
 
     // Reset local state
@@ -1546,8 +1559,8 @@ export default function MainContent() {
     // `resetForNewUpload` rather than `clearAll`: the target role is job-search
     // intent, not resume data, and the feed now runs on it with no CV at all.
     useResumeStore.getState().resetForNewUpload();
-    window.localStorage.removeItem(RESUME_STORAGE_KEY);
-    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    privateStorage.removeItem(RESUME_STORAGE_KEY);
+    privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     clearStoredMatchAnalysis();
     setResumeData("");
     // Also clear dependent data
@@ -1641,11 +1654,6 @@ export default function MainContent() {
     async (resumeInput, signal?: AbortSignal, onStage?: (stage: 'reading' | 'preparing') => void) => {
       const { parseInput, storage, fileName } = normalizeResumePayload(resumeInput);
 
-      // Clear old localStorage data to prevent corruption issues
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(RESUME_STORAGE_KEY);
-      }
-
       try {
         setFlowProgress(18);
 
@@ -1677,7 +1685,7 @@ export default function MainContent() {
             );
           },
         });
-        if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
+        if (getPrivateSessionRevision() !== sessionRevision || signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
         setFlowProgress(88);
         const enriched =
           parsed
@@ -1710,12 +1718,14 @@ export default function MainContent() {
               ? libraryError.message : t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.');
           }
         }
+        if (getPrivateSessionRevision() !== sessionRevision || signal?.aborted) throw new DOMException("Session changed", "AbortError");
+        if (librarySaveFailure) throw Object.assign(new Error(librarySaveFailure), { status: 507, code: 'resume/storage-failed' });
         setResumeData(enriched);
         setMatchAnalysis(null);
         setTruthCheckResult(null);
         clearStoredMatchAnalysis();
         if (typeof window !== "undefined") {
-          window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+          privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
         }
         setJobDescription("");
         setOptimizations([]);
@@ -1724,14 +1734,6 @@ export default function MainContent() {
         useResumeStore.getState().setOptimizeRun(null);
         resetPipelineContext();
         emitHRSuperSaudEvent('resume.uploaded');
-        if (librarySaveFailure) pushToast(
-          {
-            type: "warning",
-            title: t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.'),
-            description: librarySaveFailure,
-          },
-          { id: TOAST_IDS.upload }
-        );
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return enriched;
@@ -1769,7 +1771,7 @@ export default function MainContent() {
         throw error;
       }
     },
-    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, setJobDescription, t]
+    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, setJobDescription, t, sessionRevision]
   );
 
   const handleAnalyzeMatchAI = useCallback(
@@ -1796,6 +1798,7 @@ export default function MainContent() {
       matchRequest.current = request;
       const isCurrent = () => {
         const active = matchRequest.current;
+        if (getPrivateSessionRevision() !== sessionRevision) return false;
         if (!active || active.id !== request.id || request.failed || !sameMatchInput(request.input, latestMatchInput.current)) return false;
         return !request.context || Boolean(active.context &&
           canAcceptAssessment(active.id, request.id, request.context, active.context));
@@ -1955,7 +1958,7 @@ export default function MainContent() {
         if (matchRequest.current === request) setIsAnalyzing(false);
       }
     },
-    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, setJobDescription, t]
+    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, setJobDescription, t, sessionRevision]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
@@ -2002,12 +2005,12 @@ export default function MainContent() {
         language: truthCheckLanguage,
         userHardStops,
       }) as ResumeTruthCheckResult;
-      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+      if (getPrivateSessionRevision() !== sessionRevision || requestedResumeKey !== currentLibraryResumeKey()) return null;
 
       setAiDebug(buildAiDebugSnapshot(result, "success"));
       setTruthCheckResult(result);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
+        privateStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
           contractVersion: TRUTH_CHECK_CONTRACT_VERSION,
           resumeHash,
           resumeId: useResumeLibraryStore.getState().activeResumeId,
@@ -2033,7 +2036,7 @@ export default function MainContent() {
       );
       return result;
     } catch (error) {
-      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+      if (getPrivateSessionRevision() !== sessionRevision || requestedResumeKey !== currentLibraryResumeKey()) return null;
       setAiDebug(buildAiDebugSnapshot(error, "error"));
       pushToast(
         {
@@ -2045,9 +2048,9 @@ export default function MainContent() {
       );
       throw error;
     } finally {
-      if (requestedResumeKey === currentLibraryResumeKey()) setIsTruthChecking(false);
+      if (getPrivateSessionRevision() === sessionRevision && requestedResumeKey === currentLibraryResumeKey()) setIsTruthChecking(false);
     }
-  }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t]);
+  }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t, sessionRevision]);
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
@@ -2767,6 +2770,7 @@ export default function MainContent() {
           return;
         }
 
+        if (getPrivateSessionRevision() !== sessionRevision) return;
         const state = useResumeStore.getState();
         if (state.optimizationOrigin === 'guest_preview' && state.optimizations.some(edit => edit.applied)) {
           handleTabChange('templates');
@@ -2809,6 +2813,7 @@ export default function MainContent() {
           skipPrint: true, // Don't trigger print, just return HTML
         });
 
+        if (getPrivateSessionRevision() !== sessionRevision) return;
         const canSaveToSupabase = exportMethod === "supabase" && isSupabaseExportAvailable() && Boolean(user);
 
         if (exportMethod === "supabase" && isSupabaseExportAvailable() && !user) {
@@ -2824,6 +2829,7 @@ export default function MainContent() {
           // Export to Supabase Storage
           const result = await exportToSupabase({
             htmlContent,
+            expectedSessionRevision: sessionRevision,
             fileName: "Resume_Optimized",
             metadata: {
               variant: normalizedVariant,
@@ -2832,6 +2838,7 @@ export default function MainContent() {
             },
           });
 
+          if (getPrivateSessionRevision() !== sessionRevision) return;
           pushToast({
             type: "success",
             title: t("toasts.savedToAccount"),
@@ -2869,6 +2876,7 @@ export default function MainContent() {
           });
         }
       } catch (error) {
+        if (getPrivateSessionRevision() !== sessionRevision || error?.cancelled) return;
         console.error("Export error:", error);
         emitHRSuperSaudEvent('error.generic');
         pushToast({
@@ -2878,7 +2886,7 @@ export default function MainContent() {
         });
       }
     },
-    [activeJobApplicationId, handleTabChange, isGuestMode, jobDescription, legacyExportConfirmation, pushToast, requireSignInForGuestAction, resumeData, user, t]
+    [activeJobApplicationId, handleTabChange, isGuestMode, jobDescription, legacyExportConfirmation, pushToast, requireSignInForGuestAction, resumeData, user, t, sessionRevision]
   );
 
   const renderedToasts = useMemo(
@@ -3061,6 +3069,8 @@ export default function MainContent() {
             <>
               <UploadSection
                 onParseResume={handleParseResume}
+                onContinue={handleContinue}
+                onPendingInputChange={setHasPendingResumeInput}
                 onActivateResume={activateLibraryResume}
                 parseNotificationsHandled={true}
                 isGuestMode={isGuestMode}
@@ -3279,8 +3289,10 @@ export default function MainContent() {
           <div className="flex justify-center sm:justify-end mt-4">
             <GlassButton
               variant="secondary"
-              onClick={handleContinue}
-              disabled={!hasResume}
+              type={activeTab === "resume" ? "submit" : "button"}
+              form={activeTab === "resume" ? "resume-upload-form" : undefined}
+              onClick={activeTab === "resume" ? undefined : handleContinue}
+              disabled={!hasResume && !hasPendingResumeInput}
               title={!hasResume ? resumeGateReason : undefined}
               className="justify-center"
             >

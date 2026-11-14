@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createJobApplication, updateJobApplication } from './pipeline';
 import { supabase } from './supabase';
+import { activatePrivateSession } from '@/lib/auth/privateSession';
 
 vi.mock('./supabase', () => ({
   supabase: {
@@ -29,11 +30,23 @@ function buildBuilder({ data = null } = {}) {
 
 describe('pipeline service', () => {
   beforeEach(() => {
+    localStorage.clear();
+    activatePrivateSession('user-123', () => {});
     vi.clearAllMocks();
     supabase.auth.getUser.mockResolvedValue({
       data: { user: { id: 'user-123' } },
       error: null,
     });
+  });
+  it('rejects an account change before inserting a private job or note', async () => {
+    let finish;
+    supabase.auth.getUser.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const pending = createJobApplication({ job_description: 'Private A job', notes: 'Private A note' });
+    activatePrivateSession('user-b', () => {});
+    finish({ data: { user: { id: 'user-b' } }, error: null });
+    const result = await pending;
+    expect(result.data).toBeNull();
+    expect(supabase.from).not.toHaveBeenCalled();
   });
 
   it('persists status updates without using the removed interview timestamp', async () => {

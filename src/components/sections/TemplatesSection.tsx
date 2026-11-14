@@ -1,3 +1,4 @@
+import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/components/sections/TemplatesSection.tsx
 /**
  * PDF GENERATION DIAGNOSTIC AUDIT
@@ -19,7 +20,7 @@
  */
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo, useLayoutEffect, useEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useId, useState, useMemo, useLayoutEffect, useEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
@@ -241,7 +242,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
-  const [isHoveringSelector, setIsHoveringSelector] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -249,10 +249,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [textPdfReview, setTextPdfReview] = useState<NonNullable<typeof pdfRecovery> | null>(null);
   const textReviewGenerationRef = useRef(0);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
+  const sessionRevision = useRef(getPrivateSessionRevision()).current;
   const exportAttemptIdRef = useRef(0);
   const renderedInputsRef = useRef('');
   const capturedInputsRef = useRef<{ rendered: string; store: string } | null>(null);
-  const isCurrentExport = (id: number) => exportAttemptIdRef.current === id && (!capturedInputsRef.current ||
+  const isCurrentExport = (id: number) => getPrivateSessionRevision() === sessionRevision && exportAttemptIdRef.current === id && (!capturedInputsRef.current ||
     (capturedInputsRef.current.rendered === renderedInputsRef.current && capturedInputsRef.current.store === storeExportInputs()));
   const beginExport = () => {
     const id = ++exportAttemptIdRef.current;
@@ -349,6 +350,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     }
   }, [renderedInputs, currentStoreInputs, optimizationMetrics]);
   const hasRealResume = Boolean(resumeData?.basics?.name);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const pdfWarningId = useId();
+  const [hasArabicExportText, setHasArabicExportText] = useState(false);
+  useLayoutEffect(() => {
+    const preview = galleryRef.current?.querySelector<HTMLElement>('[data-resume-preview]');
+    setHasArabicExportText(Boolean(hasRealResume && preview && containsArabic(preview.textContent ?? '') &&
+      containsArabic(cloneVisiblePdfPreview(preview).textContent ?? '')));
+  }, [renderedInputs, hasRealResume]);
   const exportFailureMessage = t(
     'sections.templates.export.failed',
     'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
@@ -1125,7 +1134,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   };
 
   return (
-    <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
+    <div ref={galleryRef} className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
       <GlassCard padding="none" className="flex-1 flex flex-col neu-card rounded-2xl overflow-hidden min-h-0 relative group">
 
@@ -1135,7 +1144,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <div className="flex items-center justify-between">
             <div className="min-w-0">
               <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
-              <p className="text-xs md:text-sm text-gray-500 dark:text-white/60 flex items-center gap-1.5 mt-0.5">
+              <p className="text-xs md:text-sm text-gray-600 dark:text-white/60 flex items-center gap-1.5 mt-0.5">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
                 {contentLanguage && (
@@ -1187,12 +1196,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
               <GlassButton
                 onClick={handleDownloadPdf}
+                aria-describedby={hasArabicExportText ? pdfWarningId : undefined}
                 variant="primary"
                 disabled={!hasRealResume || isDownloading}
                 className="btn-metal border border-emerald-500/30 text-emerald-900 dark:text-white"
               >
                 {isDownloading ? t('sections.templates.generating', 'Generating...') : (
-                  <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+                  <><Download className="w-4 h-4 me-2" />{hasArabicExportText ? t('sections.templates.downloadPdfAnyway', 'Download PDF anyway') : t('sections.templates.downloadPdf', 'Download PDF')}</>
                 )}
               </GlassButton>
 
@@ -1213,13 +1223,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <div className="flex md:hidden flex-wrap gap-1.5">
             <GlassButton
               onClick={handleDownloadPdf}
+              aria-describedby={hasArabicExportText ? pdfWarningId : undefined}
               variant="primary"
               disabled={!hasRealResume || isDownloading}
               size="sm"
               className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="ms-1">{t('sections.templates.mobilePdf', 'PDF file')}</span>
+              <span className="ms-1">{hasArabicExportText ? t('sections.templates.downloadPdfAnyway', 'Download PDF anyway') : t('sections.templates.mobilePdf', 'PDF file')}</span>
             </GlassButton>
 
             <GlassButton
@@ -1273,11 +1284,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
 
           {showAdvancedFormatting && <KeywordBoldingToggle />}
-          {contentLanguage !== 'en' && (
-            <p className="text-xs text-gray-600 dark:text-gray-300">
-              {t('sections.templates.export.arabicLayout', 'Arabic PDFs use DejaVu Sans with template colors, emphasis and spacing. Copied text may include standard text direction marks.')}
-            </p>
-          )}
+          <div role="status" aria-label={t('sections.templates.export.pdfCompatibility', 'PDF compatibility')} aria-atomic="true" className="text-sm text-ink">
+            {hasArabicExportText && (
+              <p id={pdfWarningId}>{t('sections.templates.export.arabicPdfWarning', 'Some PDF readers may change the order of Arabic letters or miss words in a search. If the application accepts Word files, you can also download a Word version.')}</p>
+            )}
+          </div>
 
           {exportError && (
             <div
@@ -1420,13 +1431,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               <div
                 className={cn(
                   "fixed z-50 flex justify-center",
-                  // Desktop: draggable with hover opacity
+                  // Keep labels opaque while the desktop selector is draggable.
                   "md:cursor-grab",
                   isDragging && "md:cursor-grabbing",
-                  "transition-opacity duration-200",
-                  // Mobile: always full opacity; Desktop: fade unless hovered/dragged
-                  "opacity-100 md:opacity-70",
-                  (isHoveringSelector || isDragging) && "md:opacity-100"
                 )}
                 style={{
                   bottom: `calc(max(24px, env(safe-area-inset-bottom, 0px) + 8px) - ${barPosition.y}px)`,
@@ -1434,8 +1441,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   transform: 'translateX(-50%)',
                   maxWidth: 'calc(100vw - 16px)',
                 }}
-                onMouseEnter={() => setIsHoveringSelector(true)}
-                onMouseLeave={() => !isDragging && setIsHoveringSelector(false)}
               >
                 <div className="flex items-center gap-1 px-2 py-2 neu-card rounded-full max-w-full no-scrollbar overflow-x-auto shadow-2xl">
                   {/* Drag Handle - hidden on mobile for space */}
@@ -1457,6 +1462,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                       <button
                         type="button"
                         key={template.id}
+                        aria-pressed={isSelected}
                         onClick={() => handleSelectTemplate(template)}
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,scale] duration-200 shrink-0",

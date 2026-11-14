@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/services/jobFeed.ts
 // Service layer for the Job Feed (Supabase RLS), mirroring src/services/pipeline.ts.
 //
@@ -58,7 +59,9 @@ function summarizeError(error: unknown) {
 }
 
 async function authHeaders(): Promise<Record<string, string> | null> {
+  const revision = getPrivateSessionRevision();
   const { data } = await supabase.auth.getSession();
+  assertPrivateSession(revision, data.session?.user?.id ?? null);
   const token = data.session?.access_token;
   if (!token) return null;
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -356,9 +359,11 @@ export async function listFeedState(): Promise<Map<string, FeedStateValue>> {
  * manual too.
  */
 export async function setFeedState(postingId: string, state: FeedStateValue): Promise<{ error: string | null }> {
+  const revision = getPrivateSessionRevision();
   const { data: session } = await supabase.auth.getUser();
   const userId = session.user?.id;
   if (!userId) return { error: 'Not signed in' };
+  assertPrivateSession(revision, userId);
 
   const { error } = await supabase
     .from(FEED_STATE_TABLE)
@@ -450,9 +455,11 @@ export async function readLastFeedSeenAt(): Promise<string | null> {
 }
 
 export async function touchLastFeedSeenAt(): Promise<void> {
+  const revision = getPrivateSessionRevision();
   const { data: session } = await supabase.auth.getUser();
   const userId = session.user?.id;
   if (!userId) return;
+  assertPrivateSession(revision, userId);
 
   const { error } = await supabase
     .from('user_profiles')

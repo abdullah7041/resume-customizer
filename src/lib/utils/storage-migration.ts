@@ -1,3 +1,4 @@
+import { privateStorage } from '@/lib/auth/privateSession';
 /**
  * Migrates old storage keys to current "watheq:" keys.
  * Old keys are left in place so users can safely roll back to older builds.
@@ -31,16 +32,16 @@ const keyAliases: Record<string, string[]> = {
 const getAliasesForKey = (key: string): string[] => keyAliases[key] ?? [];
 
 export function getCompatibleStorageItem(key: string): string | null {
-  const currentValue = localStorage.getItem(key);
+  const currentValue = privateStorage.getItem(key);
   if (currentValue !== null) {
     return currentValue;
   }
 
   for (const oldKey of getAliasesForKey(key)) {
-    const oldValue = localStorage.getItem(oldKey);
+    const oldValue = privateStorage.getItem(oldKey);
     if (oldValue !== null) {
       try {
-        localStorage.setItem(key, oldValue);
+        privateStorage.setItem(key, oldValue);
       } catch (error) {
         console.warn(`[Storage Migration] Failed to copy ${oldKey} to ${key}:`, error);
       }
@@ -52,13 +53,13 @@ export function getCompatibleStorageItem(key: string): string | null {
 }
 
 export function setCompatibleStorageItem(key: string, value: string): void {
-  localStorage.setItem(key, value);
+  privateStorage.setItem(key, value);
 }
 
 export function removeCompatibleStorageItem(key: string): void {
-  localStorage.removeItem(key);
+  privateStorage.removeItem(key);
   getAliasesForKey(key).forEach((oldKey) => {
-    localStorage.removeItem(oldKey);
+    privateStorage.removeItem(oldKey);
   });
 }
 
@@ -68,10 +69,10 @@ export function migrateStorageKeys(): void {
     const newKey = `${NEW_PREFIX}${key}`;
 
     try {
-      const oldValue = localStorage.getItem(oldKey);
+      const oldValue = privateStorage.getItem(oldKey);
 
-      if (oldValue !== null && localStorage.getItem(newKey) === null) {
-        localStorage.setItem(newKey, oldValue);
+      if (oldValue !== null && privateStorage.getItem(newKey) === null) {
+        privateStorage.setItem(newKey, oldValue);
       }
     } catch (error) {
       console.error(`[Storage Migration] Failed to migrate ${oldKey}:`, error);
@@ -81,9 +82,9 @@ export function migrateStorageKeys(): void {
   Object.entries(keyAliases).forEach(([newKey, oldKeys]) => {
     oldKeys.forEach((oldKey) => {
       try {
-        const oldValue = localStorage.getItem(oldKey);
-        if (oldValue !== null && localStorage.getItem(newKey) === null) {
-          localStorage.setItem(newKey, oldValue);
+        const oldValue = privateStorage.getItem(oldKey);
+        if (oldValue !== null && privateStorage.getItem(newKey) === null) {
+          privateStorage.setItem(newKey, oldValue);
         }
       } catch (error) {
         console.error(`[Storage Migration] Failed to migrate ${oldKey}:`, error);
@@ -91,5 +92,5 @@ export function migrateStorageKeys(): void {
     });
   });
 
-  localStorage.setItem(MIGRATION_FLAG, 'true');
+  privateStorage.setItem(MIGRATION_FLAG, 'true');
 }

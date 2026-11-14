@@ -1,3 +1,4 @@
+import { privateStorage } from '@/lib/auth/privateSession';
 /**
  * Persistence for the last Match analysis result.
  *
@@ -35,7 +36,7 @@ type ResumeProvenance = { resumeId: string; resumeFingerprint: string };
 export function loadStoredMatchAssessment(context: AssessmentContext): StoredMatchAssessment | null {
   if (typeof window === 'undefined') return null;
   try {
-    const stored = window.localStorage.getItem(MATCH_STORAGE_KEY);
+    const stored = privateStorage.getItem(MATCH_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as ContextualStoredMatchAnalysis;
     if (!parsed?.analysis || typeof parsed.analysis.score !== 'number') return null;
@@ -48,7 +49,7 @@ export function loadStoredMatchAssessment(context: AssessmentContext): StoredMat
   } catch {
     console.warn('[MatchAnalysisCache] Failed to load cached match analysis');
     try {
-      window.localStorage.removeItem(MATCH_STORAGE_KEY);
+      privateStorage.removeItem(MATCH_STORAGE_KEY);
     } catch {
       /* storage unavailable */
     }
@@ -60,7 +61,7 @@ export function loadStoredMatchAssessment(context: AssessmentContext): StoredMat
 export function saveMatchAssessment(assessment: AssessmentRecord<MatchResult>): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(
+    privateStorage.setItem(
       MATCH_STORAGE_KEY,
       JSON.stringify({
         analysis: assessment.result,
@@ -77,7 +78,7 @@ export function saveMatchAssessment(assessment: AssessmentRecord<MatchResult>): 
 export function loadCachedMatchAnalysis(jobText: string, provenance?: ResumeProvenance): MatchResult | null {
   if (typeof window === 'undefined' || !jobText) return null;
   try {
-    const stored = window.localStorage.getItem(MATCH_STORAGE_KEY);
+    const stored = privateStorage.getItem(MATCH_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as StoredMatchAnalysis;
     return parsed?.jobText === jobText
@@ -88,7 +89,7 @@ export function loadCachedMatchAnalysis(jobText: string, provenance?: ResumeProv
   } catch {
     console.warn('[MatchAnalysisCache] Failed to load cached match analysis');
     try {
-      window.localStorage.removeItem(MATCH_STORAGE_KEY);
+      privateStorage.removeItem(MATCH_STORAGE_KEY);
     } catch {
       /* storage unavailable */
     }
@@ -99,7 +100,7 @@ export function loadCachedMatchAnalysis(jobText: string, provenance?: ResumeProv
 export function saveMatchAnalysis(analysis: MatchResult, jobText: string, provenance?: ResumeProvenance): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(
+    privateStorage.setItem(
       MATCH_STORAGE_KEY,
       JSON.stringify({ analysis, jobText, savedAt: Date.now(), ...provenance } satisfies StoredMatchAnalysis),
     );
@@ -111,7 +112,7 @@ export function saveMatchAnalysis(analysis: MatchResult, jobText: string, proven
 export function clearStoredMatchAnalysis(): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.removeItem(MATCH_STORAGE_KEY);
+    privateStorage.removeItem(MATCH_STORAGE_KEY);
   } catch {
     /* storage unavailable */
   }

@@ -11,6 +11,7 @@
     "export": "Export PDF",
     "loading": "Loading...",
     "error": "An error occurred",
+    "sessionUnavailable": "Your saved workspace could not be opened. Reload to try again.",
     "retry": "Try Again",
     "cancel": "Cancel",
     "save": "Save",
@@ -34,6 +35,8 @@
     "copy": "Copy",
     "copied": "Copied!",
     "updated": "Updated",
-    "download": "Download"
+    "download": "Download",
+    "clear": "Clear",
+    "credits": "credits"
   }
 }

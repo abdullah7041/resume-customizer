@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CoverLetterSection } from '../components/sections/CoverLetterSection';
@@ -75,6 +75,7 @@ describe('CoverLetterSection Arabic and English behavior', () => {
     localStorage.clear();
     language = 'ar';
     localStorage.setItem('airo:coverLetter', JSON.stringify({
+      contextKey: JSON.stringify(['Resume text', 'Job description']),
       coverLetter: 'أمتلك خبرة قوية في قيادة المبادرات الرقمية.\n\nوأستطيع دعم أهداف الفريق.',
       companyName: 'شركة واثق',
       hiringManager: '',
@@ -82,6 +83,25 @@ describe('CoverLetterSection Arabic and English behavior', () => {
       keyHighlights: ['قيادة المبادرات الرقمية'],
       signatureName: 'سارة الأحمد',
     }));
+  });
+
+  it('persists the exact edited letter on Done and restores it after reopening', () => {
+    const first = renderCoverLetter();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(document.querySelector('textarea')!, { target: { value: 'QA exact edited letter marker' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    first.unmount();
+    renderCoverLetter();
+    expect(screen.getByText('QA exact edited letter marker')).toBeInTheDocument();
+  });
+
+  it('does not restore a letter belonging to another resume or job', () => {
+    localStorage.setItem('airo:coverLetter', JSON.stringify({
+      contextKey: JSON.stringify(['Different candidate', 'Different job']),
+      coverLetter: 'Other candidate private letter',
+    }));
+    renderCoverLetter();
+    expect(screen.queryByText('Other candidate private letter')).not.toBeInTheDocument();
   });
 
   it('renders Arabic tone labels and rtl cover letter document chrome', () => {
@@ -99,6 +119,7 @@ describe('CoverLetterSection Arabic and English behavior', () => {
   it('keeps English tone labels and ltr cover letter document chrome', () => {
     language = 'en';
     localStorage.setItem('airo:coverLetter', JSON.stringify({
+      contextKey: JSON.stringify(['Resume text', 'Job description']),
       coverLetter: 'I can support the team with practical delivery experience.',
       companyName: 'Watheq',
       hiringManager: '',

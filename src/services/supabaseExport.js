@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/services/supabaseExport.js
 // Export optimized resumes to Supabase Storage
 
@@ -29,7 +30,8 @@ const generateFileName = (baseName = "Resume_Optimized") => {
 export const exportToSupabase = async ({
   htmlContent,
   fileName = "Resume_Optimized",
-  metadata = {}
+  metadata = {},
+  expectedSessionRevision = getPrivateSessionRevision(),
 }) => {
   // Validate input
   if (!htmlContent || typeof htmlContent !== "string") {
@@ -41,6 +43,7 @@ export const exportToSupabase = async ({
   }
 
   // Check authentication
+  const revision = expectedSessionRevision;
   const {
     data: { user },
     error: userError,
@@ -53,6 +56,7 @@ export const exportToSupabase = async ({
       hint: "Log in to store your optimized resume securely.",
     });
   }
+  assertPrivateSession(revision, user.id);
 
   try {
     // No need to create bucket - reusing existing 'resumes' bucket
@@ -100,6 +104,7 @@ export const exportToSupabase = async ({
       },
     };
 
+    assertPrivateSession(revision, user.id);
     // Try to save to database (table might not exist - that's OK)
     try {
       const { error: dbError } = await supabase.from("resume_exports").insert(exportRecord);
@@ -111,6 +116,7 @@ export const exportToSupabase = async ({
       // This is fine - file is still saved in storage
     }
 
+    assertPrivateSession(revision, user.id);
     return {
       success: true,
       filePath: data.path,
@@ -121,7 +127,7 @@ export const exportToSupabase = async ({
   } catch (error) {
     console.error("Supabase export error:", error);
 
-    if (error instanceof AppError) {
+    if (error instanceof AppError || error?.cancelled) {
       throw error;
     }
 
@@ -137,6 +143,7 @@ export const exportToSupabase = async ({
  * List user's exported resumes
  */
 export const listExports = async () => {
+  const revision = getPrivateSessionRevision();
   const {
     data: { user },
     error: userError,
@@ -149,6 +156,7 @@ export const listExports = async () => {
       hint: "Log in to access your saved resumes.",
     });
   }
+  assertPrivateSession(revision, user.id);
 
   try {
     // List files from storage (in optimized subfolder)
@@ -160,6 +168,7 @@ export const listExports = async () => {
       throw error;
     }
 
+    assertPrivateSession(revision, user.id);
     return files || [];
   } catch (error) {
     console.error("Failed to list exports:", error);
@@ -171,6 +180,7 @@ export const listExports = async () => {
  * Download an exported resume
  */
 export const downloadExport = async (filePath) => {
+  const revision = getPrivateSessionRevision();
   const {
     data: { user },
     error: userError,
@@ -183,6 +193,7 @@ export const downloadExport = async (filePath) => {
       hint: "Log in to access your saved resumes.",
     });
   }
+  assertPrivateSession(revision, user.id);
 
   try {
     const { data, error } = await supabase.storage
@@ -193,6 +204,7 @@ export const downloadExport = async (filePath) => {
       throw error;
     }
 
+    assertPrivateSession(revision, user.id);
     return data.signedUrl;
   } catch (error) {
     console.error("Failed to get download URL:", error);
@@ -208,6 +220,7 @@ export const downloadExport = async (filePath) => {
  * Delete an exported resume
  */
 export const deleteExport = async (filePath) => {
+  const revision = getPrivateSessionRevision();
   const {
     data: { user },
     error: userError,
@@ -220,6 +233,7 @@ export const deleteExport = async (filePath) => {
       hint: "Log in to manage your saved resumes.",
     });
   }
+  assertPrivateSession(revision, user.id);
 
   try {
     const { error } = await supabase.storage

@@ -1,3 +1,5 @@
+import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
+import { privateStorage } from '@/lib/auth/privateSession';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -145,20 +147,20 @@ const REFINABLE_SECTIONS = new Set(['summary', 'headline', 'experience', 'projec
 const getFreeOptimizeRunCount = (): number => {
   if (typeof window === 'undefined') return 0;
 
-  const storedCount = window.localStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY);
+  const storedCount = privateStorage.getItem(FREE_OPTIMIZE_STORAGE_KEY);
   if (storedCount !== null) {
     const parsedCount = Number.parseInt(storedCount, 10);
     return Number.isFinite(parsedCount) && parsedCount >= 0 ? parsedCount : 0;
   }
 
-  return window.localStorage.getItem(FREE_OPTIMIZE_LEGACY_KEY) === 'true' ? 1 : 0;
+  return privateStorage.getItem(FREE_OPTIMIZE_LEGACY_KEY) === 'true' ? 1 : 0;
 };
 
 const hasFreePreviewRun = () => getFreeOptimizeRunCount() < MAX_FREE_OPTIMIZE_RUNS;
 
 const markFreePreviewUsed = () => {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, String(getFreeOptimizeRunCount() + 1));
+  privateStorage.setItem(FREE_OPTIMIZE_STORAGE_KEY, String(getFreeOptimizeRunCount() + 1));
 };
 
 const finiteScore = (value: unknown): number | null => {
@@ -902,7 +904,9 @@ export function OptimizeSection({
     setRefineLoadingId(opt.sectionId);
     setRefineError(null);
     try {
+      const revision = getPrivateSessionRevision();
       const { refineBullet } = await import('@/services/api');
+      if (getPrivateSessionRevision() !== revision || useResumeStore.getState().optimizations.find(card => card.sectionId === opt.sectionId) !== opt) return;
       const jobContext = typeof window !== 'undefined'
         ? getCompatibleStorageItem(LAST_JOB_KEY) || ''
         : '';

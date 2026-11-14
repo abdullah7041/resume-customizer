@@ -16,12 +16,14 @@ import { checkPdfBlob } from '../lib/utils/pdfTextCheck';
 import { getAuthHeaders } from '../services/api';
 
 let mockContentLanguage = null;
+let mockUiLanguage = 'en';
+let mockHiddenPreviewText = '';
 
 // Mock dependencies
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key, fallback) => fallback || key,
-        i18n: { language: 'en', changeLanguage: vi.fn() },
+        i18n: { language: mockUiLanguage, changeLanguage: vi.fn() },
     }),
 }));
 
@@ -105,7 +107,7 @@ vi.mock('../components/Credits/ConfirmActionModal', () => ({
 vi.mock('../components/templates/TemplateRenderer', () => ({
     default: ({ template, contentDirection, userData }) => (
         <div data-testid="template-renderer" data-resume-preview data-template-id={template.id} data-direction={contentDirection}>
-            Template: {template.name} {userData?.basics?.name !== 'Your Name' && userData?.basics?.name} {userData?.basics?.name !== 'Your Name' && userData?.basics?.summary}
+            <span hidden>{mockHiddenPreviewText}</span>Template: {template.name} {userData?.basics?.name !== 'Your Name' && userData?.basics?.name} {userData?.basics?.name !== 'Your Name' && userData?.basics?.summary}
         </div>
     ),
 }));
@@ -162,6 +164,8 @@ beforeAll(() => {
 
 beforeEach(() => {
     mockContentLanguage = null;
+    mockUiLanguage = 'en';
+    mockHiddenPreviewText = '';
     globalThis.fetch.mockClear();
     globalThis.fetch.mockResolvedValue({
         ok: true,
@@ -173,11 +177,45 @@ beforeEach(() => {
     useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
 });
 
+describe('Arabic PDF export notice', () => {
+    it('ignores hidden Arabic text excluded from the PDF', () => {
+        mockHiddenPreviewText = 'نورة';
+        renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara', summary: 'Engineer' } }} />);
+        expect(screen.getByRole('status', { name: 'PDF compatibility' })).toBeEmptyDOMElement();
+        expect(screen.getByRole('button', { name: 'Download PDF' })).not.toHaveAttribute('aria-describedby');
+    });
+
+    it('warns for an Arabic name in an English résumé', () => {
+        renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'نورة', summary: 'Engineer' } }} />);
+        for (const button of screen.getAllByRole('button', { name: 'Download PDF anyway' })) {
+            expect(button).toHaveAccessibleDescription(expect.stringContaining('Some PDF readers'));
+        }
+    });
+
+    it.each(['سَّل', 'Software engineer SQL مهندسة'])('warns for Arabic export text %s', summary => {
+        mockContentLanguage = 'en';
+        const { rerender } = renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara', summary } }} />);
+        expect(screen.getByRole('status', { name: 'PDF compatibility' })).toHaveTextContent('Some PDF readers may change the order');
+        expect(screen.getAllByRole('button', { name: 'Download PDF anyway' })[0]).toBeEnabled();
+        expect(screen.getByRole('button', { name: 'Download DOCX' })).toBeEnabled();
+        rerender(<DirectionProvider><TemplateGallery resumeData={{ basics: { name: 'Sara', summary: 'English only' } }} /></DirectionProvider>);
+        expect(screen.getByRole('status', { name: 'PDF compatibility' })).toBeEmptyDOMElement();
+        expect(screen.getByRole('button', { name: 'Download PDF' })).toBeEnabled();
+    });
+
+    it('uses exported content instead of the Arabic interface language', () => {
+        mockUiLanguage = 'ar';
+        renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara', summary: 'Software engineer' } }} />);
+        expect(screen.getByRole('status', { name: 'PDF compatibility' })).toBeEmptyDOMElement();
+        expect(screen.getByRole('button', { name: 'Download PDF' })).toBeEnabled();
+    });
+});
+
 describe('signed-out PDF downloads', () => {
     it.each(['reader_unavailable', 'reader_error', 'timeout'])('explains %s without claiming PDF text is missing', async reason => {
         checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', reason, missingFieldIds: ['preview.0'] });
         renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Noura Example', summary: 'Saudi analyst' }, work: [], education: [], skills: [], projects: [] }} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         expect(await screen.findByRole('alert')).toHaveTextContent('PDF text verification is temporarily unavailable. Retry PDF or choose another export option.');
         expect(saveAs).not.toHaveBeenCalled();
         expect(analytics.trackExportFailed).toHaveBeenCalledWith('modern-professional', 'pdf_unverified', reason);
@@ -188,7 +226,7 @@ describe('signed-out PDF downloads', () => {
     it.each(['Software engineer', 'مهندسة برمجيات'])('downloads checked selectable PDF without a session for %s', async summary => {
         getAuthHeaders.mockRejectedValue(new Error('No session available'));
         renderWithProviders(<TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary } }} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         await waitFor(() => expect(saveAs).toHaveBeenCalledOnce());
         expect(getAuthHeaders).not.toHaveBeenCalled();
         expect(globalThis.fetch).toHaveBeenCalledWith('/.netlify/functions/generate-pdf', expect.objectContaining({ headers: { 'Content-Type': 'application/json' } }));
@@ -199,7 +237,7 @@ describe('signed-out PDF downloads', () => {
         getAuthHeaders.mockRejectedValue(new Error('Session expired'));
         checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
         renderWithProviders(<TemplateGallery resumeData={resume} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         fireEvent.click(await screen.findByRole('button', { name: 'Review Text PDF' }));
         const review = await screen.findByRole('dialog', { name: 'Review Text PDF' });
         fireEvent.click(within(review).getByRole('button', { name: 'Download Text PDF' }));
@@ -212,7 +250,7 @@ describe('signed-out PDF downloads', () => {
     it('bounds image preparation when animation frames never resume', async () => {
         globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 503 });
         renderWithProviders(<TemplateGallery resumeData={resume} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         const imageButton = await screen.findByRole('button', { name: 'Download image-only PDF' });
         vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
         const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 0);
@@ -234,7 +272,7 @@ describe('Text PDF recovery review', () => {
     it('sends the captured styled Arabic document directly and downloads only after the text gate', async () => {
         const input = { basics: { name: 'Noura Example', label: 'Engineer', summary: 'لا تغيّر الحقائق. SQL 25% 2024 ٢٥٪ ٢٠٢٤' }, work: [], education: [], skills: [], projects: [] };
         renderWithProviders(<TemplateGallery resumeData={input} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'Noura_Example_Engineer.pdf'));
         const body = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
         expect(body.format).toBe('styled');
@@ -242,13 +280,13 @@ describe('Text PDF recovery review', () => {
         expect(body.presentation).toHaveLength(body.blocks.length);
         expect(body.html).toBeUndefined();
         expect(checkPdfBlob).toHaveBeenCalled();
-        expect(screen.getByRole('status')).toHaveTextContent('Selectable text checked');
+        expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Selectable text checked');
     });
     const resume = { basics: { name: 'Noura Example', label: 'Analyst', summary: 'Saudi analyst SQL 25%' }, work: [], education: [], skills: [], projects: [] };
     const setup = async () => {
         checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
         const view = renderWithProviders(<TemplateGallery resumeData={resume} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         await screen.findByRole('button', { name: 'Review Text PDF' });
         return view;
     };
@@ -271,7 +309,7 @@ describe('Text PDF recovery review', () => {
         expect(body).toMatchObject({ format: 'text', templateId: 'modern-professional', filename: 'Noura_Example_Analyst-text', blocks: [{ kind: 'body', runs: [{ text: 'Template: Riyadh Noura Example Saudi analyst SQL 25%' }] }] });
         expect(globalThis.fetch.mock.calls[1][1].headers).toEqual({ 'Content-Type': 'application/json' });
         expect(checkPdfBlob).toHaveBeenCalledTimes(2);
-        expect(screen.getByRole('status')).toHaveTextContent('Text PDF — selectable text checked');
+        expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Text PDF — selectable text checked');
     });
     it('supports Escape and restores keyboard focus to the recovery review control', async () => {
         await setup();
@@ -297,7 +335,7 @@ describe('Text PDF recovery review', () => {
         let releaseDocx;
         exportResumeAsDocx.mockImplementationOnce(() => new Promise(resolve => { releaseDocx = resolve; }));
         const view = renderWithProviders(<TemplateGallery resumeData={resume} />);
-        fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
+        fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         const recovery = await screen.findByRole('group', { name: 'PDF export options' });
         fireEvent.click(within(recovery).getByRole('button', { name: 'Download DOCX' }));
         await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalledTimes(1));
@@ -325,7 +363,7 @@ describe('Text PDF recovery review', () => {
         view.rerender(<DirectionProvider><TemplateGallery resumeData={{ ...resume, basics: { ...resume.basics, summary: 'Later edit' } }} /></DirectionProvider>);
         await act(async () => release(boundary === 'check' ? { state: 'text_checked', missingFieldIds: [] } : boundary === 'blob' ? new Blob(['pdf']) : { ok: true, blob: async () => new Blob(['pdf']) }));
         expect(saveAs).not.toHaveBeenCalled();
-        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.queryByRole('status', { name: '' })).not.toBeInTheDocument();
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
     it('invalidates a reviewed snapshot when formatting changes', async () => {
@@ -356,7 +394,7 @@ describe('Text PDF recovery review', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Download Text PDF' }));
         await waitFor(() => expect(screen.getByRole('button', { name: 'Download Text PDF' })).not.toBeDisabled());
         expect(saveAs).not.toHaveBeenCalled();
-        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+        expect(screen.queryByRole('status', { name: '' })).not.toBeInTheDocument();
         fireEvent.keyDown(document.activeElement, { key: 'Escape' });
         await waitFor(() => expect(screen.getByRole('button', { name: 'Retry PDF' })).toBeInTheDocument());
         expect(screen.getByRole('button', { name: 'Download image-only PDF' })).toBeInTheDocument();
@@ -500,7 +538,7 @@ describe('TemplatesSection', () => {
         it('disables download button when no resume data', () => {
             renderWithProviders(<TemplateGallery />);
 
-            const downloadButton = screen.getByRole('button', { name: /download pdf/i });
+            const downloadButton = screen.getAllByRole('button', { name: /download pdf/i })[0];
             expect(downloadButton).toBeDisabled();
         });
 
@@ -515,7 +553,7 @@ describe('TemplatesSection', () => {
                 projects: [],
             }} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
             await waitFor(() => {
                 expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -540,7 +578,7 @@ describe('TemplatesSection', () => {
                 projects: [],
             }} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
             await waitFor(() => {
                 expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -630,14 +668,14 @@ describe('TemplatesSection', () => {
 
             try {
                 renderWithProviders(<TemplateGallery resumeData={{
-                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager', summary: 'a' },
                     work: [],
                     education: [],
                     skills: [],
                     projects: [],
                 }} />);
 
-                fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+                fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
                 await waitFor(() => {
                     expect(screen.getByRole('alert')).toHaveTextContent(
@@ -675,14 +713,14 @@ describe('TemplatesSection', () => {
 
             try {
                 renderWithProviders(<TemplateGallery resumeData={{
-                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager', summary: 'a' },
                     work: [],
                     education: [],
                     skills: [],
                     projects: [],
                 }} />);
 
-                fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+                fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
                 fireEvent.click(await screen.findByRole('button', { name: 'Download image-only PDF' }));
 
@@ -739,19 +777,19 @@ describe('TemplatesSection', () => {
 
             try {
                 renderWithProviders(<TemplateGallery resumeData={{
-                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager', summary: 'a' },
                     work: [],
                     education: [],
                     skills: [],
                     projects: [],
                 }} />);
 
-                fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+                fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
                 fireEvent.click(await screen.findByRole('button', { name: 'Download image-only PDF' }));
 
                 await waitFor(() => expect(pdf.save).toHaveBeenCalled());
-                expect(screen.getByRole('status')).toHaveTextContent('Image-only PDF prepared — text cannot be selected.');
+                await waitFor(() => expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Image-only PDF prepared — text cannot be selected.'));
                 expect(captureHost).toHaveAttribute('data-pdf-capture-host', 'true');
                 expect(capturedClone.style.left).not.toBe('-9999px');
                 expect(captureHost).not.toBeInTheDocument();
@@ -767,7 +805,7 @@ describe('TemplatesSection', () => {
 
             try {
                 renderWithProviders(<TemplateGallery resumeData={{
-                    basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+                    basics: { name: 'Sara Ahmed', label: 'Product Manager', summary: 'a' },
                     work: [],
                     education: [],
                     skills: [],
@@ -790,7 +828,7 @@ describe('TemplatesSection', () => {
 
     describe('Guest-preview export gate', () => {
         const resumeData = {
-            basics: { name: 'Sara Ahmed', label: 'Product Manager' },
+            basics: { name: 'Sara Ahmed', label: 'Product Manager', summary: 'a' },
             work: [],
             education: [],
             skills: [],
@@ -801,7 +839,7 @@ describe('TemplatesSection', () => {
             useResumeStore.__setMockState({ optimizations: [], optimizationOrigin: 'guest_preview' });
             renderWithProviders(<TemplateGallery resumeData={resumeData} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
             await waitFor(() => {
                 expect(globalThis.fetch).toHaveBeenCalled();
@@ -821,7 +859,7 @@ describe('TemplatesSection', () => {
             });
             renderWithProviders(<TemplateGallery resumeData={resumeData} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
             await waitFor(() => {
                 expect(globalThis.fetch).toHaveBeenCalled();
@@ -837,7 +875,7 @@ describe('TemplatesSection', () => {
             });
             renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={vi.fn()} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
 
             expect(await screen.findByTestId('confirm-reoptimize-modal')).toBeInTheDocument();
             expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -858,7 +896,7 @@ describe('TemplatesSection', () => {
             });
             renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={onRequirePaidReoptimize} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             fireEvent.click(await screen.findByText('Confirm'));
 
             await waitFor(() => {
@@ -878,7 +916,7 @@ describe('TemplatesSection', () => {
             const onRequirePaidReoptimize = vi.fn().mockResolvedValue(null);
             renderWithProviders(<TemplateGallery resumeData={resumeData} onRequirePaidReoptimize={onRequirePaidReoptimize} />);
 
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             fireEvent.click(await screen.findByText('Confirm'));
 
             await waitFor(() => {
@@ -898,7 +936,7 @@ describe('TemplatesSection', () => {
                 meta: { aiAnalysisResult: { summary_rewrite: 'Unreviewed legacy suggestion' } } };
             useResumeStore.__setMockState({ originalResume: withLegacySuggestion, getActiveResume: () => withLegacySuggestion });
             renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
             fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
             await waitFor(() => expect(exportResumeAsDocx).toHaveBeenCalled());
@@ -911,7 +949,7 @@ describe('TemplatesSection', () => {
         it.each([429, 503])('keeps busy response %s retryable without rasterizing', async (status) => {
             globalThis.fetch.mockResolvedValueOnce({ ok: false, status });
             renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             expect(await screen.findByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
             expect(screen.getByRole('alert')).toHaveTextContent('The PDF renderer was busy');
             expect(toCanvas).not.toHaveBeenCalled();
@@ -920,7 +958,7 @@ describe('TemplatesSection', () => {
         it('keeps a timed-out server attempt retryable', async () => {
             globalThis.fetch.mockRejectedValueOnce(new DOMException('Timed out', 'TimeoutError'));
             renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             expect(await screen.findByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
             expect(toCanvas).not.toHaveBeenCalled();
         });
@@ -928,7 +966,7 @@ describe('TemplatesSection', () => {
         it('does not download a blank server file', async () => {
             globalThis.fetch.mockResolvedValueOnce({ ok: true, blob: () => Promise.resolve(new Blob()) });
             renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             expect(await screen.findByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
             expect(saveAs).not.toHaveBeenCalled();
             expect(toCanvas).not.toHaveBeenCalled();
@@ -937,7 +975,7 @@ describe('TemplatesSection', () => {
         it('retains an unverified server PDF for an explicit decision', async () => {
             checkPdfBlob.mockResolvedValueOnce({ state: 'unverified', missingFieldIds: ['name'] });
             renderWithProviders(<TemplateGallery resumeData={{ basics: { name: 'Sara Ahmed' }, work: [] }} />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             expect(await screen.findByRole('button', { name: 'Download unverified PDF' })).toBeInTheDocument();
             expect(saveAs).not.toHaveBeenCalled();
             expect(toCanvas).not.toHaveBeenCalled();
@@ -951,7 +989,7 @@ describe('TemplatesSection', () => {
             useResumeStore.__setMockState({ originalResume: original });
             globalThis.fetch.mockResolvedValueOnce({ ok: false, status: 500 });
             const view = renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await screen.findByRole('button', { name: 'Retry PDF' });
             const later = { basics: { name: 'Sara Ahmed', summary: 'Later summary' }, work: [] };
             useResumeStore.__setMockState({ originalResume: later });
@@ -1018,7 +1056,7 @@ describe('TemplatesSection', () => {
             useResumeStore.__setMockState({ originalResume: resume, showOptimized: true, optimizations: [
                 { ...unresolved, evidence: { status: 'source_matched' } }], getActiveResume: () => resume });
             renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
             expect(globalThis.fetch).not.toHaveBeenCalled();
         });
@@ -1028,7 +1066,7 @@ describe('TemplatesSection', () => {
             let release;
             globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
             renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
             useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
             await act(async () => release({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) }));
@@ -1044,7 +1082,7 @@ describe('TemplatesSection', () => {
             let releasePdf;
             globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { releasePdf = resolve; }));
             renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
 
             fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
@@ -1067,7 +1105,7 @@ describe('TemplatesSection', () => {
             let releaseCheck;
             checkPdfBlob.mockImplementationOnce(() => new Promise((resolve) => { releaseCheck = resolve; }));
             renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await waitFor(() => expect(checkPdfBlob).toHaveBeenCalledTimes(1));
             fireEvent.click(screen.getByRole('button', { name: /download docx/i }));
             await waitFor(() => expect(saveAs).toHaveBeenCalledTimes(1));
@@ -1081,7 +1119,7 @@ describe('TemplatesSection', () => {
             let releasePdf;
             globalThis.fetch.mockImplementationOnce(() => new Promise((resolve) => { releasePdf = resolve; }));
             const view = renderWithProviders(<TemplateGallery />);
-            fireEvent.click(screen.getByRole('button', { name: /download pdf/i }));
+            fireEvent.click(screen.getAllByRole('button', { name: /download pdf/i })[0]);
             await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledTimes(1));
             view.unmount();
             await act(async () => releasePdf({ ok: true, blob: () => Promise.resolve(new Blob(['pdf'], { type: 'application/pdf' })) }));
@@ -1232,6 +1270,16 @@ describe('TemplatesSection', () => {
     });
 
     describe('Accessibility', () => {
+        it('exposes the selected template to assistive technology', () => {
+            renderWithProviders(<TemplateGallery />);
+            expect(screen.getByRole('button', { name: 'Riyadh' })).toHaveAttribute('aria-pressed', 'true');
+            const next = screen.getByRole('button', { name: 'Khobar' });
+            expect(next).toHaveAttribute('aria-pressed', 'false');
+            fireEvent.click(next);
+            expect(next).toHaveAttribute('aria-pressed', 'true');
+            expect(screen.getByRole('button', { name: 'Riyadh' })).toHaveAttribute('aria-pressed', 'false');
+        });
+
         it('all buttons are keyboard accessible', () => {
             renderWithProviders(<TemplateGallery />);
 
