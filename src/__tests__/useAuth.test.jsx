@@ -97,16 +97,19 @@ describe('useAuth', () => {
     useResumeStore.getState().clearAll();
   });
 
-  it('enforces redirect url on Google sign in', async () => {
+  it.each([
+    ['Google', 'signInWithGoogle', 'google'],
+    ['LinkedIn', 'signInWithLinkedIn', 'linkedin_oidc'],
+  ])('enforces the Watheq redirect URL on %s sign in', async (_name, signIn, provider) => {
     const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
     const { result } = renderHook(() => useAuth(), { wrapper });
     let attemptedRedirect;
     await waitFor(() => expect(result.current?.loading).toBe(false));
     await act(async () => {
-      attemptedRedirect = await result.current.signInWithGoogle();
+      attemptedRedirect = await result.current[signIn]();
     });
     expect(mockSignIn).toHaveBeenCalledWith({
-      provider: 'google',
+      provider,
       options: { redirectTo: expect.stringMatching(/^https?:\/\//), skipBrowserRedirect: true },
     });
     expect(attemptedRedirect).toBeTruthy();

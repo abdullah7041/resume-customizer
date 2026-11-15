@@ -7,10 +7,11 @@ import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "@/lib/assets";
 import { analytics } from "@/services/analytics";
 import type { GetStartedSource } from "@/types/analytics";
 import { PricingWaitlistModal } from "@/components/Credits/PricingWaitlistModal";
+import { SignInDialog } from "@/components/ui/SignInDialog";
 
 interface LandingPageProps {
   onGetStarted: () => void;
-  onSignIn?: () => void;
+  showSignIn?: boolean;
   /** When shown as an in-app overlay (signed-in / guest), scroll to this section id on mount. */
   initialSection?: string;
 }
@@ -500,7 +501,7 @@ function FinalCta({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: (
   );
 }
 
-export default function LandingPage({ onGetStarted, onSignIn, initialSection }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, showSignIn, initialSection }: LandingPageProps) {
   const { t, i18n } = useTranslation();
   const [theme, toggleTheme] = useTheme() as readonly [ThemeMode, () => void];
   const isArabic = i18n.language === "ar";
@@ -556,10 +557,12 @@ export default function LandingPage({ onGetStarted, onSignIn, initialSection }: 
           <button type="button" className="majlis-lang-btn" onClick={toggleLanguage}>
             {localizedText(t, "landing.majlis.langBtn", "العربية")}
           </button>
-          {onSignIn ? (
-            <button type="button" className="majlis-signin" onClick={onSignIn}>
-              {localizedText(t, "landing.majlis.signIn", "Sign in")}
-            </button>
+          {showSignIn ? (
+            <SignInDialog source="landing_get_started">
+              <button type="button" className="majlis-signin">
+                {localizedText(t, "landing.majlis.signIn", "Sign in")}
+              </button>
+            </SignInDialog>
           ) : null}
           <button type="button" className="majlis-nav-cta" onClick={() => handleCta("hero")}>
             {localizedText(t, "landing.majlis.navCta", "Check my match")}

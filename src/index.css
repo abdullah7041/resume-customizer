@@ -1740,8 +1740,7 @@
       grid-template-columns: auto 1fr;
     }
 
-    .majlis-nav-links,
-    .majlis-signin {
+    .majlis-nav-links {
       display: none;
     }
 

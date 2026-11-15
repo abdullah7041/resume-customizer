@@ -10,9 +10,9 @@ import type { User } from "@supabase/supabase-js";
 import { useTranslation } from "react-i18next";
 
 type AuthIntent = "signin" | "signup";
-type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started" | "upload_auth_required";
+export type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started" | "upload_auth_required";
 
-interface SignInWithGoogleOptions {
+interface SignInOptions {
   intent?: AuthIntent;
   source?: AuthEntrySource;
 }
@@ -20,7 +20,8 @@ interface SignInWithGoogleOptions {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: (options?: SignInWithGoogleOptions) => Promise<string | undefined>;
+  signInWithGoogle: (options?: SignInOptions) => Promise<string | undefined>;
+  signInWithLinkedIn: (options?: SignInOptions) => Promise<string | undefined>;
   signOut: () => Promise<void>;
 }
 
@@ -126,7 +127,7 @@ const trackReferralAfterSignup = async (userId: string, accessToken?: string) =>
   }
 };
 
-const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
+const signInWithProvider = async (provider: "google" | "linkedin_oidc", options: SignInOptions = {}) => {
   if (options.intent === "signup") {
     analytics.trackSignupStarted(options.source);
   } else {
@@ -135,32 +136,32 @@ const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
 
   const redirectUrl = resolveRedirectUrl();
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider,
     options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
   });
   if (error) {
-    console.error("Google login error:", error.message);
+    console.error("[useAuth] OAuth sign-in failed:", provider, error.message);
     return;
   }
 
   if (data?.url) {
-    let targetUrl;
     try {
       const authUrl = new URL(data.url);
       if (redirectUrl) {
         authUrl.searchParams.set("redirect_to", redirectUrl);
       }
-      targetUrl = authUrl.toString();
+      const targetUrl = authUrl.toString();
       // Enforce the computed redirect target across Supabase environments.
       window.location.assign(targetUrl);
+      return targetUrl;
     } catch (navigationError) {
-      console.error("Google redirect resolution failed:", navigationError);
+      console.error("[useAuth] OAuth redirect failed:", provider, navigationError);
     }
-    return targetUrl ?? redirectUrl;
   }
-
-  return redirectUrl;
 };
+
+const signInWithGoogle = (options?: SignInOptions) => signInWithProvider("google", options);
+const signInWithLinkedIn = (options?: SignInOptions) => signInWithProvider("linkedin_oidc", options);
 
 export const AuthProvider = ({ children }) => {
   const { t } = useTranslation();
@@ -258,7 +259,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signInWithGoogle, signOut }),
+    () => ({ user, loading, signInWithGoogle, signInWithLinkedIn, signOut }),
     [user, loading, signOut],
   );
 
