@@ -78,8 +78,7 @@ vi.mock("../pages/LandingPage", () => {
       return React.createElement(
         "div",
         { "data-testid": "landing-page-mock" },
-        React.createElement("button", { onClick: props.onGetStarted }, "Preview the workflow"),
-        React.createElement("button", { onClick: props.onSignIn }, "Sign in only when you want to save progress")
+        React.createElement("button", { onClick: props.onGetStarted }, "Preview the workflow")
       );
     },
   };
@@ -951,6 +950,7 @@ describe("MainContent resume parsing", () => {
     render(<MainContent />);
 
     fireEvent.click(await screen.findByRole("button", { name: /sign in to save progress/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue with Google" }));
 
     expect(analyticsMock.trackGuestPreviewSigninStarted).toHaveBeenCalledWith("guest_banner");
     expect(authMockState.signInWithGoogle).toHaveBeenCalledWith({

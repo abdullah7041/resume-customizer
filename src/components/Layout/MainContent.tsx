@@ -56,6 +56,7 @@ import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflow
 import { WorkflowStepper, type WorkflowStep, type WorkflowStepStatus } from "../ui/WorkflowStepper";
 import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
+import { SignInDialog } from "@/components/ui/SignInDialog";
 import { GlassCard } from "../ui/GlassCard";
 import { ParallaxContainer } from "../ui/ParallaxSection";
 import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "@/services/pipeline";
@@ -426,7 +427,7 @@ const buildAiDebugSnapshot = (
 
 export default function MainContent() {
   const { t, i18n } = useTranslation();
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading } = useAuth();
   const sessionRevision = useRef(getPrivateSessionRevision()).current;
   const [hasPendingResumeInput, setHasPendingResumeInput] = useState(false);
   const { refetch: refetchCredits, applyCreditsRemaining } = useUserCredits();
@@ -1169,13 +1170,6 @@ export default function MainContent() {
       description: guestProtectedActionDescription,
     });
   }, [guestProtectedActionDescription, guestProtectedActionTitle, pushToast]);
-
-  const handleGuestSignIn = useCallback((source: "guest_banner" | "guest_protected_action" = "guest_banner") => {
-    if (isGuestMode) {
-      analytics.trackGuestPreviewSigninStarted(source);
-    }
-    void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
-  }, [isGuestMode, signInWithGoogle]);
 
   useEffect(() => {
     const host = typeof window !== "undefined" ? window : globalThis;
@@ -2936,10 +2930,12 @@ export default function MainContent() {
           {guestProtectedActionDescription}
         </p>
       </div>
-      <GlassButton variant="primary" onClick={() => handleGuestSignIn("guest_protected_action")}>
-        <LogIn className="h-4 w-4 me-2" />
-        {t("workspace.guest.signInCta", "Sign in to save progress")}
-      </GlassButton>
+      <SignInDialog source="landing_get_started" onStart={() => analytics.trackGuestPreviewSigninStarted("guest_protected_action")}>
+        <GlassButton variant="primary">
+          <LogIn className="h-4 w-4 me-2" />
+          {t("workspace.guest.signInCta", "Sign in to save progress")}
+        </GlassButton>
+      </SignInDialog>
     </GlassCard>
   );
 
@@ -3010,10 +3006,12 @@ export default function MainContent() {
                 {guestNotice}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
-                <GlassButton variant="primary" size="sm" onClick={() => handleGuestSignIn("guest_banner")}>
-                  <LogIn className="h-4 w-4 me-2" />
-                  {t("workspace.guest.signInCta", "Sign in to save progress")}
-                </GlassButton>
+                <SignInDialog source="landing_get_started" onStart={() => analytics.trackGuestPreviewSigninStarted("guest_banner")}>
+                  <GlassButton variant="primary" size="sm">
+                    <LogIn className="h-4 w-4 me-2" />
+                    {t("workspace.guest.signInCta", "Sign in to save progress")}
+                  </GlassButton>
+                </SignInDialog>
                 <GlassButton variant="secondary" size="sm" onClick={exitGuestMode}>
                   {t("workspace.guest.backToLanding", "Back to landing")}
                 </GlassButton>
@@ -3323,7 +3321,7 @@ export default function MainContent() {
         <Suspense fallback={<SectionSkeleton />}>
           <LandingPage
             onGetStarted={handleLandingGetStarted}
-            onSignIn={() => handleGuestSignIn()}
+            showSignIn
           />
         </Suspense>
       </div>

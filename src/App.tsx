@@ -55,7 +55,7 @@ const getCurrentPath = () => {
 };
 
 export default function App() {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const [guestModeActive, setGuestModeActive] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -206,13 +206,7 @@ export default function App() {
                 <LandingPage
                   initialSection={landingSection ?? undefined}
                   onGetStarted={clearLanding}
-                  onSignIn={
-                    !user
-                      ? () => {
-                          void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
-                        }
-                      : undefined
-                  }
+                  showSignIn={!user}
                 />
               ) : (
                 <MainContent />

@@ -6,6 +6,7 @@ import Header from '../components/Layout/Header';
 const authState = vi.hoisted(() => ({
   user: null as null | { id: string; email: string; app_metadata: Record<string, unknown>; user_metadata: Record<string, unknown> },
   signInWithGoogle: vi.fn(),
+  signInWithLinkedIn: vi.fn(),
   signOut: vi.fn(),
 }));
 
@@ -101,6 +102,21 @@ describe('Header feedback action', () => {
     render(<Header />);
 
     expect(screen.queryByRole('button', { name: /feedback/i })).not.toBeInTheDocument();
+  });
+
+  it('offers LinkedIn alongside Google from the signed-out header', async () => {
+    authState.signInWithLinkedIn.mockResolvedValueOnce('https://example.test/authorize');
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.signIn' }));
+    const dialog = within(await screen.findByRole('dialog'));
+    expect(dialog.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole('button', { name: 'Continue with LinkedIn' }));
+
+    expect(authState.signInWithLinkedIn).toHaveBeenCalledWith({
+      intent: 'signin',
+      source: 'header_desktop',
+    });
   });
 
   it('shows Feedback for authenticated users in the account menu', async () => {
