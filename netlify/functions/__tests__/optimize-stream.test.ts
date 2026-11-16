@@ -180,7 +180,7 @@ describe('optimize-stream function', () => {
     const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
     expect(response.status).toBe(202);
     expect(response.headers.get('X-Cache')).not.toBe('HIT');
-    expect(await response.json()).toEqual({ pending: true });
+    expect(await response.json()).toMatchObject({ pending: true, operationId: expect.any(String) });
     expect(mockCreditManager.checkCredits).toHaveBeenCalled();
     expect(mockJobs.dispatchOptimizationJob).toHaveBeenCalledTimes(1);
     expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
@@ -217,7 +217,7 @@ describe('optimize-stream function', () => {
     mockRedisCache.getCached.mockResolvedValue(null);
     const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
     expect(response.status).toBe(202);
-    expect(await response.json()).toEqual({ pending: true });
+    expect(await response.json()).toMatchObject({ pending: true, operationId: expect.any(String) });
     expect(mockJobs.dispatchOptimizationJob).toHaveBeenCalledTimes(1);
     expect(mockGeminiClient.optimizeResume).not.toHaveBeenCalled();
     expect(mockCreditManager.consumeCredits).not.toHaveBeenCalled();
@@ -243,10 +243,10 @@ describe('optimize-stream function', () => {
   });
   it('blocks redispatch after an uncertain billing failure', async () => {
     mockRedisCache.getCached.mockResolvedValue(null);
-    mockJobs.readOptimizationJob.mockResolvedValue({ state: 'failed', error: { error: 'Unknown debit', status: 503, billingStateUnknown: true } });
+    mockJobs.readOptimizationJob.mockResolvedValue({ operationId: '12345678-1234-4234-8234-123456789012', state: 'failed', error: { error: 'Unknown debit', status: 503, code: 'OPTIMIZE_WORKER_FAILED', billingStateUnknown: true } });
     const response = await handler(buildRequest({ Authorization: 'Bearer test-token' }));
     expect(response.status).toBe(503);
-    expect(await response.json()).toMatchObject({ billingStateUnknown: true });
+    expect(await response.json()).toMatchObject({ operationId: '12345678-1234-4234-8234-123456789012', code: 'OPTIMIZE_WORKER_FAILED', billingStateUnknown: true });
     expect(mockJobs.claimOptimizationJob).not.toHaveBeenCalled();
   });
   it('fails closed when required job storage is unavailable', async () => {

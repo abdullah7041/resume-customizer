@@ -25,8 +25,8 @@ export const TEMPLATES: Record<TemplateId, TemplateComponent> = {
 export const TEMPLATE_CONFIGS: TemplateConfig[] = [
   {
     id: 'modern-professional',
-    name: 'Riyadh',
-    nameAr: 'الرياض',
+    name: 'Riyadh — Professional',
+    nameAr: 'الرياض — مهني',
     category: 'modern',
     description: 'Clean & minimal, perfect for any industry',
     descriptionAr: 'تصميم عصري ونظيف مع ألوان مميزة',
@@ -36,8 +36,8 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
 
   {
     id: 'technical-engineer',
-    name: 'Khobar',
-    nameAr: 'الخبر',
+    name: 'Khobar — Technical',
+    nameAr: 'الخبر — تقني',
     category: 'technical',
     description: 'Skills-first layout for technical roles',
     descriptionAr: 'تخطيط يركز على المهارات للأدوار التقنية',
@@ -46,21 +46,21 @@ export const TEMPLATE_CONFIGS: TemplateConfig[] = [
   },
   {
     id: 'ats-optimized',
-    name: 'Qiddiya',
-    nameAr: 'القدية',
+    name: 'Qiddiya — Classic',
+    nameAr: 'القدية — كلاسيكي',
     category: 'modern',
-    description: 'Single-column layout optimized for Applicant Tracking Systems',
-    descriptionAr: 'تنسيق عمود واحد محسّن لأنظمة تتبع المتقدمين',
+    description: 'Classic single-column layout with standard section headings',
+    descriptionAr: 'تنسيق كلاسيكي بعمود واحد وعناوين أقسام واضحة',
     isAtsOptimized: true,
     previewColor: '#059669', // emerald-600
   },
   {
     id: 'executive-professional',
-    name: 'Neom',
-    nameAr: 'نيوم',
+    name: 'Neom — Executive',
+    nameAr: 'نيوم — تنفيذي',
     category: 'executive',
-    description: 'Elegant serif design for senior leadership and executive roles',
-    descriptionAr: 'تصميم أنيق بخطوط سيريف للمناصب القيادية والتنفيذية',
+    description: 'Clear executive layout for senior leadership roles',
+    descriptionAr: 'تصميم واضح للمناصب القيادية والتنفيذية',
     isAtsOptimized: true,
     previewColor: '#1a4f7a',
   },

@@ -178,6 +178,7 @@ export const ResumeSchema = z.object({
 // WorkHistoryEntrySchema). Mirrors src/types/onboarding.ts SearchIntent.
 
 export const SearchIntentSchema = z.object({
+  locations: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
     targetRoles: z.array(z.string().trim().min(1).max(200)).max(10).default([]),
     seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
     meta: z.object({

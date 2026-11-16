@@ -393,28 +393,12 @@ export const runOptimization = async (event: HandlerEvent) => {
     const errorDetails = error as any;
     console.error("Optimization error:", summarizeErrorForLog(error));
 
-    // Don't send timeout errors to Sentry (expected behavior under load)
-    if (errorDetails?.name !== 'TimeoutError') {
-      // Strip PII before sending to Sentry - only send metadata
-      let rawBody: Record<string, unknown> = {};
-      try {
-        rawBody = event.body ? JSON.parse(event.body) : {};
-      } catch {
-        rawBody = {};
-      }
-      captureError(error, {
-        function: 'optimize',
-        payload: {
-          resumeTextLength: typeof rawBody.resumeText === 'string' ? rawBody.resumeText.length : 0,
-          jobTextLength: typeof rawBody.jobText === 'string' ? rawBody.jobText.length : 0,
-          hasResumeText: Boolean(rawBody.resumeText),
-          hasJobText: Boolean(rawBody.jobText),
-        },
-      });
-    }
-
     // Return 504 for timeout errors, 500 for other errors
     const isTimeout = errorDetails?.name === 'TimeoutError' || errorDetails?.status === 504;
+    const code = typeof errorDetails?.code === 'string' && /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(errorDetails.code)
+      ? errorDetails.code : isTimeout ? 'OPTIMIZE_TIMEOUT' : 'OPTIMIZE_FAILED';
+    captureError(new Error('Optimization failed'), { function: 'optimize', stage: 'pipeline',
+      status: isTimeout ? 504 : 500, code, operationId: event.headers['x-watheq-operation-id'] });
 
     return {
       statusCode: isTimeout ? 504 : 500,
@@ -427,8 +411,9 @@ export const runOptimization = async (event: HandlerEvent) => {
       },
       body: JSON.stringify({
         error: isTimeout
-          ? 'Optimization timed out. Retrying automatically...'
+          ? 'Optimization timed out. Your answers are saved; please retry.'
           : 'Failed to optimize resume',
+        code,
         retryable: isTimeout,
         billingStateUnknown,
       }),

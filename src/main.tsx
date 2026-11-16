@@ -11,6 +11,7 @@ Sentry.init({
     }),
   ],
   environment: import.meta.env.MODE,
+  release: import.meta.env.VITE_SENTRY_RELEASE,
   sendDefaultPii: false,
 
   // Performance Monitoring

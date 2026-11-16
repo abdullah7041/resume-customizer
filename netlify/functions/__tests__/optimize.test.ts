@@ -72,6 +72,7 @@ vi.mock('../../lib/credit-manager', () => ({
 import { optimizeResume } from '../../lib/gemini-client.js';
 import { buildOptimizeCacheKey, getCached, setCached } from '../../lib/redis-cache.js';
 import { checkCredits, consumeCredits } from '../../lib/credit-manager.js';
+import { captureError } from '../../lib/sentry.js';
 
 // Import handler after mocks
 const { runOptimization: handler } = await import('../optimize.js');
@@ -105,6 +106,19 @@ describe('optimize function', () => {
         const response = await handler(event);
         expect(response.statusCode).toBe(500);
         expect(JSON.parse(response.body)).toMatchObject({ billingStateUnknown: true });
+    });
+
+    it('reports provider timeouts with a stable code and no private error text', async () => {
+        vi.mocked(optimizeResume).mockRejectedValueOnce(Object.assign(new Error('Private provider response'), { name: 'TimeoutError' }));
+        const event = { httpMethod: 'POST', headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'Private resume text', jobText: 'Private target job' }) } as unknown as HandlerEvent;
+        const response = await handler(event);
+        expect(response.statusCode).toBe(504);
+        expect(JSON.parse(response.body)).toMatchObject({ code: 'OPTIMIZE_TIMEOUT', billingStateUnknown: false });
+        expect(captureError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Optimization failed' }), expect.objectContaining({
+            function: 'optimize', stage: 'pipeline', status: 504, code: 'OPTIMIZE_TIMEOUT',
+        }));
+        expect(JSON.stringify(vi.mocked(captureError).mock.calls)).not.toContain('Private');
     });
 
     describe('HTTP method validation', () => {

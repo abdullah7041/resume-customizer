@@ -80,7 +80,7 @@ export type SectionKey =
 const modernProfessional: DocxTemplateConfig = {
   fontFamily: 'Inter',
   headingFont: 'Inter',
-  baseFontSize: 21,       // 10.5pt
+  baseFontSize: 22,       // 11pt
   headingSize: 28,        // 14pt
   nameSize: 48,           // 24pt
   accentColor: '111827',  // gray-900
@@ -99,11 +99,11 @@ const modernProfessional: DocxTemplateConfig = {
   bulletChar: '●',
   dateSeparator: ' — ',
   educationDateRange: true,
-  skillsLayout: 'tags',
+  skillsLayout: 'comma',
   lineSpacing: 372,
   labels: {
-    summary: 'About',
-    experience: 'Experience',
+    summary: 'Professional Summary',
+    experience: 'Professional Experience',
     projects: 'Projects',
     skills: 'Skills',
     education: 'Education',
@@ -117,9 +117,9 @@ const modernProfessional: DocxTemplateConfig = {
 
 
 const technicalEngineer: DocxTemplateConfig = {
-  fontFamily: 'Consolas',
+  fontFamily: 'Arial',
   headingFont: 'Inter',
-  baseFontSize: 21,       // 10.5pt
+  baseFontSize: 22,       // 11pt
   headingSize: 28,        // 14pt
   nameSize: 48,           // 24pt
   accentColor: '374151',  // gray-700
@@ -138,13 +138,13 @@ const technicalEngineer: DocxTemplateConfig = {
   bulletChar: '▸',
   dateSeparator: ' - ',
   educationDateRange: true,
-  skillsLayout: 'tags',
+  skillsLayout: 'comma',
   lineSpacing: 360,
   labels: {
-    summary: 'Summary',
-    experience: 'Experience',
-    projects: 'Key Projects',
-    skills: 'Technical Skills',
+    summary: 'Professional Summary',
+    experience: 'Professional Experience',
+    projects: 'Projects',
+    skills: 'Skills',
     education: 'Education',
     certificates: 'Certifications',
     languages: 'Languages',
@@ -157,7 +157,7 @@ const technicalEngineer: DocxTemplateConfig = {
 const atsOptimized: DocxTemplateConfig = {
   fontFamily: 'Arial',
   headingFont: 'Arial',
-  baseFontSize: 21,       // 10.5pt
+  baseFontSize: 22,       // 11pt
   headingSize: 28,        // 14pt
   nameSize: 48,           // 24pt
   accentColor: '000000',
@@ -180,11 +180,11 @@ const atsOptimized: DocxTemplateConfig = {
   lineSpacing: 336,
   labels: {
     summary: 'Professional Summary',
-    experience: 'Work Experience',
-    projects: 'Key Projects',
-    skills: 'Core Competencies',
+    experience: 'Professional Experience',
+    projects: 'Projects',
+    skills: 'Skills',
     education: 'Education',
-    certificates: 'Certifications & Training',
+    certificates: 'Certifications',
     languages: 'Languages',
   },
   sectionOrder: ['summary', 'skills', 'experience', 'projects', 'education', 'certificates', 'languages'],
@@ -194,7 +194,7 @@ const atsOptimized: DocxTemplateConfig = {
 const executiveProfessional: DocxTemplateConfig = {
   fontFamily: 'Calibri',
   headingFont: 'Calibri',
-  baseFontSize: 20,       // 10pt
+  baseFontSize: 22,       // 11pt
   headingSize: 24,        // 12pt
   nameSize: 48,           // 24pt
   accentColor: '1A5276',  // navy blue
@@ -212,11 +212,11 @@ const executiveProfessional: DocxTemplateConfig = {
   summaryItalic: false,
   bulletChar: '•',
   dateSeparator: ' — ',
-  skillsLayout: 'categorized',
+  skillsLayout: 'comma',
   lineSpacing: 348,
   labels: {
-    summary: 'About',
-    experience: 'Experience',
+    summary: 'Professional Summary',
+    experience: 'Professional Experience',
     projects: 'Projects',
     skills: 'Skills',
     education: 'Education',
@@ -224,7 +224,7 @@ const executiveProfessional: DocxTemplateConfig = {
     languages: 'Languages',
   },
   sectionOrder: ['summary', 'experience', 'projects', 'skills', 'education', 'certificates', 'languages'],
-  margins: [0.5, 0.4, 0.6, 0.6],
+  margins: [0.5, 0.5, 0.6, 0.6],
   experiencePositionUnderline: true,
   experienceCompanyItalic: true,
   experienceCompanyAccentColor: true,

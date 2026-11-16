@@ -13,7 +13,7 @@ export type OptimizationJob = {
   body: string;
   state: 'queued' | 'running' | 'succeeded' | 'failed';
   result?: Record<string, unknown>;
-  error?: { error: string; status: number; billingStateUnknown: boolean; retryable?: boolean };
+  error?: { error: string; status: number; code?: string; billingStateUnknown: boolean; retryable?: boolean };
 };
 export type OptimizationEnvelope = {
   jobKey: string;

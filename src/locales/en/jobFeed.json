@@ -165,9 +165,25 @@
     },
     "alerts": {
       "label": "Free hourly job emails",
-      "hint": "Only new jobs published within 24 hours matching your saved roles and followed companies. No credits used. Unsubscribe anytime.",
+      "hint": "Only jobs with a verified publication time in the past 24 hours matching your saved search. No credits used. Unsubscribe anytime.",
       "loadError": "Could not load alerts. Sign in or try again.",
-      "saveError": "Could not save. Verify your email, save a target role, and follow a company; then try again."
+      "saveError": "Could not save. Verify your email and save a target role. Follow a company if using followed-company alerts, then try again.",
+      "off": "Alerts are off.",
+      "saving": "Saving or refreshing alert settings…",
+      "loading": "Loading alert settings…",
+      "paused": "Sending is paused. Your preference is saved; emails will resume when the service is available.",
+      "failed": "The last check failed or had incomplete source coverage. Refresh the status later.",
+      "delayed": "Checks are delayed. Refresh the status later; your preference is saved.",
+      "setup": "Save a target role and verify your email. Follow a company for followed-company alerts.",
+      "empty": "Last check completed: no new qualifying jobs.",
+      "enabled": "Alerts are enabled. Waiting for the next hourly check.",
+      "scopeLabel": "Send alerts from",
+      "followed": "Companies I follow",
+      "catalogue": "Saudi employer catalogue",
+      "lastChecked": "Last completed check: {{when}}",
+      "lastAccepted": "Last email accepted by provider: {{when}}. Inbox delivery is not confirmed.",
+      "refresh": "Refresh status",
+      "retrySetup": "Save search and retry"
     }
   }
 }

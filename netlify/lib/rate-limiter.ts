@@ -397,6 +397,7 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // is both a request amplifier and the quickest way to get this app's IP blocked
   // by the very boards the Job Feed depends on. Tighter than import-job-url.
   "job-sources-api": { maxRequests: 10 },
+  "job-search": { maxRequests: 60 },
   // Each cache miss is one resume-job AI comparison. The feed calls this limit
   // once per uncached pair, not once per HTTP request.
   "feed-match": { maxRequests: 50, windowMs: 24 * 60 * 60 * 1000 },

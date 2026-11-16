@@ -6,11 +6,13 @@ import type { Handler } from "@netlify/functions";
 import chromium from "@sparticuz/chromium";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { withRateLimit } from "../lib/rate-limiter.js";
-import { summarizeErrorForLog } from "../lib/sentry.js";
+import { summarizeErrorForLog, initSentry, captureError } from "../lib/sentry.js";
 import { generateTextPdf, validateTextPdfBlocks, validateStyledPdfStyles, validateStyledPdfMargins } from '../lib/text-pdf.js';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+
+initSentry();
 
 
 import { existsSync } from "fs";
@@ -235,13 +237,20 @@ const baseHandler: Handler = async (event) => {
   }
 
   let page: Page | null = null; // Declare outside try block for cleanup access
+  const requestedOperation = event.headers['x-watheq-operation-id'];
+  const operationId = typeof requestedOperation === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(requestedOperation) ? requestedOperation : randomUUID();
+  let stage = 'validate';
+  const reportFailure = (status: number, code: string) => captureError(new Error('PDF export failed'), { function: 'generate-pdf', operationId, stage, status, code });
 
   try {
-    const textError = (status: number, code: string, message: string) => ({
-      statusCode: status,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-      body: JSON.stringify({ status, code, message, error: message }),
-    });
+    const textError = (status: number, code: string, message: string) => {
+      if (status >= 500) reportFailure(status, code);
+      return {
+        statusCode: status,
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        body: JSON.stringify({ status, code, message, error: message, operationId }),
+      };
+    };
     // Public, stateless export: render only the supplied document, within a
     // bounded request size. Account data and paid AI actions remain separate.
     if (Buffer.byteLength(event.body || '', 'utf8') > 4 * 1024 * 1024) {
@@ -282,6 +291,7 @@ const baseHandler: Handler = async (event) => {
         return textError(400, 'pdf/invalid-request', 'Invalid Text PDF request.');
       }
       let font: Uint8Array;
+      stage = 'font';
       try {
         // included_files retains this project-relative path under the function root.
         // Using cwd also works after esbuild moves the handler into its bundle.
@@ -291,6 +301,7 @@ const baseHandler: Handler = async (event) => {
         return textError(503, 'pdf/text-font-unavailable', 'Text PDF is temporarily unavailable. Please try another export option.');
       }
       try {
+        stage = 'text-render';
         const bytes = generateTextPdf(blocks, font, presentation, margins);
         return {
           statusCode: 200,
@@ -314,6 +325,7 @@ const baseHandler: Handler = async (event) => {
       : 'modern-professional';
 
     // Get browser from pool (eliminates cold start on subsequent requests)
+    stage = 'browser';
     const browser = await getBrowser();
 
     // A cold launch can consume the entire gateway window on its own. Saying so is
@@ -336,6 +348,7 @@ const baseHandler: Handler = async (event) => {
     // Set fixed viewport matching A4 (210mm x 297mm @ 96dpi)
     await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
 
+    stage = 'render';
     await hardenPageForRender(page);
 
     // Read the user's margin settings from the incoming HTML string itself
@@ -446,6 +459,7 @@ const baseHandler: Handler = async (event) => {
     // Whatever is left of the gateway window, never the old fixed 60s — a 60s race
     // inside a ~30s window is not a safety timeout, it is a guarantee that the
     // gateway kills the request first and the client gets no usable error.
+    stage = 'pdf';
     const PDF_TIMEOUT_MS = remainingBudgetMs(requestStartedAt, RESPONSE_RESERVE_MS);
     const pdfBuffer = await Promise.race([
       page.pdf({
@@ -478,6 +492,7 @@ const baseHandler: Handler = async (event) => {
     };
   } catch (error) {
     console.error("PDF generation error:", summarizeErrorForLog(error));
+    reportFailure(500, 'pdf/generation-failed');
 
     // Cleanup: try to close page on error (browser stays alive for pooling)
     try {
@@ -488,7 +503,8 @@ const baseHandler: Handler = async (event) => {
 
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "PDF generation failed. Please try again." }),
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+      body: JSON.stringify({ status: 500, code: 'pdf/generation-failed', message: 'PDF generation failed. Please try again.', error: 'PDF generation failed. Please try again.', operationId }),
     };
   }
 };

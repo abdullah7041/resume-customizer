@@ -234,15 +234,15 @@ describe('the row explains its own match, in words', () => {
     // not a function. A title carrying only one of them must say 1 of 2, and must
     // list only the term it actually matched.
     mockListOpenPostings.mockResolvedValue({
-      postings: [posting({ title: 'Senior Engineer' })],
+      postings: [posting({ title: 'Senior AI Researcher' })],
       error: null,
     });
 
     render(<JobFeedSection />);
-    await screen.findByText('Senior Engineer');
+    await screen.findByText('Senior AI Researcher');
 
     expect(
-      screen.getByText(/Title uses 1 of 2 words from your target role "Senior AI Engineer": engineer/),
+      screen.getByText(/Title uses 1 of 2 words from your target role "Senior AI Engineer": ai/),
     ).toBeInTheDocument();
   });
 });

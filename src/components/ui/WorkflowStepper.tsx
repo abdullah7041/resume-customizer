@@ -37,7 +37,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
     <nav aria-label="Resume workflow" className={cn('w-full', className)}>
       {/* Glass shell wrapper for strong light-mode visibility */}
       <div className="rounded-2xl border border-[color:var(--glass-border-strong)] bg-[color:var(--surface-glass)] p-2.5 shadow-sm [backdrop-filter:blur(14px)] [-webkit-backdrop-filter:blur(14px)] dark:border-white/[0.12] dark:bg-[#041c17]/[0.80]">
-        <ol className="flex w-full items-stretch gap-1.5 sm:gap-2">
+        <ol className="grid w-full auto-cols-fr grid-flow-col items-stretch gap-1.5 sm:gap-2">
           {steps.map((step, index) => {
             const isCompleted = step.status === 'completed';
             const isActive = step.status === 'active';
@@ -45,7 +45,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
             const stepNumber = index + 1;
 
             return (
-              <li key={step.id} className="flex min-w-0 flex-1 items-center">
+              <li key={step.id} className="flex min-w-0 items-stretch">
                 <button
                   type="button"
                   onClick={() => !isLocked && onStepClick(step.targetTab)}
@@ -53,7 +53,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                   aria-current={isActive ? 'step' : undefined}
                   title={isLocked ? step.lockedReason : undefined}
                   className={cn(
-                    'group flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-start transition-colors sm:px-3',
+                    'group flex h-full w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-start transition-colors sm:px-3',
                     isActive &&
                       'border-emerald-800/[0.70] bg-emerald-700/[0.90] shadow-md shadow-emerald-900/[0.20]',
                     isCompleted &&
@@ -112,16 +112,6 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                   </span>
                 </button>
 
-                {/* Connector */}
-                {index < steps.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'mx-1 hidden h-px w-3 shrink-0 sm:block lg:w-5',
-                      isCompleted ? 'bg-emerald-500/40' : 'bg-[color:var(--glass-border)]'
-                    )}
-                  />
-                )}
               </li>
             );
           })}

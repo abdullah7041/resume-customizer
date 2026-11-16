@@ -95,11 +95,11 @@ vi.mock("../components/sections/UploadSection", () => {
   };
 });
 
-vi.mock("../components/sections/JobFeedSection", () => {
+vi.mock("../components/sections/JobsFirstSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    JobFeedSection: (props) => {
+    default: (props) => {
       jobFeedMockProps.current = props;
       return React.createElement("div", { "data-testid": "job-feed-mock" });
     },
@@ -324,7 +324,7 @@ vi.mock("../hooks/useUserCredits", () => ({
     credits: { remaining: 100, total: 100, feedbackCreditsEarned: 0, referralCreditsEarned: 0, resetDate: new Date().toISOString() },
     isLoading: false,
     error: null,
-    refetch: vi.fn(),
+    refetch: vi.fn().mockResolvedValue(undefined),
     showUpgrade: false,
     setShowUpgrade: vi.fn(),
     upgradeDismissedKey: null,
@@ -1518,6 +1518,40 @@ describe("MainContent resume parsing", () => {
       expect(optimizeResumeStreamMock.mock.calls[1][0].userClarifications).toContain(`${topic} dashboards`);
     }
     expect(screen.queryByRole('alert', { name: 'Optimization failed' })).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('retrieves an uncertain operation and permits a new run only after known-safe failure (%s)', async (terminalFailure) => {
+    localStorage.setItem('watheq:lastActiveTab', 'optimize');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Parsed resume', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', 'Analytics role');
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    generateClarificationsMock.mockResolvedValueOnce({ clarifications: [{ id: 'excel', theme: 'Excel', question: 'Verify Excel',
+      rationale: 'Add evidence', type: 'single', allowOther: false, options: [{ value: 'yes', label: 'Built dashboards' }] }] });
+    optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error('Still running'), { operationId, status: 504,
+      code: 'OPTIMIZE_JOB_PENDING', isBillingStateUnknown: true }));
+    const completed = { cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini' };
+    if (terminalFailure) optimizeResumeStreamMock
+      .mockRejectedValueOnce(Object.assign(new Error('Provider failed; credits restored'), { jobFailed: true, isBillingStateUnknown: false, status: 500 }))
+      .mockResolvedValueOnce(completed);
+    else optimizeResumeStreamMock.mockResolvedValueOnce(completed);
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole('button', { name: /run optimize/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Built dashboards' }));
+    fireEvent.click(screen.getByRole('button', { name: /^optimize now$/i }));
+    const failure = await screen.findByRole('status', { name: 'Optimization is still processing' });
+    expect(failure).toHaveTextContent(operationId);
+    fireEvent.click(screen.getByRole('button', { name: 'Check for results' }));
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(2));
+    expect(optimizeResumeStreamMock.mock.calls[1][0]).toMatchObject({ recoverOnly: true,
+      userClarifications: optimizeResumeStreamMock.mock.calls[0][0].userClarifications });
+    expect(generateClarificationsMock).toHaveBeenCalledTimes(1);
+    expect(optimizeResumeMock).not.toHaveBeenCalled();
+    if (terminalFailure) {
+      fireEvent.click(await screen.findByRole('button', { name: 'Retry optimization' }));
+      await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(3));
+      expect(optimizeResumeStreamMock.mock.calls[2][0].recoverOnly).not.toBe(true);
+      expect(optimizeResumeStreamMock.mock.calls[2][0].userClarifications).toContain('Built dashboards');
+    }
   });
 
   it("keeps a follow-up failure visible with saved answers and permits an explicit retry", async () => {

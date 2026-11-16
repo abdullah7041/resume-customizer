@@ -46,7 +46,7 @@ const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").t
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
-const JobFeedSection = lazy(() => import("../sections/JobFeedSection").then(m => ({ default: m.JobFeedSection })));
+const JobFeedSection = lazy(() => import("@/components/sections/JobsFirstSection"));
 const TemplateGallery = lazy(() => import("../sections/TemplatesSection"));
 const OnboardingChat = lazy(() => import("../onboarding/OnboardingChat"));
 const ClarificationModal = lazy(() => import("../modals/ClarificationModal").then(m => ({ default: m.ClarificationModal })));
@@ -793,9 +793,13 @@ export default function MainContent() {
   // Clarification interrogation state
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [optimizationFailure, setOptimizationFailure] = useState<string | null>(null);
+  const [optimizationReference, setOptimizationReference] = useState<string | null>(null);
+  const [optimizationPending, setOptimizationPending] = useState(false);
   const [clarificationError, setClarificationError] = useState<string | null>(null);
   const completedClarificationContext = useRef('');
-  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean } | null>(null);
+  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean; recovery?: {
+    workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[];
+  } } | null>(null);
   const [isCheckingClarifications, setIsCheckingClarifications] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
@@ -2052,6 +2056,8 @@ export default function MainContent() {
       if (!isCurrentOptimize(request)) return null;
       const { resumeText, jobDescription, language } = request.input;
       if (!resumeText || !jobDescription) return null;
+      const recovery = retryOptimizeArgs.current?.recovery;
+      if (recovery) ({ workHistory, userClarifications, userHardStops } = recovery);
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
@@ -2107,6 +2113,7 @@ export default function MainContent() {
               userClarifications,
               userHardStops,
               freePreview,
+                recoverOnly: Boolean(recovery),
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -2133,13 +2140,13 @@ export default function MainContent() {
             // Force-refresh credit balance so the UI reflects what actually happened.
             refetchCredits().catch(() => { /* non-blocking */ });
             // Retain the actual transport/provider code and request trace.
-            streamError.message = `${t('credits.connectionInterrupted',
+            if (streamError.code !== 'OPTIMIZE_JOB_PENDING') streamError.message = `${t('credits.connectionInterrupted',
               'The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.')} (${streamError.message})`;
             throw streamError;
           }
           // Only an unavailable route warrants a legacy request. Application
           // errors, authentication failures and timeouts must not silently rerun AI.
-          if (![404, 405].includes(streamError.status)) throw streamError;
+          if (recovery || ![404, 405].includes(streamError.status)) throw streamError;
           // Server explicitly rejected before processing (non-2xx, SSE error event) —
           // billing state is known-safe, fall back to legacy endpoint.
           console.warn('[optimize] SSE rejected before processing; using legacy endpoint');
@@ -2159,6 +2166,7 @@ export default function MainContent() {
         }
         if (!isCurrentOptimize(request)) return null;
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        if (retryOptimizeArgs.current) delete retryOptimizeArgs.current.recovery;
         // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
         // has already resolved to a single successful `result` — never inside
         // either branch — so a user-initiated run counts once regardless of
@@ -2306,6 +2314,14 @@ export default function MainContent() {
         return result;
       } catch (error: any) {
         if (!isCurrentOptimize(request)) return null;
+        if (error.isBillingStateUnknown && retryOptimizeArgs.current) {
+          retryOptimizeArgs.current.recovery = { workHistory, userClarifications, userHardStops };
+        } else if (error.jobFailed === true && error.isBillingStateUnknown === false && retryOptimizeArgs.current) {
+          delete retryOptimizeArgs.current.recovery;
+        }
+        const pending = error.code === 'OPTIMIZE_JOB_PENDING';
+        setOptimizationPending(pending);
+        setOptimizationReference(typeof error.operationId === 'string' ? error.operationId : null);
         setOptimizationFailure(error?.message ?? 'Optimization failed');
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
@@ -2331,8 +2347,8 @@ export default function MainContent() {
 
         pushToast(
           {
-            type: "danger",
-            title: t("toasts.optimizationFailed"),
+            type: pending ? "info" : "danger",
+            title: pending ? t("sections.optimize.failure.pending", "Optimization is still processing") : t("toasts.optimizationFailed"),
             description: descriptionParts.filter(Boolean).join(" • "),
           },
           { id: TOAST_IDS.optimize }
@@ -2363,7 +2379,8 @@ export default function MainContent() {
       if (optimizeRequest.current?.inFlight || isOptimizing || isInterrogating || isCheckingClarifications) return null;
       setOptimizationFailure(null);
       setClarificationError(null);
-      retryOptimizeArgs.current = { mode, freePreview: options?.freePreview };
+      setOptimizationReference(null);
+      retryOptimizeArgs.current = { ...retryOptimizeArgs.current, mode, freePreview: options?.freePreview };
 
       const input: AssessmentInput = { resumeText: resumeData.plainText, jobDescription,
         language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'optimize',
@@ -3154,13 +3171,15 @@ export default function MainContent() {
           {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
               {optimizationFailure && (
-                <div role="alert" aria-label={t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
-                  <p className="font-semibold">{t('sections.optimize.failure.title', 'Optimization failed')}</p>
+                <div role={optimizationPending ? "status" : "alert"} aria-label={optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
+                  <p className="font-semibold">{optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')}</p>
                   <p className="mt-1 text-sm">{optimizationFailure}</p>
+                  {optimizationReference && <p className="mt-1 break-all text-sm">{t('sections.optimize.failure.reference', 'Support reference')}: {optimizationReference}</p>}
                   <GlassButton variant="secondary" className="mt-3" disabled={isOptimizing || isCheckingClarifications} onClick={() => {
                     const args = retryOptimizeArgs.current;
                     if (args) void handleOptimize(args.mode, { freePreview: args.freePreview });
-                  }}>{t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                  }}>{optimizationPending ? t('sections.optimize.failure.retrieve', 'Check for results') : t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                  {optimizationReference && <GlassButton variant="secondary" className="ms-2 mt-3" onClick={() => void navigator.clipboard?.writeText(optimizationReference).then(() => pushToast({ type: 'success', title: t('sections.optimize.failure.copied', 'Support reference copied') })).catch(() => { /* The visible reference remains selectable. */ })}>{t('sections.optimize.failure.copy', 'Copy support reference')}</GlassButton>}
                 </div>
               )}
               <Suspense fallback={<SectionSkeleton />}>

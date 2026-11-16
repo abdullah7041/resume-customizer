@@ -131,6 +131,7 @@ export const ResumeZodSchema = z.looseObject({
 // SearchIntentSchema in netlify/lib/resume-schemas.ts. Validated at the store
 // boundary before persisting under `watheq:searchIntent`.
 export const SearchIntentSchema = z.object({
+  locations: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
     targetRoles: z.array(z.string()).default([]),
     seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(),
     meta: z.object({

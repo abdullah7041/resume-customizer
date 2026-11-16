@@ -28,6 +28,7 @@ vi.mock('../lib/utils/resumeText', () => ({
 }));
 
 const { optimizeResumeStream, refineBullet } = await import('../services/api.js');
+const Sentry = await import('@sentry/react');
 
 const sseResponse = (bodyText) =>
   new Response(
@@ -63,6 +64,35 @@ describe('optimizeResumeStream billing-state errors', () => {
     getSessionMock.mockResolvedValue({
       data: { session: { access_token: 'test-token' } },
       error: null,
+    });
+  });
+
+  it('reports a terminal background failure once with safe correlation metadata', async () => {
+    vi.useFakeTimers();
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(Response.json({ pending: true, operationId }, { status: 202 }))
+      .mockResolvedValueOnce(Response.json({ error: 'Private resume text', jobFailed: true, operationId,
+        code: 'AI_TIMEOUT', billingStateUnknown: false }, { status: 504 })));
+    const assertion = expect(optimizeResumeStream({ resumeText: 'Private CV', jobDesc: 'Private JD', userClarifications: 'Private answers' }))
+      .rejects.toMatchObject({ code: 'AI_TIMEOUT', operationId, jobFailed: true });
+    const observed = assertion.then(() => true, error => error);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(await observed).toBe(true);
+    expect(Sentry.captureException).toHaveBeenCalledTimes(1);
+    const [reported, context] = Sentry.captureException.mock.calls[0];
+    expect(reported.message).toBe('Optimization failed');
+    expect(context.tags).toMatchObject({ operationId, stage: 'background', status: '504', code: 'AI_TIMEOUT' });
+    expect(JSON.stringify(context)).not.toMatch(/Private/);
+  });
+
+  it('preserves a terminal worker result found while recovering a failed transport', async () => {
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('network failure'))
+      .mockResolvedValueOnce(Response.json({ error: 'Worker failed', jobFailed: true, operationId,
+        code: 'AI_CONTRACT_VALIDATION_FAILED', billingStateUnknown: false }, { status: 502 })));
+    await expect(optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD' })).rejects.toMatchObject({
+      code: 'AI_CONTRACT_VALIDATION_FAILED', operationId, status: 502, isBillingStateUnknown: false,
     });
   });
 
@@ -253,6 +283,17 @@ describe('optimizeResumeStream billing-state errors', () => {
     expect(await observed).toBe(true);
     expect(fetchMock.mock.calls.filter(([, init]) => !JSON.parse(init.body).cacheOnly)).toHaveLength(1);
   });
+  it('bounds lookup-only recovery to one polling deadline', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ pending: true, operationId: 'operation' }), { status: 202 }));
+    vi.stubGlobal('fetch', fetchMock);
+    let outcome;
+    void optimizeResumeStream({ resumeText: 'CV', jobDesc: 'JD', recoverOnly: true }).catch(error => { outcome = error; });
+    await vi.advanceTimersByTimeAsync(122000);
+    expect(outcome).toMatchObject({ code: 'OPTIMIZE_JOB_PENDING', isBillingStateUnknown: true });
+    expect(fetchMock.mock.calls.every(([, init]) => JSON.parse(init.body).cacheOnly)).toBe(true);
+  });
+
   it('keeps billing unknown when authentication expires while a background job is running', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn()

@@ -223,7 +223,7 @@ export const useResumeStore = create<ResumeState>()(
       selectedTemplate: 'modern-professional',
       displayOptions: {
         fontSize: 1, // Legacy 100% scale
-        baseFontSize: 10.5,   // pt
+        baseFontSize: 11,     // pt
         headingSize: 13,      // pt
         nameSize: 20,         // pt
         fontFamily: 'Georgia, serif',

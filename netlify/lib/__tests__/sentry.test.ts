@@ -12,6 +12,11 @@ vi.mock('@sentry/node', () => ({
 const { captureError, sanitizeSentryContext, redactForLog, summarizeErrorForLog } = await import('../sentry.js');
 
 describe('sentry context redaction', () => {
+  it('retains a validated operation UUID without treating numeric segments as a phone', () => {
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    expect(sanitizeSentryContext({ operationId })).toEqual({ operationId });
+    expect(sanitizeSentryContext({ operationId: 'user@example.com' })).toEqual({ operationId: '[REDACTED]' });
+  });
   it('redacts resume, job, and identity fields from nested context', () => {
     const sanitized = sanitizeSentryContext({
       function: 'ai-match',

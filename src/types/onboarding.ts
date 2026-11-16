@@ -17,6 +17,7 @@
  * and stored server-side in `resumes.search_intent` (jsonb).
  */
 export interface SearchIntent {
+  locations?: string[];
   targetRoles: string[]; // ["Senior Frontend Engineer"]
   seniority?: 'junior' | 'mid' | 'senior' | 'lead' | 'manager';
   meta: {
