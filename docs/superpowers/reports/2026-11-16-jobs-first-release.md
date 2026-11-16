@@ -4,6 +4,8 @@
 
 Run these additive migrations in Supabase in filename order after review. Agents have not applied them.
 
+The owner confirmed all three migrations ran successfully on November 17, 2026.
+
 1. `supabase/migrations/20261116010000_job_catalogue.sql`
 2. `supabase/migrations/20261116020000_job_alert_scope_health.sql`
 3. `supabase/migrations/20261116030000_verified_catalogue_seed.sql`
@@ -11,6 +13,12 @@ Run these additive migrations in Supabase in filename order after review. Agents
 Set `JOB_CATALOGUE_ENABLED=true` server-side and `VITE_JOB_CATALOGUE_ENABLED=true` at build time for preview qualification. Existing subscriptions default to followed-company scope. Set `JOB_ALERTS_ENABLED=true` only where email credentials, origins, secret, schedules, and migrations are configured. Review live collection and delivery health before production rollout.
 
 Error reporting requires `SENTRY_DSN` in Functions and `VITE_SENTRY_DSN` at build time. The release uses Netlify commit/deploy metadata when available. A configured Logs product is not needed for exception capture.
+
+## Test deployment
+
+PR [#150](https://github.com/abdullah7041/resume-customizer/pull/150) publishes the implementation for preview testing. Its target URL is `https://deploy-preview-150--resume-optimizing.netlify.app`.
+
+The owner configured catalogue flags and enabled alerts for previews while keeping production alerts disabled. The agent added branch-specific `SITE_URL` pointing to that preview and `SENTRY_DSN` using the existing Sentry project DSN. Production environment values and the published production deploy were left unchanged. A fresh preview build is required to consume those settings. No alert worker or email send was triggered by this deployment setup.
 
 Primary board-response evidence for 30 employers is in `research/job-catalogue-verified-2026-11-16.json`. Board access and Saudi job locations were checked on November 16. Re-run `python scripts/verify-job-catalogue.py --refresh` when re-verifying. Classification remains unclassified where primary evidence has not been reviewed. Counts are verification observations.
 
@@ -54,7 +62,7 @@ The isolated final Neom evidence is `.verification/neom-isolated/`; UI completio
 
 ## Production qualification checklist
 
-- [ ] Owner applies all three SQL migrations before deploying these alert preference reads/writes; catalogue flags remain off until preview qualification.
+- [x] Owner reports all three SQL migrations applied before preview deployment. Production promotion still requires preview qualification.
 - [ ] Preview authenticates a user with no follows, runs a catalogue crawl, searches and pages actual postings, verifies ten matches, tailors/exports, saves without changing an existing application's status, and confirms Applied explicitly.
 - [ ] A clarification Optimize run records actual HTTP status, safe code, operation ID, successful result, and credit balance. Repeat a controlled failure and lookup-only recovery.
 - [ ] The controlled terminal failure appears in Sentry Errors with release, stage, status and operation ID. No Logs-page configuration is required; inspect its payload for excluded résumé/answer/JD/contact content.
