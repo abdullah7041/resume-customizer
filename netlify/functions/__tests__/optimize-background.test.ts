@@ -49,6 +49,12 @@ describe('background optimization ownership and delivery', () => {
     expect(mocks.claim).not.toHaveBeenCalled();
     expect(mocks.run).not.toHaveBeenCalled();
   });
+  it('ignores malformed JSON as request validation without reporting a worker failure', async () => {
+    await handler(new Request('https://watheqai.app/.netlify/functions/optimize-background', { method: 'POST', body: '{' }));
+    expect(mocks.read).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
+    expect(mocks.capture).not.toHaveBeenCalled();
+  });
   it('does not repeat generation for a duplicate worker invocation', async () => {
     mocks.claim.mockResolvedValueOnce(true).mockResolvedValue(false);
     const envelope = optimizationEnvelope(key, job, body, { authorization: 'Bearer test-token' });

@@ -21,7 +21,9 @@ export default async function handler(request: Request): Promise<Response> {
   let stage = 'claim';
   try {
     if (request.method !== 'POST') return new Response(null);
-    const parsed = EnvelopeSchema.safeParse(await request.json());
+    let input: unknown;
+    try { input = await request.json(); } catch { return new Response(null); }
+    const parsed = EnvelopeSchema.safeParse(input);
     if (!parsed.success) return new Response(null);
     envelope = parsed.data;
     job = await readOptimizationJob(envelope.jobKey);

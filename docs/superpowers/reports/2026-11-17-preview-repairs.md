@@ -39,7 +39,7 @@ Live search exposed a pre-existing shared-prefix defect: `Data analyst` admitted
 
 The first Optimize attempt reached clarification generation, then a preview deployment switch removed the deferred modal chunk (`Failed to fetch dynamically imported module: ClarificationModal...js`) and React unmounted the workspace. The critical clarification dialog is now imported with the workspace. React 19 root error callbacks explicitly capture a generic safe exception and component stack; original error content is not transmitted. This follows [Sentry's React 19 guidance](https://sentry.io/changelog/react-19-support/) and the installed SDK signatures. The reporting regression and all 16 modal tests passed. MainContent had one 10-second test timeout while lint was running; its isolated 106-test follow-up passed.
 
-CI for `6646b43` passed its full suite after updating two older visual assertions to scope title-relevance colors correctly and retain readable locked-step contrast. The latest matching/rendering follow-up still requires its own deployed result.
+CI for `6646b43` passed its full suite after updating two older visual assertions to scope title-relevance colors correctly and retain readable locked-step contrast. At that stage, the matching/rendering follow-up still required its own deployed result; later live results are recorded below.
 
 Context7 was newly present in Codex configuration during this work, but the running tool connection returned `unknown MCP server context7`. No tool was installed by the agent; official documentation was used as the fallback.
 
@@ -49,8 +49,22 @@ Full [CI run 44034847649](https://github.com/abdullah7041/resume-customizer/acti
 
 A live Optimize attempt successfully opened the clarification dialog and reached the background worker using the existing resume/job and the skip-answers choice. It returned `OPTIMIZE_NO_VERIFIED_EDITS`, reference `cbf4e150-c82c-4707-8b9a-1d7465e65a5b`. The balance remained 16 credits. This is a demonstrated terminal evidence rejection, not a successful optimization. No candidate experience was invented during testing.
 
-That operation was not visible in Sentry. An explicit preview-context server DSN was subsequently configured using the existing verified public frontend DSN; production values were unchanged. A separate controlled SDK probe appeared in Sentry as JAVASCRIPT-REACT-1P, operation `f1cea02a-2e7a-452e-842a-ce708eee7d08`. This confirms SDK transport/project ingestion from the local qualification process; it does not yet prove deployed worker ingestion. New safe evidence-rejection reason counts will distinguish missing references, missing targets, wrong targets and unsupported numbers without transmitting source content.
+That operation was not visible in Sentry. The attempted server reporting setup did not resolve runtime ingestion; subsequent worker logs identified a masked branch-specific DSN, corrected below. Production values were unchanged. A separate controlled SDK probe appeared in Sentry as JAVASCRIPT-REACT-1P, operation `f1cea02a-2e7a-452e-842a-ce708eee7d08`. This confirms SDK transport/project ingestion from the local qualification process; it does not yet prove deployed worker ingestion. New safe evidence-rejection reason counts will distinguish missing references, missing targets, wrong targets and unsupported numbers without transmitting source content.
 
 A further prompt correction removes the contradictory optimization example and explicitly requires a complete original inside one resume source, matching target ID, and exact sourceId/quote references. The validator, models, budgets and retries are unchanged. The new both-contract prompt regression failed before the correction; 87 focused contract/card/evidence tests, typecheck and touched-file lint passed afterward. This corrects a demonstrated contract mismatch; it is not proof of the prior live failure's exact cause.
 
 The deployed title-filter follow-up correctly removed both DataPower jobs from the Data analyst search and showed an honest empty state.
+
+## Successful deployed optimization and final boundaries
+
+The real worker log exposed `Invalid Sentry Dsn` containing a masked display value. The earlier server setup had copied that masked value. Both the explicit deploy-preview and existing branch-specific server contexts were corrected from the verified frontend project DSN. Environment-only preview rebuild `6afc02a0309353f7ecd96a30` reached ready on `ca4eb3e`; production stayed on `7508221`.
+
+The subsequent live retry succeeded: worker request `8862d343`, 11 source-bound Experience cards, one provider attempt of about 35 seconds, and one 5-credit debit (16 → 11). The UI showed 11 suggestions ready and 0/11 applied. No candidate answers or accomplishments were invented; the live test used the skip-answers path after clarification questions. Answer-submission coverage remains synthetic regression evidence. No further paid tests were started.
+
+The controlled SDK event JAVASCRIPT-REACT-1P was visible in Sentry. The rebuilt worker no longer logged an invalid DSN. A new deployed terminal-failure event after the DSN correction was not observed because that retry succeeded; production failure reporting remains a separate qualification. Do not describe the earlier missing worker events as delivered retroactively.
+
+Final reporting hardening treats malformed worker JSON as expected request validation, before storage/ownership/generation, rather than a reportable terminal worker failure. Its regression failed before the guard; all eight worker and eight Sentry tests passed after it.
+
+Successful empty results, real alert provider acceptance/inbox receipt, production Neom export, Arabic native-reader fidelity, and Word visual qualification retain the original release-report boundaries. The current preview has no automatic hourly schedule; use Manage alerts → Send test email for an explicit current-account check. No real email was sent by the agent.
+
+Visual proof remains in ignored `.verification/verified-discovery-full.jpg` and `.verification/verified-optimization-ready.jpg`. The preview was left open with its unapplied suggestions for owner review.
