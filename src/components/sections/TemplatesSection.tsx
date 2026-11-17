@@ -1162,7 +1162,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       <GlassCard padding="none" className="flex-1 flex flex-col neu-card rounded-2xl overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
-        <div className="flex flex-col gap-2 p-3 md:p-5 border-b border-gray-200 dark:border-white/10 relative z-20 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <div className="relative z-20 flex flex-col gap-2 border-b border-emerald-700/15 bg-emerald-50/50 p-3 backdrop-blur-sm md:p-5 dark:border-emerald-400/20 dark:bg-emerald-950/50">
           {/* Top row: title + desktop buttons */}
           <div className="flex items-center justify-between">
             <div className="min-w-0">
@@ -1414,7 +1414,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         )}
 
         {/* Preview Area with Formatting Panel */}
-        <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-gray-900/50 dark:to-gray-800/30 min-h-0">
+        <div className="relative flex min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-emerald-950/60 dark:to-emerald-900/35">
 
           {/* Formatting Panel - Left Side */}
           {showAdvancedFormatting && (
@@ -1429,7 +1429,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               {/* Dynamic Scale Wrapper - centered and fit to viewport */}
               <div
                 dir={contentDirection}
-                className="relative bg-white shadow-2xl rounded-xl overflow-visible ring-1 ring-white/10 transition-transform duration-300 origin-top ease-out mx-auto"
+                className="relative mx-auto origin-top overflow-visible rounded-xl bg-white shadow-2xl ring-1 ring-emerald-700/25 transition-transform duration-300 ease-out dark:ring-emerald-400/35"
                 style={{
                   transform: `scale(${scale})`,
                   width: '210mm',

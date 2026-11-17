@@ -125,7 +125,7 @@ export function TechnicalEngineer({
                     </p>
                 )}
                 <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: fs(10) }}>
-                    {basics.email && <a href={`mailto:${basics.email}`} style={{ color: '#047857', textDecoration: 'none' }}>{basics.email}</a>}
+                    {basics.email && <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>}
                     {basics.phone && <bdi dir="ltr">{basics.phone}</bdi>}
                     {basics.location?.city && (
                         <span>
@@ -135,9 +135,9 @@ export function TechnicalEngineer({
                                 `, ${basics.location.region}`}
                         </span>
                     )}
-                    {(linkedInUrl || linkedInLabel) && (linkedInUrl ? <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>{linkedInUrl}</a> : <span>{linkedInLabel}</span>)}
-                    {(portfolioUrl || portfolioLabel) && (portfolioUrl ? <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>{portfolioUrl}</a> : <span>{portfolioLabel}</span>)}
-                    {otherProfileUrls(basics.profiles).map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>{url}</a>)}
+                    {(linkedInUrl || linkedInLabel) && (linkedInUrl ? <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{linkedInUrl}</a> : <span>{linkedInLabel}</span>)}
+                    {(portfolioUrl || portfolioLabel) && (portfolioUrl ? <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{portfolioUrl}</a> : <span>{portfolioLabel}</span>)}
+                    {otherProfileUrls(basics.profiles).map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{url}</a>)}
                 </div>
             </header>
 

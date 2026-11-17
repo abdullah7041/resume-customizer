@@ -132,7 +132,7 @@ export function ModernProfessional({
           {basics.email && (
             <>
               <span className="text-gray-300">·</span>
-              <a href={`mailto:${basics.email}`} style={{ color: '#047857', textDecoration: 'none' }}>{basics.email}</a>
+              <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>
             </>
           )}
           {basics.phone && (
@@ -145,7 +145,7 @@ export function ModernProfessional({
             <>
               <span className="text-gray-300 mx-2">·</span>
               {linkedInUrl ? (
-                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>
+                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
                   {linkedInUrl}
                 </a>
               ) : (
@@ -157,7 +157,7 @@ export function ModernProfessional({
             <>
               <span className="text-gray-300 mx-2">·</span>
               {portfolioUrl ? (
-                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>
+                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
                   {portfolioUrl}
                 </a>
               ) : (
@@ -165,7 +165,7 @@ export function ModernProfessional({
               )}
             </>
           )}
-          {otherProfileUrls(basics.profiles).map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>{url}</a>)}
+          {otherProfileUrls(basics.profiles).map(url => <a key={url} href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{url}</a>)}
         </div>
       </header>
 

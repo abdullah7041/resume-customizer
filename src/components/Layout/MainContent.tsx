@@ -3013,7 +3013,7 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <ParallaxContainer enableLayers={false} className="py-1">
+    <ParallaxContainer enableLayers={false}>
       <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
         {isGuestMode && (
           <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 px-4 py-3 dark:border-emerald-200/14 dark:bg-emerald-900/20">
@@ -3036,8 +3036,8 @@ export default function MainContent() {
           </div>
         )}
 
-        <div className="space-y-3" data-workspace-chrome>
-          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2" data-workspace-controls>
+        <div className="flex flex-col gap-2" data-workspace-chrome>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 empty:hidden" data-workspace-controls>
             {!isGuestMode && libraryEntries.length > 0 && (
               <div className="me-auto min-w-0 max-w-full flex-1 sm:max-w-sm">
                 <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
@@ -3469,7 +3469,7 @@ export default function MainContent() {
           </div>
         </div>
       )}
-      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50 p-4 sm:p-6 lg:p-8`}>
+      <div className={`${containerClass} space-y-4 px-4 pb-4 pt-2 text-gray-900 sm:space-y-10 sm:px-6 sm:pb-6 lg:space-y-12 lg:px-8 lg:pb-8 dark:text-surface-50`}>
         <div>
           {loading ? (
             <div className="space-y-6">
