@@ -25,6 +25,10 @@ vi.mock('../services/analytics', () => ({
 
 describe('DirectionProvider', () => {
   beforeEach(() => {
+    document.querySelector('.sbc-verify-seal')?.remove();
+    const seal = document.createElement('div');
+    seal.className = 'sbc-verify-seal';
+    document.body.append(seal);
     language = 'en';
     changeLanguage.mockClear();
     document.documentElement.removeAttribute('dir');
@@ -42,6 +46,7 @@ describe('DirectionProvider', () => {
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute('dir', 'ltr');
       expect(document.documentElement).toHaveAttribute('lang', 'en');
+      expect(document.querySelector('.sbc-verify-seal')).toHaveAttribute('data-position', 'bottom-left');
     });
     expect(document.documentElement.style.getPropertyValue('--font-family')).toContain('Inter');
   });
@@ -58,6 +63,7 @@ describe('DirectionProvider', () => {
     await waitFor(() => {
       expect(document.documentElement).toHaveAttribute('dir', 'rtl');
       expect(document.documentElement).toHaveAttribute('lang', 'ar');
+      expect(document.querySelector('.sbc-verify-seal')).toHaveAttribute('data-position', 'bottom-right');
     });
     expect(document.documentElement.style.getPropertyValue('--font-family')).toContain('Arabic');
   });

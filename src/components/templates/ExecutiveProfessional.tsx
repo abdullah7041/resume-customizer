@@ -1,12 +1,12 @@
 import type { CSSProperties } from 'react';
-import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
-import { useSectionLabel } from '../../hooks/useSectionLabel';
+import type { TemplateProps } from '@/components/templates/BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from '@/components/templates/BaseTemplate';
+import { useSectionLabel } from '@/hooks/useSectionLabel';
 import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
-  baseFontSize: 10,
+  baseFontSize: 11,
   headingSize: 12,
   nameSize: 20,
   fontFamily: "'Calibri', 'Arial', sans-serif",
@@ -60,7 +60,7 @@ export function ExecutiveProfessional({
 
   const fs = (pt: number) => {
     if (displayOptions?.baseFontSize) {
-      const scaleFactor = displayOptions.baseFontSize / 10;
+      const scaleFactor = displayOptions.baseFontSize / 11;
       return scaledFontSize(pt, scaleFactor);
     }
     return scaledFontSize(pt, fontScale);
@@ -97,8 +97,10 @@ export function ExecutiveProfessional({
         transformOrigin: 'top left',
         width: A4_STYLES.width,
         minHeight: A4_STYLES.minHeight,
+        boxSizing: 'border-box',
+        overflowWrap: 'anywhere',
         paddingTop: `${opts.marginTop * 25.4}mm`,
-        paddingBottom: `${opts.marginTop * 25.4}mm`,
+        paddingBottom: `${opts.marginBottom * 25.4}mm`,
         paddingLeft: `${opts.marginSide * 25.4}mm`,
         paddingRight: `${opts.marginSide * 25.4}mm`,
         fontFamily: opts.fontFamily,
@@ -135,7 +137,7 @@ export function ExecutiveProfessional({
         )}
         {/* Contact line — phone | email | location | LinkedIn | Portfolio */}
         <p style={{ fontSize: fs(9), color: '#444', letterSpacing: '0.01em' }}>
-          {basics.phone && <span>{basics.phone}</span>}
+          {basics.phone && <bdi dir="ltr">{basics.phone}</bdi>}
           {basics.email && (
             <>
               {basics.phone && <span style={{ color: '#999', margin: '0 6px' }}>|</span>}
@@ -176,9 +178,9 @@ export function ExecutiveProfessional({
       {basics.summary && (
         <section style={sectionStyle}>
           <h2 style={headingStyle}>
-            {getSectionLabel('about')}
+            {getSectionLabel('summary')}
           </h2>
-          <p style={{ lineHeight: String(opts.lineHeight), color: '#333', fontSize: fs(10), textAlign: 'justify', orphans: 2, widows: 2 }}>
+          <p style={{ lineHeight: String(opts.lineHeight), color: '#333', fontSize: fs(11), textAlign: 'justify', orphans: 2, widows: 2 }}>
             {basics.summary}
           </p>
         </section>
@@ -188,33 +190,33 @@ export function ExecutiveProfessional({
       {work.length > 0 && (
         <section style={sectionStyle}>
           <h2 style={headingStyle}>
-            {getSectionLabel('experience')}
+            {getSectionLabel('workExperience')}
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: `${opts.paragraphSpacing + 4}px` }}>
             {work.map((job, jobIndex) => (
               <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ pageBreakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ pageBreakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
                   {/* Position + Date on same row */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1px' }}>
-                    <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: '8px', alignItems: 'baseline', marginBottom: '1px' }}>
+                    <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0, overflowWrap: 'anywhere' }}>
                       {safeString(job.position)}
                     </h3>
-                    <span style={{ fontSize: fs(10), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', marginLeft: '12px', flexShrink: 0 }}>
+                    <span style={{ fontSize: fs(11), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '12px', flexShrink: 0 }}>
                       {job.startDate} — {job.endDate || 'Current'}
                     </span>
                   </div>
                   {/* Company + Location in italic */}
-                  <p style={{ fontSize: fs(10), color: ACCENT_COLOR, fontStyle: 'italic', marginBottom: '3px' }}>
+                  <p style={{ fontSize: fs(11), color: ACCENT_COLOR, fontStyle: 'italic', marginBottom: '3px' }}>
                     {safeString(job.name)}
                     {job.location && ` | ${job.location}`}
                   </p>
                 </div>
                 {/* Bullet points */}
-                {job.description && <p style={{ fontSize: fs(10), color: '#444', marginBottom: '2px' }}>{job.description}</p>}
+                {job.description && <p style={{ fontSize: fs(11), color: '#444', marginBottom: '2px' }}>{job.description}</p>}
                 {job.highlights && job.highlights.length > 0 && (
-                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                  <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
-                      <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                      <li key={j} style={{ fontSize: fs(11), color: '#333', marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {cleanHighlight(h)}
                       </li>
                     ))}
@@ -240,13 +242,13 @@ export function ExecutiveProfessional({
                     {safeString(project.name)}
                   </h3>
                   {project.description && (
-                    <p style={{ fontSize: fs(10), color: '#444', marginBottom: '2px', orphans: 2, widows: 2 }}>{project.description}</p>
+                    <p style={{ fontSize: fs(11), color: '#444', marginBottom: '2px', orphans: 2, widows: 2 }}>{project.description}</p>
                   )}
                 </div>
                 {project.highlights && project.highlights.length > 0 && (
-                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                  <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
-                      <li key={j} style={{ fontSize: fs(10), color: '#333', marginBottom: '1px', orphans: 2, widows: 2 }}>
+                      <li key={j} style={{ fontSize: fs(11), color: '#333', marginBottom: '1px', orphans: 2, widows: 2 }}>
                         {cleanHighlight(h)}
                       </li>
                     ))}
@@ -268,12 +270,12 @@ export function ExecutiveProfessional({
             {skills.map((skillItem, skillIndex) => {
               if (typeof skillItem === 'string') {
                 return (
-                  <p key={`${skillItem}-${skillIndex}`} style={{ fontSize: fs(10), color: '#333' }}>{skillItem}</p>
+                  <p key={`${skillItem}-${skillIndex}`} style={{ fontSize: fs(11), color: '#333' }}>{skillItem}</p>
                 );
               }
               const keywords = skillItem.keywords || [skillItem.name];
               return (
-                <p key={`${skillItem.name}-${skillIndex}`} style={{ fontSize: fs(10), color: '#333', lineHeight: String(opts.lineHeight) }}>
+                <p key={`${skillItem.name}-${skillIndex}`} style={{ fontSize: fs(11), color: '#333', lineHeight: String(opts.lineHeight) }}>
                   <strong style={{ color: ACCENT_COLOR }}>{skillItem.name}:</strong>{' '}
                   {keywords.join(', ')}
                 </p>
@@ -294,7 +296,7 @@ export function ExecutiveProfessional({
               <div
                 key={`${edu.institution}-${edu.studyType}-${educationIndex}`}
                 style={{
-                  fontSize: fs(10),
+                  fontSize: fs(11),
                   color: '#333',
                   pageBreakInside: filterEducationHighlights(edu.highlights).length > 4 ? 'auto' : 'avoid',
                   breakInside: filterEducationHighlights(edu.highlights).length > 4 ? 'auto' : 'avoid',
@@ -308,12 +310,12 @@ export function ExecutiveProfessional({
                   <span style={{ color: '#777' }}> ({edu.endDate || edu.startDate})</span>
                 )}
                 {edu.score && (
-                  <span style={{ color: '#555', display: 'block', paddingLeft: '4px', fontSize: fs(9.5) }}>GPA: {edu.score}</span>
+                  <span style={{ color: '#555', display: 'block', paddingInlineStart: '4px', fontSize: fs(10.5) }}>GPA: {edu.score}</span>
                 )}
                 {filterEducationHighlights(edu.highlights).length > 0 && (
-                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                  <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {filterEducationHighlights(edu.highlights).map((h, j) => (
-                      <li key={j} style={{ fontSize: fs(9.5), color: '#444' }}>
+                      <li key={j} style={{ fontSize: fs(10.5), color: '#444' }}>
                         {h}
                       </li>
                     ))}
@@ -331,13 +333,13 @@ export function ExecutiveProfessional({
           <h2 style={headingStyle}>
             {getSectionLabel('certifications')}
           </h2>
-          <ul style={{ paddingLeft: '16px', margin: 0, listStyleType: 'disc' }}>
+          <ul style={{ paddingInlineStart: '16px', margin: 0, listStyleType: 'disc' }}>
             {certificates.map((cert, certificateIndex) => (
-              <li key={`${cert.name}-${cert.date}-${certificateIndex}`} style={{ fontSize: fs(10), color: '#333', marginBottom: '3px' }}>
+              <li key={`${cert.name}-${cert.date}-${certificateIndex}`} style={{ fontSize: fs(11), color: '#333', marginBottom: '3px' }}>
                 <strong>{safeString(cert.name)}</strong>
                 {cert.date && <span style={{ color: '#555' }}> ({cert.date})</span>}
                 {cert.issuer && (
-                  <span style={{ display: 'block', fontSize: fs(9.5), fontStyle: 'italic', color: '#666', paddingLeft: '4px' }}>
+                  <span style={{ display: 'block', fontSize: fs(10.5), fontStyle: 'italic', color: '#666', paddingInlineStart: '4px' }}>
                     {cert.issuer}
                   </span>
                 )}
@@ -353,7 +355,7 @@ export function ExecutiveProfessional({
           <h2 style={headingStyle}>
             {getSectionLabel('languages')}
           </h2>
-          <p style={{ fontSize: fs(10), color: '#333' }}>
+          <p style={{ fontSize: fs(11), color: '#333' }}>
             {languages.map((lang, i) => {
               const { language, fluency } = safeLang(lang);
               return (

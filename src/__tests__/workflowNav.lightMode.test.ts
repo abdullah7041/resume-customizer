@@ -22,7 +22,9 @@ describe("workflow navigation — light-mode contrast", () => {
 
   it("WorkflowStepper gives locked steps a readable light-mode surface", () => {
     const src = read("../components/ui/WorkflowStepper.tsx");
-    expect(src).toContain("bg-[color:var(--surface-control)] opacity-80 dark:bg-transparent dark:opacity-60");
+    expect(src).toContain("bg-emerald-100/75");
+    expect(src).toContain("bg-gray-200/60 text-gray-700 dark:bg-white/5 dark:text-gray-300");
+    expect(src).not.toContain("cursor-not-allowed opacity-");
     // Active step uses white text on solid emerald fill for strong light-mode contrast.
     expect(src).toContain("text-white");
     // Locked marker text bumped off the faint gray-400.

@@ -1,0 +1,1750 @@
+[
+  {
+    "source": "workable",
+    "token": "salla",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/salla?details=true",
+    "checkedAt": "2026-11-16T10:26:33.871741+00:00",
+    "readable": true,
+    "jobCount": 28,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Makkah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Makkah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Jeddah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Jeddah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Al Khobar\", \"region\": \"Eastern Province\", \"hidden\": false}], \"city\": \"Al Khobar\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "mozn-ai",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/mozn-ai?details=true",
+    "checkedAt": "2026-11-16T10:26:33.946495+00:00",
+    "readable": true,
+    "jobCount": 23,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"\", \"region\": null, \"hidden\": false}], \"city\": \"\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "innovationteam",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/innovationteam?details=true",
+    "checkedAt": "2026-11-16T10:26:34.028754+00:00",
+    "readable": true,
+    "jobCount": 62,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"\", \"region\": null, \"hidden\": false}], \"city\": \"\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Ar Riyāḍ\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "foodics",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/foodics?details=true",
+    "checkedAt": "2026-11-16T10:26:34.093868+00:00",
+    "readable": true,
+    "jobCount": 30,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Ar Riyāḍ\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Madinah\", \"region\": \"Al Madinah Province\", \"hidden\": false}], \"city\": \"Madinah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "lucidya",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/lucidya?details=true",
+    "checkedAt": "2026-11-16T10:26:35.145306+00:00",
+    "readable": true,
+    "jobCount": 51,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"\", \"region\": null, \"hidden\": false}], \"city\": \"\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Jeddah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Jeddah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "flyakeed",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/flyakeed?details=true",
+    "checkedAt": "2026-11-16T10:26:35.203999+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "master-works",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/master-works?details=true",
+    "checkedAt": "2026-11-16T10:26:35.216286+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "eram-talent",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/eram-talent?details=true",
+    "checkedAt": "2026-11-16T10:26:35.372489+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "jaser",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jaser?details=true",
+    "checkedAt": "2026-11-16T10:26:35.726803+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "alfanar",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/alfanar?details=true",
+    "checkedAt": "2026-11-16T10:26:35.898826+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "qiddiya",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/qiddiya?details=true",
+    "checkedAt": "2026-11-16T10:26:35.899463+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "qiddiya-investment-company",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/qiddiya-investment-company?details=true",
+    "checkedAt": "2026-11-16T10:26:36.227765+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "red-sea-global",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/red-sea-global?details=true",
+    "checkedAt": "2026-11-16T10:26:36.331527+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "jasara-pmc",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jasara-pmc?details=true",
+    "checkedAt": "2026-11-16T10:26:36.414263+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "jasara-pmc-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jasara-pmc-1?details=true",
+    "checkedAt": "2026-11-16T10:26:36.424141+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "al-ayuni-investment-and-contracting-company",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/al-ayuni-investment-and-contracting-company?details=true",
+    "checkedAt": "2026-11-16T10:26:36.751527+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "bayut-saudi-arabia",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bayut-saudi-arabia?details=true",
+    "checkedAt": "2026-11-16T10:26:36.820184+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "dubizzle-group",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/dubizzle-group?details=true",
+    "checkedAt": "2026-11-16T10:26:36.901307+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "tawuniya",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/tawuniya?details=true",
+    "checkedAt": "2026-11-16T10:26:36.977693+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "niceone",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/niceone?details=true",
+    "checkedAt": "2026-11-16T10:26:37.225985+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "mrsool",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/mrsool?details=true",
+    "checkedAt": "2026-11-16T10:26:37.322086+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "hungerstation",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/hungerstation?details=true",
+    "checkedAt": "2026-11-16T10:26:37.400119+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "sary",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/sary?details=true",
+    "checkedAt": "2026-11-16T10:26:37.464387+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "nana",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/nana?details=true",
+    "checkedAt": "2026-11-16T10:26:37.710050+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "zid",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/zid?details=true",
+    "checkedAt": "2026-11-16T10:26:37.864571+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "unifonic",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/unifonic?details=true",
+    "checkedAt": "2026-11-16T10:26:37.970613+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "rasan",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/rasan?details=true",
+    "checkedAt": "2026-11-16T10:26:38.002316+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "jahez",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jahez?details=true",
+    "checkedAt": "2026-11-16T10:26:38.206086+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "invygo",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/invygo?details=true",
+    "checkedAt": "2026-11-16T10:26:38.429492+00:00",
+    "readable": true,
+    "jobCount": 6,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "paytabs",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/paytabs?details=true",
+    "checkedAt": "2026-11-16T10:26:38.458186+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "baraka",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/baraka?details=true",
+    "checkedAt": "2026-11-16T10:26:38.524378+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "intelmatix",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/intelmatix?details=true",
+    "checkedAt": "2026-11-16T10:26:38.689531+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "quant-data-analytics",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/quant-data-analytics?details=true",
+    "checkedAt": "2026-11-16T10:26:38.920759+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "data-sadad",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/data-sadad?details=true",
+    "checkedAt": "2026-11-16T10:26:38.955949+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "d360-bank",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/d360-bank?details=true",
+    "checkedAt": "2026-11-16T10:26:38.988438+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "nphies",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/nphies?details=true",
+    "checkedAt": "2026-11-16T10:26:39.213626+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "bupa-arabia",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bupa-arabia?details=true",
+    "checkedAt": "2026-11-16T10:26:39.372051+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "bayut",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bayut?details=true",
+    "checkedAt": "2026-11-16T10:26:39.438880+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "tamara",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/tamara/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:39.448789+00:00",
+    "readable": true,
+    "jobCount": 35,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"name\": \"Riyadh Saudi Arabia,   Dubai United Arab Emirates \"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"name\": \"Riyadh Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "careem",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/careem/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:39.640627+00:00",
+    "readable": true,
+    "jobCount": 15,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "hala",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/hala/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:39.852466+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "noon",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/noon/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:39.921632+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "foodics",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/foodics/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.035980+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "deliveryhero",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/deliveryhero/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.236069+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "talabat",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/talabat/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.264616+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "ninja",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/ninja/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.436839+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "saudia",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/saudia/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.472509+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "tabby",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/tabby/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.623099+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "salla",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/salla/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.671740+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "lean",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/lean/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.811624+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "samaras",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/samaras/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.910125+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "scaleai",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/scaleai/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.979123+00:00",
+    "readable": true,
+    "jobCount": 170,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "pronto",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/pronto/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.026501+00:00",
+    "readable": true,
+    "jobCount": 33,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, KSA\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "cloudkitchens",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/cloudkitchens/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.360890+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "kitchenpark",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/kitchenpark/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.450255+00:00",
+    "readable": true,
+    "jobCount": 12,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, KSA\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "beyondtrust",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/beyondtrust/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.736136+00:00",
+    "readable": true,
+    "jobCount": 36,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Remote Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"name\": \"Remote Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "uipath",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/uipath/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.969665+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "sentinelone",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/sentinelone/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:42.180634+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "datadog",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/datadog/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:42.212990+00:00",
+    "readable": true,
+    "jobCount": 384,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "cloudflare",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/cloudflare/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:42.451176+00:00",
+    "readable": true,
+    "jobCount": 473,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "canonical",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/canonical/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:42.514953+00:00",
+    "readable": true,
+    "jobCount": 316,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "grafanalabs",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/grafanalabs/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:42.576296+00:00",
+    "readable": true,
+    "jobCount": 136,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "mongodb",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/mongodb/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:43.030219+00:00",
+    "readable": true,
+    "jobCount": 394,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "elastic",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/elastic/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:43.217957+00:00",
+    "readable": true,
+    "jobCount": 401,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "confluent",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/confluent/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:43.424430+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "gitlab",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/gitlab/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:43.562110+00:00",
+    "readable": true,
+    "jobCount": 256,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "lever",
+    "token": "lalamove",
+    "evidenceUrl": "https://api.lever.co/v0/postings/lalamove?mode=json",
+    "checkedAt": "2026-11-16T10:26:43.856844+00:00",
+    "readable": true,
+    "jobCount": 140,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": \"SA\", \"categories\": {\"commitment\": \"Full-time\", \"department\": \"City Teams\", \"location\": \"Riyadh\", \"team\": \"Saudi Arabia\", \"allLocations\": [\"Riyadh\"]}, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "lever",
+    "token": "foodics",
+    "evidenceUrl": "https://api.lever.co/v0/postings/foodics?mode=json",
+    "checkedAt": "2026-11-16T10:26:44.585457+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "lucidya",
+    "evidenceUrl": "https://api.lever.co/v0/postings/lucidya?mode=json",
+    "checkedAt": "2026-11-16T10:26:44.607446+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "ashby",
+    "token": "LeanTech",
+    "evidenceUrl": "https://api.ashbyhq.com/posting-api/job-board/LeanTech",
+    "checkedAt": "2026-11-16T10:26:44.647191+00:00",
+    "readable": true,
+    "jobCount": 8,
+    "saudiLocations": [
+      "{\"location\": \"Riyadh, Saudi Arabia\", \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "ashby",
+    "token": "baraka",
+    "evidenceUrl": "https://api.ashbyhq.com/posting-api/job-board/baraka",
+    "checkedAt": "2026-11-16T10:26:45.197440+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "ashby",
+    "token": "rewaa",
+    "evidenceUrl": "https://api.ashbyhq.com/posting-api/job-board/rewaa",
+    "checkedAt": "2026-11-16T10:26:45.620744+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "ashby",
+    "token": "sarj",
+    "evidenceUrl": "https://api.ashbyhq.com/posting-api/job-board/sarj",
+    "checkedAt": "2026-11-16T10:26:45.754872+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "ashby",
+    "token": "intelmatix",
+    "evidenceUrl": "https://api.ashbyhq.com/posting-api/job-board/intelmatix",
+    "checkedAt": "2026-11-16T10:26:45.793497+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "pinpoint",
+    "token": "tabby",
+    "evidenceUrl": "https://tabby.pinpointhq.com/postings.json",
+    "checkedAt": "2026-11-16T10:26:46.026696+00:00",
+    "readable": true,
+    "jobCount": 63,
+    "saudiLocations": [
+      "{\"location\": {\"id\": \"25430\", \"city\": \"Riyadh\", \"name\": \"KSA\", \"postal_code\": \"\", \"province\": \"Saudi Arabia\", \"street_address\": \"\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"id\": \"41979\", \"city\": \"Riyadh\", \"name\": \"KSA\", \"postal_code\": \"\", \"province\": \"Riyadh\", \"street_address\": \"\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "novartis:wd3:Novartis_Careers",
+    "evidenceUrl": "https://novartis.wd3.myworkdayjobs.com/wday/cxs/novartis/Novartis_Careers/jobs",
+    "checkedAt": "2026-11-16T10:26:46.134867+00:00",
+    "readable": true,
+    "jobCount": 4,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "pwc:wd3:Global_Experienced_Careers",
+    "evidenceUrl": "https://pwc.wd3.myworkdayjobs.com/wday/cxs/pwc/Global_Experienced_Careers/jobs",
+    "checkedAt": "2026-11-16T10:26:46.172850+00:00",
+    "readable": true,
+    "jobCount": 4,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workday",
+    "token": "parsons:wd5:Search",
+    "evidenceUrl": "https://parsons.wd5.myworkdayjobs.com/wday/cxs/parsons/Search/jobs",
+    "checkedAt": "2026-11-16T10:26:47.247180+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "rollsroyce:wd3:professional",
+    "evidenceUrl": "https://rollsroyce.wd3.myworkdayjobs.com/wday/cxs/rollsroyce/professional/jobs",
+    "checkedAt": "2026-11-16T10:26:47.269210+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workday",
+    "token": "airbus:wd5:Airbus",
+    "evidenceUrl": "https://airbus.wd5.myworkdayjobs.com/wday/cxs/airbus/Airbus/jobs",
+    "checkedAt": "2026-11-16T10:26:47.377862+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "boeing:wd1:EXTERNAL_CAREERS",
+    "evidenceUrl": "https://boeing.wd1.myworkdayjobs.com/wday/cxs/boeing/EXTERNAL_CAREERS/jobs",
+    "checkedAt": "2026-11-16T10:26:47.620577+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "gsk:wd5:GSKCareers",
+    "evidenceUrl": "https://gsk.wd5.myworkdayjobs.com/wday/cxs/gsk/GSKCareers/jobs",
+    "checkedAt": "2026-11-16T10:26:48.061678+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "roche:wd3:roche-ext",
+    "evidenceUrl": "https://roche.wd3.myworkdayjobs.com/wday/cxs/roche/roche-ext/jobs",
+    "checkedAt": "2026-11-16T10:26:48.196138+00:00",
+    "readable": true,
+    "jobCount": 3,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "medtronic:wd1:MedtronicCareers",
+    "evidenceUrl": "https://medtronic.wd1.myworkdayjobs.com/wday/cxs/medtronic/MedtronicCareers/jobs",
+    "checkedAt": "2026-11-16T10:26:48.437890+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "iqvia:wd1:IQVIA",
+    "evidenceUrl": "https://iqvia.wd1.myworkdayjobs.com/wday/cxs/iqvia/IQVIA/jobs",
+    "checkedAt": "2026-11-16T10:26:48.786461+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "pfizer:wd1:PfizerCareers",
+    "evidenceUrl": "https://pfizer.wd1.myworkdayjobs.com/wday/cxs/pfizer/PfizerCareers/jobs",
+    "checkedAt": "2026-11-16T10:26:48.883845+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "gevernova:wd5:GEV_External",
+    "evidenceUrl": "https://gevernova.wd5.myworkdayjobs.com/wday/cxs/gevernova/GEV_External/jobs",
+    "checkedAt": "2026-11-16T10:26:49.074626+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "gehealthcare:wd5:GEHC_External",
+    "evidenceUrl": "https://gehealthcare.wd5.myworkdayjobs.com/wday/cxs/gehealthcare/GEHC_External/jobs",
+    "checkedAt": "2026-11-16T10:26:49.252165+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "kbr:wd5:KBR_Careers",
+    "evidenceUrl": "https://kbr.wd5.myworkdayjobs.com/wday/cxs/kbr/KBR_Careers/jobs",
+    "checkedAt": "2026-11-16T10:26:49.560383+00:00",
+    "readable": true,
+    "jobCount": 20,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Al-Kharj, Saudi Arabia\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Jubail, Saudi Arabia\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Saudi Arabia, Rabigh\"}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "aecom:wd1:AECOM",
+    "evidenceUrl": "https://aecom.wd1.myworkdayjobs.com/wday/cxs/aecom/AECOM/jobs",
+    "checkedAt": "2026-11-16T10:26:49.688451+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "raytheon:wd5:RTX_External_Careers",
+    "evidenceUrl": "https://raytheon.wd5.myworkdayjobs.com/wday/cxs/raytheon/RTX_External_Careers/jobs",
+    "checkedAt": "2026-11-16T10:26:49.754542+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "abb:wd3:External_Career_Site",
+    "evidenceUrl": "https://abb.wd3.myworkdayjobs.com/wday/cxs/abb/External_Career_Site/jobs",
+    "checkedAt": "2026-11-16T10:26:50.057689+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "hitachi:wd1:hitachi",
+    "evidenceUrl": "https://hitachi.wd1.myworkdayjobs.com/wday/cxs/hitachi/hitachi/jobs",
+    "checkedAt": "2026-11-16T10:26:50.496286+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "cargill:wd5:External",
+    "evidenceUrl": "https://cargill.wd5.myworkdayjobs.com/wday/cxs/cargill/External/jobs",
+    "checkedAt": "2026-11-16T10:26:50.670727+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "hilton:wd5:Hilton",
+    "evidenceUrl": "https://hilton.wd5.myworkdayjobs.com/wday/cxs/hilton/Hilton/jobs",
+    "checkedAt": "2026-11-16T10:26:50.748626+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "jll:wd1:jllcareers",
+    "evidenceUrl": "https://jll.wd1.myworkdayjobs.com/wday/cxs/jll/jllcareers/jobs",
+    "checkedAt": "2026-11-16T10:26:51.113801+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "mastercard:wd1:CorporateCareers",
+    "evidenceUrl": "https://mastercard.wd1.myworkdayjobs.com/wday/cxs/mastercard/CorporateCareers/jobs",
+    "checkedAt": "2026-11-16T10:26:51.159381+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "adidas:wd3:adidas",
+    "evidenceUrl": "https://adidas.wd3.myworkdayjobs.com/wday/cxs/adidas/adidas/jobs",
+    "checkedAt": "2026-11-16T10:26:51.600744+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "accor:wd3:accor",
+    "evidenceUrl": "https://accor.wd3.myworkdayjobs.com/wday/cxs/accor/accor/jobs",
+    "checkedAt": "2026-11-16T10:26:51.821184+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "qiddiya-investment-company-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/qiddiya-investment-company-1?details=true",
+    "checkedAt": "2026-11-16T14:10:28.921893+00:00",
+    "readable": true,
+    "jobCount": 272,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": null, \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "jasarapmc",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jasarapmc?details=true",
+    "checkedAt": "2026-11-16T14:10:28.924428+00:00",
+    "readable": true,
+    "jobCount": 144,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Jeddah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Jeddah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Madinah\", \"region\": \"Al Madinah Province\", \"hidden\": false}], \"city\": \"Madinah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "syarah",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/syarah?details=true",
+    "checkedAt": "2026-11-16T14:10:28.925467+00:00",
+    "readable": true,
+    "jobCount": 11,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "webook",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/webook?details=true",
+    "checkedAt": "2026-11-16T14:10:28.926365+00:00",
+    "readable": true,
+    "jobCount": 26,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "eramtalent",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/eramtalent?details=true",
+    "checkedAt": "2026-11-16T14:10:29.771329+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "master-works-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/master-works-1?details=true",
+    "checkedAt": "2026-11-16T14:10:30.020112+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "flyakeed-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/flyakeed-1?details=true",
+    "checkedAt": "2026-11-16T14:10:30.413126+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "al-ayn-university",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/al-ayn-university?details=true",
+    "checkedAt": "2026-11-16T14:10:30.430312+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "bayut-ksa",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bayut-ksa?details=true",
+    "checkedAt": "2026-11-16T14:10:30.741484+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "sikka-ae",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/sikka-ae?details=true",
+    "checkedAt": "2026-11-16T14:10:30.957724+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "bayut-dubizzle",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bayut-dubizzle?details=true",
+    "checkedAt": "2026-11-16T14:10:30.997224+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "bayutksa",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bayutksa?details=true",
+    "checkedAt": "2026-11-16T14:10:31.192080+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "squadio",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/squadio?details=true",
+    "checkedAt": "2026-11-16T14:10:31.387166+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "tabby-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/tabby-1?details=true",
+    "checkedAt": "2026-11-16T14:10:31.434658+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "alkaffarygroup",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/alkaffarygroup?details=true",
+    "checkedAt": "2026-11-16T14:10:31.554867+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "adi-dubai-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/adi-dubai-1?details=true",
+    "checkedAt": "2026-11-16T14:10:31.724773+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "nice-one",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/nice-one?details=true",
+    "checkedAt": "2026-11-16T14:10:31.940092+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "bayut-saudi",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bayut-saudi?details=true",
+    "checkedAt": "2026-11-16T14:10:32.036844+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "jazeera-paints",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jazeera-paints?details=true",
+    "checkedAt": "2026-11-16T14:10:32.138192+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "alnafitha-it",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/alnafitha-it?details=true",
+    "checkedAt": "2026-11-16T14:10:32.226838+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "arx-recruitment",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/arx-recruitment?details=true",
+    "checkedAt": "2026-11-16T14:10:32.514365+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "retal",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/retal?details=true",
+    "checkedAt": "2026-11-16T14:10:32.571706+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "almosafer",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/almosafer?details=true",
+    "checkedAt": "2026-11-16T14:10:32.623504+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "resal",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/resal?details=true",
+    "checkedAt": "2026-11-16T14:10:32.675089+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "rewaa",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/rewaa?details=true",
+    "checkedAt": "2026-11-16T14:10:33.397145+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "ithnain",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/ithnain?details=true",
+    "checkedAt": "2026-11-16T14:10:33.397471+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "alghanim-industries",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/alghanim-industries?details=true",
+    "checkedAt": "2026-11-16T14:10:33.481198+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "six-flags-qiddiya-city",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/six-flags-qiddiya-city?details=true",
+    "checkedAt": "2026-11-16T14:10:33.509086+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "numou",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/numou?details=true",
+    "checkedAt": "2026-11-16T14:10:34.131315+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "saudi-payments",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/saudi-payments?details=true",
+    "checkedAt": "2026-11-16T14:10:34.189656+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "alrajhi-takaful",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/alrajhi-takaful?details=true",
+    "checkedAt": "2026-11-16T14:10:34.679543+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "workable",
+    "token": "bcare",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/bcare?details=true",
+    "checkedAt": "2026-11-16T14:10:35.356450+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "gathern",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/gathern?details=true",
+    "checkedAt": "2026-11-16T14:10:35.388784+00:00",
+    "readable": true,
+    "jobCount": 9,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workable",
+    "token": "riyadh-air",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/riyadh-air?details=true",
+    "checkedAt": "2026-11-16T14:10:35.557329+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workable",
+    "token": "numu-guidance",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/numu-guidance?details=true",
+    "checkedAt": "2026-11-16T14:10:35.558678+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "snyk",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/snyk/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.076450+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "tenableinc",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/tenableinc/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.078630+00:00",
+    "readable": true,
+    "jobCount": 46,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Saudi Arabia - Remote\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "recordedfuture",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/recordedfuture/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.080287+00:00",
+    "readable": true,
+    "jobCount": 47,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "checkmarx",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/checkmarx/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.081830+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "rubrik",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/rubrik/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.716267+00:00",
+    "readable": true,
+    "jobCount": 182,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "veeam",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/veeam/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.740717+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "delinea",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/delinea/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.794074+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "avature",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/avature/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.181362+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "appian",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/appian/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.268948+00:00",
+    "readable": true,
+    "jobCount": 155,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "servicenow",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/servicenow/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.356447+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "sprinklr",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/sprinklr/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.559216+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "purestorage",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/purestorage/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.716533+00:00",
+    "readable": true,
+    "jobCount": 376,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "greenhouse",
+    "token": "nutanix",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/nutanix/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.757181+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "f5",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/f5/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.891393+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "five9",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/five9/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:18.202176+00:00",
+    "readable": true,
+    "jobCount": 84,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "proofpoint",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/proofpoint/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:18.286308+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "fortinet",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/fortinet/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:18.389312+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "zoom",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/zoom/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:18.894384+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "slack",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/slack/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.041317+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "asana",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/asana/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.240632+00:00",
+    "readable": true,
+    "jobCount": 109,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "amplitude",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/amplitude/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.242543+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "netskope",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/netskope/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.317554+00:00",
+    "readable": true,
+    "jobCount": 122,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "zscaler",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/zscaler/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.348598+00:00",
+    "readable": true,
+    "jobCount": 377,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "okta",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/okta/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.578618+00:00",
+    "readable": true,
+    "jobCount": 364,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "greenhouse",
+    "token": "crowdstrike",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/crowdstrike/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.748125+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "cybersecurity",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/cybersecurity/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:19.834036+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "saudiaramco",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/saudiaramco/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:20.233600+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "uniphore",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/uniphore/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:20.246060+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "incyte",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/incyte/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:20.286669+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "greenhouse",
+    "token": "foodics-sa",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/foodics-sa/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:20.364015+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "riyadhair",
+    "evidenceUrl": "https://api.lever.co/v0/postings/riyadhair?mode=json",
+    "checkedAt": "2026-11-16T14:11:20.646950+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "thndr",
+    "evidenceUrl": "https://api.lever.co/v0/postings/thndr?mode=json",
+    "checkedAt": "2026-11-16T14:11:20.648140+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "nielseniq",
+    "evidenceUrl": "https://api.lever.co/v0/postings/nielseniq?mode=json",
+    "checkedAt": "2026-11-16T14:11:20.648634+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "nielsen",
+    "evidenceUrl": "https://api.lever.co/v0/postings/nielsen?mode=json",
+    "checkedAt": "2026-11-16T14:11:20.698197+00:00",
+    "readable": true,
+    "jobCount": 0,
+    "saudiLocations": [],
+    "saudiVerified": false
+  },
+  {
+    "source": "lever",
+    "token": "ajaxsystems",
+    "evidenceUrl": "https://api.lever.co/v0/postings/ajaxsystems?mode=json",
+    "checkedAt": "2026-11-16T14:11:21.868173+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "oivan",
+    "evidenceUrl": "https://api.lever.co/v0/postings/oivan?mode=json",
+    "checkedAt": "2026-11-16T14:11:21.934456+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "egis",
+    "evidenceUrl": "https://api.lever.co/v0/postings/egis?mode=json",
+    "checkedAt": "2026-11-16T14:11:22.871811+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "lever",
+    "token": "cognite",
+    "evidenceUrl": "https://api.lever.co/v0/postings/cognite?mode=json",
+    "checkedAt": "2026-11-16T14:11:23.217244+00:00",
+    "readable": false,
+    "error": "TimeoutError"
+  },
+  {
+    "source": "workday",
+    "token": "redhat:wd5:jobs",
+    "evidenceUrl": "https://redhat.wd5.myworkdayjobs.com/wday/cxs/redhat/jobs/jobs",
+    "checkedAt": "2026-11-16T14:12:44.943100+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "salesforce:wd12:External_Career_Site",
+    "evidenceUrl": "https://salesforce.wd12.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs",
+    "checkedAt": "2026-11-16T14:12:45.033448+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "salesforce:wd1:External_Career_Site",
+    "evidenceUrl": "https://salesforce.wd1.myworkdayjobs.com/wday/cxs/salesforce/External_Career_Site/jobs",
+    "checkedAt": "2026-11-16T14:12:45.067307+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "accenture:wd103:AccentureCareers",
+    "evidenceUrl": "https://accenture.wd103.myworkdayjobs.com/wday/cxs/accenture/AccentureCareers/jobs",
+    "checkedAt": "2026-11-16T14:12:45.159292+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "dell:wd1:External",
+    "evidenceUrl": "https://dell.wd1.myworkdayjobs.com/wday/cxs/dell/External/jobs",
+    "checkedAt": "2026-11-16T14:12:45.731821+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "philips:wd3:jobs-and-careers",
+    "evidenceUrl": "https://philips.wd3.myworkdayjobs.com/wday/cxs/philips/jobs-and-careers/jobs",
+    "checkedAt": "2026-11-16T14:12:45.997589+00:00",
+    "readable": true,
+    "jobCount": 1,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "siemensenergy:wd3:jobs",
+    "evidenceUrl": "https://siemensenergy.wd3.myworkdayjobs.com/wday/cxs/siemensenergy/jobs/jobs",
+    "checkedAt": "2026-11-16T14:12:46.026467+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "bakerhughes:wd5:BakerHughes",
+    "evidenceUrl": "https://bakerhughes.wd5.myworkdayjobs.com/wday/cxs/bakerhughes/BakerHughes/jobs",
+    "checkedAt": "2026-11-16T14:12:46.099676+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "honeywell:wd5:Careers",
+    "evidenceUrl": "https://honeywell.wd5.myworkdayjobs.com/wday/cxs/honeywell/Careers/jobs",
+    "checkedAt": "2026-11-16T14:12:46.507709+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "thales:wd3:Careers",
+    "evidenceUrl": "https://thales.wd3.myworkdayjobs.com/wday/cxs/thales/Careers/jobs",
+    "checkedAt": "2026-11-16T14:12:46.670919+00:00",
+    "readable": true,
+    "jobCount": 11,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Khobar\"}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "sanofi:wd3:SanofiCareers",
+    "evidenceUrl": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs",
+    "checkedAt": "2026-11-16T14:12:46.944571+00:00",
+    "readable": true,
+    "jobCount": 3,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Al Khobar\"}"
+    ],
+    "saudiVerified": true
+  },
+  {
+    "source": "workday",
+    "token": "bp:wd3:bpCareers",
+    "evidenceUrl": "https://bp.wd3.myworkdayjobs.com/wday/cxs/bp/bpCareers/jobs",
+    "checkedAt": "2026-11-16T14:12:47.264171+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "atkinsrealis:wd3:Careers",
+    "evidenceUrl": "https://atkinsrealis.wd3.myworkdayjobs.com/wday/cxs/atkinsrealis/Careers/jobs",
+    "checkedAt": "2026-11-16T14:12:47.878819+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "schneider:wd3:SE",
+    "evidenceUrl": "https://schneider.wd3.myworkdayjobs.com/wday/cxs/schneider/SE/jobs",
+    "checkedAt": "2026-11-16T14:12:48.061353+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "nvidia:wd5:NVIDIAExternalCareerSite",
+    "evidenceUrl": "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/jobs",
+    "checkedAt": "2026-11-16T14:12:48.073600+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "brambles:wd5:Brambles_Careers",
+    "evidenceUrl": "https://brambles.wd5.myworkdayjobs.com/wday/cxs/brambles/Brambles_Careers/jobs",
+    "checkedAt": "2026-11-16T14:12:48.406438+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  },
+  {
+    "source": "workday",
+    "token": "leidos:wd5:External_Careers",
+    "evidenceUrl": "https://leidos.wd5.myworkdayjobs.com/wday/cxs/leidos/External_Careers/jobs",
+    "checkedAt": "2026-11-16T14:12:48.474084+00:00",
+    "readable": false,
+    "error": "HTTPError"
+  }
+]

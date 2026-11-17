@@ -3,16 +3,18 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { comparePdfText } from '../src/lib/utils/pdfTextCheck.ts';
 import { createServer } from 'vite';
 import puppeteer from 'puppeteer';
 import core from 'puppeteer-core';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { comparePdfText } from '../src/lib/utils/pdfTextCheck.ts';
 
 const output = resolve(process.argv[2] ?? resolve(tmpdir(), 'watheq-english-pdf-regression'));
 const runFile = promisify(execFile);
 const executablePath = process.env.PDF_TEST_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+const fixtureLanguage = process.env.PDF_FIXTURE_LANGUAGE ?? 'en';
+const shortFixture = process.env.PDF_SHORT === 'true';
 await mkdir(output, { recursive: true });
 const resume = {
   basics: { name: 'Noura Example', label: 'Data Analyst', email: 'noura@example.test', phone: '+966500000001',
@@ -26,8 +28,26 @@ const resume = {
   projects: [{ name: 'Reporting portfolio', description: 'Built reliable reports.', url: 'https://example.test/report' }],
   certificates: [], languages: [{ language: 'English', fluency: 'Fluent' }],
 };
-resume.work = Array.from({ length: 8 }, (_, index) => ({ ...resume.work[0], name: `Example Company ${index + 1}`,
-  highlights: Array.from({ length: 5 }, (_, bullet) => `Report ${index + 1}.${bullet + 1}: Prepared SQL reports with 25% faster review and documented commercial findings for the team.`) }));
+if (fixtureLanguage !== 'en') {
+  resume.basics.name = 'نورة المثال';
+  resume.basics.label = fixtureLanguage === 'ar' ? 'محللة بيانات' : 'محللة بيانات — Data Analyst';
+  resume.basics.summary = fixtureLanguage === 'ar' ? 'محللة سعودية تعد التقارير وتراجع البيانات وتوثق النتائج.' : 'محللة سعودية تعد SQL reports وتراجع البيانات وتوثق النتائج.';
+  resume.basics.location.city = 'الرياض';
+  resume.work[0].name = 'شركة المثال';
+  resume.work[0].position = fixtureLanguage === 'ar' ? 'محللة بيانات' : 'محللة بيانات — SQL Analyst';
+  resume.work[0].highlights = ['أعددت تقارير البيانات ووثقت النتائج.', 'راجعت المتطلبات مع فريق العمل.'];
+  resume.education[0].institution = 'كلية المثال';
+  resume.education[0].area = 'الحوسبة';
+  resume.education[0].studyType = 'دبلوم';
+  resume.skills[0].name = 'المهارات';
+  resume.projects[0].name = 'مشروع التقارير';
+  resume.projects[0].description = 'أعددت تقارير موثوقة.';
+  resume.languages[0] = { language: 'العربية', fluency: 'اللغة الأم' };
+}
+if (!shortFixture) resume.work = Array.from({ length: 8 }, (_, index) => ({ ...resume.work[0], name: `${resume.work[0].name} ${index + 1}`,
+  ...(fixtureLanguage === 'en' ? {
+  highlights: Array.from({ length: 5 }, (_, bullet) => `Report ${index + 1}.${bullet + 1}: Prepared SQL reports with 25% faster review and documented commercial findings for the team.`)
+  } : { highlights: Array.from({ length: 5 }, (_, bullet) => `التقرير ${index + 1}.${bullet + 1}: أعددت تقارير البيانات ووثقت النتائج وراجعت المتطلبات مع فريق العمل.`) }) }));
 let renderer;
 const launch = core.launch.bind(core);
 core.launch = async options => { renderer = await launch({ ...options, executablePath }); return renderer; };
@@ -58,10 +78,18 @@ const fixtureHtml = `<!doctype html><html lang="en"><body><div id="root"></div><
     analytics.trackExportFailed = (...args) => window.pdfFailures.push(args);
     import { useResumeStore } from '/src/lib/stores/resumeStore.ts';
     window.fixture = ${JSON.stringify(resume)};
+    function Fixture() {
+    const [ready, setReady] = React.useState(false);
+    React.useEffect(() => {
+    sessionStorage.setItem('pdfFixtureMounts', String(Number(sessionStorage.getItem('pdfFixtureMounts') ?? '0') + 1));
     useResumeStore.setState(state => ({ originalResume: window.fixture, optimizations: [], showOptimized: false,
-      isSaudiNational: false, parsedResumeText: JSON.stringify(window.fixture), contentLanguage: 'en',
+      isSaudiNational: false, parsedResumeText: JSON.stringify(window.fixture), contentLanguage: ${JSON.stringify(fixtureLanguage === 'en' ? 'en' : 'ar')},
       displayOptions: { ...state.displayOptions, boldKeywords: true },
       optimizationMetrics: { ...state.optimizationMetrics, jdKeywords: ['SQL', 'Power BI'] } }));
+    setReady(true);
+    }, []);
+    return ready ? React.createElement(Gallery, {resumeData: window.fixture}) : null;
+    }
     const questions = Array.from({length: 5}, (_, n) => ({id: String(n), theme: 'SQL', rationale: 'Add verifiable details. '.repeat(12),
       question: 'Which reporting work can you verify?', type: 'multi', allowOther: false,
       options: [{value:'yes', label:'Built SQL dashboards'}, {value:'no', label:'No SQL experience', isHardStop:true}]}));
@@ -69,9 +97,9 @@ const fixtureHtml = `<!doctype html><html lang="en"><body><div id="root"></div><
     createRoot(document.getElementById('root')).render(React.createElement(AuthProvider, null,
       React.createElement(CreditsProvider, null, params.get('view') === 'questions'
         ? React.createElement(ClarificationModal, {questions, round:3, isOpen:true, onSubmit:()=>{}, onSkip:()=>{}, onOptimizeNow:()=>{}})
-        : React.createElement(Gallery))));
+        : React.createElement(Fixture))));
   </script></body></html>`;
-const server = await createServer({ server: { host: '127.0.0.1', port: 5175, strictPort: true }, clearScreen: false,
+const server = await createServer({ server: { host: '127.0.0.1', port: 5175, strictPort: true, watch: { ignored: ['**/.verification/**'] } }, clearScreen: false,
   plugins: [{ name: 'synthetic-pdf-fixture', configureServer(vite) {
     vite.middlewares.use('/__pdf_regression', async (_req, res) => {
       const html = await vite.transformIndexHtml('/__pdf_regression', fixtureHtml);
@@ -83,6 +111,7 @@ await server.listen();
 console.log('Synthetic PDF browser:', server.resolvedUrls.local[0] + '__pdf_regression');
 const browser = await puppeteer.launch({ headless: true, executablePath });
 const page = await browser.newPage();
+page.on('framenavigated', frame => { if (frame === page.mainFrame()) console.log('Fixture navigation:', frame.url()); });
 page.on('pageerror', error => console.error('Browser error:', error.message));
 page.on('requestfailed', request => { if (request.url().includes('pdf')) console.error('PDF resource failure:', request.url(), request.failure()?.errorText); });
 page.on('console', message => { if (message.type() === 'error') console.error('Browser console:', message.text()); });
@@ -103,17 +132,18 @@ page.on('request', async request => {
 try {
   await page.goto(server.resolvedUrls.local[0] + '__pdf_regression', { waitUntil: 'networkidle0', timeout: 120000 });
   await page.waitForSelector('[data-resume-preview]', { timeout: 60000 });
-  if (!process.env.UI_ONLY) for (const [id, label] of [['modern-professional', 'Riyadh'], ['technical-engineer', 'Khobar'], ['ats-optimized', 'Qiddiya'], ['executive-professional', 'Neom']]) {
+  if (!process.env.UI_ONLY) for (const [id, label] of [['modern-professional', 'Riyadh — Professional'], ['technical-engineer', 'Khobar — Technical'], ['ats-optimized', 'Qiddiya — Classic'], ['executive-professional', 'Neom — Executive']]) {
+    if (process.env.PDF_TEMPLATE_ID && process.env.PDF_TEMPLATE_ID !== id) continue;
     activeId = id;
     await page.evaluate(label => [...document.querySelectorAll('button')].find(button => button.textContent.trim() === label)?.click(), label);
-    await page.waitForFunction(label => [...document.querySelectorAll('button')].some(button => button.textContent.trim() === label && button.className.includes('btn-metal')), {}, label);
+    await page.waitForFunction(label => [...document.querySelectorAll('button')].some(button => button.textContent.trim() === label && button.getAttribute('aria-pressed') === 'true'), {}, label);
     responseBytes = undefined;
     await page.evaluate(() => [...document.querySelectorAll('button')].find(button => button.textContent.includes('Download PDF'))?.click());
     await page.waitForFunction(() => document.querySelector('[role="alert"]') || [...document.querySelectorAll('[role="status"]')].some(el => el.textContent.includes('Selectable text checked')), { timeout: 60000 });
     const result = await page.evaluate(async () => {
       const { expectedPdfText } = await import('/src/lib/utils/pdfTextCheck.ts');
       return { alert: document.querySelector('[role="alert"]')?.textContent, status: [...document.querySelectorAll('[role="status"]')].map(el => el.textContent),
-        failures: window.pdfFailures, workerStarts: window.workerStarts,
+        failures: window.pdfFailures, workerStarts: window.workerStarts, fixtureMounts: Number(sessionStorage.getItem('pdfFixtureMounts')),
         expected: expectedPdfText(window.fixture, document.querySelector('[data-resume-preview]')) };
     });
     await writeFile(resolve(output, `${id}-ui.json`), JSON.stringify(result, null, 2));
@@ -134,7 +164,8 @@ try {
     console.log(id, JSON.stringify({ alert: result.alert, state: result.check?.state, pages: result.check?.pages, missing: result.check?.missingFieldIds }));
     assert.equal(result.check?.state, 'text_checked', `${id}: PDF did not pass actual reader check`);
     assert.equal(result.workerStarts, 0, `${id}: verification depended on the stalled module worker`);
-    assert.ok(result.check.pages > 1, `${id}: fixture must exercise multiple pages`);
+    assert.equal(result.fixtureMounts, 1, `${id}: fixture remounted during export`);
+    assert.ok(shortFixture || result.check.pages > 1, `${id}: fixture must exercise multiple pages`);
     assert.equal(result.alert, undefined, `${id}: download UI reported an error`);
   }
   if (process.env.UI_ONLY) {

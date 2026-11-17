@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ run: vi.fn(), read: vi.fn(), claim: vi.fn(), finish: vi.fn() }));
+const mocks = vi.hoisted(() => ({ run: vi.fn(), read: vi.fn(), claim: vi.fn(), finish: vi.fn(), capture: vi.fn(), flush: vi.fn() }));
 vi.mock('../optimize.js', () => ({ runOptimization: mocks.run }));
 vi.mock('../../lib/optimization-jobs.js', async importOriginal => ({
   ...await importOriginal<typeof import('../../lib/optimization-jobs.js')>(),
   readOptimizationJob: mocks.read, claimOptimizationWorker: mocks.claim, finishOptimizationJob: mocks.finish,
 }));
-vi.mock('../../lib/sentry.js', () => ({ summarizeErrorForLog: () => ({ error: 'redacted' }) }));
+vi.mock('../../lib/sentry.js', () => ({ initSentry: vi.fn(), captureError: mocks.capture, flushSentry: mocks.flush, summarizeErrorForLog: () => ({ error: 'redacted' }) }));
 import { newOptimizationJob, optimizationEnvelope, type OptimizationJob } from '../../lib/optimization-jobs.js';
 import handler from '../optimize-background.js';
 
@@ -40,7 +40,7 @@ describe('background optimization ownership and delivery', () => {
     await vi.advanceTimersByTimeAsync(40000);
     await pending;
     expect(mocks.run).toHaveBeenCalledTimes(1);
-    expect(mocks.finish).toHaveBeenCalledWith(key, expect.objectContaining({ state: 'succeeded', result }));
+    expect(mocks.finish).toHaveBeenCalledWith(key, expect.objectContaining({ state: 'succeeded', result: { ...result, operationId: job.operationId } }));
   });
   it('rejects tampered input or bearer credentials before claiming or generating', async () => {
     const envelope = optimizationEnvelope(key, job, body, { authorization: 'Bearer test-token' });
@@ -48,6 +48,12 @@ describe('background optimization ownership and delivery', () => {
     await handler(request(envelope));
     expect(mocks.claim).not.toHaveBeenCalled();
     expect(mocks.run).not.toHaveBeenCalled();
+  });
+  it('ignores malformed JSON as request validation without reporting a worker failure', async () => {
+    await handler(new Request('https://watheqai.app/.netlify/functions/optimize-background', { method: 'POST', body: '{' }));
+    expect(mocks.read).not.toHaveBeenCalled();
+    expect(mocks.run).not.toHaveBeenCalled();
+    expect(mocks.capture).not.toHaveBeenCalled();
   });
   it('does not repeat generation for a duplicate worker invocation', async () => {
     mocks.claim.mockResolvedValueOnce(true).mockResolvedValue(false);
@@ -66,5 +72,22 @@ describe('background optimization ownership and delivery', () => {
     mocks.run.mockResolvedValue({ statusCode: 504, body: JSON.stringify({ error: 'Provider timed out', retryable: true, billingStateUnknown: false }) });
     await handler(request());
     expect(mocks.finish).toHaveBeenCalledWith(key, expect.objectContaining({ state: 'failed', error: expect.objectContaining({ billingStateUnknown: false }) }));
+  });
+  it('flushes a storage failure before worker ownership is acquired without starting generation', async () => {
+    mocks.read.mockRejectedValue(new Error('Redis unavailable'));
+    await handler(request());
+    expect(mocks.run).not.toHaveBeenCalled();
+    expect(mocks.capture).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ stage: 'claim', code: 'OPTIMIZE_WORKER_FAILED' }));
+    expect(mocks.flush).toHaveBeenCalledOnce();
+  });
+  it('persists the pipeline code and reports safe operation metadata for terminal failures', async () => {
+    mocks.run.mockResolvedValue({ statusCode: 504, body: JSON.stringify({ error: 'Private provider response', code: 'AI_TIMEOUT', billingStateUnknown: false }) });
+    await handler(request());
+    expect(mocks.finish).toHaveBeenCalledWith(key, expect.objectContaining({ error: expect.objectContaining({ code: 'AI_TIMEOUT' }) }));
+    expect(mocks.capture).toHaveBeenCalledWith(expect.objectContaining({ message: 'Optimization failed' }), expect.objectContaining({
+      operationId: job.operationId, stage: 'pipeline', status: 504, code: 'AI_TIMEOUT',
+    }));
+    expect(JSON.stringify(mocks.capture.mock.calls)).not.toContain('Private');
+    expect(mocks.flush).toHaveBeenCalledOnce();
   });
 });

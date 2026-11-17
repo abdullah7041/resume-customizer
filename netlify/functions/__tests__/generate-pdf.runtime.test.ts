@@ -5,7 +5,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 const hostPlatform = process.platform;
 
-const { launch, executablePath, getUser, rateLimit, readFont, mkdir, writeFont } = vi.hoisted(() => ({
+const { launch, executablePath, getUser, rateLimit, readFont, mkdir, writeFont, capture } = vi.hoisted(() => ({
+  capture: vi.fn(),
   launch: vi.fn(),
   executablePath: vi.fn().mockResolvedValue('/tmp/chromium'),
   getUser: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('node:fs', async importOriginal => {
 });
 
 vi.mock('puppeteer-core', () => ({ default: { launch } }));
+vi.mock('../../lib/sentry.js', () => ({ initSentry: vi.fn(), captureError: capture, summarizeErrorForLog: vi.fn(() => 'safe error') }));
 vi.mock('@sparticuz/chromium', () => ({
   default: { executablePath, args: ['--lambda-chromium-arg'] },
 }));
@@ -64,6 +66,17 @@ afterEach(() => {
 });
 
 describe('PDF browser runtime selection', () => {
+  it('reports terminal renderer failure with safe metadata and a support reference', async () => {
+    vi.stubEnv('NETLIFY', 'true');
+    launch.mockRejectedValueOnce(new Error('private@example.test resume body'));
+    const { handler } = await import('../generate-pdf.js');
+    const operationId = '11111111-1111-4111-8111-111111111111';
+    const response = await handler({httpMethod:'POST', headers:{'x-watheq-operation-id':operationId}, body:JSON.stringify({html:'<p>private resume body</p>'})} as unknown as HandlerEvent, {} as HandlerContext, () => {}) as {statusCode:number;body:string};
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body)).toMatchObject({status:500,code:'pdf/generation-failed',operationId});
+    expect(capture).toHaveBeenCalledWith(expect.objectContaining({message:'PDF export failed'}),{function:'generate-pdf',operationId,stage:'browser',status:500,code:'pdf/generation-failed'});
+    expect(JSON.stringify(capture.mock.calls)).not.toContain('private');
+  });
   it.each([
     ['AWS_LAMBDA_FUNCTION_NAME', 'generate-pdf', '/tmp/chromium', ['--lambda-chromium-arg']],
     ['AWS_EXECUTION_ENV', 'AWS_Lambda_nodejs22.x', '/tmp/chromium', ['--lambda-chromium-arg']],

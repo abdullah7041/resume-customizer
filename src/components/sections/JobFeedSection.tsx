@@ -939,7 +939,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   return (
     <div className="space-y-4">
       <JobAlertSettings persistIntent={async () => {
-        if (!intent?.targetRoles.length || !companies.length) throw new Error('Set a role and follow a company');
+        if (!intent?.targetRoles.length) throw new Error('Set a target role');
         const result = await saveSearchIntent({ ...intent, meta: { confidence: 'high', completeness: 100, updatedAt: new Date().toISOString() } });
         if (result.error) throw new Error(result.error);
       }} />

@@ -7,6 +7,7 @@ import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "@/lib/assets";
 import { analytics } from "@/services/analytics";
 import type { GetStartedSource } from "@/types/analytics";
 import { PricingWaitlistModal } from "@/components/Credits/PricingWaitlistModal";
+import WhatsAppSupportLink from "@/components/Layout/WhatsAppSupportLink";
 import { SignInDialog } from "@/components/ui/SignInDialog";
 
 interface LandingPageProps {
@@ -633,6 +634,7 @@ export default function LandingPage({ onGetStarted, showSignIn, initialSection }
           <nav className="majlis-footer-col" aria-label={localizedText(t, "footer.columns.connect", "Connect")}>
             <h3>{localizedText(t, "footer.columns.connect", "Connect")}</h3>
             <a href="mailto:support@watheqai.app">{localizedText(t, "footer.links.contact", "Contact Us")}</a>
+            <WhatsAppSupportLink />
             <a href="https://www.linkedin.com/in/3binahmed/" target="_blank" rel="noopener noreferrer">
               LinkedIn
             </a>

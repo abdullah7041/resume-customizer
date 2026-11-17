@@ -14,7 +14,7 @@ import {
   isAuthRequiredError,
   AI_DEFAULT_TEMPERATURE,
 } from "../../services/api.js";
-import { type ClarificationQuestion } from "../modals/ClarificationModal";
+import { ClarificationModal, type ClarificationQuestion } from "@/components/modals/ClarificationModal";
 import {
   filterClarificationQuestionsByHardStops,
   appendClarificationHistory,
@@ -46,10 +46,9 @@ const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").t
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
-const JobFeedSection = lazy(() => import("../sections/JobFeedSection").then(m => ({ default: m.JobFeedSection })));
+const JobFeedSection = lazy(() => import("@/components/sections/JobsFirstSection"));
 const TemplateGallery = lazy(() => import("../sections/TemplatesSection"));
 const OnboardingChat = lazy(() => import("../onboarding/OnboardingChat"));
-const ClarificationModal = lazy(() => import("../modals/ClarificationModal").then(m => ({ default: m.ClarificationModal })));
 
 import type { Tab } from "../ui/GlassTabs";
 import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
@@ -793,9 +792,13 @@ export default function MainContent() {
   // Clarification interrogation state
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [optimizationFailure, setOptimizationFailure] = useState<string | null>(null);
+  const [optimizationReference, setOptimizationReference] = useState<string | null>(null);
+  const [optimizationPending, setOptimizationPending] = useState(false);
   const [clarificationError, setClarificationError] = useState<string | null>(null);
   const completedClarificationContext = useRef('');
-  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean } | null>(null);
+  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean; recovery?: {
+    workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[];
+  } } | null>(null);
   const [isCheckingClarifications, setIsCheckingClarifications] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
@@ -1469,15 +1472,15 @@ export default function MainContent() {
       },
       {
         id: "optimize",
-        label: t("workspace.stepper.optimize", "Optimize"),
-        hint: t("workspace.stepper.optimizeHint", "Improve resume"),
+        label: t("workspace.stepper.optimize", "Tailor"),
+        hint: t("workspace.stepper.optimizeHint", "Adapt your CV for each role"),
         status: gatedStatus(activeTab === "optimize" ? "active" : hasOptimization ? "completed" : "upcoming"),
         targetTab: "optimize",
         lockedReason: resumeGateReason,
       },
       {
         id: "export",
-        label: t("workspace.stepper.export", "Export / Pipeline"),
+        label: t("workspace.stepper.export", "Export & track"),
         hint: t("workspace.stepper.exportHint", "Save and track"),
         status: gatedStatus(isExportStep ? "active" : "upcoming"),
         targetTab: "templates",
@@ -2052,6 +2055,8 @@ export default function MainContent() {
       if (!isCurrentOptimize(request)) return null;
       const { resumeText, jobDescription, language } = request.input;
       if (!resumeText || !jobDescription) return null;
+      const recovery = retryOptimizeArgs.current?.recovery;
+      if (recovery) ({ workHistory, userClarifications, userHardStops } = recovery);
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
@@ -2107,6 +2112,7 @@ export default function MainContent() {
               userClarifications,
               userHardStops,
               freePreview,
+                recoverOnly: Boolean(recovery),
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -2133,13 +2139,13 @@ export default function MainContent() {
             // Force-refresh credit balance so the UI reflects what actually happened.
             refetchCredits().catch(() => { /* non-blocking */ });
             // Retain the actual transport/provider code and request trace.
-            streamError.message = `${t('credits.connectionInterrupted',
+            if (streamError.code !== 'OPTIMIZE_JOB_PENDING') streamError.message = `${t('credits.connectionInterrupted',
               'The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.')} (${streamError.message})`;
             throw streamError;
           }
           // Only an unavailable route warrants a legacy request. Application
           // errors, authentication failures and timeouts must not silently rerun AI.
-          if (![404, 405].includes(streamError.status)) throw streamError;
+          if (recovery || ![404, 405].includes(streamError.status)) throw streamError;
           // Server explicitly rejected before processing (non-2xx, SSE error event) —
           // billing state is known-safe, fall back to legacy endpoint.
           console.warn('[optimize] SSE rejected before processing; using legacy endpoint');
@@ -2159,6 +2165,7 @@ export default function MainContent() {
         }
         if (!isCurrentOptimize(request)) return null;
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        if (retryOptimizeArgs.current) delete retryOptimizeArgs.current.recovery;
         // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
         // has already resolved to a single successful `result` — never inside
         // either branch — so a user-initiated run counts once regardless of
@@ -2306,6 +2313,14 @@ export default function MainContent() {
         return result;
       } catch (error: any) {
         if (!isCurrentOptimize(request)) return null;
+        if (error.isBillingStateUnknown && retryOptimizeArgs.current) {
+          retryOptimizeArgs.current.recovery = { workHistory, userClarifications, userHardStops };
+        } else if (error.jobFailed === true && error.isBillingStateUnknown === false && retryOptimizeArgs.current) {
+          delete retryOptimizeArgs.current.recovery;
+        }
+        const pending = error.code === 'OPTIMIZE_JOB_PENDING';
+        setOptimizationPending(pending);
+        setOptimizationReference(typeof error.operationId === 'string' ? error.operationId : null);
         setOptimizationFailure(error?.message ?? 'Optimization failed');
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
@@ -2331,8 +2346,8 @@ export default function MainContent() {
 
         pushToast(
           {
-            type: "danger",
-            title: t("toasts.optimizationFailed"),
+            type: pending ? "info" : "danger",
+            title: pending ? t("sections.optimize.failure.pending", "Optimization is still processing") : t("toasts.optimizationFailed"),
             description: descriptionParts.filter(Boolean).join(" • "),
           },
           { id: TOAST_IDS.optimize }
@@ -2363,7 +2378,8 @@ export default function MainContent() {
       if (optimizeRequest.current?.inFlight || isOptimizing || isInterrogating || isCheckingClarifications) return null;
       setOptimizationFailure(null);
       setClarificationError(null);
-      retryOptimizeArgs.current = { mode, freePreview: options?.freePreview };
+      setOptimizationReference(null);
+      retryOptimizeArgs.current = { ...retryOptimizeArgs.current, mode, freePreview: options?.freePreview };
 
       const input: AssessmentInput = { resumeText: resumeData.plainText, jobDescription,
         language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'optimize',
@@ -2997,7 +3013,7 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <ParallaxContainer enableLayers={false} className="py-1">
+    <ParallaxContainer enableLayers={false} className="pb-1">
       <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
         {isGuestMode && (
           <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 px-4 py-3 dark:border-emerald-200/14 dark:bg-emerald-900/20">
@@ -3020,27 +3036,26 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* The desktop action column gives the selector its own row below More tools. */}
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-3">
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:col-start-2 md:row-start-1 md:w-64 lg:w-72">
+        <div className="flex flex-col gap-2" data-workspace-chrome>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 empty:hidden" data-workspace-controls>
+            {!isGuestMode && libraryEntries.length > 0 && (
+              <div className="me-auto min-w-0 max-w-full flex-1 sm:max-w-sm">
+                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+              </div>
+            )}
             <GlassButton
               type="button"
               variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
               size="sm"
               onClick={() => handleTabChange("more-tools")}
-              className="hidden whitespace-nowrap md:col-start-1 md:row-start-1 md:inline-flex md:min-h-11 md:w-full"
+              className="hidden min-h-11 shrink-0 whitespace-nowrap md:inline-flex"
             >
               <MoreHorizontal className="h-4 w-4 me-1.5" />
               {t("tabs.moreTools", "More tools")}
             </GlassButton>
-            {!isGuestMode && libraryEntries.length > 0 && (
-              <div className="col-start-1 row-start-1 min-w-0 md:col-span-2 md:row-start-2">
-                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
-              </div>
-            )}
             {renderClearAllAction(false)}
           </div>
-          <div className="min-w-0 md:col-start-1 md:row-start-1">
+          <div className="w-full min-w-0" data-workspace-steps>
             <div className="md:hidden">
               <MobileWorkflowNav
                 primarySteps={mobilePrimarySteps}
@@ -3059,6 +3074,13 @@ export default function MainContent() {
             </div>
           </div>
         </div>
+
+        {flowProgress > 0 && (
+          <div className="rounded-lg border border-emerald-600/20 bg-emerald-500/5 px-3 py-2" role="progressbar" aria-label={t('toasts.generatingOptimizations')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(flowProgress)}>
+            <div className="mb-1.5 flex justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-200"><span>{t('toasts.generatingOptimizations')}</span><span>{Math.round(flowProgress)}%</span></div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/40"><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 motion-reduce:transition-none" style={{width:`${flowProgress}%`}} /></div>
+          </div>
+        )}
 
         <div className="workspace-panel relative min-h-[420px] p-4 transition-shadow duration-300 sm:min-h-[480px] sm:p-5 lg:p-6">
           {/* Parse-quality warning — shown on all tabs so the user always sees it */}
@@ -3154,13 +3176,15 @@ export default function MainContent() {
           {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
               {optimizationFailure && (
-                <div role="alert" aria-label={t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
-                  <p className="font-semibold">{t('sections.optimize.failure.title', 'Optimization failed')}</p>
+                <div role={optimizationPending ? "status" : "alert"} aria-label={optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
+                  <p className="font-semibold">{optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')}</p>
                   <p className="mt-1 text-sm">{optimizationFailure}</p>
+                  {optimizationReference && <p className="mt-1 break-all text-sm">{t('sections.optimize.failure.reference', 'Support reference')}: {optimizationReference}</p>}
                   <GlassButton variant="secondary" className="mt-3" disabled={isOptimizing || isCheckingClarifications} onClick={() => {
                     const args = retryOptimizeArgs.current;
                     if (args) void handleOptimize(args.mode, { freePreview: args.freePreview });
-                  }}>{t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                  }}>{optimizationPending ? t('sections.optimize.failure.retrieve', 'Check for results') : t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                  {optimizationReference && <GlassButton variant="secondary" className="ms-2 mt-3" onClick={() => void navigator.clipboard?.writeText(optimizationReference).then(() => pushToast({ type: 'success', title: t('sections.optimize.failure.copied', 'Support reference copied') })).catch(() => { /* The visible reference remains selectable. */ })}>{t('sections.optimize.failure.copy', 'Copy support reference')}</GlassButton>}
                 </div>
               )}
               <Suspense fallback={<SectionSkeleton />}>
@@ -3268,7 +3292,7 @@ export default function MainContent() {
                      network round trip and an analytics event to arrive at
                      "Resume required". The feed hides the button when the prop is
                      absent. */
-                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} />}
+                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} onToast={pushToast} />}
               </Suspense>
             </LazyErrorBoundary>
           )}
@@ -3445,18 +3469,8 @@ export default function MainContent() {
           </div>
         </div>
       )}
-      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50 p-4 sm:p-6 lg:p-8`}>
+      <div className={`${containerClass} space-y-4 px-4 pb-4 pt-2 text-gray-900 sm:space-y-10 sm:px-6 sm:pb-6 lg:space-y-12 lg:px-8 lg:pb-8 dark:text-surface-50`}>
         <div>
-          {flowProgress > 0 && (
-            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-emerald-900/10 dark:bg-black/45">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-[width] duration-300"
-                style={{ width: `${flowProgress}%` }}
-                aria-hidden="true"
-              />
-            </div>
-          )}
-
           {loading ? (
             <div className="space-y-6">
               <div className="h-8 w-40 rounded-full bg-emerald-900/10 dark:bg-white/10" />

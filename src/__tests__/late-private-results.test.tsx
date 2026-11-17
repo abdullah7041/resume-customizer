@@ -38,6 +38,7 @@ it('discards a late Vision response without changing the next owner’s loading 
   fireEvent.click(screen.getByRole('button', { name: /Analyze|vision2030.section.analyze/ }));
   fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
   await waitFor(() => expect(analyzeVision2030).toHaveBeenCalled());
+  expect(analyzeVision2030).toHaveBeenLastCalledWith('Private A resume', 'en', undefined, expect.any(AbortSignal));
   view.unmount();
   activatePrivateSession('owner-b', () => {});
   privateStorage.setItem('watheq:vision2030Analyzing', 'B pending');

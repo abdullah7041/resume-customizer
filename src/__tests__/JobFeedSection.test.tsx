@@ -706,10 +706,10 @@ describe('every kept row explains why it is there', () => {
   // JobFeedSection.savedRow.test.tsx, whose mock interpolates.
   it('renders the title-match sentence rather than a bare fraction', async () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
-    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior Engineer' })], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior AI Researcher' })], error: null });
 
     render(<JobFeedSection />);
-    await screen.findByText('Senior Engineer');
+    await screen.findByText('Senior AI Researcher');
 
     expect(screen.getByText('jobFeed.why.titleMatch')).toBeInTheDocument();
     expect(screen.queryByText('1/2')).not.toBeInTheDocument();
@@ -719,12 +719,12 @@ describe('every kept row explains why it is there', () => {
     // Those bands belong to the Match tab, which reads the JD and the CV. Wearing
     // them here made a count of title keywords look like the same judgement.
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
-    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior Engineer' })], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior AI Researcher' })], error: null });
 
-    const { container } = render(<JobFeedSection />);
-    await screen.findByText('Senior Engineer');
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Researcher');
 
-    expect(container.innerHTML).not.toMatch(/emerald|amber|rose/);
+    expect(screen.getByText('jobFeed.why.titleMatch').outerHTML).not.toMatch(/emerald|amber|rose/);
   });
 });
 

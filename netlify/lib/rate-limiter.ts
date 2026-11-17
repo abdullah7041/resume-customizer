@@ -397,6 +397,8 @@ export const ENDPOINT_RATE_LIMITS: Record<string, EndpointRateLimitConfig> = {
   // is both a request amplifier and the quickest way to get this app's IP blocked
   // by the very boards the Job Feed depends on. Tighter than import-job-url.
   "job-sources-api": { maxRequests: 10 },
+  "job-search": { maxRequests: 60 },
+  "job-alert-test": { maxRequests: 3, windowMs: 60 * 60 * 1000, failClosed: true },
   // Each cache miss is one resume-job AI comparison. The feed calls this limit
   // once per uncached pair, not once per HTTP request.
   "feed-match": { maxRequests: 50, windowMs: 24 * 60 * 60 * 1000 },
@@ -601,7 +603,7 @@ const PAID_QUOTA_UNAVAILABLE_RESPONSE: HandlerResponse = {
 };
 
 /**
- * Fail-closed quota check for authenticated work that directly incurs AI cost.
+ * Fail-closed quota check for authenticated work that incurs provider cost (AI or email).
  * A missing or unhealthy limiter must never turn into unlimited paid requests.
  */
 export async function checkCostBearingRateLimitForIdentifier(
@@ -621,6 +623,7 @@ export async function checkCostBearingRateLimitForIdentifier(
 
   try {
     const result = await limiter.limit(`${endpoint}:${clientId}`);
+    if (result.reason === 'timeout') return { allowed: false, response: PAID_QUOTA_UNAVAILABLE_RESPONSE };
     if (result.success) return { allowed: true };
     const retryAfter = Math.max(60, Math.ceil((config.windowMs ?? 60_000) / 1000));
     return {

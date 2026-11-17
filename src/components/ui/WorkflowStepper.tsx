@@ -10,7 +10,7 @@
  * warm surfaces, calm emerald accents, low-noise borders.
  */
 
-import { Check, Lock } from 'lucide-react';
+import { Check, ChevronRight, Lock } from 'lucide-react';
 import { cn } from '../../lib/utils/cn';
 
 export type WorkflowStepStatus = 'completed' | 'active' | 'upcoming' | 'locked';
@@ -34,10 +34,9 @@ interface WorkflowStepperProps {
 
 export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepperProps) {
   return (
-    <nav aria-label="Resume workflow" className={cn('w-full', className)}>
-      {/* Glass shell wrapper for strong light-mode visibility */}
-      <div className="rounded-2xl border border-[color:var(--glass-border-strong)] bg-[color:var(--surface-glass)] p-2.5 shadow-sm [backdrop-filter:blur(14px)] [-webkit-backdrop-filter:blur(14px)] dark:border-white/[0.12] dark:bg-[#041c17]/[0.80]">
-        <ol className="flex w-full items-stretch gap-1.5 sm:gap-2">
+    <nav aria-label="Resume workflow" className={cn('workflow-stepper w-full', className)}>
+      <div className="overflow-hidden rounded-xl border border-emerald-700/15 bg-emerald-100/75 p-1 shadow-sm dark:border-emerald-400/15 dark:bg-emerald-950/70">
+        <ol className="grid w-full auto-cols-fr grid-flow-col items-stretch">
           {steps.map((step, index) => {
             const isCompleted = step.status === 'completed';
             const isActive = step.status === 'active';
@@ -45,7 +44,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
             const stepNumber = index + 1;
 
             return (
-              <li key={step.id} className="flex min-w-0 flex-1 items-center">
+              <li key={step.id} className="relative flex min-w-0 items-stretch">
                 <button
                   type="button"
                   onClick={() => !isLocked && onStepClick(step.targetTab)}
@@ -53,15 +52,15 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                   aria-current={isActive ? 'step' : undefined}
                   title={isLocked ? step.lockedReason : undefined}
                   className={cn(
-                    'group flex w-full items-center gap-2.5 rounded-xl border px-2.5 py-2 text-start transition-colors sm:px-3',
+                    'group flex h-full w-full items-center gap-2.5 rounded-lg px-3 py-3 text-start transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] lg:px-4',
                     isActive &&
-                      'border-emerald-800/[0.70] bg-emerald-700/[0.90] shadow-md shadow-emerald-900/[0.20]',
+                      'bg-emerald-700 text-white shadow-sm',
                     isCompleted &&
-                      'border-emerald-500/40 bg-emerald-500/[0.12] hover:bg-emerald-500/[0.18]',
+                      'hover:bg-emerald-500/15',
                     step.status === 'upcoming' &&
-                      'border-[color:var(--glass-border)] bg-white/60 hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10',
+                      'hover:bg-emerald-500/10',
                     isLocked &&
-                      'cursor-not-allowed border-[color:var(--glass-border)] bg-[color:var(--surface-control)] opacity-80 dark:bg-transparent dark:opacity-60'
+                      'cursor-not-allowed'
                   )}
                 >
                   {/* Step marker */}
@@ -69,10 +68,10 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                     className={cn(
                       'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors',
                       isActive && 'border border-white/25 bg-white/[0.18] text-white shadow-sm',
-                      isCompleted && 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300',
+                      isCompleted && 'bg-emerald-700 text-white',
                       step.status === 'upcoming' &&
-                        'bg-gray-200/70 text-gray-600 dark:bg-white/10 dark:text-gray-300',
-                      isLocked && 'bg-gray-200/60 text-gray-500 dark:bg-white/5 dark:text-gray-500'
+                        'bg-emerald-700/12 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200',
+                      isLocked && 'bg-gray-200/60 text-gray-700 dark:bg-white/5 dark:text-gray-300'
                     )}
                     aria-hidden="true"
                   >
@@ -89,39 +88,29 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                   <span className="flex min-w-0 flex-col leading-tight">
                     <span
                       className={cn(
-                        'truncate text-xs font-bold',
+                        'text-xs font-bold leading-snug lg:text-sm',
                         isActive
                           ? 'text-white'
                           : isCompleted
-                            ? 'text-gray-800 dark:text-emerald-100/90'
-                            : 'text-gray-600 dark:text-emerald-100/70'
+                            ? 'text-emerald-950 dark:text-emerald-50'
+                            : 'text-emerald-950 dark:text-emerald-100/80'
                       )}
                     >
                       {step.label}
                     </span>
                     {step.hint && (
                       <span className={cn(
-                        'hidden truncate text-[11px] sm:block',
+                        'mt-0.5 hidden text-[11px] sm:block',
                         isActive
                           ? 'text-white/80'
-                          : 'text-gray-500 dark:text-emerald-100/55'
+                          : 'text-emerald-950/70 dark:text-emerald-100/65'
                       )}>
                         {step.hint}
                       </span>
                     )}
                   </span>
                 </button>
-
-                {/* Connector */}
-                {index < steps.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      'mx-1 hidden h-px w-3 shrink-0 sm:block lg:w-5',
-                      isCompleted ? 'bg-emerald-500/40' : 'bg-[color:var(--glass-border)]'
-                    )}
-                  />
-                )}
+                {index < steps.length - 1 && <ChevronRight className="pointer-events-none absolute -end-2 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-emerald-700/55 rtl:rotate-180 dark:text-emerald-300/50" aria-hidden="true" />}
               </li>
             );
           })}

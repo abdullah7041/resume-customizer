@@ -4,7 +4,7 @@
  * some use en-dashes, some use Tailwind-only padding for disc markers.
  *
  * Expected: Every template uses the ExecutiveProfessional pattern —
- *   <ul style={{ paddingLeft: '16px', listStyleType: 'disc' }}>
+ *   <ul style={{ paddingInlineStart: '16px', listStyleType: 'disc' }}>
  *     <li>text</li>
  *
  * This test checks that no template uses the broken bullet patterns:
@@ -54,9 +54,9 @@ describe("Bug: bullet points must use native disc markers", () => {
         expect(src).not.toMatch(/insetInlineStart.*['"]0['"]/);
       });
 
-      it("uses paddingLeft on <ul> for bullet indentation (inline style)", () => {
-        // The correct pattern has paddingLeft as an inline style on <ul>
-        expect(src).toContain("paddingLeft: '16px'");
+      it("uses paddingInlineStart on <ul> for bullet indentation (inline style)", () => {
+        // The correct pattern has paddingInlineStart as an inline style on <ul>
+        expect(src).toContain("paddingInlineStart: '16px'");
       });
 
       it("uses listStyleType: 'disc' on <ul> (inline style)", () => {
@@ -74,7 +74,7 @@ describe("Bug: bullet points must use native disc markers", () => {
 
     it("uses the correct bullet pattern", () => {
       expect(src).toContain("listStyleType: 'disc'");
-      expect(src).toContain("paddingLeft: '16px'");
+      expect(src).toContain("paddingInlineStart: '16px'");
       expect(src).not.toContain("listStyleType: 'none'");
     });
   });

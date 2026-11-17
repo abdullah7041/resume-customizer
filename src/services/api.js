@@ -802,7 +802,7 @@ async function waitForOptimization(params, onStatus) {
   while (Date.now() < deadline) {
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      return await optimizeResumeStream({ ...params, cacheOnly: true }, onStatus);
+      return await optimizeResumeStream({ ...params, recoverOnly: false, cacheOnly: true }, onStatus);
     } catch (error) {
       if (error?.cancelled) throw error;
       if (error.jobPending) continue;
@@ -814,11 +814,39 @@ async function waitForOptimization(params, onStatus) {
     }
   }
   throw Object.assign(new Error('Optimization is still running. Retry to retrieve this same request.'), {
-    status: 504, code: 'OPTIMIZE_JOB_PENDING', isBillingStateUnknown: true,
+    status: 504, code: 'OPTIMIZE_JOB_PENDING', operationId: params.operationId, isBillingStateUnknown: true,
   });
 }
 
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false, expectedSessionRevision = undefined }, onStatus) => {
+export const optimizeResumeStream = async (params, onStatus) => {
+  params = { ...params, expectedSessionRevision: params.expectedSessionRevision ?? getPrivateSessionRevision() };
+  try {
+    if (params.recoverOnly) {
+      try {
+        return await runOptimizeResumeStream({ ...params, cacheOnly: true }, onStatus);
+      } catch (error) {
+        if (!error.jobPending) throw error;
+        return await waitForOptimization({ ...params, recoverOnly: false, operationId: error.operationId }, onStatus);
+      }
+    }
+    return await runOptimizeResumeStream(params, onStatus);
+  } catch (error) {
+    // Poll failures are retried by the owning request; report only its final outcome.
+    if (!params.cacheOnly && !error.cancelled && !error.jobPending && error.code !== 'OPTIMIZE_JOB_PENDING' &&
+        ![400, 401, 402, 403, 422, 429].includes(error.status)) {
+      const code = /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(error.code || '') ? error.code : 'OPTIMIZE_FAILED';
+      const operationId = /^[a-f0-9-]{36}$/i.test(error.operationId || '') ? error.operationId : undefined;
+      Sentry.captureException(new Error('Optimization failed'), { tags: {
+        feature: 'optimize', stage: error.jobFailed ? 'background' : 'streaming',
+        status: String(error.status || 0), code, ...(operationId ? { operationId } : {}),
+        release: import.meta.env.VITE_SENTRY_RELEASE || 'unknown',
+      } });
+    }
+    throw error;
+  }
+};
+
+const runOptimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false, operationId, expectedSessionRevision = undefined }, onStatus) => {
   const privateRevision = expectedSessionRevision ?? getPrivateSessionRevision();
   if (!cacheOnly && isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
@@ -837,15 +865,16 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         mode,
         preview,
         language,
-        workHistory,        userClarifications,
+        workHistory,
+        userClarifications,
         userHardStops,
         freePreview,
         cacheOnly: true,
         }, onStatus);
         return recovered;
       } catch (recoveryErr) {
-        if (recoveryErr?.cancelled) throw recoveryErr;
-        if (recoveryErr.jobPending) return waitForOptimization({ expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
+        if (recoveryErr?.cancelled || recoveryErr.jobFailed) throw recoveryErr;
+        if (recoveryErr.jobPending) return waitForOptimization({ operationId: recoveryErr.operationId, expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
         // Only a cache miss can become a hit while the original request finishes.
         if (!recoveryErr.cacheOnlyMiss) break;
       }
@@ -869,10 +898,11 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   });
 
   if (response.status === 202) {
+    const pending = await response.json().catch(() => ({}));
     if (cacheOnly) throw Object.assign(new Error('Optimization is still running.'), {
-      cacheOnlyMiss: true, jobPending: true, isBillingStateUnknown: true,
+      cacheOnlyMiss: true, jobPending: true, operationId: pending.operationId || operationId, isBillingStateUnknown: true,
     });
-    return waitForOptimization({ expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
+    return waitForOptimization({ operationId: pending.operationId, expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
   }
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
@@ -882,11 +912,13 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     const error = new Error(data.error || 'Optimization failed');
     error.status = response.status;
     error.code = data.code;
+    error.operationId = data.operationId || operationId;
+    error.retryable = data.retryable === true;
     error.cacheOnlyMiss = data.cacheOnlyMiss === true;
     error.jobFailed = data.jobFailed === true;
     // Gateway failures can occur after processing: never start a paid fallback.
     error.isBillingStateUnknown = typeof data.billingStateUnknown === 'boolean' ? data.billingStateUnknown : response.status >= 500;
-    if (error.isBillingStateUnknown) {
+    if (error.isBillingStateUnknown && !error.jobFailed) {
       const recovered = await recoverFromCacheOnly();
       if (recovered) return recovered;
     }
@@ -935,6 +967,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
       const error = new Error(parsed.error || 'Optimization failed');
       error.retryable = parsed.retryable === true;
       error.code = parsed.code;
+      error.operationId = parsed.operationId || operationId;
       error.status = parsed.status;
       error.isBillingStateUnknown = parsed.billingStateUnknown === true;
       attachErrorDebug(error, response, parsed);
@@ -1003,7 +1036,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   return result;
 };
 
-export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null) => {
+export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null, signal) => {
   const privateRevision = getPrivateSessionRevision();
   if (!resumeText?.plainText && typeof resumeText !== "string") {
     throw new Error("Resume text is required");
@@ -1020,6 +1053,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
 
       const response = await fetch(VISION2030_ENDPOINT, {
         method: "POST",
+        signal,
         headers,
         body: JSON.stringify({
           resumeText: text,

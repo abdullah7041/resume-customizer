@@ -17,6 +17,7 @@ export function initSentry() {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         environment: process.env.CONTEXT || 'development', // Netlify env
+        release: process.env.COMMIT_REF || process.env.DEPLOY_ID,
         tracesSampleRate: 0.1,
     });
 
@@ -99,6 +100,10 @@ export function summarizePayloadForLog(payload: unknown): unknown {
 }
 
 export function sanitizeSentryContext(value: unknown, key = "", depth = 0): unknown {
+    if (key === 'operationId') {
+        return typeof value === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value)
+            ? value : value == null ? value : REDACTED;
+    }
     if (IDENTITY_FIELD_PATTERN.test(key)) {
         return REDACTED;
     }
@@ -140,5 +145,13 @@ export function redactForLog(value: unknown): unknown {
 }
 
 export function captureError(error: Error | unknown, context?: Record<string, unknown>) {
-    Sentry.captureException(error, { extra: sanitizeSentryContext(context) as Record<string, unknown> | undefined });
+    const extra = sanitizeSentryContext(context) as Record<string, unknown> | undefined;
+    const operationId = extra?.operationId;
+    Sentry.captureException(error, { extra,
+        ...(typeof operationId === 'string' && operationId !== REDACTED ? { tags: { operationId } } : {}),
+    });
+}
+
+export async function flushSentry(): Promise<void> {
+    try { await Sentry.flush(1500); } catch { /* Telemetry must not change the billing outcome. */ }
 }

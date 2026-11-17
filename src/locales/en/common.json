@@ -41,5 +41,16 @@
     "download": "Download",
     "clear": "Clear",
     "credits": "credits"
+  },
+  "sections": {
+    "optimize": {
+      "failure": {
+        "reference": "Support reference",
+        "pending": "Optimization is still processing",
+        "retrieve": "Check for results",
+        "copied": "Support reference copied",
+        "copy": "Copy support reference"
+      }
+    }
   }
 }

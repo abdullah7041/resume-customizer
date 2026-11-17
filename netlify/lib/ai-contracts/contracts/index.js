@@ -1084,6 +1084,8 @@ ${taggedBlock('resume_text', resumeText)}`;
 const OPTIMIZE_TRUTHFULNESS_SYSTEM = `You are an expert resume optimization strategist. Generate truthful optimization suggestions only. Do not add facts, skills, credentials, employers, dates, or metrics unless supported by resume text or user clarifications.
 
 EVIDENCE PROTOCOL — mandatory and machine-checked:
+- For every non-empty edit, its COMPLETE original must be a verbatim substring of exactly ONE resume source in <evidence_sources>, including original_headline and original_summary. Do not concatenate sources or reconstruct a full multi-line bullet as original.
+- Use that source's targetId and exact {sourceId, quote} evidence_references: sourceId is the source's id and quote is copied character-for-character from its text. source_span does not substitute for original or evidence_references.
 - For EVERY bullet_improvement, set "source_span" to a VERBATIM substring copied exactly from a resume source in <evidence_sources> (or <resume_text> when no sources are supplied) that supports the rewrite. Copy it character-for-character; do not paraphrase the span. Keep each source_span to the SHORTEST exact phrase that supports the claim — at most ~120 characters (about 15 words). Never copy whole sentences or paragraphs; a short verbatim fragment is enough.
 - The "improved" bullet may only assert facts, tools, scope, employers, and numbers supported by the cited source for the SAME target. If a number is absent, write a qualitative result or ask the candidate for the real figure. Never invent a number or append a verification placeholder.
 - When the resume ALREADY states a concrete metric, scope, technology, or number, KEEP it verbatim in the rewrite and cite its source — do not generalize it away, soften it, or drop it.
@@ -1131,15 +1133,9 @@ function buildOptimizeMessages(input, context) {
     : '';
 
   const system = `${OPTIMIZE_TRUTHFULNESS_SYSTEM}${hardStopInstruction}`;
-  const example = `Example item:
-- original: "Responsible for improving the API and making it faster for users."
-- improved: "Reduced API latency by 40% through caching and query optimization."
-- source_span: "Reduced API latency by 40% through caching and query optimization"
-- issue: "Vague verb; the sourced outcome is missing."
-- rationale: "Keeps the real 40% and the techniques named in the cited span."`;
   const user = `Analyze the resume against the job description and return optimization suggestions matching the schema. Cite evidence_sources IDs with exact quotes and set each edit's target_id to the ORIGINAL resume source's targetId. A clarification may support the edit but cannot set its target_id. Use headline_target_id and summary_target_id for those edits. An empty edit uses an empty target ID and references. Each bullet_improvement MUST include a verbatim source_span. Keep skills as recommendations only, not applied resume content. Calculate baseline and projected scores. ${MATCH_SCORING_RUBRIC} after_score must reflect only the effect of the suggested wording changes under the same rubric — do not assume skills, credentials, or experience the resume does not contain.
 
-${example}${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${evidenceSourcesBlock(input.evidenceSources)}
+${languageInstruction}${withRagBlock(context.retrievedContext)}${vulnerabilityBlock}${evidenceSourcesBlock(input.evidenceSources)}
 ${hardStopsBlock}
 
 ${taggedBlock('job_description', jobDescription)}

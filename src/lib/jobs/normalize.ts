@@ -63,15 +63,13 @@ export function tokenize(value: string): string[] {
 }
 
 /**
- * Whether two tokens are the same word for matching purposes. Plain substring
- * matching fails the common case in both directions — "engineering" does not
- * contain "engineer" as a term, and "develop" does not contain "developer" —
- * so a shared prefix of at least four characters counts as the same stem.
+ * Allow ordinary inflections, not arbitrary compounds such as DataPower or Salesforce.
  */
 export function sharesStem(a: string, b: string): boolean {
   if (a === b) return true;
   if (Math.min(a.length, b.length) < 4) return false;
-  return a.startsWith(b) || b.startsWith(a);
+  const [shorter, longer] = a.length < b.length ? [a, b] : [b, a];
+  return longer.startsWith(shorter) && /^(?:s|es|ed|ing|er|ers|ment|ments|ات|ون|ين|ه|ي|يه)$/.test(longer.slice(shorter.length));
 }
 
 /** Role terms the title supports, compared token by token rather than as substrings. */

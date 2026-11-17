@@ -225,7 +225,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
         !isSignedOutHeader && "hero-bg-animate",
         isSignedOutHeader
           ? "bg-[color:var(--bg)] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
-          : "text-gray-900 dark:text-white pb-4"
+          : "text-gray-900 dark:text-white"
       )}
     >
       {/* Animated background effects */}

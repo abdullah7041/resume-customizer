@@ -165,9 +165,28 @@
     },
     "alerts": {
       "label": "Free hourly job emails",
-      "hint": "Only new jobs published within 24 hours matching your saved roles and followed companies. No credits used. Unsubscribe anytime.",
+      "hint": "Only jobs with a verified publication time in the past 24 hours matching your saved search. No credits used. Unsubscribe anytime.",
       "loadError": "Could not load alerts. Sign in or try again.",
-      "saveError": "Could not save. Verify your email, save a target role, and follow a company; then try again."
+      "saveError": "Could not save. Verify your email and save a target role. Follow a company if using followed-company alerts, then try again.",
+      "off": "Alerts are off.",
+      "saving": "Saving or refreshing alert settings…",
+      "loading": "Loading alert settings…",
+      "paused": "Sending is paused. Your preference is saved. Saving does not send a test email.",
+      "failed": "The last check failed or had incomplete source coverage. Refresh the status later.",
+      "delayed": "Checks are delayed. Refresh the status later; your preference is saved.",
+      "setup": "Save a target role and verify your email. Follow a company for followed-company alerts.",
+      "empty": "Last check completed: no new qualifying jobs.",
+      "enabled": "Your preference is saved. Hourly checks are configured; no completed check is recorded yet. Saving does not send a test email.",
+      "manual": "Your preference is saved. This preview does not run hourly checks. Saving does not send a test email.",
+      "unconfigured": "Your preference is saved. Email checks are unavailable until the service is configured.",
+      "accepted": "Last check completed: email accepted by the provider. Inbox delivery is not confirmed.",
+      "scopeLabel": "Send alerts from",
+      "followed": "Companies I follow",
+      "catalogue": "Saudi employer catalogue",
+      "lastChecked": "Last completed check: {{when}}",
+      "lastAccepted": "Last email accepted by provider: {{when}}. Inbox delivery is not confirmed.",
+      "refresh": "Refresh status",
+      "retrySetup": "Save search and retry"
     }
   }
 }

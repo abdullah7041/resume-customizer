@@ -87,11 +87,26 @@ describe('AI contract layer', () => {
       });
       expect(cards).toHaveLength(1);
       expect(cards[0].evidence.targetId).toBe('work-a');
-      expect(diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' }]);
+      expect(diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.', reasons: ['missing_source'] }]);
     }
     expect(aiContracts.refine_bullet.legacyOutputSchema.safeParse({ improved: 'x', issue: 'z', rationale: 'r', evidence_references: [{ sourceId: 'source-a' }] }).success).toBe(false);
     expect(aiContracts.refine_bullet.outputSchema.parse({ improved: 'x', issue: 'z', rationale: 'r', evidence_references: [{ sourceId: 'source-a' }] }).evidence_references).toBeUndefined();
   });
+  it.each(['optimize', 'optimize_stream'])('requires complete single-source originals without unrelated example claims in %s', id => {
+    const text = 'Built reports';
+    const prompt = getAiContract(id).buildMessages({
+      resumeText: text, jobDescription: 'Analyst',
+      evidenceSources: [{ id: 'source-a', targetId: 'work-a', kind: 'resume', text }],
+    }, { retrievedContext: { documents: [] } }).map(message => message.content).join('\n');
+    expect(prompt).toContain('COMPLETE original must be a verbatim substring of exactly ONE resume source');
+    expect(prompt).toContain('Do not concatenate sources or reconstruct a full multi-line bullet as original');
+    expect(prompt).toContain('Use that source\'s targetId');
+    expect(prompt).toContain('exact {sourceId, quote} evidence_references');
+    expect(prompt).toContain('source_span does not substitute for original or evidence_references');
+    expect(prompt).not.toMatch(/Example item:|40%|API latency|caching and query optimization/);
+    expect(prompt).toContain(JSON.stringify({ id: 'source-a', targetId: 'work-a', kind: 'resume', text }));
+  });
+
   it('requires target identities for fresh edits and supplies stable source IDs to both prompts', () => {
     for (const id of ['optimize', 'optimize_stream']) {
       const contract = getAiContract(id);
@@ -101,7 +116,6 @@ describe('AI contract layer', () => {
       expect(messages[1].content).toContain('source-1');
       expect(messages[1].content).toContain('work-a');
       expect(messages[0].content).not.toContain('(verify)');
-      expect(messages[1].content).toContain('Reduced API latency by 40% through caching and query optimization.');
       expect(messages[1].content).not.toMatch(/Redis|N\+1|customer-facing/);
     }
     const refine = getAiContract('refine_bullet').buildMessages({ original: 'Built reports', currentImproved: 'Built reports', userInstruction: '', resumeText: 'Built reports', evidenceSources: [{ id: 'source-1', targetId: 'work-a', kind: 'resume', text: 'Built reports' }] }, { retrievedContext: { documents: [] } });

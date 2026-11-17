@@ -7,6 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import TemplateGallery from '../components/sections/TemplatesSection';
 import { DirectionProvider } from '../components/providers/DirectionProvider';
 import { exportResumeAsDocx } from '../services/exportDocx';
+import * as Sentry from '@sentry/react';
 import { saveAs } from 'file-saver';
 import { analytics } from '../services/analytics';
 import { toCanvas } from 'html-to-image';
@@ -18,6 +19,8 @@ import { getAuthHeaders } from '../services/api';
 let mockContentLanguage = null;
 let mockUiLanguage = 'en';
 let mockHiddenPreviewText = '';
+
+vi.mock('@sentry/react', () => ({ captureException: vi.fn() }));
 
 // Mock dependencies
 vi.mock('react-i18next', () => ({
@@ -163,6 +166,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+    Sentry.captureException.mockClear();
     mockContentLanguage = null;
     mockUiLanguage = 'en';
     mockHiddenPreviewText = '';
@@ -174,7 +178,7 @@ beforeEach(() => {
     exportResumeAsDocx.mockClear();
     checkPdfBlob.mockResolvedValue({ state: 'text_checked', missingFieldIds: [] });
     getAuthHeaders.mockReset().mockResolvedValue({ Authorization: 'Bearer test-token' });
-    useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, getActiveResume: () => null });
+    useResumeStore.__setMockState({ originalResume: null, optimizations: [], optimizationOrigin: null, showOptimized: false, isSaudiNational: false, selectedTemplate: 'modern-professional', getActiveResume: () => null });
 });
 
 describe('Arabic PDF export notice', () => {
@@ -229,7 +233,7 @@ describe('signed-out PDF downloads', () => {
         fireEvent.click(screen.getAllByRole('button', { name: /^Download PDF/ })[0]);
         await waitFor(() => expect(saveAs).toHaveBeenCalledOnce());
         expect(getAuthHeaders).not.toHaveBeenCalled();
-        expect(globalThis.fetch).toHaveBeenCalledWith('/.netlify/functions/generate-pdf', expect.objectContaining({ headers: { 'Content-Type': 'application/json' } }));
+        expect(globalThis.fetch).toHaveBeenCalledWith('/.netlify/functions/generate-pdf', expect.objectContaining({ headers: { 'Content-Type': 'application/json', 'x-watheq-operation-id': expect.stringMatching(/^[a-f0-9-]{36}$/i) } }));
         expect(screen.queryByRole('button', { name: 'Sign in for selectable PDF' })).not.toBeInTheDocument();
     });
 
@@ -306,7 +310,7 @@ describe('Text PDF recovery review', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Download Text PDF' }));
         await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), 'Noura_Example_Analyst-text.pdf'));
         const body = JSON.parse(globalThis.fetch.mock.calls[1][1].body);
-        expect(body).toMatchObject({ format: 'text', templateId: 'modern-professional', filename: 'Noura_Example_Analyst-text', blocks: [{ kind: 'body', runs: [{ text: 'Template: Riyadh Noura Example Saudi analyst SQL 25%' }] }] });
+        expect(body).toMatchObject({ format: 'text', templateId: 'modern-professional', filename: 'Noura_Example_Analyst-text', blocks: [{ kind: 'body', runs: [{ text: 'Template: Riyadh — Professional Noura Example Saudi analyst SQL 25%' }] }] });
         expect(globalThis.fetch.mock.calls[1][1].headers).toEqual({ 'Content-Type': 'application/json' });
         expect(checkPdfBlob).toHaveBeenCalledTimes(2);
         expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Text PDF — selectable text checked');
@@ -431,20 +435,20 @@ describe('TemplatesSection', () => {
             const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons)
                 .map(btn => btn.textContent?.trim())
-                .filter(text => ['Riyadh', 'Khobar', 'Qiddiya'].includes(text || ''));
+                .filter(text => ['Riyadh — Professional', 'Khobar — Technical', 'Qiddiya — Classic'].includes(text || ''));
 
-            expect(templateButtons).toContain('Riyadh');
-            expect(templateButtons).toContain('Khobar');
-            expect(templateButtons).toContain('Qiddiya');
+            expect(templateButtons).toContain('Riyadh — Professional');
+            expect(templateButtons).toContain('Khobar — Technical');
+            expect(templateButtons).toContain('Qiddiya — Classic');
         });
 
         it('renders template names in floating selector', () => {
             renderWithProviders(<TemplateGallery />);
 
             // Check for template names in the floating selector
-            expect(screen.getAllByText('Riyadh').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Qiddiya').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Riyadh — Professional').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Khobar — Technical').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Qiddiya — Classic').length).toBeGreaterThan(0);
         });
 
         it('renders Download PDF button', () => {
@@ -479,9 +483,9 @@ describe('TemplatesSection', () => {
             renderWithProviders(<TemplateGallery />);
 
             // Should show at least 3 templates in the floating selector
-            expect(screen.getAllByText('Riyadh').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
-            expect(screen.getAllByText('Qiddiya').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Riyadh — Professional').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Khobar — Technical').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Qiddiya — Classic').length).toBeGreaterThan(0);
         });
 
         it('calls onSelectTemplate callback when template is selected', () => {
@@ -492,7 +496,7 @@ describe('TemplatesSection', () => {
             const allButtons = screen.getAllByRole('button');
             // Find a button that contains Khobar text
             const classicButtons = allButtons.filter(btn =>
-                btn.textContent?.includes('Khobar')
+                btn.textContent?.includes('Khobar — Technical')
             );
 
             if (classicButtons.length > 0) {
@@ -516,7 +520,7 @@ describe('TemplatesSection', () => {
 
             // Check that h3 heading shows a template name
             const h3 = screen.getByRole('heading', { level: 3 });
-            expect(h3.textContent).toContain('Riyadh');
+            expect(h3.textContent).toContain('Riyadh — Professional');
         });
 
         it('uses RTL preview direction for mixed Arabic/English content', () => {
@@ -685,6 +689,12 @@ describe('TemplatesSection', () => {
                 expect(screen.getByRole('button', { name: 'Retry PDF' })).toBeInTheDocument();
                 expect(screen.getByRole('group', { name: 'PDF export options' })).toHaveTextContent('Download DOCX');
                 expect(toCanvas).not.toHaveBeenCalled();
+                expect(Sentry.captureException).toHaveBeenCalledWith(expect.objectContaining({ message: 'pdf/export-failed' }), {
+                    tags: { area: 'pdf-export', templateId: 'modern-professional', stage: 'request', code: 'export_failed', status: '500' },
+                    extra: { httpStatus: 500, operationId: expect.stringMatching(/^[a-f0-9-]{36}$/i) },
+                });
+                expect(globalThis.fetch.mock.calls[0][1].headers['x-watheq-operation-id']).toBe(Sentry.captureException.mock.calls[0][1].extra.operationId);
+                expect(JSON.stringify(Sentry.captureException.mock.calls)).not.toContain('Sara Ahmed');
                 expect(screen.queryByText(/canvas failed/i)).not.toBeInTheDocument();
             } finally {
                 consoleError.mockRestore();
@@ -1138,7 +1148,7 @@ describe('TemplatesSection', () => {
             if (input === 'resume') useResumeStore.__setMockState({ originalResume: { ...resume, basics: { ...resume.basics, summary: 'Later summary' } } });
             if (input === 'formatting') useResumeStore.__setMockState({ displayOptions: { ...useResumeStore.getState().displayOptions, fontSize: 2 } });
             if (input === 'applied edits') useResumeStore.__setMockState({ optimizations: [{ ...unresolved, applied: true }] });
-            if (input === 'template') fireEvent.click(screen.getByRole('button', { name: 'Khobar' }));
+            if (input === 'template') fireEvent.click(screen.getByRole('button', { name: 'Khobar — Technical' }));
             view.rerender(<DirectionProvider><TemplateGallery /></DirectionProvider>);
             expect(screen.queryByRole('button', { name: 'Generating...' })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /download docx/i })).not.toBeDisabled();
@@ -1175,7 +1185,7 @@ describe('TemplatesSection', () => {
             renderWithProviders(<TemplateGallery />);
 
             // Template selector renders pills - Riyadh should be visible
-            expect(screen.getAllByText('Riyadh').length).toBeGreaterThan(0);
+            expect(screen.getAllByText('Riyadh — Professional').length).toBeGreaterThan(0);
         });
 
         it('template pills are clickable', () => {
@@ -1185,17 +1195,17 @@ describe('TemplatesSection', () => {
             const allButtons = document.body.querySelectorAll('button');
             const templateButtons = Array.from(allButtons).filter(btn => {
                 const text = btn.textContent?.trim();
-                return ['Riyadh', 'Khobar', 'Qiddiya'].includes(text || '');
+                return ['Riyadh — Professional', 'Khobar — Technical', 'Qiddiya — Classic'].includes(text || '');
             });
 
             expect(templateButtons.length).toBeGreaterThanOrEqual(3);
 
             // Click on Khobar
-            const techButton = templateButtons.find(btn => btn.textContent?.includes('Khobar'));
+            const techButton = templateButtons.find(btn => btn.textContent?.includes('Khobar — Technical'));
             if (techButton) {
                 fireEvent.click(techButton);
                 // Verify click doesn't cause errors
-                expect(screen.getAllByText('Khobar').length).toBeGreaterThan(0);
+                expect(screen.getAllByText('Khobar — Technical').length).toBeGreaterThan(0);
             }
         });
     });
@@ -1258,7 +1268,7 @@ describe('TemplatesSection', () => {
             setViewportWidth(width);
             renderWithProviders(<TemplateGallery />);
 
-            const templateButton = screen.getAllByText('Riyadh')
+            const templateButton = screen.getAllByText('Riyadh — Professional')
                 .map((node) => node.closest('button'))
                 .find(Boolean);
             const selector = templateButton?.closest('div.fixed');
@@ -1270,14 +1280,19 @@ describe('TemplatesSection', () => {
     });
 
     describe('Accessibility', () => {
+        it('restores the saved template ID when reopening the gallery', () => {
+            useResumeStore.__setMockState({ selectedTemplate: 'executive-professional' });
+            renderWithProviders(<TemplateGallery />);
+            expect(screen.getByRole('button', { name: 'Neom — Executive' })).toHaveAttribute('aria-pressed', 'true');
+        });
         it('exposes the selected template to assistive technology', () => {
             renderWithProviders(<TemplateGallery />);
-            expect(screen.getByRole('button', { name: 'Riyadh' })).toHaveAttribute('aria-pressed', 'true');
-            const next = screen.getByRole('button', { name: 'Khobar' });
+            expect(screen.getByRole('button', { name: 'Riyadh — Professional' })).toHaveAttribute('aria-pressed', 'true');
+            const next = screen.getByRole('button', { name: 'Khobar — Technical' });
             expect(next).toHaveAttribute('aria-pressed', 'false');
             fireEvent.click(next);
             expect(next).toHaveAttribute('aria-pressed', 'true');
-            expect(screen.getByRole('button', { name: 'Riyadh' })).toHaveAttribute('aria-pressed', 'false');
+            expect(screen.getByRole('button', { name: 'Riyadh — Professional' })).toHaveAttribute('aria-pressed', 'false');
         });
 
         it('all buttons are keyboard accessible', () => {
@@ -1335,7 +1350,7 @@ describe('Template Data Structure', () => {
 
         const template = getTemplateById('modern-professional');
         expect(template).toBeDefined();
-        expect(template?.name).toBe('Riyadh');
+        expect(template?.name).toBe('Riyadh — Professional');
     });
 
     it('getTemplateById returns null for unknown ID', async () => {

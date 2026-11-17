@@ -13,7 +13,7 @@ export const resumeTemplates = [
   {
     id: "modern-professional",
     // Saudi market: clean, contemporary — ideal for tech & Vision 2030 roles
-    name: "Riyadh",
+    name: "Riyadh — Professional",
     category: TEMPLATE_CATEGORIES.MODERN,
     description: "Clean, contemporary design with clear section headers. Perfect for tech and corporate roles.",
     atsScore: 100,
@@ -99,14 +99,14 @@ export const resumeTemplates = [
 
   {
     id: "technical-engineer",
-    name: "Khobar",
+    name: "Khobar — Technical",
     category: TEMPLATE_CATEGORIES.TECHNICAL,
     description: "Optimized for software developers, engineers, and IT professionals. Highlights technical skills and projects.",
     atsScore: 100,
     preview: {
-      layout: "two-column",
+      layout: "single-column",
       colorScheme: "blue",
-      font: "monospace"
+      font: "sans-serif"
     },
     structure: {
       header: {
@@ -186,9 +186,9 @@ export const resumeTemplates = [
 
   {
     id: "ats-optimized",
-    name: "Qiddiya",
+    name: "Qiddiya — Classic",
     category: TEMPLATE_CATEGORIES.MODERN,
-    description: "Maximum ATS compatibility with clean, parseable single-column format. Keyword-rich design optimized for applicant tracking systems.",
+    description: "Classic single-column format with standard headings and plain-text skills.",
     atsScore: 100,
     preview: {
       layout: "single-column",
@@ -288,7 +288,7 @@ export const resumeTemplates = [
   ,
   {
     id: "executive-professional",
-    name: "Neom",
+    name: "Neom — Executive",
     category: TEMPLATE_CATEGORIES.EXECUTIVE,
     description: "Elegant serif design for senior leadership and executive roles. Navy blue accents with centered header.",
     atsScore: 100,
