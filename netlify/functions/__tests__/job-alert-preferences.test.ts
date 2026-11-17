@@ -11,7 +11,7 @@ beforeEach(()=>{
   const q={select:()=>q,eq:vi.fn(()=>q),limit:()=>q,maybeSingle:()=>q,upsert:(value:unknown)=>{mocks.writes(value);return q;},update:(value:unknown)=>{mocks.writes(value);return q;},then:(resolve:(value:unknown)=>unknown)=>Promise.resolve({data:table==='user_profiles'?{search_intent:{targetRoles:['Engineer']}}:table==='user_tracked_companies'?followed:{enabled:false,language:'en'},error:null}).then(resolve)};return q;
  });
 });
-const call=(method='POST',body=JSON.stringify({enabled:true,language:'en'}))=>handler({httpMethod:method,headers:{authorization:'Bearer token'},body} as unknown as HandlerEvent,{} as HandlerContext,()=>{});
+const call=(method='POST',body=JSON.stringify({enabled:true,language:'en'}),rawUrl?:string)=>handler({httpMethod:method,headers:{authorization:'Bearer token'},body,rawUrl} as unknown as HandlerEvent,{} as HandlerContext,()=>{});
 it('requires a session and refuses cross-user input identity',async()=>{
  mocks.getUser.mockResolvedValueOnce({data:{user:null},error:new Error('bad')});expect((await call() as {statusCode:number}).statusCode).toBe(401);
  await call('POST',JSON.stringify({enabled:true,language:'en',user_id:'victim'}));
@@ -29,6 +29,22 @@ it('allows explicit catalogue opt-in without following a company',async()=>{
  expect((await call('POST',JSON.stringify({enabled:true,language:'en',scope:'catalogue'})) as {statusCode:number}).statusCode).toBe(200);
  expect(mocks.writes).toHaveBeenCalledWith(expect.objectContaining({scope:'catalogue',enabled:true}));
  expect((await call() as {statusCode:number}).statusCode).toBe(422);
+});
+it('reports preview consent separately from an automatic hourly schedule',async()=>{
+ vi.stubEnv('JOB_ALERTS_ENABLED','true');vi.stubEnv('CONTEXT','deploy-preview');
+ const result=await call('GET') as {body:string};
+ expect(JSON.parse(result.body)).toMatchObject({serviceAvailable:false,serviceState:'manual'});
+});
+it('detects a preview request when build-only context variables are absent',async()=>{
+ vi.stubEnv('JOB_ALERTS_ENABLED','true');vi.stubEnv('CONTEXT','');vi.stubEnv('URL','https://watheqai.app');vi.stubEnv('SITE_NAME','resume-optimizing');
+ const result=await call('GET',undefined,'https://deploy-preview-150--resume-optimizing.netlify.app/.netlify/functions/job-alert-preferences') as {body:string};
+ expect(JSON.parse(result.body)).toMatchObject({serviceAvailable:false,serviceState:'manual'});
+});
+it('requires production context and worker/email configuration before reporting scheduled service',async()=>{
+ vi.stubEnv('JOB_ALERTS_ENABLED','true');vi.stubEnv('CONTEXT','production');vi.stubEnv('RESEND_API_KEY','');
+ expect(JSON.parse((await call('GET') as {body:string}).body)).toMatchObject({serviceAvailable:false,serviceState:'unconfigured'});
+ vi.stubEnv('RESEND_API_KEY','test');vi.stubEnv('JOB_CRAWL_SECRET','test');vi.stubEnv('SITE_URL','https://watheqai.app');vi.stubEnv('URL','https://watheqai.app');
+ expect(JSON.parse((await call('GET') as {body:string}).body)).toMatchObject({serviceAvailable:true,serviceState:'scheduled'});
 });
 it('unsubscribe GET never writes; POST revokes consent and token',async()=>{
  const event={httpMethod:'GET',queryStringParameters:{token:'11111111-1111-1111-1111-111111111111'}} as unknown as HandlerEvent;

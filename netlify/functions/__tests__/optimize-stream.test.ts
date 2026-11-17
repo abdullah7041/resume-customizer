@@ -169,6 +169,7 @@ describe('optimize-stream function', () => {
     expect(response.headers.get('X-Cache')).not.toBe('HIT');
     expect(response.status).toBe(202);
     expect(mockJobs.dispatchOptimizationJob).toHaveBeenCalledTimes(1);
+    expect(mockJobs.dispatchOptimizationJob.mock.calls[0][3]).toBe('http://localhost/api/optimize-stream');
   });
 
   it('does not return a cached empty card payload as a successful optimization', async () => {

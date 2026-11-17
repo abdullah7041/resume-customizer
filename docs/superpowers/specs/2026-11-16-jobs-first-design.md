@@ -2,6 +2,8 @@
 
 Approved in chat on November 16, 2026. The user selected free sources, employer-site application handoff, and purpose plus Saudi template names.
 
+The user supplied the exact [approved visual concept](assets/2026-11-16-jobs-first-concept.png) again during preview qualification on November 17. Use its full-width step strip, compact search and alert rows, horizontal job results, and right-hand next-step/company-discovery panels. The pictured employers, counts, status and CV content are illustrative.
+
 The user journey is find relevant jobs, understand the comparison against the active résumé, tailor, export, apply on the employer site, and track progress in Watheq. Show jobs before company setup. Following is optional for catalogue discovery. Keep explicit checks in batches of ten and show progress beside results. Distinguish unchecked jobs, poor fit, failed checks, and unavailable descriptions.
 
 Preserve existing alert consent as followed-company scope. Offer catalogue scope explicitly. Show operational state, completed checks, and provider acceptance. Only reliable publication timestamps qualify for the 24-hour promise.

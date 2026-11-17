@@ -1983,7 +1983,7 @@ describe("MainContent resume parsing", () => {
     await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalled());
 
     const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
-    fireEvent.click(within(workflow).getByRole("button", { name: /optimize improve resume/i }));
+    fireEvent.click(within(workflow).getByRole("button", { name: /tailor adapt your cv/i }));
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
 
     expect(generateClarificationsMock).not.toHaveBeenCalled();
@@ -2174,8 +2174,8 @@ describe("MainContent resume parsing", () => {
     expect(within(workflow).getByRole("button", { name: /resume upload or paste/i })).toBeInTheDocument();
     // Job Ad is removed from stepper; Match now shows "Add job ad" hint when no job description
     expect(within(workflow).getByRole("button", { name: /match add job ad/i })).toBeInTheDocument();
-    expect(within(workflow).getByRole("button", { name: /optimize improve resume/i })).toBeInTheDocument();
-    expect(within(workflow).getByRole("button", { name: /export \/ pipeline save and track/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /tailor adapt your cv/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /export & track save and track/i })).toBeInTheDocument();
     expect(within(workflow).queryByRole("button", { name: /tabs\.interview/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /more tools/i }).length).toBeGreaterThan(0);
 

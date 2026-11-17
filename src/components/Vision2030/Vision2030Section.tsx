@@ -162,7 +162,7 @@ export function Vision2030Section({ resumeText, onToast }: Vision2030SectionProp
         description: t('vision2030.section.analyzingDesc', 'Analyzing your resume against Vision 2030 sectors...'),
       });
 
-      const rawResult = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', controller.signal);
+      const rawResult = await analyzeVision2030(resumeText, isArabic ? 'ar' : 'en', undefined, controller.signal);
       if (!isCurrent()) return;
       if (!isUsableVision2030Analysis(rawResult)) {
         throw new Error(t(

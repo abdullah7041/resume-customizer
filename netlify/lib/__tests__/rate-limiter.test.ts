@@ -202,6 +202,17 @@ describe('rate-limiter endpoint configs', () => {
     expect(errored.allowed).toBe(false);
     expect(errored.response?.statusCode).toBe(503);
   });
+  it('limits test emails to three per authenticated user per hour',async()=>{
+    const {checkCostBearingRateLimitForIdentifier}=await loadRateLimiter();
+    for(let i=0;i<3;i++) expect((await checkCostBearingRateLimitForIdentifier('job-alert-test','owner')).allowed).toBe(true);
+    expect(await checkCostBearingRateLimitForIdentifier('job-alert-test','owner')).toMatchObject({allowed:false,response:{statusCode:429}});
+    expect((await checkCostBearingRateLimitForIdentifier('job-alert-test','other')).allowed).toBe(true);
+    expect(constructedLimiters[constructedLimiters.length-1]?.limiter).toEqual({maxRequests:3,window:'3600 s'});
+  });
+  it('does not allow test emails when quota storage times out',async()=>{
+    const {checkCostBearingRateLimitForIdentifier}=await loadRateLimiter();
+    expect(await checkCostBearingRateLimitForIdentifier('job-alert-test','timeout-user')).toMatchObject({allowed:false,response:{statusCode:503}});
+  });
 });
 
 describe('checkGuestPreviewRateLimit', () => {

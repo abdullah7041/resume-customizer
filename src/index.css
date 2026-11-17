@@ -2157,6 +2157,13 @@
   }
 
   /* Workspace-specific surface utilities */
+  .jobs-workspace,
+  .workflow-stepper {
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+  }
+
   .workspace-panel {
     background: var(--workspace-surface);
     border: 1px solid var(--workspace-border);

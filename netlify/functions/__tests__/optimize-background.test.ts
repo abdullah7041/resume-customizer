@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ run: vi.fn(), read: vi.fn(), claim: vi.fn(), finish: vi.fn(), capture: vi.fn() }));
+const mocks = vi.hoisted(() => ({ run: vi.fn(), read: vi.fn(), claim: vi.fn(), finish: vi.fn(), capture: vi.fn(), flush: vi.fn() }));
 vi.mock('../optimize.js', () => ({ runOptimization: mocks.run }));
 vi.mock('../../lib/optimization-jobs.js', async importOriginal => ({
   ...await importOriginal<typeof import('../../lib/optimization-jobs.js')>(),
   readOptimizationJob: mocks.read, claimOptimizationWorker: mocks.claim, finishOptimizationJob: mocks.finish,
 }));
-vi.mock('../../lib/sentry.js', () => ({ initSentry: vi.fn(), captureError: mocks.capture, summarizeErrorForLog: () => ({ error: 'redacted' }) }));
+vi.mock('../../lib/sentry.js', () => ({ initSentry: vi.fn(), captureError: mocks.capture, flushSentry: mocks.flush, summarizeErrorForLog: () => ({ error: 'redacted' }) }));
 import { newOptimizationJob, optimizationEnvelope, type OptimizationJob } from '../../lib/optimization-jobs.js';
 import handler from '../optimize-background.js';
 
@@ -67,6 +67,13 @@ describe('background optimization ownership and delivery', () => {
     await handler(request());
     expect(mocks.finish).toHaveBeenCalledWith(key, expect.objectContaining({ state: 'failed', error: expect.objectContaining({ billingStateUnknown: false }) }));
   });
+  it('flushes a storage failure before worker ownership is acquired without starting generation', async () => {
+    mocks.read.mockRejectedValue(new Error('Redis unavailable'));
+    await handler(request());
+    expect(mocks.run).not.toHaveBeenCalled();
+    expect(mocks.capture).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ stage: 'claim', code: 'OPTIMIZE_WORKER_FAILED' }));
+    expect(mocks.flush).toHaveBeenCalledOnce();
+  });
   it('persists the pipeline code and reports safe operation metadata for terminal failures', async () => {
     mocks.run.mockResolvedValue({ statusCode: 504, body: JSON.stringify({ error: 'Private provider response', code: 'AI_TIMEOUT', billingStateUnknown: false }) });
     await handler(request());
@@ -75,5 +82,6 @@ describe('background optimization ownership and delivery', () => {
       operationId: job.operationId, stage: 'pipeline', status: 504, code: 'AI_TIMEOUT',
     }));
     expect(JSON.stringify(mocks.capture.mock.calls)).not.toContain('Private');
+    expect(mocks.flush).toHaveBeenCalledOnce();
   });
 });

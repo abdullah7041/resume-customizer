@@ -145,5 +145,13 @@ export function redactForLog(value: unknown): unknown {
 }
 
 export function captureError(error: Error | unknown, context?: Record<string, unknown>) {
-    Sentry.captureException(error, { extra: sanitizeSentryContext(context) as Record<string, unknown> | undefined });
+    const extra = sanitizeSentryContext(context) as Record<string, unknown> | undefined;
+    const operationId = extra?.operationId;
+    Sentry.captureException(error, { extra,
+        ...(typeof operationId === 'string' && operationId !== REDACTED ? { tags: { operationId } } : {}),
+    });
+}
+
+export async function flushSentry(): Promise<void> {
+    try { await Sentry.flush(1500); } catch { /* Telemetry must not change the billing outcome. */ }
 }

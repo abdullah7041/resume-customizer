@@ -34,6 +34,7 @@ async function attachLiveCredits<T extends Record<string, unknown>>(
 
 export const runOptimization = async (event: HandlerEvent) => {
   let billingStateUnknown = false;
+  let stage = 'cache';
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -204,6 +205,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     const evidenceSources = buildRequestEvidenceSources(resumeText, userClarifications);
 
     // Use dedicated optimizeResume function for faster, focused optimization
+    stage = 'provider';
     const optimization = await optimizeResume(
       requestEvidenceResumeText(evidenceSources),
       jobText,
@@ -243,8 +245,11 @@ export const runOptimization = async (event: HandlerEvent) => {
     }
 
     // Map to frontend expected format (Cards)
+    stage = 'evidence';
     const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: '[optimize]', sources: evidenceSources });
-    if (cards.length === 0) throw new Error('AI optimization produced no usable evidence-backed edits');
+    if (cards.length === 0) throw Object.assign(new Error('AI optimization produced no usable evidence-backed edits'), {
+      status: 422, code: 'OPTIMIZE_NO_VERIFIED_EDITS',
+    });
 
     // Log processing summary
     console.log('[optimize] Processing complete:', {
@@ -253,6 +258,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     });
 
     // Use AI-calculated match score, or calculate from category_scores as fallback
+    stage = 'scoring';
     let scores: ReturnType<typeof calculateScores>;
     try {
       scores = calculateScores(optimization, { cards, logPrefix: '[optimize]' });
@@ -277,6 +283,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
     // Consume credits AFTER successful optimization
+    stage = 'billing';
     billingStateUnknown = !freePreview && Boolean(userEmail);
     const creditResult = freePreview || !userEmail
       ? { success: true, creditsRemaining: null }
@@ -296,6 +303,7 @@ export const runOptimization = async (event: HandlerEvent) => {
       };
     }
 
+    stage = 'delivery';
     const responsePayload = {
       evidenceVersion: 2,
       cards: cards,
@@ -393,15 +401,16 @@ export const runOptimization = async (event: HandlerEvent) => {
     const errorDetails = error as any;
     console.error("Optimization error:", summarizeErrorForLog(error));
 
-    // Return 504 for timeout errors, 500 for other errors
+    // Preserve actionable pre-charge failures and keep unexpected errors generic.
     const isTimeout = errorDetails?.name === 'TimeoutError' || errorDetails?.status === 504;
+    const status = isTimeout ? 504 : [422, 502].includes(errorDetails?.status) ? errorDetails.status : 500;
     const code = typeof errorDetails?.code === 'string' && /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(errorDetails.code)
       ? errorDetails.code : isTimeout ? 'OPTIMIZE_TIMEOUT' : 'OPTIMIZE_FAILED';
-    captureError(new Error('Optimization failed'), { function: 'optimize', stage: 'pipeline',
-      status: isTimeout ? 504 : 500, code, operationId: event.headers['x-watheq-operation-id'] });
+    captureError(new Error('Optimization failed'), { function: 'optimize', stage,
+      status, code, operationId: event.headers['x-watheq-operation-id'] });
 
     return {
-      statusCode: isTimeout ? 504 : 500,
+      statusCode: status,
       headers: {
         'Content-Type': 'application/json',
         ...(isTimeout && {
@@ -412,9 +421,11 @@ export const runOptimization = async (event: HandlerEvent) => {
       body: JSON.stringify({
         error: isTimeout
           ? 'Optimization timed out. Your answers are saved; please retry.'
-          : 'Failed to optimize resume',
+          : code === 'OPTIMIZE_NO_VERIFIED_EDITS'
+            ? 'No source-verified edits could be generated. No credits were charged. Review your resume and try again.'
+            : 'Failed to optimize resume',
         code,
-        retryable: isTimeout,
+        retryable: isTimeout || errorDetails?.retryable === true,
         billingStateUnknown,
       }),
     };
@@ -423,7 +434,7 @@ export const runOptimization = async (event: HandlerEvent) => {
 
 // Legacy callers share the same durable job ownership as the modern endpoint.
 export const handler: Handler = async (event) => {
-  const origin = process.env.DEPLOY_URL || process.env.URL || 'https://watheqai.app';
+  const origin = event.rawUrl || process.env.DEPLOY_URL || process.env.URL || 'https://watheqai.app';
   const response = await dispatchOptimization(new Request(new URL('/api/optimize-stream', origin), {
     method: event.httpMethod,
     headers: Object.fromEntries(Object.entries(event.headers).filter((entry): entry is [string, string] => typeof entry[1] === 'string')),

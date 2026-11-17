@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
+import dispatchOptimization from '../optimize-stream.js';
+
+vi.mock('../optimize-stream.js', () => ({ default: vi.fn() }));
 
 // Mock dependencies BEFORE importing handler
 vi.mock('../../lib/gemini-client', () => ({
@@ -75,7 +78,7 @@ import { checkCredits, consumeCredits } from '../../lib/credit-manager.js';
 import { captureError } from '../../lib/sentry.js';
 
 // Import handler after mocks
-const { runOptimization: handler } = await import('../optimize.js');
+const { runOptimization: handler, handler: dispatchHandler } = await import('../optimize.js');
 
 // Test auth header
 const TEST_HEADERS = { 'Authorization': 'Bearer test-token' };
@@ -94,6 +97,13 @@ describe('optimize function', () => {
             success: true,
             creditsRemaining: 10,
         });
+    });
+
+    it('preserves the incoming preview origin for the legacy HTTP dispatcher', async () => {
+        vi.mocked(dispatchOptimization).mockResolvedValueOnce(Response.json({ pending: true }, { status: 202 }));
+        await dispatchHandler({ httpMethod: 'POST', headers: TEST_HEADERS, body: '{}',
+            rawUrl: 'https://deploy-preview-150--watheq.netlify.app/.netlify/functions/optimize' } as unknown as HandlerEvent, {} as never);
+        expect(vi.mocked(dispatchOptimization).mock.calls[0][0].url).toBe('https://deploy-preview-150--watheq.netlify.app/api/optimize-stream');
     });
 
     it('keeps billing unknown if the debit operation fails after it starts', async () => {
@@ -116,9 +126,21 @@ describe('optimize function', () => {
         expect(response.statusCode).toBe(504);
         expect(JSON.parse(response.body)).toMatchObject({ code: 'OPTIMIZE_TIMEOUT', billingStateUnknown: false });
         expect(captureError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Optimization failed' }), expect.objectContaining({
-            function: 'optimize', stage: 'pipeline', status: 504, code: 'OPTIMIZE_TIMEOUT',
+            function: 'optimize', stage: 'provider', status: 504, code: 'OPTIMIZE_TIMEOUT',
         }));
         expect(JSON.stringify(vi.mocked(captureError).mock.calls)).not.toContain('Private');
+    });
+
+    it('keeps provider contract failures distinguishable from runtime failures before billing', async () => {
+        vi.mocked(optimizeResume).mockRejectedValueOnce(Object.assign(new Error('Private provider output'), {
+            status: 502, code: 'AI_CONTRACT_VALIDATION_FAILED', retryable: true,
+        }));
+        const response = await handler({ httpMethod: 'POST', headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'Resume text', jobText: 'Target job' }) } as unknown as HandlerEvent);
+        expect(response.statusCode).toBe(502);
+        expect(JSON.parse(response.body)).toMatchObject({ code: 'AI_CONTRACT_VALIDATION_FAILED', retryable: true, billingStateUnknown: false });
+        expect(consumeCredits).not.toHaveBeenCalled();
+        expect(captureError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ stage: 'provider', code: 'AI_CONTRACT_VALIDATION_FAILED' }));
     });
 
     describe('HTTP method validation', () => {

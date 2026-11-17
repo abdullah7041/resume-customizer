@@ -1,0 +1,302 @@
+{
+  "workable:salla": {
+    "source": "workable",
+    "token": "salla",
+    "displayName": "Salla",
+    "category": "scaleup",
+    "sector": "E-commerce software",
+    "evidenceUrl": "https://salla.com/en/ai-info",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company reports pre-IPO growth funding and an established merchant platform."
+  },
+  "workable:mozn-ai": {
+    "source": "workable",
+    "token": "mozn-ai",
+    "displayName": "Mozn",
+    "category": "scaleup",
+    "sector": "Artificial intelligence",
+    "evidenceUrl": "https://www.mozn.ai/humain-mozn-partnership",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company announces strategic investment supporting international expansion and scale-up of its AI platform."
+  },
+  "workable:innovationteam": {
+    "source": "workable",
+    "token": "innovationteam",
+    "displayName": "InnovationTeam",
+    "category": "unclassified",
+    "sector": "IT services and consulting",
+    "evidenceUrl": "https://www.innovationteam.com/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official services confirm IT and AI consulting; no reliable company-stage or size evidence found."
+  },
+  "workable:foodics": {
+    "source": "workable",
+    "token": "foodics",
+    "displayName": "Foodics",
+    "category": "scaleup",
+    "sector": "Restaurant technology",
+    "evidenceUrl": "https://www.foodics.com/foodics-third-financing-round/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series C funding and restaurant software operations across regional offices."
+  },
+  "workable:lucidya": {
+    "source": "workable",
+    "token": "lucidya",
+    "displayName": "Lucidya",
+    "category": "scaleup",
+    "sector": "Customer experience software",
+    "evidenceUrl": "https://www.lucidya.com/our-company/investors",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series B funding in 2025 and an AI customer-experience product business."
+  },
+  "workable:invygo": {
+    "source": "workable",
+    "token": "invygo",
+    "displayName": "invygo",
+    "category": "startup",
+    "sector": "Automotive and mobility",
+    "evidenceUrl": "https://apply.workable.com/invygo/j/DB14A67BB0/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Employer describes its working environment as a startup and operates car-subscription services."
+  },
+  "greenhouse:tamara": {
+    "source": "greenhouse",
+    "token": "tamara",
+    "displayName": "Tamara",
+    "category": "scaleup",
+    "sector": "Financial technology",
+    "evidenceUrl": "https://tamara.co/en-bh/blog-post/tamara-series-c",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series C growth funding for its financial services platform."
+  },
+  "greenhouse:scaleai": {
+    "source": "greenhouse",
+    "token": "scaleai",
+    "displayName": "Scale AI",
+    "category": "scaleup",
+    "sector": "Artificial intelligence",
+    "evidenceUrl": "https://scale.com/blog/scale-ai-series-f",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series F financing and an established AI data product business."
+  },
+  "greenhouse:pronto": {
+    "source": "greenhouse",
+    "token": "pronto",
+    "displayName": "Pronto",
+    "category": "unclassified",
+    "sector": "Autonomous vehicle technology",
+    "evidenceUrl": "https://job-boards.greenhouse.io/pronto/jobs/8842898002",
+    "verifiedAt": "2026-11-17",
+    "basis": "Employer identifies autonomous haulage technology; stage and corporate ownership require further confirmation."
+  },
+  "greenhouse:kitchenpark": {
+    "source": "greenhouse",
+    "token": "kitchenpark",
+    "displayName": "KitchenPark",
+    "category": "unclassified",
+    "sector": "Cloud kitchens",
+    "evidenceUrl": "https://job-boards.greenhouse.io/kitchenpark",
+    "verifiedAt": "2026-11-17",
+    "basis": "Employer describes commercial kitchen facilities; company size and funding stage are not established."
+  },
+  "greenhouse:beyondtrust": {
+    "source": "greenhouse",
+    "token": "beyondtrust",
+    "displayName": "BeyondTrust",
+    "category": "enterprise",
+    "sector": "Cybersecurity",
+    "evidenceUrl": "https://www.beyondtrust.com/company/overview",
+    "verifiedAt": "2026-11-17",
+    "basis": "Established international identity-security company with employees, partners and customers worldwide."
+  },
+  "greenhouse:datadog": {
+    "source": "greenhouse",
+    "token": "datadog",
+    "displayName": "Datadog",
+    "category": "enterprise",
+    "sector": "Cloud monitoring and security",
+    "evidenceUrl": "https://investors.datadoghq.com/shareholder-services/investor-faqs",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Nasdaq listing; official product links cover monitoring and security."
+  },
+  "greenhouse:elastic": {
+    "source": "greenhouse",
+    "token": "elastic",
+    "displayName": "Elastic",
+    "category": "enterprise",
+    "sector": "Search and observability software",
+    "evidenceUrl": "https://ir.elastic.co/overview/default.aspx",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official investor page identifies NYSE listing and search, observability and security software."
+  },
+  "lever:lalamove": {
+    "source": "lever",
+    "token": "lalamove",
+    "displayName": "Lalamove",
+    "category": "scaleup",
+    "sector": "Logistics technology",
+    "evidenceUrl": "https://www.lalamove.com/en-sg/about-lalamove",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company describes a technology delivery platform expanded from its 2013 founding into multiple international markets."
+  },
+  "ashby:LeanTech": {
+    "source": "ashby",
+    "token": "LeanTech",
+    "displayName": "Lean Technologies",
+    "category": "scaleup",
+    "sector": "Financial technology",
+    "evidenceUrl": "https://leantech.me/uae/en/blog/lean-technologies-secures-67-5m-in-series-b-funding-led-by-general-catalyst-solidifying-its-position-as-the-leading-fintech-infrastructure-platform-in-the-middle-east",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series B growth financing for its financial infrastructure platform."
+  },
+  "pinpoint:tabby": {
+    "source": "pinpoint",
+    "token": "tabby",
+    "displayName": "Tabby",
+    "category": "scaleup",
+    "sector": "Financial technology",
+    "evidenceUrl": "https://tabby.ai/en-AE/newsroom/series-e-funding",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series E financing and expansion of its financial services product portfolio."
+  },
+  "workday:novartis:wd3:Novartis_Careers": {
+    "source": "workday",
+    "token": "novartis:wd3:Novartis_Careers",
+    "displayName": "Novartis",
+    "category": "enterprise",
+    "sector": "Healthcare",
+    "evidenceUrl": "https://www.novartis.com/about",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official company page documents a large multinational medicines business and global employee footprint."
+  },
+  "workday:roche:wd3:roche-ext": {
+    "source": "workday",
+    "token": "roche:wd3:roche-ext",
+    "displayName": "Roche",
+    "category": "enterprise",
+    "sector": "Healthcare",
+    "evidenceUrl": "https://www.roche.com/about",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company documents its long-established global medicines and diagnostics business."
+  },
+  "workday:kbr:wd5:KBR_Careers": {
+    "source": "workday",
+    "token": "kbr:wd5:KBR_Careers",
+    "displayName": "KBR",
+    "category": "enterprise",
+    "sector": "Engineering and technology services",
+    "evidenceUrl": "https://www.kbr.com/en/who-we-are",
+    "verifiedAt": "2026-11-17",
+    "basis": "Established global corporate group delivering government and industrial technology and engineering services."
+  },
+  "workable:qiddiya-investment-company-1": {
+    "source": "workable",
+    "token": "qiddiya-investment-company-1",
+    "displayName": "Qiddiya Investment Company",
+    "category": "public_sector",
+    "sector": "Entertainment and development",
+    "evidenceUrl": "https://qiddiya.com/about/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company identifies itself as a PIF company developing entertainment, sports and culture; this taxonomy includes wholly state-owned companies."
+  },
+  "workable:jasarapmc": {
+    "source": "workable",
+    "token": "jasarapmc",
+    "displayName": "JASARA PMC",
+    "category": "enterprise",
+    "sector": "Project and construction management",
+    "evidenceUrl": "https://jasarapmc.com/who-we-are/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official company page confirms a corporate joint venture of Aramco, Jacobs and PIF providing program-management services; not classified as a government agency."
+  },
+  "workable:syarah": {
+    "source": "workable",
+    "token": "syarah",
+    "displayName": "Syarah",
+    "category": "scaleup",
+    "sector": "Automotive e-commerce",
+    "evidenceUrl": "https://syarah.com/carsguide/series-c-investment/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company announces Series C growth funding for its online car marketplace."
+  },
+  "workable:webook": {
+    "source": "workable",
+    "token": "webook",
+    "displayName": "webook.com",
+    "category": "unclassified",
+    "sector": "Events and entertainment technology",
+    "evidenceUrl": "https://webook.com/en/about",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official page confirms an events and ticketing platform with substantial usage; usage alone does not establish funding stage or corporate ownership."
+  },
+  "workable:gathern": {
+    "source": "workable",
+    "token": "gathern",
+    "displayName": "Gathern",
+    "category": "scaleup",
+    "sector": "Travel and hospitality technology",
+    "evidenceUrl": "https://blog.gathern.co/en/gathern-closes-sar-270-million-series-b-funding-round-led-by-sanabil-investments-valuing-the-company-at-over-sar-1-billion-in-preparation-for-saudi-stock-market-listing/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company confirms Series B growth financing for its alternative-hospitality platform."
+  },
+  "greenhouse:tenableinc": {
+    "source": "greenhouse",
+    "token": "tenableinc",
+    "displayName": "Tenable",
+    "category": "enterprise",
+    "sector": "Cybersecurity",
+    "evidenceUrl": "https://investors.tenable.com/investor-relations",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official investor page confirms Nasdaq listing and a global cyber-exposure management business."
+  },
+  "greenhouse:recordedfuture": {
+    "source": "greenhouse",
+    "token": "recordedfuture",
+    "displayName": "Recorded Future",
+    "category": "enterprise",
+    "sector": "Cybersecurity",
+    "evidenceUrl": "https://investor.mastercard.com/investor-news/investor-news-details/2024/Mastercard-Finalizes-Acquisition-of-Recorded-Future/",
+    "verifiedAt": "2026-11-17",
+    "basis": "Mastercard confirms completed acquisition of Recorded Future and its threat-intelligence business."
+  },
+  "greenhouse:purestorage": {
+    "source": "greenhouse",
+    "token": "purestorage",
+    "displayName": "Pure Storage",
+    "category": "enterprise",
+    "sector": "Data storage and management",
+    "evidenceUrl": "https://www.everpuredata.com/company.html",
+    "verifiedAt": "2026-11-17",
+    "basis": "Original Pure Storage company page redirects to Everpure's official enterprise data-storage business; board display name retained."
+  },
+  "workday:philips:wd3:jobs-and-careers": {
+    "source": "workday",
+    "token": "philips:wd3:jobs-and-careers",
+    "displayName": "Philips",
+    "category": "enterprise",
+    "sector": "Healthcare technology",
+    "evidenceUrl": "https://www.philips.com/a-w/about.html",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official page confirms a long-established global healthcare technology business."
+  },
+  "workday:thales:wd3:Careers": {
+    "source": "workday",
+    "token": "thales:wd3:Careers",
+    "displayName": "Thales",
+    "category": "enterprise",
+    "sector": "Aerospace, defence and digital security",
+    "evidenceUrl": "https://www.thalesgroup.com/en/about-thales",
+    "verifiedAt": "2026-11-17",
+    "basis": "Official company page documents a large global aerospace, defence and digital-technology group."
+  },
+  "workday:sanofi:wd3:SanofiCareers": {
+    "source": "workday",
+    "token": "sanofi:wd3:SanofiCareers",
+    "displayName": "Sanofi",
+    "category": "enterprise",
+    "sector": "Healthcare",
+    "evidenceUrl": "https://www.sanofi.com/en/our-company",
+    "verifiedAt": "2026-11-17",
+    "basis": "Company documents a global medicines and vaccines business."
+  }
+}

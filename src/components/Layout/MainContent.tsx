@@ -1473,15 +1473,15 @@ export default function MainContent() {
       },
       {
         id: "optimize",
-        label: t("workspace.stepper.optimize", "Optimize"),
-        hint: t("workspace.stepper.optimizeHint", "Improve resume"),
+        label: t("workspace.stepper.optimize", "Tailor"),
+        hint: t("workspace.stepper.optimizeHint", "Adapt your CV for each role"),
         status: gatedStatus(activeTab === "optimize" ? "active" : hasOptimization ? "completed" : "upcoming"),
         targetTab: "optimize",
         lockedReason: resumeGateReason,
       },
       {
         id: "export",
-        label: t("workspace.stepper.export", "Export / Pipeline"),
+        label: t("workspace.stepper.export", "Export & track"),
         hint: t("workspace.stepper.exportHint", "Save and track"),
         status: gatedStatus(isExportStep ? "active" : "upcoming"),
         targetTab: "templates",
@@ -3037,27 +3037,26 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* The desktop action column gives the selector its own row below More tools. */}
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-3">
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:col-start-2 md:row-start-1 md:w-64 lg:w-72">
+        <div className="space-y-3" data-workspace-chrome>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2" data-workspace-controls>
+            {!isGuestMode && libraryEntries.length > 0 && (
+              <div className="me-auto min-w-0 max-w-full flex-1 sm:max-w-sm">
+                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+              </div>
+            )}
             <GlassButton
               type="button"
               variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
               size="sm"
               onClick={() => handleTabChange("more-tools")}
-              className="hidden whitespace-nowrap md:col-start-1 md:row-start-1 md:inline-flex md:min-h-11 md:w-full"
+              className="hidden min-h-11 shrink-0 whitespace-nowrap md:inline-flex"
             >
               <MoreHorizontal className="h-4 w-4 me-1.5" />
               {t("tabs.moreTools", "More tools")}
             </GlassButton>
-            {!isGuestMode && libraryEntries.length > 0 && (
-              <div className="col-start-1 row-start-1 min-w-0 md:col-span-2 md:row-start-2">
-                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
-              </div>
-            )}
             {renderClearAllAction(false)}
           </div>
-          <div className="min-w-0 md:col-start-1 md:row-start-1">
+          <div className="w-full min-w-0" data-workspace-steps>
             <div className="md:hidden">
               <MobileWorkflowNav
                 primarySteps={mobilePrimarySteps}
@@ -3076,6 +3075,13 @@ export default function MainContent() {
             </div>
           </div>
         </div>
+
+        {flowProgress > 0 && (
+          <div className="rounded-lg border border-emerald-600/20 bg-emerald-500/5 px-3 py-2" role="progressbar" aria-label={t('toasts.generatingOptimizations')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(flowProgress)}>
+            <div className="mb-1.5 flex justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-200"><span>{t('toasts.generatingOptimizations')}</span><span>{Math.round(flowProgress)}%</span></div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/40"><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 motion-reduce:transition-none" style={{width:`${flowProgress}%`}} /></div>
+          </div>
+        )}
 
         <div className="workspace-panel relative min-h-[420px] p-4 transition-shadow duration-300 sm:min-h-[480px] sm:p-5 lg:p-6">
           {/* Parse-quality warning — shown on all tabs so the user always sees it */}
@@ -3287,7 +3293,7 @@ export default function MainContent() {
                      network round trip and an analytics event to arrive at
                      "Resume required". The feed hides the button when the prop is
                      absent. */
-                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} />}
+                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} onToast={pushToast} />}
               </Suspense>
             </LazyErrorBoundary>
           )}
@@ -3466,16 +3472,6 @@ export default function MainContent() {
       )}
       <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50 p-4 sm:p-6 lg:p-8`}>
         <div>
-          {flowProgress > 0 && (
-            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-emerald-900/10 dark:bg-black/45">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-[width] duration-300"
-                style={{ width: `${flowProgress}%` }}
-                aria-hidden="true"
-              />
-            </div>
-          )}
-
           {loading ? (
             <div className="space-y-6">
               <div className="h-8 w-40 rounded-full bg-emerald-900/10 dark:bg-white/10" />

@@ -265,7 +265,7 @@ export default async function handler(request: Request): Promise<Response> {
       return Response.json(await attachLiveCredits(job.result, userEmail, freePreview));
     }
     if (job.state === 'failed') return Response.json({ ...job.error, operationId: job.operationId, jobFailed: true }, { status: job.error?.status || 500 });
-    if (job.state === 'queued') await dispatchOptimizationJob(jobKey, job, headers);
+    if (job.state === 'queued') await dispatchOptimizationJob(jobKey, job, headers, request.url);
     return Response.json({ pending: true, operationId: job.operationId }, { status: 202 });
   } catch (error) {
     if (error instanceof Error && 'status' in error && error.status === 413) {

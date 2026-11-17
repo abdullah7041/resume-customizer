@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { getRedis } from './redis-cache.js';
+import { jobRuntime } from './job-runtime.js';
 
 // Covers the 15-minute worker lifetime and Netlify's delayed invocation retries.
 // ponytail: ownership is bounded to this window; cross-day replay needs durable billing operation IDs.
@@ -87,13 +88,14 @@ export async function finishOptimizationJob(key: string, job: OptimizationJob): 
     redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
     return 1`, [key], [job.operationId, JSON.stringify(job), job.state === 'succeeded' ? RESULT_TTL : CLAIM_TTL]) === 1;
 }
-export async function dispatchOptimizationJob(key: string, job: OptimizationJob, headers: Record<string, string>): Promise<void> {
-  const siteUrl = process.env.DEPLOY_URL || process.env.URL;
-  if (!siteUrl || new URL(siteUrl).protocol !== 'https:') throw Object.assign(new Error('Optimization worker URL is unavailable.'), { status: 503, code: 'optimize/worker-unavailable' });
+export async function dispatchOptimizationJob(key: string, job: OptimizationJob, headers: Record<string, string>, rawUrl?: string): Promise<void> {
+  const siteUrl = jobRuntime(rawUrl).origin;
+  if (!siteUrl) throw Object.assign(new Error('Optimization worker URL is unavailable.'), { status: 503, code: 'optimize/worker-unavailable' });
   const payload = optimizationJobPayload(key, job, headers);
   try {
     const response = await fetch(new URL('/.netlify/functions/optimize-background', siteUrl), {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload,
+      redirect: 'error',
       signal: AbortSignal.timeout(5000),
     });
     if (response.status !== 202) console.warn('[optimize-job] Worker acknowledgement was not received.', { status: response.status });

@@ -14,6 +14,7 @@ const html = `<!doctype html><html><body><div id="root"></div><script type="modu
  import React from 'react'; import { createRoot } from 'react-dom/client';
  import '/src/index.css'; import i18n from '/src/lib/i18n';
  import Jobs from '/src/components/sections/JobsFirstSection.tsx';
+ import {WorkflowStepper} from '/src/components/ui/WorkflowStepper.tsx';
  import {supabase} from '/src/services/supabase.js';
  import {useResumeLibraryStore} from '/src/lib/resumeLibrary';
  import {useResumeStore} from '/src/lib/stores/resumeStore';
@@ -23,7 +24,8 @@ const html = `<!doctype html><html><body><div id="root"></div><script type="modu
  supabase.auth.getSession=async()=>({data:{session:{user:{id:'fixture-user'},access_token:'synthetic-test-token'}},error:null});
  useResumeStore.setState({searchIntent:{targetRoles:['AI Engineer'],meta:{confidence:'high',completeness:100,updatedAt:new Date().toISOString()}}});
  useResumeLibraryStore.setState({activeResumeId:'cv',entries:[{id:'cv',fingerprint:'fixture',name:'Example CV',plainText:'Built AI products',parsedResume:{basics:{name:'Example'}}}]});
- createRoot(document.getElementById('root')).render(React.createElement('main',{className:'bg-background text-ink p-4'},React.createElement(Jobs,{onMatchPosting:input=>window.selectedJob=input})));
+ const steps=[['resume','Resume','Add or update your CV'],['truth-check','Truth check','Keep your information accurate'],['match','Match','Find roles that fit your profile'],['optimize','Tailor','Adapt your CV for each role'],['templates','Export & track','Save, apply and track']].map(([id,label,hint])=>({id,label,hint,targetTab:id,status:id==='resume'?'completed':'upcoming'}));
+ createRoot(document.getElementById('root')).render(React.createElement('main',{className:'mx-auto max-w-[1440px] space-y-4 bg-background p-4 text-ink'},React.createElement('div',{className:'hidden md:block'},React.createElement(WorkflowStepper,{steps,onStepClick:()=>{}})),React.createElement(Jobs,{onMatchPosting:input=>window.selectedJob=input,onToast:()=>{}})));
  </script></body></html>`;
 const server=await createServer({server:{host:'127.0.0.1',port:5176,strictPort:true,watch:{ignored:['**/.verification/**']}} ,clearScreen:false,plugins:[{
  name:'jobs-ui-fixture',configureServer(vite){vite.middlewares.use('/__jobs',async(_req,res)=>{
@@ -53,10 +55,10 @@ try{
   const dimensions=await page.evaluate(()=>({width:innerWidth,content:document.documentElement.scrollWidth,dir:document.documentElement.dir}));
   assert.ok(dimensions.content<=dimensions.width+1,JSON.stringify(dimensions));
   assert.equal(dimensions.dir,language==='ar'?'rtl':'ltr');
-  await page.screenshot({path:resolve(output,`${language}-${theme}-${width}.png`),fullPage:true});
   const buttonText=language==='ar'?'افحص التوافق (حتى 10)':'Check my matches (up to 10)';
   await page.evaluate(label=>[...document.querySelectorAll('button')].find(button=>button.textContent===label).click(),buttonText);
   await page.waitForFunction(()=>document.body.textContent.includes('72%'));
+  await page.screenshot({path:resolve(output,`${language}-${theme}-${width}.png`),fullPage:true});
   assert.equal(await page.$eval('a[target="_blank"]',link=>link.getAttribute('href')),'https://example.test/job');
   console.log('Jobs UI passed',language,theme,width);
  }

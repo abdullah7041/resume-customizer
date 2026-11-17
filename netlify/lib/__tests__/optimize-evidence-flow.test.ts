@@ -18,7 +18,7 @@ vi.mock('../credit-manager.js', () => ({ FEATURE_COSTS: { optimize: 5 }, checkCr
 vi.mock('../supabase-client.js', () => ({ getSupabaseClient: () => ({ auth: { getUser: mocks.getUser } }) }));
 vi.mock('../rate-limiter.js', () => ({ withRateLimit: (_: string, handler: unknown) => handler,
   checkFreePreviewRateLimit: mocks.previewLimit, checkRateLimitForRequest: async () => ({ allowed: true }), checkFreePreviewRateLimitForRequest: async () => ({ allowed: true }) }));
-vi.mock('../sentry.js', () => ({ initSentry: vi.fn(), captureError: vi.fn(), summarizeErrorForLog: () => 'error' }));
+vi.mock('../sentry.js', () => ({ initSentry: vi.fn(), captureError: vi.fn(), flushSentry: vi.fn(), summarizeErrorForLog: () => 'error' }));
 vi.mock('../vulnerability-detector.js', () => ({ detectVulnerabilities: () => [] }));
 
 const { runOptimization: ordinary } = await import('../../functions/optimize.js');
@@ -113,8 +113,8 @@ describe('evidence at editing endpoints', () => {
     mocks.optimizeResume.mockResolvedValue({ match_score: 60, bullet_improvements: [invalid] });
     const response = await ordinary({ httpMethod: 'POST', headers: { authorization: 'Bearer token' },
       body: JSON.stringify({ resumeText, jobText }) } as never) as { statusCode: number; body: string };
-    expect(response.statusCode).toBe(500);
-    expect(JSON.parse(response.body)).toMatchObject({ billingStateUnknown: false });
+    expect(response.statusCode).toBe(422);
+    expect(JSON.parse(response.body)).toMatchObject({ code: 'OPTIMIZE_NO_VERIFIED_EDITS', billingStateUnknown: false });
     expect(mocks.consumeCredits).not.toHaveBeenCalled();
     expect(mocks.setCached).not.toHaveBeenCalled();
   });

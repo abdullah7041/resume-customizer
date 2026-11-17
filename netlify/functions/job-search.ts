@@ -2,7 +2,7 @@ import type { Handler } from '@netlify/functions';
 import { z } from 'zod';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
-import { searchPostings } from '../lib/job-search.js';
+import { classifyEmployer, searchPostings } from '../lib/job-search.js';
 import { initSentry, captureError } from '../lib/sentry.js';
 import type { FeedPosting } from '../../src/lib/jobs/types.js';
 initSentry();
@@ -35,10 +35,10 @@ const baseHandler: Handler = async (event) => {
         if (tracked.error)
             throw tracked.error;
         const trackedIds = (tracked.data ?? []).map(row => row.company_id as string);
-        const registry = await db.from('ats_companies').select('id,display_name,company_category,sector,last_status,last_fetched_at,source,token').eq('catalog_enabled', true);
+        const registry = await db.from('ats_companies').select('id,display_name,company_category,sector,classification_source,classification_verified_at,last_status,last_fetched_at,source,token').eq('catalog_enabled', true);
         if (registry.error)
             throw registry.error;
-        const companies = (registry.data ?? []).map(company => ({ ...company, followed: trackedIds.includes(company.id) }));
+        const companies = (registry.data ?? []).map(company => ({ ...classifyEmployer(company), followed: trackedIds.includes(company.id) }));
         const dismissed = await db.from('user_job_feed_state').select('posting_id').eq('user_id', user.id).eq('state', 'dismissed');
         if (dismissed.error)
             throw dismissed.error;

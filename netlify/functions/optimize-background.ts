@@ -3,7 +3,7 @@ import { runOptimization } from './optimize.js';
 import { hasCurrentEvidenceCards } from '../lib/optimize-cards.js';
 import { claimOptimizationWorker, finishOptimizationJob, readOptimizationJob, verifyOptimizationEnvelope,
   type OptimizationEnvelope, type OptimizationJob } from '../lib/optimization-jobs.js';
-import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
+import { initSentry, captureError, flushSentry, summarizeErrorForLog } from '../lib/sentry.js';
 import { z } from 'zod';
 
 const EnvelopeSchema = z.object({
@@ -76,5 +76,6 @@ export default async function handler(request: Request): Promise<Response> {
     }
   }
   // Errors are recorded above. Throwing here would request automatic background retries.
+  await flushSentry();
   return new Response(null);
 }

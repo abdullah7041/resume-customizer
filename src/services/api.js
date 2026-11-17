@@ -1036,7 +1036,7 @@ const runOptimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, lan
   return result;
 };
 
-export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null) => {
+export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null, signal) => {
   const privateRevision = getPrivateSessionRevision();
   if (!resumeText?.plainText && typeof resumeText !== "string") {
     throw new Error("Resume text is required");
@@ -1053,6 +1053,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
 
       const response = await fetch(VISION2030_ENDPOINT, {
         method: "POST",
+        signal,
         headers,
         body: JSON.stringify({
           resumeText: text,

@@ -2,10 +2,16 @@ import type { Handler } from '@netlify/functions';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getSupabaseClient } from '../lib/supabase-client.js';
+import { jobRuntime } from '../lib/job-runtime.js';
 const schema = z.object({ enabled: z.boolean(), language: z.enum(['ar', 'en']), scope: z.enum(['followed','catalogue']).default('followed') });
 const selection='enabled,language,scope,last_completed_check_at,last_outcome,last_provider_accepted_at';
 interface HealthRow { last_completed_check_at?:string; last_outcome?:string; last_provider_accepted_at?:string }
-const health=(row:HealthRow|null,scope:string)=>({serviceAvailable:process.env.JOB_ALERTS_ENABLED==='true' && (scope!=='catalogue' || process.env.JOB_CATALOGUE_ENABLED==='true'),lastCheckedAt:row?.last_completed_check_at ?? null,lastOutcome:row?.last_outcome ?? null,lastProviderAcceptedAt:row?.last_provider_accepted_at ?? null});
+function health(row:HealthRow|null,scope:string,rawUrl?:string) {
+ const enabled=process.env.JOB_ALERTS_ENABLED==='true' && (scope!=='catalogue' || process.env.JOB_CATALOGUE_ENABLED==='true');
+ const configured=!!process.env.RESEND_API_KEY && !!process.env.JOB_CRAWL_SECRET && /^https:\/\//.test(process.env.SITE_URL ?? '');
+ const serviceState=!enabled ? 'paused' : !jobRuntime(rawUrl).scheduled ? 'manual' : !configured ? 'unconfigured' : 'scheduled';
+ return {serviceAvailable:serviceState==='scheduled',serviceState,lastCheckedAt:row?.last_completed_check_at ?? null,lastOutcome:row?.last_outcome ?? null,lastProviderAcceptedAt:row?.last_provider_accepted_at ?? null};
+}
 const response = (status: number, code: string, message: string) => ({ statusCode: status, body: JSON.stringify({ status, code, message }) });
 export const handler: Handler = async event => {
  try {
@@ -17,7 +23,7 @@ export const handler: Handler = async event => {
   if (event.httpMethod === 'GET') {
    const result = await db.from('job_alert_preferences').select(selection).eq('user_id', user.id).maybeSingle();
    if (result.error) throw result.error;
-   return { statusCode: 200, body: JSON.stringify({ enabled: result.data?.enabled ?? false, language: result.data?.language ?? 'en',scope:result.data?.scope ?? 'followed',...health(result.data,result.data?.scope ?? 'followed') }) };
+   return { statusCode: 200, body: JSON.stringify({ enabled: result.data?.enabled ?? false, language: result.data?.language ?? 'en',scope:result.data?.scope ?? 'followed',...health(result.data,result.data?.scope ?? 'followed',event.rawUrl) }) };
   }
   let body: unknown; try { body=JSON.parse(event.body ?? '{}'); } catch { return response(400,'invalid','Invalid request'); }
   const parsed = schema.safeParse(body); if (!parsed.success) return response(400,'invalid','Invalid request');
@@ -32,6 +38,6 @@ export const handler: Handler = async event => {
   }
   const saved = await db.from('job_alert_preferences').upsert({ user_id:user.id, ...parsed.data, last_completed_check_at:null, last_outcome:null, token:randomUUID(), revision:randomUUID(), consent_at:parsed.data.enabled ? new Date().toISOString() : null }, { onConflict:'user_id' }).select(selection).maybeSingle();
   if (saved.error) throw saved.error;
-  return { statusCode:200, body:JSON.stringify({...parsed.data,...health(saved.data,parsed.data.scope)}) };
+  return { statusCode:200, body:JSON.stringify({...parsed.data,...health(saved.data,parsed.data.scope,event.rawUrl)}) };
  } catch { return response(503,'unavailable','Could not save alert preferences'); }
 };
