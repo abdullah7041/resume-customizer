@@ -3013,7 +3013,7 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <ParallaxContainer enableLayers={false}>
+    <ParallaxContainer enableLayers={false} className="pb-1">
       <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
         {isGuestMode && (
           <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 px-4 py-3 dark:border-emerald-200/14 dark:bg-emerald-900/20">
