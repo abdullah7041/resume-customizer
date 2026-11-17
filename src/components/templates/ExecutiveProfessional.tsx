@@ -18,15 +18,14 @@ const DEFAULT_OPTIONS = {
   marginSide: 0.6,
 };
 
-// Navy blue accent color matching resume design
-const ACCENT_COLOR = '#1a5276';
+const ACCENT_COLOR = '#047857';
 
 /**
  * Executive Professional Template
  * Matches resume design:
- * - Centered bold name in dark color, subtitle in accent blue
+ * - Centered bold name in dark color, subtitle in emerald
  * - Contact line with clickable links separated by pipes
- * - Navy blue uppercase section headings with underline
+ * - Emerald uppercase section headings with underline
  * - Work entries: underlined position, italic company/location below, date right-aligned
  * - Skills: bold category labels with inline keywords
  * - Education as "Qualifications" with bullet format
@@ -116,7 +115,7 @@ export function ExecutiveProfessional({
             fontSize: nameFontSize,
             fontWeight: '800',
             letterSpacing: '0.05em',
-            color: '#1a5276',
+            color: ACCENT_COLOR,
             textTransform: 'uppercase',
             marginBottom: '2px',
           }}
@@ -201,7 +200,7 @@ export function ExecutiveProfessional({
                     <h3 style={{ fontSize: fs(10.5), fontWeight: '700', textDecoration: 'underline', color: ACCENT_COLOR, minWidth: 0, overflowWrap: 'anywhere' }}>
                       {safeString(job.position)}
                     </h3>
-                    <span style={{ fontSize: fs(11), color: '#1a5276', textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '12px', flexShrink: 0 }}>
+                    <span style={{ fontSize: fs(11), color: ACCENT_COLOR, textDecoration: 'underline', fontStyle: 'italic', whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '12px', flexShrink: 0 }}>
                       {job.startDate} — {job.endDate || 'Current'}
                     </span>
                   </div>
@@ -238,7 +237,7 @@ export function ExecutiveProfessional({
             {projects.map((project, projectIndex) => (
               <div key={`${project.name}-${projectIndex}`} style={{ pageBreakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid', breakInside: (project.highlights && project.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ pageBreakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto', breakAfter: (project.highlights && project.highlights.length > 4) ? 'avoid' : 'auto' }}>
-                  <h3 style={{ fontSize: fs(10.5), fontWeight: '700', color: '#1a5276', marginBottom: '2px' }}>
+                  <h3 style={{ fontSize: fs(10.5), fontWeight: '700', color: ACCENT_COLOR, marginBottom: '2px' }}>
                     {safeString(project.name)}
                   </h3>
                   {project.description && (

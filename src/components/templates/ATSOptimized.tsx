@@ -122,7 +122,7 @@ export function ATSOptimized({
                     {basics?.email && (
                         <>
                             {basics?.phone && <Sep />}
-                            <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>
+                            <a href={`mailto:${basics.email}`} style={{ color: '#047857', textDecoration: 'none' }}>{basics.email}</a>
                         </>
                     )}
                     {basics?.location?.city && (
@@ -140,7 +140,7 @@ export function ATSOptimized({
                         <>
                             <Sep />
                             {linkedInUrl ? (
-                                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                                <a href={linkedInUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>
                                     {linkedInUrl}
                                 </a>
                             ) : (
@@ -152,7 +152,7 @@ export function ATSOptimized({
                         <>
                             <Sep />
                             {portfolioUrl ? (
-                                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>
+                                <a href={portfolioUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>
                                     {portfolioUrl}
                                 </a>
                             ) : (
@@ -160,7 +160,7 @@ export function ATSOptimized({
                             )}
                         </>
                     )}
-                    {otherProfileUrls(basics.profiles).map(url => <span key={url}><Sep /><a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{url}</a></span>)}
+                    {otherProfileUrls(basics.profiles).map(url => <span key={url}><Sep /><a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#047857', textDecoration: 'underline' }}>{url}</a></span>)}
                 </p>
             </header>
 
