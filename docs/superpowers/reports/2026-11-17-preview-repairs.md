@@ -42,3 +42,15 @@ The first Optimize attempt reached clarification generation, then a preview depl
 CI for `6646b43` passed its full suite after updating two older visual assertions to scope title-relevance colors correctly and retain readable locked-step contrast. The latest matching/rendering follow-up still requires its own deployed result.
 
 Context7 was newly present in Codex configuration during this work, but the running tool connection returned `unknown MCP server context7`. No tool was installed by the agent; official documentation was used as the fallback.
+
+## Final preview evidence at 7e300d4
+
+Full [CI run 44034847649](https://github.com/abdullah7041/resume-customizer/actions/runs/44034847649) passed: 258 files, 2,805 tests passed, three skipped. Netlify preview deploy `6afbfa7a9b9ee49da385d1e3` reached ready at that commit.
+
+A live Optimize attempt successfully opened the clarification dialog and reached the background worker using the existing resume/job and the skip-answers choice. It returned `OPTIMIZE_NO_VERIFIED_EDITS`, reference `cbf4e150-c82c-4707-8b9a-1d7465e65a5b`. The balance remained 16 credits. This is a demonstrated terminal evidence rejection, not a successful optimization. No candidate experience was invented during testing.
+
+That operation was not visible in Sentry. An explicit preview-context server DSN was subsequently configured using the existing verified public frontend DSN; production values were unchanged. A separate controlled SDK probe appeared in Sentry as JAVASCRIPT-REACT-1P, operation `f1cea02a-2e7a-452e-842a-ce708eee7d08`. This confirms SDK transport/project ingestion from the local qualification process; it does not yet prove deployed worker ingestion. New safe evidence-rejection reason counts will distinguish missing references, missing targets, wrong targets and unsupported numbers without transmitting source content.
+
+A further prompt correction removes the contradictory optimization example and explicitly requires a complete original inside one resume source, matching target ID, and exact sourceId/quote references. The validator, models, budgets and retries are unchanged. The new both-contract prompt regression failed before the correction; 87 focused contract/card/evidence tests, typecheck and touched-file lint passed afterward. This corrects a demonstrated contract mismatch; it is not proof of the prior live failure's exact cause.
+
+The deployed title-filter follow-up correctly removed both DataPower jobs from the Data analyst search and showed an honest empty state.

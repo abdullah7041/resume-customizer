@@ -35,6 +35,7 @@ async function attachLiveCredits<T extends Record<string, unknown>>(
 export const runOptimization = async (event: HandlerEvent) => {
   let billingStateUnknown = false;
   let stage = 'cache';
+  let evidenceFailures: Record<string, number> | undefined;
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -247,6 +248,10 @@ export const runOptimization = async (event: HandlerEvent) => {
     // Map to frontend expected format (Cards)
     stage = 'evidence';
     const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: '[optimize]', sources: evidenceSources });
+    evidenceFailures = {};
+    for (const diagnostic of diagnostics) for (const reason of diagnostic.reasons ?? []) {
+      evidenceFailures[reason] = (evidenceFailures[reason] ?? 0) + 1;
+    }
     if (cards.length === 0) throw Object.assign(new Error('AI optimization produced no usable evidence-backed edits'), {
       status: 422, code: 'OPTIMIZE_NO_VERIFIED_EDITS',
     });
@@ -407,7 +412,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     const code = typeof errorDetails?.code === 'string' && /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(errorDetails.code)
       ? errorDetails.code : isTimeout ? 'OPTIMIZE_TIMEOUT' : 'OPTIMIZE_FAILED';
     captureError(new Error('Optimization failed'), { function: 'optimize', stage,
-      status, code, operationId: event.headers['x-watheq-operation-id'] });
+      status, code, evidenceFailures, operationId: event.headers['x-watheq-operation-id'] });
 
     return {
       statusCode: status,
