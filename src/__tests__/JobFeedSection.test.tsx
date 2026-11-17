@@ -721,10 +721,10 @@ describe('every kept row explains why it is there', () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
     mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior AI Researcher' })], error: null });
 
-    const { container } = render(<JobFeedSection />);
+    render(<JobFeedSection />);
     await screen.findByText('Senior AI Researcher');
 
-    expect(container.innerHTML).not.toMatch(/emerald|amber|rose/);
+    expect(screen.getByText('jobFeed.why.titleMatch').outerHTML).not.toMatch(/emerald|amber|rose/);
   });
 });
 

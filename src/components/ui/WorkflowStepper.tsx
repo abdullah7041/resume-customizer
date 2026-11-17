@@ -60,7 +60,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                     step.status === 'upcoming' &&
                       'hover:bg-emerald-500/10',
                     isLocked &&
-                      'cursor-not-allowed opacity-65'
+                      'cursor-not-allowed'
                   )}
                 >
                   {/* Step marker */}
@@ -71,7 +71,7 @@ export function WorkflowStepper({ steps, onStepClick, className }: WorkflowStepp
                       isCompleted && 'bg-emerald-700 text-white',
                       step.status === 'upcoming' &&
                         'bg-emerald-700/12 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200',
-                      isLocked && 'bg-gray-200/60 text-gray-500 dark:bg-white/5 dark:text-gray-500'
+                      isLocked && 'bg-gray-200/60 text-gray-700 dark:bg-white/5 dark:text-gray-300'
                     )}
                     aria-hidden="true"
                   >
