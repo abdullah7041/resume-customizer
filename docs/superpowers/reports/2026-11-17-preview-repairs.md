@@ -30,3 +30,15 @@ The new optional migration is `supabase/migrations/20261117010000_reviewed_emplo
 
 Tooling: this worktree has no CodeGraph index. RTK and focused PowerShell fallbacks were used for live source, Windows paths and captured check output. No dependencies or tools were installed.
 
+
+## Live preview follow-up
+
+The deployed step strip and content panel both measured 1,184px wide, with a 12px gap (the old strip was about 884px with a 38px gap). Verified company search narrowed immediately to Salla; one test follow completed with the visible Following state. Applications opened inside the job area and Back to jobs restored its filters/results. Alert management showed manual-preview operation, scope controls and an explicit test-email button; no email was sent.
+
+Live search exposed a pre-existing shared-prefix defect: `Data analyst` admitted `DataPower` roles, and regression tests also reproduced `Database`, `Salesforce` and `Production` false positives. The shared token comparator now permits ordinary inflection suffixes rather than arbitrary compounds. All 118 focused matching/feed/API tests passed after four red cases.
+
+The first Optimize attempt reached clarification generation, then a preview deployment switch removed the deferred modal chunk (`Failed to fetch dynamically imported module: ClarificationModal...js`) and React unmounted the workspace. The critical clarification dialog is now imported with the workspace. React 19 root error callbacks explicitly capture a generic safe exception and component stack; original error content is not transmitted. This follows [Sentry's React 19 guidance](https://sentry.io/changelog/react-19-support/) and the installed SDK signatures. The reporting regression and all 16 modal tests passed. MainContent had one 10-second test timeout while lint was running; its isolated 106-test follow-up passed.
+
+CI for `6646b43` passed its full suite after updating two older visual assertions to scope title-relevance colors correctly and retain readable locked-step contrast. The latest matching/rendering follow-up still requires its own deployed result.
+
+Context7 was newly present in Codex configuration during this work, but the running tool connection returned `unknown MCP server context7`. No tool was installed by the agent; official documentation was used as the fallback.

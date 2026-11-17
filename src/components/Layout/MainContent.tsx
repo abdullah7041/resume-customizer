@@ -14,7 +14,7 @@ import {
   isAuthRequiredError,
   AI_DEFAULT_TEMPERATURE,
 } from "../../services/api.js";
-import { type ClarificationQuestion } from "../modals/ClarificationModal";
+import { ClarificationModal, type ClarificationQuestion } from "@/components/modals/ClarificationModal";
 import {
   filterClarificationQuestionsByHardStops,
   appendClarificationHistory,
@@ -49,7 +49,6 @@ const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m 
 const JobFeedSection = lazy(() => import("@/components/sections/JobsFirstSection"));
 const TemplateGallery = lazy(() => import("../sections/TemplatesSection"));
 const OnboardingChat = lazy(() => import("../onboarding/OnboardingChat"));
-const ClarificationModal = lazy(() => import("../modals/ClarificationModal").then(m => ({ default: m.ClarificationModal })));
 
 import type { Tab } from "../ui/GlassTabs";
 import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
