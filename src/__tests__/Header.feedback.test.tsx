@@ -59,9 +59,6 @@ vi.mock('../components/Credits/CreditUsageModal', () => ({
 vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: () => null,
 }));
-vi.mock('../components/Credits/PricingWaitlistModal', () => ({
-  PricingWaitlistModal: () => null,
-}));
 
 vi.mock('../components/Settings/SettingsModal', () => ({
   SettingsModal: () => null,

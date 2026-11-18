@@ -6,8 +6,6 @@ import { useTheme } from "@/hooks/useTheme";
 import { getSkylineUrls, SKYLINE_FALLBACK_URL } from "@/lib/assets";
 import { analytics } from "@/services/analytics";
 import type { GetStartedSource } from "@/types/analytics";
-import { PricingWaitlistModal } from "@/components/Credits/PricingWaitlistModal";
-import { usePaymentConfig } from "@/hooks/usePaymentConfig";
 import { CreditPack } from "@/components/Credits/CreditPack";
 import WhatsAppSupportLink from "@/components/Layout/WhatsAppSupportLink";
 import { SignInDialog } from "@/components/ui/SignInDialog";
@@ -395,10 +393,7 @@ function ComparisonSection({ t }: { t: TranslationApi["t"] }) {
 }
 
 function PricingSection({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStarted: () => void }) {
-  const paymentConfig = usePaymentConfig();
   const freeFeatures = translatedArray<TextItem>(t, "landing.majlis.freeFeatures", []);
-  const proFeatures = translatedArray<TextItem>(t, "landing.majlis.proFeatures", []);
-  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
 
   return (
     <section id="mj2-pricing" className="majlis-section" aria-labelledby="majlis-pricing-title">
@@ -423,39 +418,11 @@ function PricingSection({ t, onGetStarted }: { t: TranslationApi["t"]; onGetStar
             <PrimaryButton onClick={onGetStarted}>{localizedText(t, "landing.majlis.navCta", "Check my match")}</PrimaryButton>
           </article>
 
-          {paymentConfig?.enabled ? <article className="majlis-price-card majlis-price-card-pro"><CreditPack /></article> : <article className="majlis-price-card majlis-price-card-pro">
-            <div className="majlis-price-head">
-              <h3>{localizedText(t, "landing.majlis.pro", "Pro")}</h3>
-              <span>{localizedText(t, "landing.majlis.waitlist", "Waitlist")}</span>
-            </div>
-            <p className="majlis-price">
-              <Numeral>{localizedText(t, "landing.majlis.proPrice", "29 SAR")}</Numeral>
-              <span>{localizedText(t, "landing.majlis.perMonth", "/ month · planned")}</span>
-            </p>
-            {proFeatures.map((feature) => (
-              <div key={feature.text} className="majlis-check-row majlis-check-row-gold">
-                <span>{feature.text}</span>
-                <Check aria-hidden="true" />
-              </div>
-            ))}
-            <button
-              type="button"
-              className="majlis-btn majlis-btn-secondary"
-              onClick={() => setShowWaitlistModal(true)}
-            >
-              {localizedText(t, "landing.majlis.proCta", "Join the pricing waitlist")}
-            </button>
-          </article>}
+          <article className="majlis-price-card majlis-price-card-pro">
+            <CreditPack />
+          </article>
         </div>
-        {!paymentConfig?.enabled && <p className="majlis-pricing-note">{localizedText(t, "landing.majlis.pricingNote", "Paid plans are not live yet - the waitlist helps shape launch pricing.")}</p>}
       </div>
-      <PricingWaitlistModal
-        isOpen={showWaitlistModal}
-        onClose={() => setShowWaitlistModal(false)}
-        creditsRemaining={0}
-        dismissKey="watheq:landingPricingWaitlist"
-        source="pricing"
-      />
     </section>
   );
 }

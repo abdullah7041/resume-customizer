@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import LandingPage from '../pages/LandingPage';
 
+const paymentConfig = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/usePaymentConfig', () => ({ usePaymentConfig: paymentConfig }));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     i18n: {
@@ -27,6 +30,10 @@ vi.mock('react-i18next', () => ({
         return [];
       }
       const translations: Record<string, string> = {
+        'pricing.pack.title': 'Application Credits',
+        'pricing.pack.price': '29 SAR · one-time payment',
+        'pricing.pack.cta': 'Buy 100 credits',
+        'pricing.checkout.disabled': 'Checkout is currently unavailable.',
         'landing.comparison.title': 'Compare proof, not just templates.',
         'landing.comparison.eyebrow': 'Workflow comparison',
         'landing.comparison.subtitle': 'See how Watheq protects evidence and scores fit.',
@@ -102,17 +109,11 @@ vi.mock('../lib/assets', () => ({
   }),
 }));
 
-vi.mock('../components/sections/PricingSection', () => ({
-  PricingSection: () => <section id="pricing">Public pricing plans</section>,
-}));
 
-vi.mock('../components/Credits/PricingWaitlistModal', () => ({
-  PricingWaitlistModal: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div role="dialog">Pricing waitlist modal</div> : null,
-}));
 
 describe('Landing pricing and comparison placement', () => {
   it('keeps full pricing and comparison available on the public landing page', () => {
+    paymentConfig.mockReturnValue({ enabled: true, environment: 'live' });
     render(<LandingPage onGetStarted={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'Compare proof, not just templates.' })).toBeInTheDocument();
@@ -121,14 +122,23 @@ describe('Landing pricing and comparison placement', () => {
     expect(screen.getByRole('columnheader', { name: 'Manual editing' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Start free. Everything you need to apply.' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Free' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Pro' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Application Credits' })).toBeInTheDocument();
     expect(screen.getByText('0 SAR')).toBeInTheDocument();
-    expect(screen.getByText('29 SAR')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Join the pricing waitlist' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('Pricing waitlist modal');
+    expect(screen.getByText('29 SAR · one-time payment')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Buy 100 credits' })).toHaveAttribute('href', '/checkout');
     expect(screen.queryByText('Native Arabic Support')).not.toBeInTheDocument();
     expect(screen.queryByText('Professional Templates')).not.toBeInTheDocument();
     expect(screen.queryByText(RegExp(['Generic', 'Tool', 'A'].join(' '), 'i'))).not.toBeInTheDocument();
+  });
+
+  it('keeps the one-time price visible if checkout is unavailable', () => {
+    paymentConfig.mockReturnValue({ enabled: false, environment: 'live' });
+    render(<LandingPage onGetStarted={vi.fn()} />);
+
+    expect(screen.getByText('29 SAR · one-time payment')).toBeInTheDocument();
+    expect(screen.getByText('Checkout is currently unavailable.')).toBeInTheDocument();
+    expect(screen.queryByText(/waitlist|month · planned/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Buy 100 credits' })).not.toBeInTheDocument();
   });
 
   it('lets visitors compare a weak sample with an optimized proof-led version', () => {

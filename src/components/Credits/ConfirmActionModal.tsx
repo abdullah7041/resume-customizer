@@ -2,20 +2,18 @@
  * ConfirmActionModal Component
  *
  * Confirmation dialog before expensive credit-consuming operations.
- * Shows credit cost, current balance, and insufficient credits warning with waitlist signup.
+ * Shows credit cost, current balance, and an option to buy credits when the balance is too low.
  */
 
 import { createPortal } from 'react-dom';
-import { useState } from 'react';
-import { X, AlertTriangle, Sparkles, Mail, ListChecks, Check } from 'lucide-react';
+import { X, AlertTriangle, Sparkles } from 'lucide-react';
 import { GlassButton } from '../ui/GlassButton';
 import { glass } from '../../lib/styles/glass';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
 import { FEATURE_COSTS, FEATURE_LABELS, type FeatureName } from '../../types/credits';
-import { supabase } from '../../services/supabase';
 import { useUserCredits } from '../../hooks/useUserCredits';
-import { analytics } from '../../services/analytics';
+import { CreditPack } from '@/components/Credits/CreditPack';
 
 interface ConfirmActionModalProps {
   isOpen: boolean;
@@ -36,13 +34,8 @@ export function ConfirmActionModal({
   isLoading = false,
   isFree = false,
 }: ConfirmActionModalProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { credits } = useUserCredits();
-  const [email, setEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
   const currentCredits = credits?.remaining || 0;
   const cost = isFree ? 0 : FEATURE_COSTS[feature];
   const canProceed = isFree || currentCredits >= cost;
@@ -55,76 +48,6 @@ export function ConfirmActionModal({
       await onConfirm();
     } catch (err) {
       console.error('[ConfirmActionModal] onConfirm rejected:', err);
-    }
-  };
-
-  const handleSubmitWaitlist = async (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-
-    if (!email || !email.includes('@')) {
-      setSubmitError(t('pricing.waitlist.invalidEmail', 'Please enter a valid email address'));
-      return;
-    }
-
-    // Basic abuse prevention
-    const attemptKey = 'watheq:waitlistAttempts';
-    const lastAttempt = localStorage.getItem(attemptKey);
-    if (lastAttempt) {
-      const timeSince = Date.now() - parseInt(lastAttempt);
-      if (timeSince < 60000) {
-        setSubmitError(t('pricing.waitlist.tooManyAttempts', 'Please wait a moment before trying again'));
-        return;
-      }
-    }
-
-    analytics.trackPricingIntent({ source: 'insufficient_credits_modal', planHint: 'pro' });
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const { error } = await supabase.from('waitlist').insert({
-        email: email.toLowerCase().trim(),
-        plan_type: 'pro',
-        language: i18n.language,
-        metadata: {
-          source: 'insufficient_credits',
-          feature_attempted: feature,
-          credits_remaining: currentCredits,
-          timestamp: new Date().toISOString(),
-        },
-      });
-
-      if (error) {
-        if (error.code === '23505') {
-          setSubmitError(t('pricing.waitlist.alreadyJoined', "You're already on the waitlist!"));
-        } else {
-          throw error;
-        }
-      } else {
-        // Send confirmation email
-        try {
-          await fetch('/.netlify/functions/waitlist-confirm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: email.toLowerCase().trim(),
-              language: i18n.language,
-            }),
-          });
-        } catch (emailError) {
-          console.warn('[ConfirmActionModal] Confirmation email failed:', emailError);
-        }
-
-        setSubmitSuccess(true);
-        analytics.trackWaitlistJoined('insufficient_credits_modal');
-        localStorage.setItem(attemptKey, Date.now().toString());
-      }
-    } catch (err) {
-      console.error('[ConfirmActionModal] Failed to join waitlist:', err);
-      setSubmitError(t('pricing.waitlist.error', 'Failed to join waitlist. Please try again.'));
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -141,7 +64,7 @@ export function ConfirmActionModal({
       <div
         className={cn(
           glass.elevated,
-          'relative rounded-xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200 ease-out'
+          'relative max-h-[90vh] overflow-y-auto rounded-xl p-6 max-w-md w-full animate-in fade-in zoom-in-95 duration-200 ease-out'
         )}
         role="dialog"
         aria-modal="true"
@@ -195,7 +118,7 @@ export function ConfirmActionModal({
             </div>
           )}
 
-          {/* Insufficient credits - Show waitlist signup */}
+          {/* Insufficient credits */}
           {!canProceed && (
             <div className="space-y-4">
               {/* Warning */}
@@ -214,59 +137,7 @@ export function ConfirmActionModal({
                 </p>
               </div>
 
-              {/* Waitlist Signup */}
-              {submitSuccess ? (
-                <div className={cn(glass.card, 'p-4 border-emerald-500/30 text-center')}>
-                  <Check className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                  <p className="text-emerald-400 font-medium">
-                    {t('pricing.waitlist.success', "We'll only notify you when pricing opens. No payment required.")}
-                  </p>
-                </div>
-              ) : (
-                <div className={cn(glass.card, 'p-4 border-gold-500/30')}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <ListChecks className="w-4 h-4 text-gold-400" />
-                    <p className="text-sm font-semibold text-gold-400">
-                      {t('pricing.waitlist.title', 'Join the pricing waitlist')}
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                    {t('pricing.waitlist.subtitle', 'Paid plans are not live yet. Join the list and help shape launch pricing.')}
-                  </p>
-                  <form onSubmit={handleSubmitWaitlist} className="space-y-2">
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder={t('pricing.emailPlaceholder', 'Enter your email')}
-                        className={cn(
-                          'w-full pl-10 pr-4 py-2 rounded-lg text-sm',
-                          'bg-gray-100/50 dark:bg-white/5 border border-gray-300 dark:border-white/10',
-                          'text-gray-900 dark:text-white placeholder:text-gray-500',
-                          'focus:outline-none focus:ring-2 focus:ring-emerald-500/50',
-                          'transition-shadow duration-200'
-                        )}
-                        disabled={isSubmitting}
-                        required
-                      />
-                    </div>
-                    <GlassButton
-                      type="submit"
-                      variant="prominent"
-                      disabled={isSubmitting || !email}
-                      className="w-full"
-                      size="sm"
-                    >
-                      {isSubmitting ? t('common.submitting', 'Sending...') : t('pricing.waitlist.cta', 'Join pricing waitlist')}
-                    </GlassButton>
-                    {submitError && (
-                      <p className="text-red-400 text-xs">{submitError}</p>
-                    )}
-                  </form>
-                </div>
-              )}
+              <CreditPack />
             </div>
           )}
 
