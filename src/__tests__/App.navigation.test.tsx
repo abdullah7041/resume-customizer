@@ -58,6 +58,7 @@ vi.mock('react-i18next', () => ({
         'privacy.sections.contact.content': 'Contact content',
         'privacy.sections.contact.button': 'Contact Privacy Team',
         'privacy.sdaiaReference': 'SDAIA reference',
+        'pricing.checkout.summary': '100 credits · SAR 29',
         'footer.linksLabel': 'Legal links',
         'footer.links.privacy': 'Privacy Policy',
         'footer.links.contact': 'Contact Us',
@@ -172,7 +173,7 @@ describe('App compliance navigation', () => {
   it('resumes checkout after OAuth returns to the configured root URL', async () => {
     window.sessionStorage.setItem('watheq:checkoutReturn', '?checkout=1');
     render(<App />);
-    expect(await screen.findByRole('button', { name: /sign in to buy credits or check your payment/i })).toBeInTheDocument();
+    expect(await screen.findByText('100 credits · SAR 29')).toBeInTheDocument();
     expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
   });
 
