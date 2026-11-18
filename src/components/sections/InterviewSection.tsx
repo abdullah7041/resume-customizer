@@ -264,7 +264,7 @@ export function InterviewSection({
   onUpdate
 }: InterviewSectionProps) {
   const { t, i18n } = useTranslation();
-  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { refetch: refetchCredits } = useUserCredits();
   const requestRef = useRef<AbortController | null>(null);
   const contextKey = JSON.stringify([resumeText, jobDescription, i18n.language]);
   const currentContext = useRef(contextKey);
@@ -1142,7 +1142,6 @@ export function InterviewSection({
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        creditsRemaining={credits?.remaining || 0}
         dismissKey="watheq:upgradeDismissed-interview"
       />
 

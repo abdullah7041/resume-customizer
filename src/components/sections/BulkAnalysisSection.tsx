@@ -210,7 +210,7 @@ const ResumeCard = ({ resume, onRemove, contextStatus }: { resume: Resume; onRem
 
 export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps) {
   const { t, i18n } = useTranslation();
-  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { refetch: refetchCredits } = useUserCredits();
   const currentJob = jobDescription ?? '';
   const currentLanguage: 'en' | 'ar' = i18n.language === 'ar' ? 'ar' : 'en';
   const latestInput = useRef({ jobSnapshot: currentJob, language: currentLanguage });
@@ -950,7 +950,6 @@ export function BulkAnalysisSection({ jobDescription }: BulkAnalysisSectionProps
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        creditsRemaining={credits?.remaining || 0}
         dismissKey="watheq:upgradeDismissed-bulk"
       />
 

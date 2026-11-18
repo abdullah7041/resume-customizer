@@ -64,12 +64,6 @@
       "liveNow": "Live now",
       "freePrice": "0 SAR",
       "forever": "/ forever",
-      "pro": "Pro",
-      "waitlist": "Waitlist",
-      "proPrice": "29 SAR",
-      "perMonth": "/ month · planned",
-      "proCta": "Join the pricing waitlist",
-      "pricingNote": "Paid plans are not live yet — the waitlist helps shape launch pricing.",
       "s6Title": "Questions, answered.",
       "s6Sub": "The honest version, including what Watheq can't do yet.",
       "ctaTitle": "See where you stand before you hit apply.",
@@ -127,11 +121,6 @@
         { "text": "Vision 2030 alignment scoring" },
         { "text": "PDF exports and 4 professional templates" },
         { "text": "Referral rewards — 5 credits per friend" }
-      ],
-      "proFeatures": [
-        { "text": "More optimization credits" },
-        { "text": "Save and track more jobs" },
-        { "text": "Priority improvements and early access" }
       ],
       "faqs": [
         {

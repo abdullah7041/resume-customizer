@@ -66,7 +66,7 @@ const getToneLabel = (value: string, fallback: string, isArabic: boolean) => {
 
 export function CoverLetterSection({ resumeText, jobDescription, resumeData }: CoverLetterSectionProps) {
   const { t, i18n } = useTranslation();
-  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { refetch: refetchCredits } = useUserCredits();
   const isArabic = i18n.language === 'ar';
   const documentDirection = isArabic ? 'rtl' : 'ltr';
 
@@ -731,7 +731,6 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        creditsRemaining={credits?.remaining || 0}
         dismissKey="watheq:upgradeDismissed-coverletter"
       />
 

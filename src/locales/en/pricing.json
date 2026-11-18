@@ -38,33 +38,10 @@
       "back": "Back to Watheq"
     },
     "title": "Pricing",
-    "subtitle": "Free access is live. Paid plans are waitlist-only while launch pricing is finalized.",
-    "workspaceCta": "Need more credits? View plans",
+    "subtitle": "Start free. Add credits whenever you need them.",
+    "workspaceCta": "Get more credits",
     "forever": "/forever",
     "getStarted": "Get Started Free",
-    "emailPlaceholder": "Enter your email",
-    "waitlist": {
-      "badge": "Pricing Waitlist",
-      "title": "Join the pricing waitlist",
-      "subtitle": "Paid plans are not live yet. Join the list and help shape launch pricing.",
-      "trust": "No payment required. We'll only notify you when pricing opens.",
-      "cta": "Join pricing waitlist",
-      "emailLabel": "Your email",
-      "intentLabel": "Which pricing would you consider? (optional)",
-      "notLiveNote": "Paid plans are not live yet — joining the waitlist helps us shape launch pricing.",
-      "successTitle": "You're on the list",
-      "success": "We'll only notify you when pricing opens. No payment required.",
-      "priceLine": "Planned launch price: 29 SAR/month",
-      "alreadyJoined": "You're already on the waitlist!",
-      "invalidEmail": "Please enter a valid email address",
-      "tooManyAttempts": "Please wait a moment before trying again",
-      "error": "Failed to join waitlist. Please try again.",
-      "intent": {
-        "pack9Sar": "9 SAR application pack",
-        "monthly29Sar": "29 SAR monthly while job searching",
-        "notSure": "Not sure yet"
-      }
-    },
     "plans": {
       "free": {
         "name": "Free",
@@ -80,18 +57,6 @@
           "PDF exports included",
           "5 professional templates",
           "Referral rewards (5 credits per friend)"
-        ]
-      },
-      "pro": {
-        "name": "Pro",
-        "description": "For active job seekers who want more room to apply",
-        "price": "29 SAR",
-        "period": "/month",
-        "priceNote": "Planned launch price — join the waitlist",
-        "features": [
-          "More optimization credits",
-          "Save and track more jobs",
-          "Priority improvements and early feature access"
         ]
       }
     }

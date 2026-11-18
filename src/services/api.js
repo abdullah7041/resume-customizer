@@ -555,7 +555,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
 
       // Handle quota exceeded
       if (error.quotaExceeded) {
-        throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used). Join the Pro waitlist for higher limits when paid plans launch.`);
+        throw new Error(`Match analysis limit reached (${error.used}/${error.limit} used).`);
       }
 
       // Handle timeout/gateway errors with better messaging
@@ -651,7 +651,7 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
 
       // Handle quota exceeded errors with user-friendly message
       if (error.quotaExceeded) {
-        throw new Error(`Optimization limit reached (${error.used}/${error.limit} used). Join the Pro waitlist for higher limits when paid plans launch.`);
+        throw new Error(`Optimization limit reached (${error.used}/${error.limit} used).`);
       }
 
       // Handle timeout/gateway errors with consistent messaging
