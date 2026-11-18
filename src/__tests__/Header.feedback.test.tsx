@@ -222,9 +222,9 @@ describe('Header feedback action', () => {
     expect(content).toHaveClass('flex-1', 'overflow-y-auto');
     expect(footer).not.toHaveClass('absolute');
 
-    // Secondary tools (credits, plans, invite) remain reachable.
+    // Secondary tools (credits, credit pack, invite) remain reachable.
     expect(navQueries.getAllByText(/credits/i).length).toBeGreaterThan(0);
-    expect(navQueries.getByText(/view plans/i)).toBeInTheDocument();
+    expect(navQueries.getByText(/get more credits/i)).toBeInTheDocument();
     expect(navQueries.getByText(/invite friends/i)).toBeInTheDocument();
 
     // Feedback still opens the existing modal.

@@ -11,6 +11,8 @@ interface UpgradeModalProps {
 export function UpgradeModal({ isOpen, onClose, dismissKey }: UpgradeModalProps) {
   const { t, i18n } = useTranslation();
 
+  if (!isOpen) return null;
+
   function dismiss() {
     if (dismissKey) localStorage.setItem(dismissKey, Date.now().toString());
     onClose();
