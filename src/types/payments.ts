@@ -7,7 +7,7 @@ export interface PaymentConfig {
 
 export interface PaymentCheckout {
   paymentId: string;
-  checkoutUrl: string;
+  sessionId: string;
   environment: 'sandbox' | 'live';
 }
 
@@ -17,4 +17,6 @@ export interface PaymentStatus {
   environment: 'sandbox' | 'live';
   creditsGranted: boolean;
   refundedMinor: number;
+  noOrder?: boolean;
+  expired?: boolean;
 }

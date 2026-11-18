@@ -4,123 +4,234 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { usePaymentConfig } from '@/hooks/usePaymentConfig';
 import { useUserCredits } from '@/hooks/useUserCredits';
-import { createPayment, readPaymentStatus } from '@/services/payments';
-import { CreditPack } from '@/components/Credits/CreditPack';
-import type { PaymentStatus } from '@/types/payments';
+import { getSkylineUrls } from '@/lib/assets';
+import { loadGeideaCheckout } from '@/services/geideaCheckout';
+import { createPayment, geideaGuid, readPaymentStatus } from '@/services/payments';
+import type { PaymentCheckout, PaymentConfig, PaymentStatus } from '@/types/payments';
 
 const returnStorageKey = 'watheq:checkoutReturn';
-const guid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+const containerId = 'watheq-payment-form';
+const referenceSchema = z.object({
+  paymentId: z.uuid(),
+  orderId: geideaGuid.optional(),
+  cancelled: z.boolean().optional(),
+});
+type Reference = z.infer<typeof referenceSchema>;
+type CheckoutLanguage = 'ar' | 'en';
+
+function returnedPayment() {
+  return new URLSearchParams(window.location.search || sessionStorage.getItem(returnStorageKey) || '');
+}
+
+function readReference(ownerId: string): Reference | null {
+  const params = returnedPayment();
+  const paymentId = params.get('payment') ?? params.get('paymentId');
+  const orderId = geideaGuid.safeParse(params.get('orderId')).data;
+  const saved = window.history.state?.watheqPayment;
+  return referenceSchema.safeParse(paymentId ? { paymentId, orderId } : saved?.ownerId === ownerId ? saved : null).data ?? null;
+}
+
+function saveReference(ownerId: string, reference: Reference | null) {
+  window.history.replaceState({ ...window.history.state, watheqPayment: reference && { ...reference, ownerId } }, '', '/checkout');
+}
+
+function outcome(payment: PaymentStatus, reference: Reference) {
+  if (payment.refundedMinor > 0 || payment.status === 'refunded') return 'refunded';
+  if (payment.status === 'succeeded') {
+    if (payment.environment === 'sandbox') return 'sandboxSuccess';
+    if (payment.creditsGranted) return 'success';
+  }
+  if (payment.status === 'cancelled' || (payment.noOrder && reference.cancelled)) return 'cancelled';
+  if (payment.status === 'failed') return 'failed';
+  if (payment.noOrder && payment.expired) return 'expired';
+  return null;
+}
+
+const actionClass = 'inline-flex min-h-11 items-center rounded-xl bg-emerald-800 px-5 py-2.5 font-semibold text-white hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink-accent';
+const linkClass = 'inline-flex min-h-11 items-center rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-accent';
+
+function PaymentPanel({ ownerId, language, config }: { ownerId: string; language: CheckoutLanguage; config: PaymentConfig | null }) {
+  const { t } = useTranslation();
+  const { refetch } = useUserCredits();
+  const [reference, setReference] = useState(() => readReference(ownerId));
+  const [invalidReturn] = useState(() => {
+    const params = returnedPayment();
+    return (params.has('payment') || params.has('paymentId')) && !reference;
+  });
+  const [attempt, setAttempt] = useState(0);
+  const [formReady, setFormReady] = useState(false);
+  const [startupError, setStartupError] = useState(false);
+  const [result, setResult] = useState<PaymentStatus | null>(null);
+  const [checkingLonger, setCheckingLonger] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const createRequest = useRef<Promise<PaymentCheckout> | null>(null);
+  const lastRefreshed = useRef<PaymentStatus | null>(null);
+  const enabled = config?.enabled;
+  const formTitle = t('pricing.checkout.formTitle');
+
+  useEffect(() => {
+    saveReference(ownerId, reference);
+    sessionStorage.removeItem(returnStorageKey);
+  }, [ownerId, reference]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (reference || invalidReturn || !enabled || !host) return;
+    let active = true;
+    let finished = false;
+
+    async function mountForm(container: HTMLDivElement) {
+      const Checkout = await loadGeideaCheckout();
+      if (!active) return;
+      createRequest.current ??= createPayment(language);
+      const { paymentId, sessionId } = await createRequest.current;
+      if (!active) return;
+
+      saveReference(ownerId, { paymentId });
+      const finish = (payload: unknown, cancelled = false) => {
+        if (!active || finished) return;
+        finished = true;
+        const orderId = z.object({ orderId: geideaGuid }).safeParse(payload).data?.orderId;
+        const completed = { paymentId, orderId, cancelled };
+        saveReference(ownerId, completed);
+        setReference(completed);
+      };
+
+      try {
+        const checkout = new Checkout(finish, finish, (payload) => finish(payload, true));
+        checkout.startPayment(sessionId, null, containerId);
+        const iframe = container.querySelector('iframe');
+        if (!iframe) {
+          finish(undefined);
+          return;
+        }
+        iframe.title = formTitle;
+        if (!finished) setFormReady(true);
+      } catch {
+        finish(undefined);
+      }
+    }
+
+    void mountForm(host).catch(() => {
+      if (active) setStartupError(true);
+    });
+    return () => {
+      active = false;
+      host.replaceChildren();
+    };
+  }, [attempt, enabled, formTitle, invalidReturn, language, ownerId, reference]);
+
+  useEffect(() => {
+    if (!reference) return;
+    const controller = new AbortController();
+    let nextCheck: number | undefined;
+    let delay = 2000;
+    let orderId = reference.orderId;
+    const slowCheck = window.setTimeout(() => setCheckingLonger(true), 60000);
+
+    async function check(payment: Reference) {
+      try {
+        const status = await readPaymentStatus(payment.paymentId, orderId, controller.signal);
+        if (controller.signal.aborted) return;
+        setResult(status);
+        if (outcome(status, payment)) {
+          window.clearTimeout(slowCheck);
+          return;
+        }
+      } catch {
+        // A browser-supplied order hint may be stale. Fall back to Geidea's merchant reference lookup.
+        orderId = undefined;
+      }
+      if (controller.signal.aborted) return;
+      nextCheck = window.setTimeout(() => void check(payment), delay);
+      delay = Math.min(delay * 2, 30000);
+    }
+
+    void check(reference);
+    return () => {
+      controller.abort();
+      window.clearTimeout(nextCheck);
+      window.clearTimeout(slowCheck);
+    };
+  }, [reference]);
+
+  useEffect(() => {
+    if (!result?.creditsGranted || result === lastRefreshed.current) return;
+    lastRefreshed.current = result;
+    void refetch();
+  }, [result, refetch]);
+
+  function retry() {
+    createRequest.current = null;
+    setFormReady(false);
+    setStartupError(false);
+    setResult(null);
+    setCheckingLonger(false);
+    setReference(null);
+    setAttempt((previous) => previous + 1);
+  }
+
+  const finalStatus = reference && result ? outcome(result, reference) : null;
+  const canRetry = enabled && (startupError || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
+  const statusMessage = reference
+    ? finalStatus ?? (checkingLonger ? 'pendingLonger' : 'pending')
+    : invalidReturn ? 'invalid' : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'error' : !formReady ? 'loading' : null;
+  const isSandbox = (result?.environment ?? config?.environment) === 'sandbox' && Boolean(enabled || result);
+
+  return <>
+    {isSandbox && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">{t('pricing.checkout.sandbox')}</p>}
+    <div id={containerId} ref={hostRef} className="min-w-0 [&>iframe]:block [&>iframe]:max-w-full [&>iframe]:border-0" hidden={!formReady || Boolean(reference)} />
+    <p role="status" className="empty:sr-only">{statusMessage && t(`pricing.checkout.${statusMessage}`)}</p>
+    {canRetry && <button type="button" className={actionClass} onClick={retry}>{t('pricing.checkout.new')}</button>}
+    {finalStatus === 'success' && <a href="/" className={actionClass}>{t('pricing.checkout.back')}</a>}
+  </>;
+}
 
 export default function CheckoutPage() {
   const { t, i18n } = useTranslation();
   const { user, loading, signInWithGoogle } = useAuth();
-  const { refetch } = useUserCredits();
   const config = usePaymentConfig();
-  const [reference] = useState(() => {
-    const search = window.location.search || sessionStorage.getItem(returnStorageKey) || '';
-    const params = new URLSearchParams(search);
-    const rawPaymentId = params.get('payment') ?? params.get('paymentId');
-    const paymentId = z.uuid().safeParse(rawPaymentId);
-    const rawOrderId = params.get('orderId');
-    return {
-      paymentId: paymentId.success ? paymentId.data : null,
-      orderId: rawOrderId && guid.test(rawOrderId) ? rawOrderId : undefined,
-      invalid: Boolean(rawPaymentId) && !paymentId.success,
-    };
-  });
-  const [paymentId, setPaymentId] = useState(reference.paymentId);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const [result, setResult] = useState<PaymentStatus | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-  const refreshedPayments = useRef(new Set<string>());
-
-  useEffect(() => {
-    if (!user) return;
-    window.history.replaceState({}, '', reference.paymentId ? `/checkout?payment=${reference.paymentId}${reference.orderId ? `&orderId=${reference.orderId}` : ''}` : '/checkout');
-    sessionStorage.removeItem(returnStorageKey);
-    if (!reference.paymentId) return;
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20000);
-    void readPaymentStatus(reference.paymentId, reference.orderId, controller.signal)
-      .then((status) => { if (!controller.signal.aborted) setResult(status); })
-      .catch(() => { if (!controller.signal.aborted) setError(true); });
-    return () => { window.clearTimeout(timeout); controller.abort(); };
-  }, [reference, user]);
-
-  useEffect(() => {
-    if (!result || !['succeeded', 'refunded'].includes(result.status) || !result.creditsGranted) return;
-    const refreshKey = `${result.paymentId}:${result.status}:${result.refundedMinor}`;
-    if (refreshedPayments.current.has(refreshKey)) return;
-    refreshedPayments.current.add(refreshKey);
-    void refetch();
-  }, [result, refetch]);
-
-  async function prepareCheckout() {
-    setBusy(true); setError(false);
-    try {
-      const checkout = await createPayment(i18n.language.startsWith('ar') ? 'ar' : 'en');
-      setPaymentId(checkout.paymentId); setCheckoutUrl(checkout.checkoutUrl); setResult(null);
-      window.history.replaceState({}, '', `/checkout?payment=${checkout.paymentId}`);
-    } catch { setError(true); }
-    finally { setBusy(false); }
-  }
-
-  async function refreshStatus() {
-    if (!paymentId) return;
-    setBusy(true); setError(false);
-    try { setResult(await readPaymentStatus(paymentId, reference.orderId)); }
-    catch { setError(true); }
-    finally { setBusy(false); }
-  }
+  const [signInError, setSignInError] = useState(false);
+  const language = i18n.resolvedLanguage?.startsWith('ar') || i18n.language?.startsWith('ar') ? 'ar' : 'en';
+  const skyline = getSkylineUrls();
+  const params = returnedPayment();
+  const hasReturn = Boolean(params.get('payment') ?? params.get('paymentId'));
 
   async function signIn() {
-    sessionStorage.setItem(returnStorageKey, paymentId ? `?payment=${paymentId}${reference.orderId ? `&orderId=${reference.orderId}` : ''}` : '?checkout=1');
+    setSignInError(false);
+    sessionStorage.setItem(returnStorageKey, window.location.search || '?checkout=1');
     try { await signInWithGoogle({ intent: 'signin' }); }
-    catch { setError(true); }
+    catch { setSignInError(true); }
   }
 
-  const confirmed = result?.status === 'succeeded' && result.creditsGranted && result.refundedMinor === 0;
-  const canStart = config?.enabled && !paymentId && !reference.invalid;
-  const buttonClass = 'min-h-11 rounded-xl border border-line px-5 py-3 font-semibold hover:bg-ink/5 disabled:opacity-50';
-
   return (
-    <main className="relative z-10 mx-auto w-full max-w-2xl space-y-6 px-4 py-10 text-ink" dir={i18n.dir()}>
-      <h1 className="text-3xl font-bold">{t('pricing.checkout.title', 'Buy credits')}</h1>
-      <section className="space-y-5 rounded-2xl border border-line bg-surface p-6 sm:p-8">
-        <CreditPack showCheckoutLink={false} />
-        {(config?.environment === 'sandbox' || result?.environment === 'sandbox') && <p role="status" className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-ink">{t('pricing.checkout.sandbox', 'Test mode: use GEIDEA test cards only. This is not a live payment.')}</p>}
-        {loading || !config ? <p aria-busy="true">{t('pricing.checkout.loading', 'Loading checkout…')}</p> : !user ? (
-          <button type="button" onClick={() => void signIn()} className={buttonClass}>{t('pricing.checkout.signIn', 'Sign in to buy credits or check your payment')}</button>
-        ) : canStart ? (
-          <button type="button" disabled={busy} onClick={() => void prepareCheckout()} className={buttonClass}>{busy ? t('pricing.checkout.working', 'Working…') : t('pricing.checkout.prepare', 'Prepare secure payment')}</button>
-        ) : null}
-        {config && !config.enabled && !paymentId && <p>{t('pricing.checkout.disabled', 'Paid checkout is not available yet. You can keep using your free credits.')}</p>}
-        {checkoutUrl && <a href={checkoutUrl} className="inline-flex min-h-11 items-center rounded-xl bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-800">{t('pricing.checkout.pay', 'Pay 29 SAR with GEIDEA')}</a>}
-        {reference.invalid && <p role="alert">{t('pricing.checkout.invalid', 'This payment reference is invalid. Contact support if you were charged.')}</p>}
-        {paymentId && <div className="space-y-3">
-          <p className="break-all text-sm text-ink-muted">{t('pricing.checkout.reference', 'Payment reference')}: <bdi>{paymentId}</bdi></p>
-          {user && <button type="button" disabled={busy} onClick={() => void refreshStatus()} className={buttonClass}>{busy ? t('pricing.checkout.working', 'Working…') : t('pricing.checkout.retry', 'Check payment status')}</button>}
-          <p role="status" aria-live="polite">{result && result.refundedMinor > 0
-            ? t('pricing.checkout.refunded', 'This payment has been refunded. Check your current credit balance.') : confirmed
-            ? t('pricing.checkout.success', 'Payment verified. Your 100 purchased credits have been added.')
-            : result?.status === 'succeeded' && result.environment === 'sandbox'
-              ? t('pricing.checkout.sandboxSuccess', 'Test payment verified. No spendable credits were added.')
-            : result?.status === 'failed' ? t('pricing.checkout.failed', 'Payment failed. No credits were added. You can start a new checkout.')
-              : result?.status === 'cancelled' ? t('pricing.checkout.cancelled', 'Payment cancelled. No credits were added. You can start a new checkout.')
-                : result?.status === 'refunded' ? t('pricing.checkout.refunded', 'This payment has been refunded. Check your current credit balance.')
-                  : t('pricing.checkout.pending', 'Payment is awaiting server confirmation. Check again in a moment before starting another payment.')}</p>
-          {result && ['failed', 'cancelled', 'refunded'].includes(result.status) && <a href="/checkout" className="inline-block text-ink-accent underline">{t('pricing.checkout.new', 'Start a new checkout')}</a>}
-        </div>}
-        {error && <p role="alert" className="text-red-700 dark:text-red-300">{t('pricing.checkout.error', 'We could not verify this request. Try again. If you were charged, check this payment before paying again or contact support.')}</p>}
-        <p className="text-sm text-ink-muted">{t('pricing.checkout.verification', 'Returning from GEIDEA does not confirm payment. Credits are added only after the server verifies the payment.')}</p>
-        <div className="flex flex-wrap gap-4 text-sm text-ink-accent underline">
-          <a href="/refund">{t('pricing.checkout.refundPolicy', 'Refund policy')}</a>
-          <a href="/terms">{t('pricing.checkout.terms', 'Terms of service')}</a>
-          <a href="mailto:support@watheqai.app">{t('pricing.checkout.support', 'Contact support')}</a>
-        </div>
-      </section>
-      <a href="/" className="text-ink-accent underline">{t('pricing.checkout.back', 'Back to Watheq')}</a>
+    <main lang={language} dir={language === 'ar' ? 'rtl' : 'ltr'} className="relative isolate flex flex-1 items-center justify-center bg-emerald-950 px-3 py-5 text-ink sm:px-8 sm:py-10">
+      <picture aria-hidden="true" className="pointer-events-none absolute inset-0 -z-20">
+        <source media="(min-width: 768px)" srcSet={skyline.desktop} />
+        <img src={skyline.mobile} alt="" className="h-full w-full object-cover" />
+      </picture>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-emerald-950/50 md:bg-emerald-950/65" />
+      <div className="grid w-full min-w-0 max-w-lg gap-4 rounded-2xl bg-surface-strong p-4 shadow-xl sm:p-6 md:max-w-6xl md:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] md:items-center md:gap-12 md:bg-transparent md:p-0 md:shadow-none">
+        <section className="min-w-0 space-y-1.5 md:space-y-4 md:text-white">
+          <a href="/" className={`${linkClass} text-xl font-bold no-underline md:text-4xl`}>{t('common.appName')}</a>
+          <h1 className="sr-only md:not-sr-only md:text-xl md:font-semibold">{t('pricing.pack.title')}</h1>
+          <p className="text-lg font-semibold md:text-4xl">{t('pricing.checkout.summary')}</p>
+          <p className="text-sm text-ink-muted md:text-base md:text-white">{t('pricing.checkout.packNote')}</p>
+        </section>
+        <section aria-label={t('pricing.checkout.formTitle')} className="min-w-0 space-y-3 md:rounded-2xl md:bg-surface-strong md:p-5 md:shadow-xl">
+          {loading ? <p role="status">{t('pricing.checkout.loading')}</p>
+            : user ? <PaymentPanel key={user.id} ownerId={user.id} language={language} config={config} />
+              : !config ? <p role="status">{t('pricing.checkout.loading')}</p>
+                : config.enabled || hasReturn ? <button type="button" className={actionClass} onClick={() => void signIn()}>{t('pricing.checkout.signIn')}</button>
+                  : <p role="status">{t('pricing.checkout.disabled')}</p>}
+          {signInError && <p role="alert">{t('pricing.checkout.signInError')}</p>}
+          <footer className="flex flex-wrap gap-x-4 border-t border-line pt-1 text-sm text-ink-accent">
+            <a className={linkClass} href="/refund">{t('pricing.checkout.refundPolicy')}</a>
+            <a className={linkClass} href="/terms">{t('pricing.checkout.terms')}</a>
+            <a className={linkClass} href="mailto:support@watheqai.app">{t('pricing.checkout.support')}</a>
+          </footer>
+        </section>
+      </div>
     </main>
   );
 }
