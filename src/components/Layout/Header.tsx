@@ -6,6 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrls } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
+import { SignInDialog, SignInOptions } from "@/components/ui/SignInDialog";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { useTheme } from "../../hooks/useTheme";
@@ -40,7 +41,7 @@ interface HeaderProps {
 
 export default function Header({ showDecorativeSkyline = true, showMarketingNav = true }: HeaderProps) {
   const { t, i18n } = useTranslation();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
@@ -224,7 +225,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
         !isSignedOutHeader && "hero-bg-animate",
         isSignedOutHeader
           ? "bg-[color:var(--bg)] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
-          : "text-gray-900 dark:text-white pb-4"
+          : "text-gray-900 dark:text-white"
       )}
     >
       {/* Animated background effects */}
@@ -461,17 +462,16 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                   {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
                   </button>
                   <LanguageSwitcher />
-                  <GlassButton
-                    onClick={() => {
-                      void signInWithGoogle({ intent: "signin", source: "header_desktop" });
-                    }}
-                    variant="prominent"
-                    size="md"
-                    className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    {t("common.signIn")}
-                  </GlassButton>
+                  <SignInDialog source="header_desktop">
+                    <GlassButton
+                      variant="prominent"
+                      size="md"
+                      className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      {t("common.signIn")}
+                    </GlassButton>
+                  </SignInDialog>
                 </>
               )}
             </div>
@@ -683,17 +683,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                     )}
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void signInWithGoogle({ intent: "signin", source: "header_mobile" });
-                      setMobileNavOpen(false);
-                    }}
-                    className="btn-metal w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-transparent"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    <span>{t("common.signIn")}</span>
-                  </button>
+                  <SignInOptions source="header_mobile" />
                 )}
               </div>
             </div>

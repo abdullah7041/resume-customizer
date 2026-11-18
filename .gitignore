@@ -48,6 +48,7 @@ stats.json
 coverage
 
 # Test artifacts
+.verification/
 *.pdf
 eslint.json
 deno.lock

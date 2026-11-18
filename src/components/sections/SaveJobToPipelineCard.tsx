@@ -1,3 +1,5 @@
+import { privateStorage } from '@/lib/auth/privateSession';
+import { getPrivateSessionRevision } from "@/lib/auth/privateSession";
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Save, Loader2 } from 'lucide-react';
@@ -5,13 +7,14 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { GlassButton } from '@/components/ui/GlassButton';
 import { useAuth } from '@/hooks/useAuth';
 import { analytics } from '@/services/analytics';
-import { createJobApplication, updateJobApplication } from '@/services/pipeline';
+import { createJobApplication, updateJobApplication, listJobApplications } from '@/services/pipeline';
 import type { ExtractedJobMetadata, JobApplication, JobApplicationStatus } from '@/types/pipeline';
 import { requestValueMomentFeedbackPrompt } from '@/components/Feedback/FeedbackPromptController';
 import { sanitizeCompanyName, sanitizeJobMetadataField } from '@/lib/utils/jobMetadata';
 
 interface SaveJobToPipelineCardProps {
   jobDescription: string;
+  resumeContext?: string;
   matchScore?: number | null;
   extractedMetadata?: ExtractedJobMetadata | null;
   onSaved?: (application: JobApplication) => void;
@@ -23,6 +26,7 @@ interface SaveJobToPipelineCardProps {
 
 export function SaveJobToPipelineCard({
   jobDescription,
+  resumeContext = '',
   matchScore,
   extractedMetadata,
   onSaved,
@@ -43,6 +47,18 @@ export function SaveJobToPipelineCard({
   const [status, setStatus] = useState<JobApplicationStatus>(() => savedApplication?.status ?? 'saved');
   const [notes, setNotes] = useState(() => sanitizeJobMetadataField(savedApplication?.notes));
   const [isSaving, setIsSaving] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  const saveInFlight = useRef(false);
+  const [recoveredId, setRecoveredId] = useState<string | null>(null);
+  const [recoveryPending, setRecoveryPending] = useState(false);
+  const [recoveryFailed, setRecoveryFailed] = useState(false);
+  const [recoveryAttempt, setRecoveryAttempt] = useState(0);
+  const effectiveApplicationId = savedApplicationId ?? recoveredId;
+  const contextKey = JSON.stringify([user?.id, jobDescription, resumeContext]);
+  const currentContext = useRef(contextKey);
+  currentContext.current = contextKey;
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const needsConfirmation = extractedMetadata?.needsUserConfirmation ?? true;
 
@@ -88,6 +104,38 @@ export function SaveJobToPipelineCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- field values intentionally excluded; seed runs once per metadata identity
   }, [extractedMetadata]);
 
+  useEffect(() => {
+    let active = true;
+    setRecoveredId(null); setRecoveryFailed(false); setRecoveryPending(false);
+    const revision = getPrivateSessionRevision();
+    try {
+      const draft = JSON.parse(privateStorage.getItem('watheq:jobSaveDraft') || 'null');
+      if (!draft || draft.userId !== user?.id || draft.jobDescription !== jobDescription || (savedApplicationId && draft.applicationId !== savedApplicationId) || (draft.resumeContext ?? '') !== resumeContext) return;
+      const value = draft.fields;
+      if (!value || typeof value !== 'object') return;
+      setCompanyName(sanitizeCompanyName(value.company_name));
+      setJobTitle(sanitizeJobMetadataField(value.job_title));
+      setJobUrl(sanitizeJobMetadataField(value.job_url));
+      setLocation(sanitizeJobMetadataField(value.location));
+      setEmploymentType(sanitizeJobMetadataField(value.employment_type));
+      setSeniority(sanitizeJobMetadataField(value.seniority));
+      setSector(sanitizeJobMetadataField(value.sector));
+      if (['saved', 'applied', 'offer', 'rejected', 'withdrawn'].includes(value.status)) setStatus(value.status);
+      setNotes(sanitizeJobMetadataField(value.notes));
+      setRestoredDraft(true);
+      if (!savedApplicationId && typeof draft.applicationId === 'string') {
+        setRecoveryPending(true);
+        void listJobApplications().then(({ data, error }) => {
+          if (!active || revision !== getPrivateSessionRevision()) return;
+          const row = data.find(item => item.id === draft.applicationId && item.user_id === user?.id && item.job_description === jobDescription);
+          setRecoveredId(!error && row ? row.id : null);
+          setRecoveryFailed(!!error || !row);
+        }).catch(() => { if (active) setRecoveryFailed(true); }).finally(() => { if (active) setRecoveryPending(false); });
+      }
+    } catch { /* Keep unreadable draft bytes for recovery. */ }
+    return () => { active = false; };
+  }, [user?.id, jobDescription, resumeContext, savedApplicationId, recoveryAttempt]);
+
   const handleSave = async () => {
     if (!user) {
       analytics.trackPipelineSaveClicked();
@@ -98,6 +146,9 @@ export function SaveJobToPipelineCard({
       return;
     }
 
+    if (saveInFlight.current || recoveryPending || recoveryFailed) return;
+    saveInFlight.current = true;
+    const revision = getPrivateSessionRevision();
     analytics.trackPipelineSaveClicked();
     setIsSaving(true);
 
@@ -118,9 +169,12 @@ export function SaveJobToPipelineCard({
           needsUserConfirmation: needsConfirmation,
         },
       };
-      const saveResult = savedApplicationId
-        ? await updateJobApplication(savedApplicationId, editableFields)
+      const draft = JSON.stringify({ userId: user.id, jobDescription, resumeContext, applicationId: effectiveApplicationId ?? null, fields: editableFields });
+      privateStorage.setItem('watheq:jobSaveDraft', draft);
+      const saveResult = effectiveApplicationId
+        ? await updateJobApplication(effectiveApplicationId, editableFields)
         : await createJobApplication({ ...editableFields, job_description: jobDescription });
+      if (!mounted.current || currentContext.current !== contextKey || getPrivateSessionRevision() !== revision) return;
       const { data, error } = saveResult;
       const isDuplicate = 'isDuplicate' in saveResult && saveResult.isDuplicate === true;
 
@@ -134,6 +188,8 @@ export function SaveJobToPipelineCard({
         return;
       }
 
+      if (privateStorage.getItem('watheq:jobSaveDraft') === draft) privateStorage.removeItem('watheq:jobSaveDraft');
+      setRestoredDraft(false);
       analytics.trackPipelineJobSaved({ is_duplicate: isDuplicate || false });
       requestValueMomentFeedbackPrompt('pipeline_save');
 
@@ -152,32 +208,38 @@ export function SaveJobToPipelineCard({
       }
 
       onSaved?.(data);
+    } catch (error) {
+      if (!mounted.current || currentContext.current !== contextKey || getPrivateSessionRevision() !== revision) return;
+      onToast?.({ type: 'danger', title: t('pipeline.saveFailed', 'Failed to save job'), description: error instanceof Error ? error.message : undefined });
     } finally {
+      saveInFlight.current = false;
       setIsSaving(false);
     }
   };
 
   return (
     <GlassCard className="mt-4">
+      {recoveryFailed && <p role="alert">{t('pipeline.recoveryFailed', 'Could not verify the saved job. Your edits are retained.')} <button type="button" onClick={() => setRecoveryAttempt(value => value + 1)}>{t('common.retry', 'Try Again')}</button></p>}
+      {restoredDraft && <p role="status">{t('pipeline.draftRestored', 'Unsaved changes restored. Save to finish the update.')}</p>}
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-emerald-500/10">
           <Briefcase className="w-5 h-5 text-emerald-500" />
         </div>
         <div>
           <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {savedApplicationId
+            {effectiveApplicationId
               ? t('pipeline.autoSavedTitle', 'Saved to your pipeline')
               : t('pipeline.saveJob', 'Save this job to pipeline')}
           </h4>
           <p className="text-xs text-gray-500">
-            {savedApplicationId
+            {effectiveApplicationId
               ? t('pipeline.autoSavedDesc', 'Details were saved automatically — edit and save to update.')
               : t('pipeline.saveJobDesc', 'Track your application progress')}
           </p>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <fieldset disabled={isSaving || recoveryPending || recoveryFailed} className="space-y-3">
         {(needsConfirmation || !extractedMetadata?.companyName) && (
           <div>
             <label htmlFor="pipeline-company-name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -331,17 +393,17 @@ export function SaveJobToPipelineCard({
           variant="secondary"
           size="sm"
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || recoveryPending || recoveryFailed}
           leftIcon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           className="w-full"
         >
           {isSaving
             ? t('common.submitting', 'Sending...')
-            : savedApplicationId
+            : effectiveApplicationId
               ? t('pipeline.updateSaved', 'Update saved job')
               : t('common.save', 'Save')}
         </GlassButton>
-      </div>
+      </fieldset>
     </GlassCard>
   );
 }

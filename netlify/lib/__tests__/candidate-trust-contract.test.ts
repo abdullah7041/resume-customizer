@@ -15,7 +15,7 @@ vi.mock('../credit-manager.js', () => ({ FEATURE_COSTS: { optimize: 5 }, checkCr
 vi.mock('../supabase-client.js', () => ({ getSupabaseClient: () => ({ auth: { getUser: mocks.getUser } }) }));
 vi.mock('../rate-limiter.js', () => ({ withRateLimit: (_name: string, handler: unknown) => handler,
   checkRateLimitForRequest: async () => ({ allowed: true }), checkFreePreviewRateLimitForRequest: async () => ({ allowed: true }) }));
-vi.mock('../sentry.js', () => ({ initSentry: vi.fn(), captureError: vi.fn(), summarizeErrorForLog: () => 'error' }));
+vi.mock('../sentry.js', () => ({ initSentry: vi.fn(), captureError: vi.fn(), flushSentry: vi.fn(), summarizeErrorForLog: () => 'error' }));
 vi.mock('../vulnerability-detector.js', () => ({ detectVulnerabilities: () => [] }));
 
 const { runOptimization: ordinary } = await import('../../functions/optimize.js');

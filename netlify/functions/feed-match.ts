@@ -49,6 +49,11 @@ export const handler: Handler = async (event) => {
       .eq('user_id', user.id);
     if (trackedError) return failure(503, 'service_unavailable', 'Could not verify followed companies');
     const companyIds = (tracked ?? []).map((row: { company_id: string }) => row.company_id);
+    if (process.env.JOB_CATALOGUE_ENABLED === 'true') {
+      const catalogue = await supabase.from('ats_companies').select('id').eq('catalog_enabled', true);
+      if (catalogue.error) return failure(503, 'service_unavailable', 'Could not read employer catalogue');
+      companyIds.push(...(catalogue.data ?? []).map((row: { id: string }) => row.id));
+    }
     if (!companyIds.length) return failure(404, 'posting_not_found', 'Posting not found');
 
     const { data: posting, error: postingError } = await supabase

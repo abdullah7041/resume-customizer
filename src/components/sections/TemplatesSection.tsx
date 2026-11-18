@@ -1,3 +1,6 @@
+import * as Sentry from '@sentry/react';
+import { getTemplateConfig } from '@/components/templates/registry';
+import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/components/sections/TemplatesSection.tsx
 /**
  * PDF GENERATION DIAGNOSTIC AUDIT
@@ -19,7 +22,7 @@
  */
 // Resume template gallery with floating overlay template selector
 
-import { useState, useMemo, useLayoutEffect, useEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useId, useState, useMemo, useLayoutEffect, useEffect, useRef, useCallback, lazy, Suspense, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { saveAs } from "file-saver";
@@ -237,11 +240,15 @@ interface TemplateGalleryProps {
 }
 
 export default function TemplateGallery({ resumeData: propResumeData, optimizationData, onSelectTemplate, onRequirePaidReoptimize, onReviewSections }: TemplateGalleryProps) {
-  const { t } = useTranslation();
-  const [selectedTemplate, setSelectedTemplate] = useState(resumeTemplates[0]);
+  const { t, i18n } = useTranslation();
+  const templateName = (id: string) => {
+    const config = getTemplateConfig(id as TemplateId);
+    return i18n.language.startsWith('ar') ? config.nameAr : config.name;
+  };
+  const [selectedTemplate, setSelectedTemplate] = useState(() =>
+    resumeTemplates.find(template => template.id === useResumeStore.getState().selectedTemplate) ?? resumeTemplates[0]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
-  const [isHoveringSelector, setIsHoveringSelector] = useState(false);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -249,10 +256,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   const [textPdfReview, setTextPdfReview] = useState<NonNullable<typeof pdfRecovery> | null>(null);
   const textReviewGenerationRef = useRef(0);
   const [pdfStatus, setPdfStatus] = useState<string | null>(null);
+  const sessionRevision = useRef(getPrivateSessionRevision()).current;
   const exportAttemptIdRef = useRef(0);
   const renderedInputsRef = useRef('');
   const capturedInputsRef = useRef<{ rendered: string; store: string } | null>(null);
-  const isCurrentExport = (id: number) => exportAttemptIdRef.current === id && (!capturedInputsRef.current ||
+  const isCurrentExport = (id: number) => getPrivateSessionRevision() === sessionRevision && exportAttemptIdRef.current === id && (!capturedInputsRef.current ||
     (capturedInputsRef.current.rendered === renderedInputsRef.current && capturedInputsRef.current.store === storeExportInputs()));
   const beginExport = () => {
     const id = ++exportAttemptIdRef.current;
@@ -349,6 +357,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     }
   }, [renderedInputs, currentStoreInputs, optimizationMetrics]);
   const hasRealResume = Boolean(resumeData?.basics?.name);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const pdfWarningId = useId();
+  const [hasArabicExportText, setHasArabicExportText] = useState(false);
+  useLayoutEffect(() => {
+    const preview = galleryRef.current?.querySelector<HTMLElement>('[data-resume-preview]');
+    setHasArabicExportText(Boolean(hasRealResume && preview && containsArabic(preview.textContent ?? '') &&
+      containsArabic(cloneVisiblePdfPreview(preview).textContent ?? '')));
+  }, [renderedInputs, hasRealResume]);
   const exportFailureMessage = t(
     'sections.templates.export.failed',
     'Export failed. Please try again, or switch to the ATS-friendly template and retry.'
@@ -502,6 +518,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     setExportError(null);
     analytics.trackExportClicked(attempt.templateId, 'pdf');
     const clone = previewSnapshot.cloneNode(true) as HTMLElement;
+    let stage = 'prepare';
+    let httpStatus: number | undefined;
+    const operationId = crypto.randomUUID();
+    const reportFailure = (code: string) => Sentry.captureException(new Error('pdf/export-failed'), {
+      tags: { area: 'pdf-export', templateId: attempt.templateId, stage, code, status: String(httpStatus ?? 0) },
+      extra: { httpStatus, operationId },
+    });
 
     try {
       const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
@@ -602,9 +625,10 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       }
 
       // 5. Send to Server (Netlify Function)
+      stage = 'request';
       const response = await fetch('/.netlify/functions/generate-pdf', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-watheq-operation-id': operationId },
         body: JSON.stringify(requestBody),
         // Without this the client waits out the gateway's own kill, then starts a
         // second slow path on top of it.
@@ -612,10 +636,12 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       });
       if (!isCurrentExport(attempt.id)) return;
 
+      httpStatus = response.status;
       if (!response.ok) {
         if (styledArabic && response.status === 422) {
           setPdfRecovery(attempt);
           setExportError(t('sections.templates.export.styledUnsupported', 'This Arabic PDF could not preserve every character safely. Choose DOCX or review the Text PDF layout.'));
+          reportFailure('styled_unsupported');
           analytics.trackExportFailed(attempt.templateId, 'pdf', 'styled_unsupported');
           return;
         }
@@ -624,6 +650,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         // spend 20 more seconds to produce a worse PDF for a problem that fixes
         // itself, so these say so and stop.
         if (response.status === 429 || response.status === 503) {
+          reportFailure(`server_${response.status}`);
           analytics.trackExportFailed(attempt.templateId, 'pdf', `server_${response.status}`);
           setExportError(exportBusyMessage);
           setPdfRecovery(attempt);
@@ -632,9 +659,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         throw new Error(`[PDFDownload] Server error: ${response.status}`);
       }
 
+      stage = 'response';
       const blob = await response.blob();
       if (!isCurrentExport(attempt.id)) return;
       if (!blob || blob.size === 0) throw new Error('[PDFDownload] Server returned an empty PDF');
+      stage = 'text_check';
       const quality = await checkPdfBlob(blob, expectedPdfText(exportResume, previewSnapshot));
       if (!isCurrentExport(attempt.id)) return;
       if (quality.state === 'unverified') {
@@ -643,6 +672,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         setExportError(readerUnavailable
           ? t('sections.templates.export.verificationUnavailable', 'PDF text verification is temporarily unavailable. Retry PDF or choose another export option.')
           : t('sections.templates.export.unverified', 'Selectable text could not be verified. Review this PDF before using it.'));
+        reportFailure('text_unverified');
         analytics.trackExportFailed(attempt.templateId, 'pdf_unverified', quality.reason ?? 'text_check');
         return;
       }
@@ -650,6 +680,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       // 6. Mobile-safe Download
       // iOS Safari frequently blocks navigator.share or blob URLs after async fetch delays.
       // Data URLs bypass the transient user activation restriction and trigger the native iOS download prompt.
+      stage = 'download';
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
       if (isIOS) {
@@ -677,7 +708,8 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
     } catch (err) {
       if (!isCurrentExport(attempt.id)) return;
-      console.error(`[PDFDownload] Server-side generation failed: ${summarizeErrorForConsole(err).message}`);
+      reportFailure(err instanceof DOMException && err.name === 'TimeoutError' ? 'timeout' : 'export_failed');
+      console.error('[PDFDownload] Export failed', { stage, httpStatus, templateId: attempt.templateId });
       analytics.trackExportFailed(attempt.templateId, 'pdf', 'server_error');
       setPdfRecovery(attempt);
       setExportError(exportFailureMessage);
@@ -1125,17 +1157,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
   };
 
   return (
-    <div className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
+    <div ref={galleryRef} className="relative flex flex-col min-h-[700px] md:min-h-[800px]">
       {/* Full-Width Preview */}
       <GlassCard padding="none" className="flex-1 flex flex-col neu-card rounded-2xl overflow-hidden min-h-0 relative group">
 
         {/* Header Bar */}
-        <div className="flex flex-col gap-2 p-3 md:p-5 border-b border-gray-200 dark:border-white/10 relative z-20 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <div className="relative z-20 flex flex-col gap-2 border-b border-emerald-700/15 bg-emerald-50/50 p-3 backdrop-blur-sm md:p-5 dark:border-emerald-400/20 dark:bg-emerald-950/50">
           {/* Top row: title + desktop buttons */}
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white transition-opacity duration-300 truncate">{selectedTemplate.name}</h3>
-              <p className="text-xs md:text-sm text-gray-500 dark:text-white/60 flex items-center gap-1.5 mt-0.5">
+              <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white transition-opacity duration-300 truncate">{templateName(selectedTemplate.id)}</h3>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-white/60 flex items-center gap-1.5 mt-0.5">
                 <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 {t(`sections.templates.categories.${selectedTemplate.category.toLowerCase()}`, selectedTemplate.category.charAt(0).toUpperCase() + selectedTemplate.category.slice(1))}
                 {contentLanguage && (
@@ -1187,12 +1219,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
               <GlassButton
                 onClick={handleDownloadPdf}
+                aria-describedby={hasArabicExportText ? pdfWarningId : undefined}
                 variant="primary"
                 disabled={!hasRealResume || isDownloading}
-                className="btn-metal border border-emerald-500/30 text-emerald-900 dark:text-white"
+                className="border border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800 dark:border-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500"
               >
                 {isDownloading ? t('sections.templates.generating', 'Generating...') : (
-                  <><Download className="w-4 h-4 me-2" />{t('sections.templates.downloadPdf', 'Download PDF')}</>
+                  <><Download className="w-4 h-4 me-2" />{hasArabicExportText ? t('sections.templates.downloadPdfAnyway', 'Download PDF anyway') : t('sections.templates.downloadPdf', 'Download PDF')}</>
                 )}
               </GlassButton>
 
@@ -1213,13 +1246,14 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           <div className="flex md:hidden flex-wrap gap-1.5">
             <GlassButton
               onClick={handleDownloadPdf}
+              aria-describedby={hasArabicExportText ? pdfWarningId : undefined}
               variant="primary"
               disabled={!hasRealResume || isDownloading}
               size="sm"
               className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 shadow-lg !px-2.5 !py-1.5 !rounded-lg !text-xs"
             >
               <Download className="w-3.5 h-3.5 shrink-0" />
-              <span className="ms-1">{t('sections.templates.mobilePdf', 'PDF file')}</span>
+              <span className="ms-1">{hasArabicExportText ? t('sections.templates.downloadPdfAnyway', 'Download PDF anyway') : t('sections.templates.mobilePdf', 'PDF file')}</span>
             </GlassButton>
 
             <GlassButton
@@ -1273,11 +1307,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           </div>
 
           {showAdvancedFormatting && <KeywordBoldingToggle />}
-          {contentLanguage !== 'en' && (
-            <p className="text-xs text-gray-600 dark:text-gray-300">
-              {t('sections.templates.export.arabicLayout', 'Arabic PDFs use DejaVu Sans with template colors, emphasis and spacing. Copied text may include standard text direction marks.')}
-            </p>
-          )}
+          <div role="status" aria-label={t('sections.templates.export.pdfCompatibility', 'PDF compatibility')} aria-atomic="true" className="text-sm text-ink">
+            {hasArabicExportText && (
+              <p id={pdfWarningId}>{t('sections.templates.export.arabicPdfWarning', 'Some PDF readers may change the order of Arabic letters or miss words in a search. If the application accepts Word files, you can also download a Word version.')}</p>
+            )}
+          </div>
 
           {exportError && (
             <div
@@ -1380,7 +1414,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         )}
 
         {/* Preview Area with Formatting Panel */}
-        <div className="relative flex-1 flex overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-gray-900/50 dark:to-gray-800/30 min-h-0">
+        <div className="relative flex min-h-0 flex-1 overflow-hidden bg-gradient-to-br from-emerald-50/50 to-emerald-100/30 dark:from-emerald-950/60 dark:to-emerald-900/35">
 
           {/* Formatting Panel - Left Side */}
           {showAdvancedFormatting && (
@@ -1395,7 +1429,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               {/* Dynamic Scale Wrapper - centered and fit to viewport */}
               <div
                 dir={contentDirection}
-                className="relative bg-white shadow-2xl rounded-xl overflow-visible ring-1 ring-white/10 transition-transform duration-300 origin-top ease-out mx-auto"
+                className="relative mx-auto origin-top overflow-visible rounded-xl bg-white shadow-2xl ring-1 ring-emerald-700/25 transition-transform duration-300 ease-out dark:ring-emerald-400/35"
                 style={{
                   transform: `scale(${scale})`,
                   width: '210mm',
@@ -1420,13 +1454,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
               <div
                 className={cn(
                   "fixed z-50 flex justify-center",
-                  // Desktop: draggable with hover opacity
+                  // Keep labels opaque while the desktop selector is draggable.
                   "md:cursor-grab",
                   isDragging && "md:cursor-grabbing",
-                  "transition-opacity duration-200",
-                  // Mobile: always full opacity; Desktop: fade unless hovered/dragged
-                  "opacity-100 md:opacity-70",
-                  (isHoveringSelector || isDragging) && "md:opacity-100"
                 )}
                 style={{
                   bottom: `calc(max(24px, env(safe-area-inset-bottom, 0px) + 8px) - ${barPosition.y}px)`,
@@ -1434,8 +1464,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                   transform: 'translateX(-50%)',
                   maxWidth: 'calc(100vw - 16px)',
                 }}
-                onMouseEnter={() => setIsHoveringSelector(true)}
-                onMouseLeave={() => !isDragging && setIsHoveringSelector(false)}
               >
                 <div className="flex items-center gap-1 px-2 py-2 neu-card rounded-full max-w-full no-scrollbar overflow-x-auto shadow-2xl">
                   {/* Drag Handle - hidden on mobile for space */}
@@ -1457,16 +1485,17 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
                       <button
                         type="button"
                         key={template.id}
+                        aria-pressed={isSelected}
                         onClick={() => handleSelectTemplate(template)}
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,scale] duration-200 shrink-0",
                           isSelected
-                            ? "btn-metal text-emerald-900 dark:text-white scale-105 shadow-md border-emerald-500/30"
+                            ? "border border-emerald-700 bg-emerald-700 text-white shadow-md dark:border-emerald-500 dark:bg-emerald-600"
                             : "text-gray-600 hover:text-gray-900 hover:bg-black/5 dark:text-white/70 dark:hover:text-white dark:hover:bg-white/10 btn-spring"
                         )}
                       >
                         {isSelected && <Check className="w-3 h-3" />}
-                        {template.name}
+                        {templateName(template.id)}
                       </button>
                     );
                   })}
@@ -1481,7 +1510,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
 
         {/* PDF Generation Loading Overlay - Full Screen via Portal */}
         {isDownloading && createPortal(
-          <div className="fixed bottom-6 right-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-200 ease-out">
+          <div className="fixed bottom-6 end-6 z-[100] animate-in slide-in-from-bottom-4 fade-in duration-200 ease-out">
             <LoadingMessages type="pdf" estimatedTime={2000} />
           </div>,
           document.body

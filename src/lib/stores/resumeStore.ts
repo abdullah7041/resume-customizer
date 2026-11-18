@@ -1,3 +1,4 @@
+import { privateStorage } from '@/lib/auth/privateSession';
 import { useMemo } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -31,11 +32,11 @@ const MAX_JOB_VARIANTS = 10;
 let lastStorageWriteFailed = false;
 
 const resumeStorage = {
-  getItem: (name: string) => localStorage.getItem(name),
+  getItem: (name: string) => privateStorage.getItem(name),
   setItem: (name: string, value: string) => {
     lastStorageWriteFailed = false;
     try {
-      localStorage.setItem(name, value);
+      privateStorage.setItem(name, value);
     } catch (error) {
       lastStorageWriteFailed = true;
       if (import.meta.env.DEV) console.warn('[ResumeStore] Failed to persist resume state:', error);
@@ -46,7 +47,7 @@ const resumeStorage = {
       }
     }
   },
-  removeItem: (name: string) => localStorage.removeItem(name),
+  removeItem: (name: string) => privateStorage.removeItem(name),
 };
 
 /** Minimal valid resume skeleton — basics required fields as empty strings. */
@@ -222,7 +223,7 @@ export const useResumeStore = create<ResumeState>()(
       selectedTemplate: 'modern-professional',
       displayOptions: {
         fontSize: 1, // Legacy 100% scale
-        baseFontSize: 10.5,   // pt
+        baseFontSize: 11,     // pt
         headingSize: 13,      // pt
         nameSize: 20,         // pt
         fontFamily: 'Georgia, serif',
@@ -877,6 +878,8 @@ export const useResumeStore = create<ResumeState>()(
     }),
     {
       name: 'resume-storage',
+      // Auth preserves legacy bytes and selects the owner before the first read.
+      skipHydration: true,
       storage: createJSONStorage(() => resumeStorage),
       // v1: added jobVariants/activeVariantId slice (job-specific resume builder).
       // v2: recommendation-only cards (skills/certifications) can no longer be
@@ -948,7 +951,7 @@ export const useResumeStore = create<ResumeState>()(
       }),
       // Custom merge to properly handle nested optimizationMetrics
       merge: (persistedState, currentState) => {
-        const persisted = persistedState as Partial<ResumeState>;
+        const persisted = (persistedState ?? {}) as Partial<ResumeState>;
         return {
           ...currentState,
           ...persisted,

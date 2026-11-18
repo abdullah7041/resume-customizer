@@ -182,6 +182,7 @@ export interface EvidenceDiagnostic {
   status: 422;
   code: 'EVIDENCE_INVALID';
   message: string;
+  reasons: Array<EditEvidence['reasons'][number] | 'missing_target'>;
 }
 
 /** Build only source-bound edit cards from a fresh provider result. */
@@ -194,7 +195,8 @@ export async function buildEvidenceBackedOptimizationCards(
   const add = async (targetId: string | undefined, original: unknown, proposed: unknown, references: EvidenceReference[] | undefined, input: OptimizationInput) => {
     if (!hasContent(original) || !hasContent(proposed)) return;
     if (!targetId || !references) {
-      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
+      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.',
+        reasons: [...(!targetId ? ['missing_target' as const] : []), ...(!references?.length ? ['missing_source' as const] : [])] });
       return;
     }
     const statement = (value: unknown) => Array.isArray(value) && value.every((item) => typeof item === 'string')
@@ -202,7 +204,7 @@ export async function buildEvidenceBackedOptimizationCards(
     const evidence = await validateEditEvidence({ targetId,
       original: statement(original), proposed: statement(proposed), references }, sources);
     if (evidence.status === 'rejected' || evidence.reasons.includes('new_number')) {
-      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' });
+      diagnostics.push({ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.', reasons: evidence.reasons });
       return;
     }
     const built = buildOptimizationCards(input, { logPrefix });

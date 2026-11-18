@@ -1,0 +1,9 @@
+@font-face { font-family: "Thmanyah Sans UI"; src: url("/fonts/thmanyah/Ej0k3h4Mi5O7TSo2w2JaDCPRgvo.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "Thmanyah Sans UI"; src: url("/fonts/thmanyah/3XGelYpTgxSxBXN4Oieg9Dt3bc.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "Thmanyah Sans UI"; src: url("/fonts/thmanyah/JUv6rms2ye2kYL3UI3O9YyExQcQ.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+html[lang^="ar"] {
+  --font-arabic-interface: "Thmanyah Sans UI", "IBM Plex Sans Arabic", "Tajawal", sans-serif;
+}
+html[lang^="ar"] body :not(:where([data-resume-preview], [data-resume-preview] *, [data-pdf-capture-host], [data-pdf-capture-host] *, [data-preserve-export-font], [data-preserve-export-font] *, svg, svg *, code, code *, pre, pre *)) {
+  font-family: var(--font-arabic-interface) !important;
+}

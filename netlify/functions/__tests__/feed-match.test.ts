@@ -55,6 +55,21 @@ beforeEach(() => {
 });
 
 describe('feed-match', () => {
+  it('authorizes open catalogue jobs without follows only when catalogue discovery is enabled', async () => {
+    vi.stubEnv('JOB_CATALOGUE_ENABLED', 'true');
+    const posting = query({ data: { id: 'posting-1', description: 'AI engineering experience required.' }, error: null });
+    fromMock.mockImplementation((table: string) => table === 'user_tracked_companies'
+      ? query({ data: [], error: null })
+      : table === 'ats_companies' ? query({ data: [{ id: 'catalogue-company' }], error: null }) : posting);
+    const input = { postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'a', fingerprint: 'a', text: 'resume' }] };
+    try {
+      expect((await invoke(input)).statusCode).toBe(200);
+      expect(posting.in).toHaveBeenCalledWith('company_id', ['catalogue-company']);
+      expect(posting.is).toHaveBeenCalledWith('closed_at', null);
+      vi.stubEnv('JOB_CATALOGUE_ENABLED', 'false');
+      expect((await invoke(input)).statusCode).toBe(404);
+    } finally { vi.unstubAllEnvs(); }
+  });
   it('returns machine-readable codes for unavailable service and missing posting', async () => {
     fromMock.mockImplementationOnce(() => query({ data: null, error: new Error('offline') }));
     const unavailable = await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'a', fingerprint: 'a', text: 'resume' }] });

@@ -106,7 +106,7 @@ export const workday: AtsProvider = {
         appliedFacets: {},
       });
       if (!response.ok) {
-        return { ok: false, status: response.status, postings: [], error: response.error };
+        return { ok: false, status: response.status, postings: [], error: response.error, ...(response.retryAt ? { retryAt: response.retryAt } : {}) };
       }
 
       const page = response.body as WorkdayPage;

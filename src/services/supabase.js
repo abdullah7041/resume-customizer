@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/services/supabase.js
 import { createClient } from "@supabase/supabase-js";
 
@@ -154,7 +155,7 @@ const ensureStoragePath = (value) => {
   return trimmed;
 };
 
-export const uploadResumeFile = async (file, { onProgress } = {}) => {
+export const uploadResumeFile = async (file, { onProgress, expectedSessionRevision = getPrivateSessionRevision() } = {}) => {
   const { mime, extension, baseKey } = ensureSupportedDocument(file);
 
   const {
@@ -178,6 +179,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
     });
   }
 
+  assertPrivateSession(expectedSessionRevision, user.id);
   const bucket = supabase.storage.from(RESUME_BUCKET);
   const maxAttempts = 3;
   let lastConflictError = null;
@@ -187,6 +189,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
     const candidateName = `${baseKey}${suffix}.${extension}`;
     const path = buildStorageObjectKey(user.id, candidateName);
 
+    assertPrivateSession(expectedSessionRevision, user.id);
     const { error } = await bucket.upload(path, file, {
       cacheControl: "3600",
       upsert: false,
@@ -199,6 +202,7 @@ export const uploadResumeFile = async (file, { onProgress } = {}) => {
     });
 
     if (!error) {
+      assertPrivateSession(expectedSessionRevision, user.id);
       return { path, fileName: candidateName, userId: user.id, bucket: RESUME_BUCKET };
     }
 

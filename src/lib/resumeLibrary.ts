@@ -100,8 +100,11 @@ export function removeResumeFromLibrary(
 }
 
 function openDatabase(): Promise<IDBDatabase> {
+  const scope = useResumeLibraryStore.getState().scope;
+  if (!scope) return Promise.reject(new Error('Resume library is locked until authentication resolves.'));
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
+    // The old unowned database remains intact and is never assigned to a visitor.
+    const request = indexedDB.open(`${DB_NAME}:${encodeURIComponent(scope)}`, 1);
     request.onupgradeneeded = () => {
       if (!request.result.objectStoreNames.contains(STORE_NAME)) {
         request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
@@ -142,11 +145,16 @@ const libraryDb = {
 
 function persistActiveId(id: string | null): void {
   if (typeof window === 'undefined') return;
-  if (id) window.localStorage.setItem(ACTIVE_KEY, id);
-  else window.localStorage.removeItem(ACTIVE_KEY);
+  const scope = useResumeLibraryStore.getState().scope;
+  if (!scope) return;
+  const key = `${ACTIVE_KEY}:${scope}`;
+  if (id) window.localStorage.setItem(key, id);
+  else window.localStorage.removeItem(key);
 }
 
 interface ResumeLibraryState {
+  scope: string | null;
+  setScope: (scope: string | null) => void;
   entries: ResumeLibraryEntry[];
   activeResumeId: string | null;
   initialized: boolean;
@@ -161,10 +169,18 @@ interface ResumeLibraryState {
 let initializationPromise: Promise<void> | null = null;
 
 export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
+  scope: null,
+  setScope: (scope) => {
+    if (get().scope === scope) return;
+    initializationPromise = null;
+    set({ scope, entries: [], activeResumeId: null, initialized: false });
+  },
   entries: [],
   activeResumeId: null,
   initialized: false,
   initialize: async (legacy) => {
+    const scope = get().scope;
+    if (!scope) return;
     if (get().initialized) return;
     if (typeof indexedDB === 'undefined') {
       set({ initialized: true });
@@ -174,13 +190,15 @@ export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
     initializationPromise = (async () => {
       try {
         let entries = await libraryDb.getAll();
+        if (get().scope !== scope) return;
         const migrated = migrateLegacyResume(entries, legacy);
         const migratedLegacy = migrated !== entries;
         if (migratedLegacy) {
           entries = migrated;
           await libraryDb.put(entries[0]);
         }
-        const storedActive = typeof window === 'undefined' ? null : window.localStorage.getItem(ACTIVE_KEY);
+        if (get().scope !== scope) return;
+        const storedActive = typeof window === 'undefined' ? null : window.localStorage.getItem(`${ACTIVE_KEY}:${scope}`);
         const activeResumeId = entries.some(entry => entry.id === storedActive)
           ? storedActive
           : migratedLegacy ? entries[0]?.id ?? null : null;
@@ -188,7 +206,7 @@ export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
         set({ entries, activeResumeId, initialized: true });
       } catch (error) {
         console.warn('[resume-library] IndexedDB unavailable; keeping the current resume only.', error);
-        set({ initialized: true });
+        if (get().scope === scope) set({ initialized: true });
       }
     })();
     try {
@@ -198,13 +216,16 @@ export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
     }
   },
   saveResume: async (input, { activate = true } = {}) => {
+    const scope = get().scope;
     if (initializationPromise) await initializationPromise;
+    if (!scope || get().scope !== scope) throw new Error('The resume session changed. Please try again.');
     if (!activate) {
       const existing = get().entries.find(entry => entry.fingerprint === fingerprintResume(input.plainText));
       if (existing) return existing;
     }
     const result = addResumeToLibrary(get().entries, input);
     await libraryDb.put(result.entry);
+    if (get().scope !== scope) throw new Error('The resume session changed. Please try again.');
     if (activate) persistActiveId(result.entry.id);
     set({ entries: result.entries, ...(activate ? { activeResumeId: result.entry.id } : {}) });
     return result.entry;
@@ -215,22 +236,29 @@ export const useResumeLibraryStore = create<ResumeLibraryState>((set, get) => ({
     set({ activeResumeId: id });
   },
   renameResume: async (id, name) => {
+    const scope = get().scope;
     const trimmed = name.trim().slice(0, 80);
     if (!trimmed) return;
     const entry = get().entries.find(item => item.id === id);
     if (!entry) return;
     const updated = { ...entry, name: trimmed, updatedAt: Date.now() };
     await libraryDb.put(updated);
+    if (get().scope !== scope) return;
     set(state => ({ entries: state.entries.map(item => item.id === id ? updated : item) }));
   },
   removeResume: async (id) => {
+    if (!get().entries.some(entry => entry.id === id)) return;
+    const scope = get().scope;
     const result = removeResumeFromLibrary(get().entries, id, get().activeResumeId);
     await libraryDb.delete(id);
+    if (get().scope !== scope) return;
     persistActiveId(result.activeResumeId);
     set(result);
   },
   clearLibrary: async () => {
+    const scope = get().scope;
     await libraryDb.clear();
+    if (get().scope !== scope) return;
     persistActiveId(null);
     set({ entries: [], activeResumeId: null });
   },

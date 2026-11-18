@@ -2,7 +2,7 @@
 //
 // Kept apart from the feed's own clock on purpose. "Updated just now" times the
 // database re-read, which the Reload button does; this times the crawl, which
-// runs once a day on a schedule no button here can trigger.
+// runs hourly or after a user requests a board check.
 
 import type { TrackedCompany } from '@/services/jobFeed';
 

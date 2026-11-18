@@ -1,6 +1,7 @@
 import { Linkedin } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import WhatsAppSupportLink from "@/components/Layout/WhatsAppSupportLink";
 
 export default function Footer() {
   const { t } = useTranslation();
@@ -54,6 +55,7 @@ export default function Footer() {
             <a href="mailto:support@watheqai.app" className="font-medium text-emerald-700 transition-colors hover:text-emerald-600 dark:text-emerald-300 dark:hover:text-emerald-200">
               {t("footer.links.contact")}
             </a>
+            <WhatsAppSupportLink className="font-medium text-emerald-700 hover:underline dark:text-emerald-300" />
           </nav>
         </div>
       </footer>
@@ -92,6 +94,7 @@ export default function Footer() {
               >
                 {t("footer.links.contact")}
               </a>
+              <WhatsAppSupportLink className="font-medium text-emerald-700 hover:underline dark:text-emerald-300" />
             </nav>
           </div>
 

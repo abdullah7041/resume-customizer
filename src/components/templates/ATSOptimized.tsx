@@ -1,11 +1,11 @@
-import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
-import { useSectionLabel } from '../../hooks/useSectionLabel';
+import type { TemplateProps } from '@/components/templates/BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from '@/components/templates/BaseTemplate';
+import { useSectionLabel } from '@/hooks/useSectionLabel';
 import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
-    baseFontSize: 10.5,
+    baseFontSize: 11,
     headingSize: 13,
     nameSize: 20,
     fontFamily: 'Arial, Helvetica, sans-serif',
@@ -61,7 +61,7 @@ export function ATSOptimized({
     // Helper for scaled fonts - use displayOptions or legacy fontScale
     const fs = (pt: number) => {
         if (displayOptions?.baseFontSize) {
-            const scaleFactor = displayOptions.baseFontSize / 10.5;
+            const scaleFactor = displayOptions.baseFontSize / 11;
             return scaledFontSize(pt, scaleFactor);
         }
         return scaledFontSize(pt, fontScale);
@@ -71,7 +71,7 @@ export function ATSOptimized({
         : scaledFontSize(opts.nameSize ?? 20, fontScale);
 
     // Dynamic margins based on displayOptions
-    const marginPadding = `${opts.marginTop * 25.4}mm ${opts.marginSide * 25.4}mm`;
+    const marginPadding = `${opts.marginTop * 25.4}mm ${opts.marginSide * 25.4}mm ${opts.marginBottom * 25.4}mm`;
 
     // Computed styles based on displayOptions
     const sectionStyle = { marginBottom: `${opts.sectionSpacing}px` };
@@ -95,6 +95,8 @@ export function ATSOptimized({
                 colorScheme: 'light',
                 width: A4_STYLES.width,
                 minHeight: A4_STYLES.minHeight,
+        boxSizing: 'border-box',
+        overflowWrap: 'anywhere',
                 padding: marginPadding,
                 transform: `scale(${scale})`,
                 transformOrigin: 'top left',
@@ -116,7 +118,7 @@ export function ATSOptimized({
                 )}
                 {/* Contact Line */}
                 <p className="text-black mt-2" style={{ fontSize: fs(10) }}>
-                    {basics?.phone && <span>{basics.phone}</span>}
+                    {basics?.phone && <bdi dir="ltr">{basics.phone}</bdi>}
                     {basics?.email && (
                         <>
                             {basics?.phone && <Sep />}
@@ -168,7 +170,7 @@ export function ATSOptimized({
                     <h2 className="text-black" style={headingStyle}>
                         {getSectionLabel('summary')}
                     </h2>
-                    <p className="leading-relaxed" style={{ fontSize: fs(10.5) }}>{basics.summary}</p>
+                    <p className="leading-relaxed" style={{ fontSize: fs(11) }}>{basics.summary}</p>
                 </section>
             )}
 
@@ -176,9 +178,9 @@ export function ATSOptimized({
             {allSkills.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        {getSectionLabel('coreCompetencies')}
+                        {getSectionLabel('skills')}
                     </h2>
-                    <p style={{ fontSize: fs(10.5) }}>
+                    <p style={{ fontSize: fs(11) }}>
                         {allSkills.join(', ')}
                     </p>
                 </section>
@@ -192,23 +194,23 @@ export function ATSOptimized({
                     </h2>
                     {work.map((job, jobIndex) => (
                         <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} className="mb-4" style={{ breakInside: 'avoid' }}>
-                            <div className="flex justify-between items-baseline">
-                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                            <div className="flex flex-wrap gap-x-2 justify-between items-baseline">
+                                <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                                     <span className="font-semibold" style={{ fontSize: fs(12) }}>{safeString(job.position)}</span>
                                     {job.name && <span className="text-black" style={{ fontSize: fs(11) }}> | {job.name}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '8px' }}>
                                     {job.startDate} - {job.endDate || 'Present'}
                                 </span>
                             </div>
                             {job.location && (
-                                <p className="text-black" style={{ fontSize: fs(10.5) }}>{job.location}</p>
+                                <p className="text-black" style={{ fontSize: fs(11) }}>{job.location}</p>
                             )}
-                            {job.description && <p className="mb-1 text-black" style={{ fontSize: fs(10.5) }}>{job.description}</p>}
+                            {job.description && <p className="mb-1 text-black" style={{ fontSize: fs(11) }}>{job.description}</p>}
                             {job.highlights && job.highlights.length > 0 && (
-                                <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                                <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                     {job.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} style={{ fontSize: fs(10.5), marginBottom: '1px' }}>
+                                        <li key={hIndex} style={{ fontSize: fs(11), marginBottom: '1px' }}>
                                             {cleanHighlight(highlight)}
                                         </li>
                                     ))}
@@ -223,18 +225,18 @@ export function ATSOptimized({
             {projects && projects.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        {getSectionLabel('keyProjects')}
+                        {getSectionLabel('projects')}
                     </h2>
                     {projects.map((project, projectIndex) => (
                         <div key={`${project.name}-${projectIndex}`} className="mb-3" style={{ breakInside: 'avoid' }}>
                             <p className="font-semibold" style={{ fontSize: fs(11) }}>{safeString(project.name)}</p>
                             {project.description && (
-                                <p className="text-black" style={{ fontSize: fs(10.5) }}>{project.description}</p>
+                                <p className="text-black" style={{ fontSize: fs(11) }}>{project.description}</p>
                             )}
                             {project.highlights && project.highlights.length > 0 && (
-                                <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                                <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                     {project.highlights.map((highlight, hIndex) => (
-                                        <li key={hIndex} style={{ fontSize: fs(10.5), marginBottom: '1px' }}>
+                                        <li key={hIndex} style={{ fontSize: fs(11), marginBottom: '1px' }}>
                                             {cleanHighlight(highlight)}
                                         </li>
                                     ))}
@@ -257,26 +259,26 @@ export function ATSOptimized({
                             className="mb-3"
                             style={{ breakInside: filterEducationHighlights(edu.highlights).length > 4 ? 'auto' : 'avoid' }}
                         >
-                            <div className="flex justify-between">
-                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                    <span className="font-semibold" style={{ fontSize: fs(10.5) }}>{safeString(edu.studyType)}</span>
-                                    {edu.area && <span style={{ fontSize: fs(10.5) }}> in {edu.area}</span>}
+                            <div className="flex flex-wrap gap-x-2 justify-between">
+                                <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                                    <span className="font-semibold" style={{ fontSize: fs(11) }}>{safeString(edu.studyType)}</span>
+                                    {edu.area && <span style={{ fontSize: fs(11) }}> in {edu.area}</span>}
                                 </div>
-                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                <span className="text-black" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '8px' }}>
                                     {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : (edu.endDate || edu.startDate)}
                                 </span>
                             </div>
-                            <p className="text-black" style={{ fontSize: fs(10.5) }}>{safeString(edu.institution)}</p>
-                            {edu.score && <p style={{ fontSize: fs(10.5) }}>GPA: {edu.score}</p>}
+                            <p className="text-black" style={{ fontSize: fs(11) }}>{safeString(edu.institution)}</p>
+                            {edu.score && <p style={{ fontSize: fs(11) }}>GPA: {edu.score}</p>}
                             {edu.courses && edu.courses.length > 0 && (
-                                <p className="text-black" style={{ fontSize: fs(10.5), marginTop: '2px' }}>
+                                <p className="text-black" style={{ fontSize: fs(11), marginTop: '2px' }}>
                                     Relevant Coursework: {edu.courses.join(' · ')}
                                 </p>
                             )}
                             {filterEducationHighlights(edu.highlights).length > 0 && (
-                                <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                                <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                     {filterEducationHighlights(edu.highlights).map((h, hIndex) => (
-                                        <li key={hIndex} style={{ fontSize: fs(10.5), marginBottom: '1px' }}>
+                                        <li key={hIndex} style={{ fontSize: fs(11), marginBottom: '1px' }}>
                                             {h}
                                         </li>
                                     ))}
@@ -291,17 +293,17 @@ export function ATSOptimized({
             {certificates && certificates.length > 0 && (
                 <section style={sectionStyle}>
                     <h2 className="text-black" style={headingStyle}>
-                        {getSectionLabel('certificationsTraining')}
+                        {getSectionLabel('certifications')}
                     </h2>
                     <div className="space-y-2">
                     {certificates.map((cert, certificateIndex) => (
-                        <div key={`${typeof cert === 'string' ? cert : `${cert.name}-${cert.date}`}-${certificateIndex}`} className="flex justify-between items-baseline">
+                        <div key={`${typeof cert === 'string' ? cert : `${cert.name}-${cert.date}`}-${certificateIndex}`} className="flex flex-wrap gap-x-2 justify-between items-baseline">
                                 <div>
-                                    <span className="font-semibold" style={{ fontSize: fs(10.5) }}>
+                                    <span className="font-semibold" style={{ fontSize: fs(11) }}>
                                         {typeof cert === 'string' ? cert : safeString(cert.name)}
                                     </span>
                                     {typeof cert !== 'string' && cert.issuer && (
-                                        <span className="text-black" style={{ fontSize: fs(10.5) }}> | {cert.issuer}</span>
+                                        <span className="text-black" style={{ fontSize: fs(11) }}> | {cert.issuer}</span>
                                     )}
                                 </div>
                                 {typeof cert !== 'string' && cert.date && (
@@ -319,7 +321,7 @@ export function ATSOptimized({
                     <h2 className="text-black" style={headingStyle}>
                         {getSectionLabel('languages')}
                     </h2>
-                    <p style={{ fontSize: fs(10.5) }}>
+                    <p style={{ fontSize: fs(11) }}>
                         {languages.map(lang => {
                             const { language, fluency } = safeLang(lang);
                             return `${language}${fluency ? ` (${fluency})` : ''}`;

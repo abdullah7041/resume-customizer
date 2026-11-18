@@ -1,3 +1,4 @@
+import { activatePrivateSession, privateStorage } from '@/lib/auth/privateSession';
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, renderHook, act, waitFor } from "@testing-library/react";
 import { StrictMode, useEffect } from "react";
@@ -36,8 +37,55 @@ vi.mock("@supabase/supabase-js", () => ({
 
 import { AuthProvider, useAuth } from '../hooks/useAuth';
 import { useResumeStore } from '../lib/stores/resumeStore';
+import { useResumeLibraryStore } from '../lib/resumeLibrary';
 
 describe('useAuth', () => {
+  it('keeps private content hidden and offers recovery when session lookup fails', async () => {
+    mockGetSession.mockRejectedValueOnce(new Error('offline'));
+    const view = render(<AuthProvider><div>private workspace</div></AuthProvider>);
+    await waitFor(() => expect(view.getByRole('alert')).toBeTruthy());
+    expect(view.queryByText('private workspace')).toBeNull();
+    expect(view.getByRole('button')).toBeTruthy();
+  });
+
+  it('hides children until authentication is resolved', async () => {
+    let finish;
+    mockGetSession.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    const view = render(<AuthProvider><div>private workspace</div></AuthProvider>);
+    const initialContent = view.queryByText('private workspace');
+    await act(async () => { finish({ data: { session: null } }); });
+    expect(initialContent).toBeNull();
+    expect(view.getByText('private workspace')).toBeTruthy();
+  });
+
+  it('locks the library on logout and restores only the returning owner session', async () => {
+    mockGetSession.mockResolvedValueOnce({ data: { session: { user: { id: 'owner-a' } } } });
+    const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.user?.id).toBe('owner-a'));
+    useResumeStore.getState().setParsedResumeText('Owner A private source resume text. '.repeat(5));
+    useResumeLibraryStore.setState({ entries: [{ id: 'private-a', name: 'Private A' }], activeResumeId: 'private-a' });
+    await act(async () => { await result.current.signOut(); });
+    expect(useResumeLibraryStore.getState().entries).toEqual([]);
+    expect(useResumeStore.getState().parsedResumeText).toBeNull();
+    await act(async () => { authState.callback('SIGNED_IN', { user: { id: 'owner-b' } }); });
+    expect(useResumeStore.getState().parsedResumeText).toBeNull();
+    await act(async () => { authState.callback('SIGNED_IN', { user: { id: 'owner-a' } }); });
+    expect(useResumeStore.getState().parsedResumeText).toContain('Owner A private source');
+  });
+
+  it('does not restore a stale cross-tab session lookup after a newer auth event', async () => {
+    mockGetSession.mockResolvedValueOnce({ data: { session: { user: { id: 'race-a' } } } });
+    const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current?.user?.id).toBe('race-a'));
+    let resolveOld;
+    mockGetSession.mockImplementationOnce(() => new Promise(resolve => { resolveOld = resolve; }));
+    await act(async () => { window.dispatchEvent(new StorageEvent('storage', { key: 'watheq:privateOwner' })); });
+    await act(async () => { authState.callback('SIGNED_IN', { user: { id: 'race-b' } }); });
+    await act(async () => { resolveOld({ data: { session: { user: { id: 'race-a' } } } }); });
+    expect(result.current.user.id).toBe('race-b');
+  });
   beforeEach(() => {
     mockSignIn.mockClear();
     mockSignOut.mockClear();
@@ -49,15 +97,19 @@ describe('useAuth', () => {
     useResumeStore.getState().clearAll();
   });
 
-  it('enforces redirect url on Google sign in', async () => {
+  it.each([
+    ['Google', 'signInWithGoogle', 'google'],
+    ['LinkedIn', 'signInWithLinkedIn', 'linkedin_oidc'],
+  ])('enforces the Watheq redirect URL on %s sign in', async (_name, signIn, provider) => {
     const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
     const { result } = renderHook(() => useAuth(), { wrapper });
     let attemptedRedirect;
+    await waitFor(() => expect(result.current?.loading).toBe(false));
     await act(async () => {
-      attemptedRedirect = await result.current.signInWithGoogle();
+      attemptedRedirect = await result.current[signIn]();
     });
     expect(mockSignIn).toHaveBeenCalledWith({
-      provider: 'google',
+      provider,
       options: { redirectTo: expect.stringMatching(/^https?:\/\//), skipBrowserRedirect: true },
     });
     expect(attemptedRedirect).toBeTruthy();
@@ -66,25 +118,27 @@ describe('useAuth', () => {
   });
 
   it('clears sensitive local session data on sign out', async () => {
+    mockGetSession.mockResolvedValueOnce({ data: { session: { user: { id: 'signed-out-test' } } } });
     const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
     const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current?.loading).toBe(false));
 
-    localStorage.setItem("resume-storage", JSON.stringify({ state: { parsedResumeText: "private" } }));
-    localStorage.setItem("watheq:resumeData", JSON.stringify({ basics: { name: "Private" } }));
-    localStorage.setItem("watheq:lastJobDescription", "private job description");
-    localStorage.setItem("watheq:coverLetter", JSON.stringify({ coverLetter: "private" }));
-    localStorage.setItem("watheq:onboardingTourCompleted", "true");
+    privateStorage.setItem("resume-storage", JSON.stringify({ state: { parsedResumeText: "private" } }));
+    privateStorage.setItem("watheq:resumeData", JSON.stringify({ basics: { name: "Private" } }));
+    privateStorage.setItem("watheq:lastJobDescription", "private job description");
+    privateStorage.setItem("watheq:coverLetter", JSON.stringify({ coverLetter: "private" }));
+    privateStorage.setItem("watheq:onboardingTourCompleted", "true");
 
     await act(async () => {
       await result.current.signOut();
     });
 
     expect(mockSignOut).toHaveBeenCalled();
-    expect(localStorage.getItem("resume-storage")).toBeNull();
-    expect(localStorage.getItem("watheq:resumeData")).toBeNull();
-    expect(localStorage.getItem("watheq:lastJobDescription")).toBeNull();
-    expect(localStorage.getItem("watheq:coverLetter")).toBeNull();
-    expect(localStorage.getItem("watheq:onboardingTourCompleted")).toBe("true");
+    expect(JSON.parse(privateStorage.getItem("resume-storage") || '{}').state?.parsedResumeText ?? null).toBeNull();
+    expect(privateStorage.getItem("watheq:resumeData")).toBeNull();
+    expect(privateStorage.getItem("watheq:lastJobDescription")).toBeNull();
+    expect(privateStorage.getItem("watheq:coverLetter")).toBeNull();
+    expect(privateStorage.getItem("watheq:onboardingTourCompleted")).toBe("true");
   });
 
   it('clears sensitive cached data when the initial signed-in user differs from the cached auth user', async () => {
@@ -138,6 +192,7 @@ describe('useAuth', () => {
       },
     });
 
+    activatePrivateSession("user-a", () => {});
     localStorage.setItem("watheq:lastAuthUserId", "user-a");
     localStorage.setItem("resume-storage", JSON.stringify({ state: { parsedResumeText: "private" } }));
     localStorage.setItem("watheq:resumeData", JSON.stringify({ basics: { name: "Private" } }));
@@ -199,7 +254,7 @@ describe('useAuth', () => {
     expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 
-  it('does not remount the authenticated subtree when auth state changes from anonymous to signed in', async () => {
+  it('remounts private consumers when the authenticated owner changes', async () => {
     const mountProbe = vi.fn();
 
     function Probe() {
@@ -216,7 +271,7 @@ describe('useAuth', () => {
       </AuthProvider>
     );
 
-    expect(mountProbe).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mountProbe).toHaveBeenCalledTimes(1));
 
     await act(async () => {
       authState.callback("SIGNED_IN", {
@@ -225,7 +280,7 @@ describe('useAuth', () => {
       });
     });
 
-    expect(mountProbe).toHaveBeenCalledTimes(1);
+    expect(mountProbe).toHaveBeenCalledTimes(2);
   });
 });
 

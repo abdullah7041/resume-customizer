@@ -9,12 +9,13 @@ export function DirectionProvider({ children }) {
   const [direction, setDirection] = useState('ltr');
 
   useEffect(() => {
-    const isArabic = i18n.language === 'ar';
+    const isArabic = i18n.language.startsWith('ar');
     const dir = isArabic ? 'rtl' : 'ltr';
 
     setDirection(dir);
     document.documentElement.dir = dir;
     document.documentElement.lang = i18n.language;
+    document.querySelector('.sbc-verify-seal')?.setAttribute('data-position', isArabic ? 'bottom-right' : 'bottom-left');
 
     // Update font family for Arabic
     if (isArabic) {

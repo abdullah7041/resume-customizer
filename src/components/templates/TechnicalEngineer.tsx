@@ -1,14 +1,14 @@
-import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
-import { useSectionLabel } from '../../hooks/useSectionLabel';
+import type { TemplateProps } from '@/components/templates/BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from '@/components/templates/BaseTemplate';
+import { useSectionLabel } from '@/hooks/useSectionLabel';
 import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
-    baseFontSize: 10.5,
+    baseFontSize: 11,
     headingSize: 13,
     nameSize: 20,
-    fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+    fontFamily: "Arial, Helvetica, sans-serif",
     sectionSpacing: 8,
     paragraphSpacing: 6,
     lineHeight: 1.5,
@@ -20,7 +20,7 @@ const DEFAULT_OPTIONS = {
 /**
  * Technical Engineer Template
  * Optimized for tech roles with prominent skills section
- * Clean sections, monospace accents for technical credibility
+ * Single-column sections and plain-text technical skills
  */
 export function TechnicalEngineer({
     resume,
@@ -53,7 +53,7 @@ export function TechnicalEngineer({
     // Helper for scaled fonts - use displayOptions or legacy fontScale
     const fs = (pt: number) => {
         if (displayOptions?.baseFontSize) {
-            const scaleFactor = displayOptions.baseFontSize / 10.5;
+            const scaleFactor = displayOptions.baseFontSize / 11;
             return scaledFontSize(pt, scaleFactor);
         }
         return scaledFontSize(pt, fontScale);
@@ -88,8 +88,10 @@ export function TechnicalEngineer({
                 transformOrigin: 'top left',
                 width: A4_STYLES.width,
                 minHeight: A4_STYLES.minHeight,
+        boxSizing: 'border-box',
+        overflowWrap: 'anywhere',
                 paddingTop: `${opts.marginTop * 25.4}mm`,
-                paddingBottom: `${opts.marginTop * 25.4}mm`,
+                paddingBottom: `${opts.marginBottom * 25.4}mm`,
                 paddingLeft: `${opts.marginSide * 25.4}mm`,
                 paddingRight: `${opts.marginSide * 25.4}mm`,
                 fontFamily: opts.fontFamily,
@@ -124,7 +126,7 @@ export function TechnicalEngineer({
                 )}
                 <div className="flex flex-wrap gap-4 text-gray-500" style={{ fontSize: fs(10) }}>
                     {basics.email && <a href={`mailto:${basics.email}`} style={{ color: '#2563eb', textDecoration: 'none' }}>{basics.email}</a>}
-                    {basics.phone && <span>{basics.phone}</span>}
+                    {basics.phone && <bdi dir="ltr">{basics.phone}</bdi>}
                     {basics.location?.city && (
                         <span>
                             {basics.location.city}
@@ -142,49 +144,17 @@ export function TechnicalEngineer({
             {/* SKILLS FIRST - Technical emphasis */}
             {skills.length > 0 && (
                 <section
-                    style={{ ...sectionStyle, padding: '1rem', borderRadius: '0.25rem', backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
+                    style={sectionStyle}
                 >
                     <h2
                         className="text-gray-700"
                         style={{ ...headingStyle, borderBottom: 'none' }}
                     >
-                        {getSectionLabel('technicalSkills')}
+                        {getSectionLabel('skills')}
                     </h2>
-                    <div className="flex flex-wrap gap-2">
-                        {skills.map((skillItem, skillIndex) => {
-                            // Handle both string and object formats
-                            if (typeof skillItem === 'string') {
-                                return (
-                                    <span
-                                        key={`${skillItem}-${skillIndex}`}
-                                        className="px-3 py-1 text-gray-700 rounded"
-                                        style={{
-                                            fontSize: fs(10.5),
-                                            backgroundColor: '#ffffff',
-                                            border: '1px solid #d1d5db',
-                                        }}
-                                    >
-                                        {skillItem}
-                                    </span>
-                                );
-                            }
-                            // Object format with keywords
-                            const keywords = skillItem.keywords || [skillItem.name];
-                            return keywords.map((skill: string, keywordIndex: number) => (
-                                <span
-                                    key={`${skillItem.name}-${skill}-${skillIndex}-${keywordIndex}`}
-                                    className="px-3 py-1 text-gray-700 rounded"
-                                    style={{
-                                        fontSize: fs(10.5),
-                                        backgroundColor: '#ffffff',
-                                        border: '1px solid #d1d5db',
-                                    }}
-                                >
-                                    {skill}
-                                </span>
-                            ));
-                        })}
-                    </div>
+                    <p style={{ fontSize: fs(11) }}>
+                      {skills.flatMap(skill => typeof skill === 'string' ? [skill] : (skill.keywords?.length ? skill.keywords : [skill.name])).filter(Boolean).join(', ')}
+                    </p>
                 </section>
             )}
 
@@ -201,7 +171,7 @@ export function TechnicalEngineer({
                         className="text-gray-600"
                         style={{
                             fontFamily: "'Inter', -apple-system, sans-serif",
-                            fontSize: fs(10.5),
+                            fontSize: fs(11),
                             orphans: 2,
                             widows: 2,
                         }}
@@ -218,13 +188,13 @@ export function TechnicalEngineer({
                         className="text-gray-700"
                         style={headingStyle}
                     >
-                        {getSectionLabel('experience')}
+                        {getSectionLabel('workExperience')}
                     </h2>
                     <div className="space-y-4">
                         {work.map((job, jobIndex) => (
                             <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                                 <div style={{ breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
-                                    <div className="flex justify-between items-baseline mb-1">
+                                    <div className="flex flex-wrap gap-x-2 justify-between items-baseline mb-1">
                                         <h3
                                             className="text-gray-900"
                                             style={{
@@ -232,12 +202,12 @@ export function TechnicalEngineer({
                                                 fontWeight: '600',
                                                 fontFamily: "'Inter', -apple-system, sans-serif",
                                                 minWidth: 0,
-                                                overflow: 'hidden',
+                                                overflowWrap: 'anywhere',
                                             }}
                                         >
                                             {safeString(job.position)}
                                         </h3>
-                                        <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                        <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '8px' }}>
                                             {job.startDate} - {job.endDate || 'Present'}
                                         </span>
                                     </div>
@@ -246,11 +216,11 @@ export function TechnicalEngineer({
                                         {job.location && ` | ${job.location}`}
                                     </p>
                                 </div>
-                                {job.description && <p className="mb-1 text-gray-600" style={{ fontSize: fs(10.5) }}>{job.description}</p>}
+                                {job.description && <p className="mb-1 text-gray-600" style={{ fontSize: fs(11) }}>{job.description}</p>}
                                 {job.highlights && job.highlights.length > 0 && (
-                                    <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                                    <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {job.highlights.map((h, j) => (
-                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(11), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                                                 {cleanHighlight(h)}
                                             </li>
                                         ))}
@@ -286,13 +256,13 @@ export function TechnicalEngineer({
                                         {safeString(project.name)}
                                     </h3>
                                     {project.description && (
-                                        <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5), orphans: 2, widows: 2 }}>{project.description}</p>
+                                        <p className="text-gray-600 mb-1" style={{ fontSize: fs(11), orphans: 2, widows: 2 }}>{project.description}</p>
                                     )}
                                 </div>
                                 {project.highlights && project.highlights.length > 0 && (
-                                    <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                                    <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {project.highlights.map((h, j) => (
-                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(11), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                                                 {cleanHighlight(h)}
                                             </li>
                                         ))}
@@ -317,42 +287,42 @@ export function TechnicalEngineer({
                         {education.map((edu, educationIndex) => (
                             <div key={`${edu.institution}-${edu.studyType}-${educationIndex}`} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
                                 <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
-                                    <div className="flex justify-between items-baseline">
-                                        <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                    <div className="flex flex-wrap gap-x-2 justify-between items-baseline">
+                                        <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                                             <h3
                                                 className="text-gray-900"
                                                 style={{
-                                                    fontSize: fs(10.5),
+                                                    fontSize: fs(11),
                                                     fontWeight: '600',
                                                     fontFamily: "'Inter', -apple-system, sans-serif",
                                                 }}
                                             >
                                                 {safeString(edu.institution)}
                                             </h3>
-                                            <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
+                                            <p className="text-gray-500" style={{ fontSize: fs(11) }}>
                                                 {safeString(edu.studyType)}
                                                 {edu.area && ` - ${edu.area}`}
                                             </p>
                                             {edu.score && (
-                                                <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
+                                                <p className="text-gray-500" style={{ fontSize: fs(11) }}>
                                                     GPA: {edu.score}
                                                 </p>
                                             )}
                                             {edu.courses && edu.courses.length > 0 && (
-                                                <p className="text-gray-500" style={{ fontSize: fs(10.5), marginTop: '2px' }}>
+                                                <p className="text-gray-500" style={{ fontSize: fs(11), marginTop: '2px' }}>
                                                     Relevant Coursework: {edu.courses.join(' · ')}
                                                 </p>
                                             )}
                                         </div>
-                                        <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                                        <span className="text-gray-500" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '8px' }}>
                                             {edu.startDate && edu.endDate ? `${edu.startDate} - ${edu.endDate}` : (edu.endDate || edu.startDate)}
                                         </span>
                                     </div>
                                 </div>
                                 {filterEducationHighlights(edu.highlights).length > 0 && (
-                                    <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                                    <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                                         {filterEducationHighlights(edu.highlights).map((h, j) => (
-                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                                            <li key={j} className="text-gray-600" style={{ fontSize: fs(11), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                                                 {h}
                                             </li>
                                         ))}
@@ -375,12 +345,12 @@ export function TechnicalEngineer({
                     </h2>
                     <div className="space-y-2">
                         {certificates.map((cert, certificateIndex) => (
-                            <div key={`${cert.name}-${cert.date}-${certificateIndex}`} className="flex justify-between items-baseline">
+                            <div key={`${cert.name}-${cert.date}-${certificateIndex}`} className="flex flex-wrap gap-x-2 justify-between items-baseline">
                                 <div>
                                     <h3
                                         className="text-gray-900"
                                         style={{
-                                            fontSize: fs(10.5),
+                                            fontSize: fs(11),
                                             fontWeight: '600',
                                             fontFamily: "'Inter', -apple-system, sans-serif",
                                         }}
@@ -388,7 +358,7 @@ export function TechnicalEngineer({
                                         {safeString(cert.name)}
                                     </h3>
                                     {cert.issuer && (
-                                        <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
+                                        <p className="text-gray-500" style={{ fontSize: fs(11) }}>
                                             {cert.issuer}
                                         </p>
                                     )}
@@ -417,7 +387,7 @@ export function TechnicalEngineer({
                         {languages.map((lang, languageIndex) => {
                             const { language, fluency } = safeLang(lang);
                             return (
-                                <span key={`${language}-${languageIndex}`} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                                <span key={`${language}-${languageIndex}`} className="text-gray-600" style={{ fontSize: fs(11) }}>
                                     <strong>{language}</strong>{fluency ? `: ${fluency}` : ''}
                                 </span>
                             );

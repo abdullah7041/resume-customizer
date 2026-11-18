@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/services/jobFeed.ts
 // Service layer for the Job Feed (Supabase RLS), mirroring src/services/pipeline.ts.
 //
@@ -24,7 +25,7 @@ const FEED_STATE_TABLE = 'user_job_feed_state';
  * thousands of postings with several KB of JD each — shipping that on every feed
  * open would be megabytes for nothing. The JD is loaded per posting, on demand.
  */
-const POSTING_COLUMNS = 'id, company_id, external_id, title, location, apply_url, posted_at, first_seen_at';
+const POSTING_COLUMNS = 'id, company_id, external_id, title, location, apply_url, posted_at, publication_kind, publication_precision, first_seen_at';
 
 export interface TrackedCompany {
   companyId: string;
@@ -58,7 +59,9 @@ function summarizeError(error: unknown) {
 }
 
 async function authHeaders(): Promise<Record<string, string> | null> {
+  const revision = getPrivateSessionRevision();
   const { data } = await supabase.auth.getSession();
+  assertPrivateSession(revision, data.session?.user?.id ?? null);
   const token = data.session?.access_token;
   if (!token) return null;
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
@@ -109,7 +112,7 @@ export function untrackCompany(companyId: string) {
 /**
  * Ask the server to re-read the boards this user follows.
  *
- * Distinct from `load()` in the feed, which re-reads the DATABASE. Only the daily
+ * Distinct from `load()` in the feed, which re-reads the DATABASE. The hourly
  * cron ever went out to the employer boards, so a user watching for a new posting
  * had no way to ask for one. The server scopes this to the caller's own companies
  * and skips any board read within the last hour, so pressing it repeatedly costs
@@ -265,19 +268,6 @@ export async function listOpenPostings(
 
   const nameById = new Map(companies.map((company) => [company.companyId, company.displayName]));
 
-  const { data, error } = await supabase
-    .from(POSTINGS_TABLE)
-    .select(POSTING_COLUMNS)
-    .in('company_id', [...nameById.keys()])
-    .is('closed_at', null)
-    .order('first_seen_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error('[JobFeed] Failed to list postings:', summarizeError(error));
-    return { postings: [], error: summarizeError(error).message };
-  }
-
   interface PostingRow {
     id: string;
     company_id: string;
@@ -285,10 +275,25 @@ export async function listOpenPostings(
     location: string;
     apply_url: string;
     posted_at: string | null;
+    publication_kind: FeedPosting['publicationKind'];
+    publication_precision: FeedPosting['publicationPrecision'];
     first_seen_at: string;
   }
 
-  const postings: FeedPosting[] = ((data ?? []) as PostingRow[]).map((row) => ({
+  const data: PostingRow[] = [];
+  const pageSize = Math.min(500, Math.max(1, limit));
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await supabase.from(POSTINGS_TABLE).select(POSTING_COLUMNS)
+      .in('company_id', [...nameById.keys()]).is('closed_at', null)
+      .order('id').range(offset, offset + pageSize - 1);
+    if (page.error) {
+      console.error('[JobFeed] Failed to list postings:', summarizeError(page.error));
+      return { postings: [], error: summarizeError(page.error).message };
+    }
+    data.push(...(page.data ?? []) as PostingRow[]);
+    if ((page.data?.length ?? 0) < pageSize) break;
+  }
+  const postings: FeedPosting[] = data.map((row) => ({
     id: row.id,
     companyId: row.company_id,
     companyName: nameById.get(row.company_id) ?? '',
@@ -296,6 +301,8 @@ export async function listOpenPostings(
     location: row.location,
     applyUrl: row.apply_url,
     postedAt: row.posted_at,
+    publicationKind: row.publication_kind,
+    publicationPrecision: row.publication_precision,
     firstSeenAt: row.first_seen_at,
   }));
 
@@ -352,9 +359,11 @@ export async function listFeedState(): Promise<Map<string, FeedStateValue>> {
  * manual too.
  */
 export async function setFeedState(postingId: string, state: FeedStateValue): Promise<{ error: string | null }> {
+  const revision = getPrivateSessionRevision();
   const { data: session } = await supabase.auth.getUser();
   const userId = session.user?.id;
   if (!userId) return { error: 'Not signed in' };
+  assertPrivateSession(revision, userId);
 
   const { error } = await supabase
     .from(FEED_STATE_TABLE)
@@ -446,9 +455,11 @@ export async function readLastFeedSeenAt(): Promise<string | null> {
 }
 
 export async function touchLastFeedSeenAt(): Promise<void> {
+  const revision = getPrivateSessionRevision();
   const { data: session } = await supabase.auth.getUser();
   const userId = session.user?.id;
   if (!userId) return;
+  assertPrivateSession(revision, userId);
 
   const { error } = await supabase
     .from('user_profiles')

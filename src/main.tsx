@@ -11,6 +11,7 @@ Sentry.init({
     }),
   ],
   environment: import.meta.env.MODE,
+  release: import.meta.env.VITE_SENTRY_RELEASE,
   sendDefaultPii: false,
 
   // Performance Monitoring
@@ -35,7 +36,7 @@ Sentry.init({
   },
 });
 
-import { StrictMode } from "react";
+import { StrictMode, type ErrorInfo } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./hooks/useAuth";
@@ -47,7 +48,17 @@ import "./index.css";
 // Initialize analytics (respects consent)
 void analytics.init();
 
-createRoot(document.getElementById("root")!).render(
+// React 19 reports render failures through root callbacks. Never attach private error content.
+const reportRenderFailure = (_error: unknown, info: ErrorInfo) => {
+  Sentry.captureReactException(new Error('Workspace rendering failed'), info, {
+    tags: { stage: 'render', code: 'UI_RENDER_FAILED' },
+  });
+};
+
+createRoot(document.getElementById("root")!, {
+  onCaughtError: reportRenderFailure,
+  onUncaughtError: reportRenderFailure,
+}).render(
   <StrictMode>
     <AuthProvider>
       <CreditsProvider>

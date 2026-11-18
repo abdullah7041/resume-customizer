@@ -1,8 +1,8 @@
 // Hard filters, ported from the job-search-digest engine (digest.py:655-684).
 // Each rule here is a bug that pipeline already paid for once.
 
-import { containsAny, matchedRoleTerms, normalizeTerms, normalizeText } from './normalize';
-import type { FeedIntent, FeedDropReason, FeedPosting, Seniority } from './types';
+import { containsAny, matchedRoleTerms, normalizeTerms, normalizeText } from './normalize.js';
+import type { FeedIntent, FeedDropReason, FeedPosting, Seniority } from './types.js';
 
 /** Saudi locations, English and Arabic. Normalized at load, so ة/ه folding is already applied. */
 export const SAUDI_LOCATIONS = normalizeTerms([
@@ -77,6 +77,17 @@ export function deriveRoleTerms(targetRoles: readonly string[]): string[] {
   return [...terms];
 }
 
+const GENERIC_ROLE_WORDS = normalizeTerms(['engineer', 'engineering', 'manager', 'specialist', 'analyst', 'developer', 'officer', 'consultant', 'designer', 'representative', 'scientist', 'founder', 'مهندس', 'مدير', 'اخصائي', 'محلل', 'مطور', 'مؤسس', 'استشاري', 'مستشار', 'مصمم', 'مندوب', 'عالم']);
+
+/** Each target must support its own discipline; unioning roles loses that boundary. */
+export function matchesTargetRole(title: string, targetRoles: readonly string[]): boolean {
+  return targetRoles.some(role => {
+    const terms = deriveRoleTerms([role]);
+    const discipline = terms.filter(term => !GENERIC_ROLE_WORDS.includes(term));
+    return matchedRoleTerms(title, discipline.length ? discipline : terms).length > 0;
+  });
+}
+
 /**
  * True when the TITLE says the job is really somewhere else, whatever the board's
  * location metadata claims. The 2026-07-31 digest delivered Agoda's "Staff Data
@@ -113,7 +124,7 @@ export function dropReason(posting: FeedPosting, intent: FeedIntent): FeedDropRe
   if (containsAny(title, excludedLevelTerms(intent.seniority))) return 'seniority';
 
   const roleTerms = deriveRoleTerms(intent.targetRoles);
-  if (roleTerms.length > 0 && matchedRoleTerms(posting.title, roleTerms).length === 0) return 'role';
+  if (roleTerms.length > 0 && !matchesTargetRole(posting.title, intent.targetRoles)) return 'role';
 
   return null;
 }

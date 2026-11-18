@@ -3,9 +3,10 @@
     "title": "Job feed",
     "subtitle": "New roles from the company boards you follow, matched against your target role.",
     "verification": {
+      "start": "Check jobs against my CV",
       "checking": "Checking {{count}} shortlisted roles against your saved resumes…",
-        "progress": "{{checked}} of {{total}} checked against {{name}}",
-        "verifiedCount": "{{count}} medium/high matches confirmed",
+      "progress": "{{checked}} of {{total}} checked against {{name}}",
+      "verifiedCount": "{{count}} medium/high matches confirmed",
       "slow": "Verification is taking longer than usual. Results appear as each check finishes.",
       "quota": "Daily verification limit reached. Cached results remain available.",
       "timeouts": "{{count}} checks timed out. You can retry them.",
@@ -56,7 +57,7 @@
     },
     "empty": {
       "noCompanies": "Follow a company to start seeing roles.",
-      "noCompaniesHelp": "Add the employers you actually want to work for. Watheq checks their job boards once a day.",
+      "noCompaniesHelp": "Add the employers you actually want to work for. Watheq checks their job boards hourly.",
       "suggestions": "From your CV",
       "suggestionsHelp": "Companies you have worked at — a quick place to start.",
       "noIntent": "Set your target role first.",
@@ -86,7 +87,7 @@
     },
     "filters": {
       "ageLegend": "Posted within",
-      "ageDay": "24 hours",
+      "ageDay": "Past 24 hours",
       "ageWeek": "7 days",
       "ageMonth": "30 days",
       "ageAll": "Any time",
@@ -161,6 +162,31 @@
       "unknown": "Experience fit not yet verified",
       "explain": "Discovery relevance. Run Match for a full assessment.",
       "gaps": "Requirements to verify"
+    },
+    "alerts": {
+      "label": "Free hourly job emails",
+      "hint": "Only jobs with a verified publication time in the past 24 hours matching your saved search. No credits used. Unsubscribe anytime.",
+      "loadError": "Could not load alerts. Sign in or try again.",
+      "saveError": "Could not save. Verify your email and save a target role. Follow a company if using followed-company alerts, then try again.",
+      "off": "Alerts are off.",
+      "saving": "Saving or refreshing alert settings…",
+      "loading": "Loading alert settings…",
+      "paused": "Sending is paused. Your preference is saved. Saving does not send a test email.",
+      "failed": "The last check failed or had incomplete source coverage. Refresh the status later.",
+      "delayed": "Checks are delayed. Refresh the status later; your preference is saved.",
+      "setup": "Save a target role and verify your email. Follow a company for followed-company alerts.",
+      "empty": "Last check completed: no new qualifying jobs.",
+      "enabled": "Your preference is saved. Hourly checks are configured; no completed check is recorded yet. Saving does not send a test email.",
+      "manual": "Your preference is saved. This preview does not run hourly checks. Saving does not send a test email.",
+      "unconfigured": "Your preference is saved. Email checks are unavailable until the service is configured.",
+      "accepted": "Last check completed: email accepted by the provider. Inbox delivery is not confirmed.",
+      "scopeLabel": "Send alerts from",
+      "followed": "Companies I follow",
+      "catalogue": "Saudi employer catalogue",
+      "lastChecked": "Last completed check: {{when}}",
+      "lastAccepted": "Last email accepted by provider: {{when}}. Inbox delivery is not confirmed.",
+      "refresh": "Refresh status",
+      "retrySetup": "Save search and retry"
     }
   }
 }

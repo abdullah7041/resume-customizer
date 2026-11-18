@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, generateClarifications, importJobFromUrl, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
+import { AUTH_REQUIRED, analyzeResume, analyzeResumeTruthCheck, analyzeVision2030, generateClarifications, importJobFromUrl, optimizeResume, optimizeResumeStream, parseResume, refineBullet } from './api.js';
 import { supabase } from './supabase';
 
 const mockResumeText = vi.hoisted(() => ({
@@ -47,6 +47,30 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   delete global.localStorage;
+});
+
+it('does not replay a paid verification after an ambiguous transport failure', async () => {
+  vi.useFakeTimers();
+  try {
+    global.fetch.mockRejectedValue(new Error('offline'));
+    const result = expect(analyzeResume('resume', 'job', 'en', { mode: 'verify' })).rejects.toThrow();
+    await vi.runAllTimersAsync();
+    await result;
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  } finally { vi.useRealTimers(); }
+});
+
+describe('analyzeVision2030', () => {
+  it('keeps cancellation separate from the optional job description', async () => {
+    const controller = new AbortController();
+    global.fetch.mockResolvedValueOnce({ ok: true, json: async () => ({ overallScore: 70 }) });
+
+    await analyzeVision2030('Resume text', 'en', undefined, controller.signal);
+
+    const request = global.fetch.mock.calls[0][1];
+    expect(request.signal).toBe(controller.signal);
+    expect(JSON.parse(request.body)).toEqual({ resumeText: 'Resume text', language: 'en' });
+  });
 });
 
 describe('importJobFromUrl', () => {

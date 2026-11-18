@@ -1,3 +1,4 @@
+import { privateStorage } from '@/lib/auth/privateSession';
 import {
   detectVulnerabilities,
   type WorkEntry,
@@ -110,7 +111,7 @@ function formatHardStopTerm(question: ClarificationQuestion, option: Clarificati
 
 function getBrowserStorage(): HardStopStorage | undefined {
   if (typeof window === 'undefined') return undefined;
-  return window.localStorage;
+  return privateStorage;
 }
 
 function normalizeHardStops(values: unknown): string[] {

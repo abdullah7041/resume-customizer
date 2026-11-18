@@ -25,6 +25,7 @@ import { getProvider } from '../lib/ats/index.js';
 import type { AtsSource } from '../lib/ats/types.js';
 import { buildCacheKey, getCached, setCached } from '../lib/redis-cache.js';
 import { extractRequirements } from '../lib/job-requirements.js';
+import { jobRuntime } from '../lib/job-runtime.js';
 
 initSentry();
 
@@ -66,20 +67,7 @@ const RecrawlSchema = z.object({
 const RequirementsSchema = z.object({ action: z.literal('requirements'), postingIds: z.array(z.string().uuid()).max(500) });
 const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema, RequirementsSchema]);
 
-/**
- * How stale a company must be before a user-pressed check will re-read its board.
- *
- * Reload in the UI re-reads the DATABASE; only the daily cron ever re-read the
- * boards, so a user watching for a new posting had no way to ask for one. This adds
- * that ask without handing anyone a button that hammers employer job boards.
- *
- * The ONLY guard on this path is last_fetched_at: a company read within the last
- * hour is skipped. `claim_job_crawl_batch` does NOT apply here — it is called solely
- * by cron-job-crawl.ts, and the explicit-companyIds branch of crawl-jobs-background
- * takes no lease. Since last_fetched_at is stamped only after a crawl COMPLETES,
- * requests inside one rate-limit window can still overlap on the same board. Do not
- * drop the last_fetched_at check believing a lease backs it up.
- */
+/** Keep manual refreshes on the same company lease as scheduled collection. */
 const MIN_MINUTES_BETWEEN_MANUAL_CRAWLS = 60;
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
@@ -118,11 +106,11 @@ const baseHandler: Handler = async (event) => {
       case 'resolve':
         return await handleResolve(parsed.data.query);
       case 'track':
-        return await handleTrack(supabase, user.id, parsed.data);
+        return await handleTrack(supabase, user.id, parsed.data, event.rawUrl);
       case 'untrack':
         return await handleUntrack(supabase, user.id, parsed.data.companyId);
       case 'recrawl':
-        return await handleRecrawl(supabase, user.id);
+        return await handleRecrawl(supabase, user.id, event.rawUrl);
       case 'requirements':
         return await handleRequirements(supabase, user.id, parsed.data.postingIds);
     }
@@ -178,7 +166,7 @@ interface TrackInput {
   careersUrl?: string;
 }
 
-async function handleTrack(supabase: Supabase, userId: string, input: TrackInput) {
+async function handleTrack(supabase: Supabase, userId: string, input: TrackInput, rawUrl?: string) {
   const provider = getProvider(input.source);
   if (input.source !== 'jsonld' && (!provider || !provider.isValidToken(input.token))) {
     return { statusCode: 400, headers: jsonHeaders, body: errorBody(400, 'source/invalid-token', 'That token is not valid for this job board.') };
@@ -235,7 +223,7 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
   // Cold start: without an immediate crawl the feed sits empty until the next cron
   // run and the feature reads as broken on first use.
   const requestedAt = new Date().toISOString();
-  const crawlDispatched = await dispatchImmediateCrawl(company.id, Boolean(company.last_fetched_at));
+  const crawlDispatched = await dispatchImmediateCrawl(supabase, company.id, requestedAt, rawUrl);
 
   return {
     statusCode: 200,
@@ -265,7 +253,7 @@ async function handleUntrack(supabase: Supabase, userId: string, companyId: stri
  * Scoped to the caller's own tracked companies and throttled by each company's
  * last_fetched_at, so pressing it repeatedly costs nothing after the first run.
  */
-async function handleRecrawl(supabase: Supabase, userId: string) {
+async function handleRecrawl(supabase: Supabase, userId: string, rawUrl?: string) {
   const requestedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from('user_tracked_companies')
@@ -321,7 +309,7 @@ async function handleRecrawl(supabase: Supabase, userId: string) {
   if (claimError) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'crawl/claim-failed', 'Could not queue board checks') };
   const claimedIds = (claimed ?? []).map((row: { id: string }) => row.id);
   const inProgressIds = stale.filter((row) => Date.parse(companyOf(row)?.crawl_lease_until ?? '') > Date.parse(requestedAt)).map((row) => row.company_id);
-  const crawlDispatched = claimedIds.length > 0 ? await dispatchCrawl(claimedIds) : inProgressIds.length > 0;
+  const crawlDispatched = claimedIds.length > 0 ? await dispatchCrawl(claimedIds, rawUrl) : inProgressIds.length > 0;
   if (!crawlDispatched && claimedIds.length > 0) {
     await supabase.from('ats_companies').update({ crawl_lease_until: null }).in('id', claimedIds).eq('crawl_lease_until', leaseUntil);
     return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'crawl/dispatch-failed', 'Board checks could not be queued. Existing roles are unchanged.') };
@@ -342,16 +330,25 @@ async function handleRecrawl(supabase: Supabase, userId: string) {
 }
 
 /** Fire-and-forget handoff. A failure here costs freshness, never the tracking itself. */
-async function dispatchImmediateCrawl(companyId: string, alreadyCrawled: boolean): Promise<boolean> {
-  if (alreadyCrawled) return false;
-  return dispatchCrawl([companyId]);
+async function dispatchImmediateCrawl(supabase: Supabase, companyId: string, requestedAt: string, rawUrl?: string): Promise<boolean> {
+  const leaseUntil = new Date(Date.now() + 16 * 60_000).toISOString();
+  const claim = await supabase.from('ats_companies').update({ crawl_lease_until: leaseUntil })
+    .eq('id', companyId).is('last_fetched_at', null)
+    .or(`crawl_lease_until.is.null,crawl_lease_until.lt.${requestedAt}`)
+    .select('id').maybeSingle();
+  if (claim.error || !claim.data) return false;
+  const dispatched = await dispatchCrawl([companyId], rawUrl);
+  if (!dispatched) {
+    await supabase.from('ats_companies').update({ crawl_lease_until: null }).eq('id', companyId).eq('crawl_lease_until', leaseUntil);
+  }
+  return dispatched;
 }
 
-async function dispatchCrawl(companyIds: string[]): Promise<boolean> {
+async function dispatchCrawl(companyIds: string[], rawUrl?: string): Promise<boolean> {
   if (companyIds.length === 0) return false;
 
   const secret = process.env.JOB_CRAWL_SECRET;
-  const siteUrl = process.env.URL || process.env.DEPLOY_PRIME_URL;
+  const siteUrl = jobRuntime(rawUrl).origin;
   if (!secret || !siteUrl) return false;
 
   try {
@@ -360,6 +357,7 @@ async function dispatchCrawl(companyIds: string[]): Promise<boolean> {
       headers: { 'content-type': 'application/json', 'x-watheq-crawl-secret': secret },
       body: JSON.stringify({ companyIds }),
       signal: AbortSignal.timeout(8000),
+      redirect: 'error',
     });
     return response.ok || response.status === 202;
   } catch (error) {

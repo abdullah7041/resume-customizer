@@ -90,8 +90,9 @@ async function settleImport() {
 describe('device library batch import', () => {
   beforeEach(() => {
     mockParse.mockReset();
+    useResumeLibraryStore.getState().setScope('guest');
     useResumeLibraryStore.setState({ entries: [], activeResumeId: 'active', initialized: true });
-    localStorage.setItem('watheq:activeResumeId', 'active');
+    localStorage.setItem('watheq:activeResumeId:guest', 'active');
     installDatabase();
   });
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -99,7 +100,7 @@ describe('device library batch import', () => {
   it('saves without changing or persisting the active ID and defaults single saves to activation', async () => {
     const saved = await useResumeLibraryStore.getState().saveResume({ parsedResume: parsed('First'), plainText: 'first' }, { activate: false });
     expect(useResumeLibraryStore.getState().activeResumeId).toBe('active');
-    expect(localStorage.getItem('watheq:activeResumeId')).toBe('active');
+    expect(localStorage.getItem('watheq:activeResumeId:guest')).toBe('active');
     expect(useResumeLibraryStore.getState().entries[0].id).toBe(saved.id);
     const activated = await useResumeLibraryStore.getState().saveResume({ parsedResume: parsed('Second'), plainText: 'second' });
     expect(useResumeLibraryStore.getState().activeResumeId).toBe(activated.id);
@@ -107,7 +108,7 @@ describe('device library batch import', () => {
 
   it('activates the original resume when migrating a legacy workspace', async () => {
     useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
-    localStorage.removeItem('watheq:activeResumeId');
+    localStorage.removeItem('watheq:activeResumeId:guest');
     await useResumeLibraryStore.getState().initialize({ parsedResume: parsed('Legacy'), plainText: 'legacy text' });
     expect(useResumeLibraryStore.getState().activeResumeId).toBe(useResumeLibraryStore.getState().entries[0].id);
   });
@@ -140,7 +141,7 @@ describe('device library batch import', () => {
     await waitFor(() => expect(useResumeLibraryStore.getState().entries).toHaveLength(2));
     expect(useResumeStore.getState()).toBe(before);
     expect(useResumeLibraryStore.getState().activeResumeId).toBe('active');
-    expect(localStorage.getItem('watheq:activeResumeId')).toBe('active');
+    expect(localStorage.getItem('watheq:activeResumeId:guest')).toBe('active');
     expect(view.onParseResume).not.toHaveBeenCalled();
     expect(view.onBeforeParseResume).not.toHaveBeenCalled();
     expect(view.onClear).not.toHaveBeenCalled();
@@ -149,20 +150,20 @@ describe('device library batch import', () => {
 
   it('leaves no active resume when importing into an empty workspace and deduplicates fingerprints', async () => {
     useResumeLibraryStore.setState({ activeResumeId: null });
-    localStorage.removeItem('watheq:activeResumeId');
+    localStorage.removeItem('watheq:activeResumeId:guest');
     mockParse.mockResolvedValueOnce(document('First', 'same text')).mockResolvedValueOnce(document('Duplicate', 'SAME   text'));
     const view = setup([file('first.pdf'), file('duplicate.pdf')]);
     await settleImport();
     expect(useResumeLibraryStore.getState().entries).toHaveLength(1);
     expect(useResumeLibraryStore.getState().activeResumeId).toBeNull();
-    expect(localStorage.getItem('watheq:activeResumeId')).toBeNull();
+    expect(localStorage.getItem('watheq:activeResumeId:guest')).toBeNull();
     expect(view.onToast).not.toHaveBeenCalled();
     // Reopening the device library must still wait for an explicit selection.
     useResumeLibraryStore.setState({ entries: [], activeResumeId: null, initialized: false });
     await useResumeLibraryStore.getState().initialize();
     expect(useResumeLibraryStore.getState().entries).toHaveLength(1);
     expect(useResumeLibraryStore.getState().activeResumeId).toBeNull();
-    expect(localStorage.getItem('watheq:activeResumeId')).toBeNull();
+    expect(localStorage.getItem('watheq:activeResumeId:guest')).toBeNull();
   });
 
   it('keeps successes and continues past unsupported, oversized, parse and storage failures', async () => {

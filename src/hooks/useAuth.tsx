@@ -1,15 +1,18 @@
-import { useCallback, useEffect, useMemo, useState, useRef, createContext, useContext } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, Fragment, createContext, useContext } from "react";
 import { resolveAuthRedirectUrl } from "../lib/auth/authRedirect";
 import { useResumeStore } from "@/lib/stores/resumeStore";
+import { useResumeLibraryStore } from "@/lib/resumeLibrary";
+import { activatePrivateSession, getPrivateSessionRevision, PRIVATE_EPOCH_STORAGE_KEY, PRIVATE_OWNER_STORAGE_KEY } from "@/lib/auth/privateSession";
 import { flushSearchIntentOnSignIn } from "@/lib/onboarding/flushSearchIntent";
 import { analytics } from "../services/analytics";
 import { supabase } from "../services/supabase";
 import type { User } from "@supabase/supabase-js";
+import { useTranslation } from "react-i18next";
 
 type AuthIntent = "signin" | "signup";
-type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started" | "upload_auth_required";
+export type AuthEntrySource = "header_desktop" | "header_mobile" | "landing_get_started" | "upload_auth_required";
 
-interface SignInWithGoogleOptions {
+interface SignInOptions {
   intent?: AuthIntent;
   source?: AuthEntrySource;
 }
@@ -17,7 +20,8 @@ interface SignInWithGoogleOptions {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signInWithGoogle: (options?: SignInWithGoogleOptions) => Promise<string | undefined>;
+  signInWithGoogle: (options?: SignInOptions) => Promise<string | undefined>;
+  signInWithLinkedIn: (options?: SignInOptions) => Promise<string | undefined>;
   signOut: () => Promise<void>;
 }
 
@@ -39,53 +43,16 @@ const getInitialAuthSession = () => {
   return pendingInitialSessionPromise;
 };
 
-const SENSITIVE_SESSION_STORAGE_KEYS = [
-  "resume-storage",
-  "watheq:resumeData",
-  "airo:resumeData",
-  "watheq:lastJobDescription",
-  "airo:lastJobDescription",
-  "watheq:vision2030Analysis",
-  "watheq:vision2030Analyzing",
-  "watheq:vision2030_state",
-  "watheq:coverLetter",
-  "airo:coverLetter",
-  "watheq:interviewQuestions",
-  "airo:interviewQuestions",
-  "watheq:bulkAnalysis",
-  "airo:bulkAnalysis",
-];
-
-const setStoredAuthUserId = (userId: string | null) => {
-  if (typeof window === "undefined") return;
-
-  if (userId) {
-    window.localStorage.setItem(AUTH_SESSION_USER_STORAGE_KEY, userId);
-    return;
-  }
-
-  window.localStorage.removeItem(AUTH_SESSION_USER_STORAGE_KEY);
-};
-
-const clearSensitiveSessionData = () => {
-  useResumeStore.getState().clearAll();
-
-  if (typeof window !== "undefined") {
-    for (const key of SENSITIVE_SESSION_STORAGE_KEYS) {
-      window.localStorage.removeItem(key);
-    }
-  }
-};
-
-const reconcileSensitiveSessionDataForUser = (currentUserId: string | null) => {
-  if (typeof window === "undefined") return;
-
-  const storedUserId = window.localStorage.getItem(AUTH_SESSION_USER_STORAGE_KEY);
-  if (storedUserId && storedUserId !== currentUserId) {
-    clearSensitiveSessionData();
-  }
-
-  setStoredAuthUserId(currentUserId);
+const reconcileSensitiveSessionDataForUser = (userId: string | null) => {
+  activatePrivateSession(userId, () => {
+    useResumeLibraryStore.getState().setScope(null);
+    useResumeStore.setState(useResumeStore.getInitialState(), true);
+  });
+  useResumeLibraryStore.getState().setScope(userId ? `user:${userId}` : 'guest');
+  void useResumeStore.persist.rehydrate();
+  if (userId) localStorage.setItem(AUTH_SESSION_USER_STORAGE_KEY, userId);
+  else localStorage.removeItem(AUTH_SESSION_USER_STORAGE_KEY);
+  return getPrivateSessionRevision();
 };
 
 const resolveRedirectUrl = () => {
@@ -160,7 +127,7 @@ const trackReferralAfterSignup = async (userId: string, accessToken?: string) =>
   }
 };
 
-const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
+const signInWithProvider = async (provider: "google" | "linkedin_oidc", options: SignInOptions = {}) => {
   if (options.intent === "signup") {
     analytics.trackSignupStarted(options.source);
   } else {
@@ -169,54 +136,65 @@ const signInWithGoogle = async (options: SignInWithGoogleOptions = {}) => {
 
   const redirectUrl = resolveRedirectUrl();
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider,
     options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
   });
   if (error) {
-    console.error("Google login error:", error.message);
+    console.error("[useAuth] OAuth sign-in failed:", provider, error.message);
     return;
   }
 
   if (data?.url) {
-    let targetUrl;
     try {
       const authUrl = new URL(data.url);
       if (redirectUrl) {
         authUrl.searchParams.set("redirect_to", redirectUrl);
       }
-      targetUrl = authUrl.toString();
+      const targetUrl = authUrl.toString();
       // Enforce the computed redirect target across Supabase environments.
       window.location.assign(targetUrl);
+      return targetUrl;
     } catch (navigationError) {
-      console.error("Google redirect resolution failed:", navigationError);
+      console.error("[useAuth] OAuth redirect failed:", provider, navigationError);
     }
-    return targetUrl ?? redirectUrl;
   }
-
-  return redirectUrl;
 };
 
+const signInWithGoogle = (options?: SignInOptions) => signInWithProvider("google", options);
+const signInWithLinkedIn = (options?: SignInOptions) => signInWithProvider("linkedin_oidc", options);
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const { t } = useTranslation();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionFailed, setSessionFailed] = useState(false);
+  const [privateScopeRevision, setPrivateScopeRevision] = useState('unresolved');
   const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
+    let authRevision = 0;
+    const failSession = (error: unknown) => {
+      if (!isActive) return;
+      console.error('[useAuth] Could not open the private session:', error);
+      useResumeLibraryStore.getState().setScope(null);
+      setLoading(true);
+      setSessionFailed(true);
+    };
     // Capture referral parameter on mount
     captureReferralParam();
 
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isActive) return;
+      authRevision += 1;
       const currentUser = session?.user || null;
       const currentUserId = currentUser?.id || null;
       const previousUserId = lastUserIdRef.current;
-      if (previousUserId && previousUserId !== currentUserId) {
-        clearSensitiveSessionData();
-      }
-      reconcileSensitiveSessionDataForUser(currentUserId);
+      try { setPrivateScopeRevision(reconcileSensitiveSessionDataForUser(currentUserId)); }
+      catch (error) { failSession(error); return; }
 
       setUser(currentUser);
+      setSessionFailed(false);
       setLoading(false);
 
       // Track referral for new signups
@@ -229,38 +207,69 @@ export const AuthProvider = ({ children }) => {
       lastUserIdRef.current = currentUserId;
     });
 
-    getInitialAuthSession().then(({ data: { session } }) => {
-      if (!isActive) return;
+    getInitialAuthSession().then(({ data: { session }, error }) => {
+      if (!isActive || authRevision !== 0) return;
+      if (error) throw error;
       const currentUser = session?.user || null;
       const currentUserId = currentUser?.id || null;
-      reconcileSensitiveSessionDataForUser(currentUserId);
+      setPrivateScopeRevision(reconcileSensitiveSessionDataForUser(currentUserId));
       setUser(currentUser);
       lastUserIdRef.current = currentUserId;
+      setSessionFailed(false);
       setLoading(false);
-    });
+    }).catch(error => { if (authRevision === 0) failSession(error); });
 
+    const handleOwnerChange = (event: StorageEvent) => {
+      if (event.key !== PRIVATE_OWNER_STORAGE_KEY && event.key !== PRIVATE_EPOCH_STORAGE_KEY) return;
+      // Unmount private consumers immediately; Supabase will resolve the new identity.
+      setLoading(true);
+      useResumeLibraryStore.getState().setScope(null);
+      const requestedRevision = ++authRevision;
+      void supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (!isActive || requestedRevision !== authRevision) return;
+        if (error) throw error;
+        const next = session?.user ?? null;
+        setPrivateScopeRevision(reconcileSensitiveSessionDataForUser(next?.id ?? null));
+        lastUserIdRef.current = next?.id ?? null;
+        setUser(next);
+        setSessionFailed(false);
+        setLoading(false);
+      }).catch(error => { if (requestedRevision === authRevision) failSession(error); });
+    };
+    window.addEventListener('storage', handleOwnerChange);
     return () => {
+      window.removeEventListener('storage', handleOwnerChange);
       isActive = false;
       authListener.subscription.unsubscribe();
     };
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    clearSensitiveSessionData();
-    setStoredAuthUserId(null);
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) { setLoading(false); throw error; }
+    try { setPrivateScopeRevision(reconcileSensitiveSessionDataForUser(null)); }
+    catch (error) { setSessionFailed(true); throw error; }
+    setSessionFailed(false);
+    setLoading(false);
     lastUserIdRef.current = null;
     setUser(null);
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, signInWithGoogle, signOut }),
+    () => ({ user, loading, signInWithGoogle, signInWithLinkedIn, signOut }),
     [user, loading, signOut],
   );
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {sessionFailed && <div role="alert">
+        <p>{t('common.sessionUnavailable', 'Your saved workspace could not be opened. Reload to try again.')}</p>
+        <button type="button" onClick={() => window.location.reload()}>{t('common.retry', 'Try Again')}</button>
+      </div>}
+      {!loading && <Fragment key={privateScopeRevision}>{children}</Fragment>}
     </AuthContext.Provider>
   );
 };

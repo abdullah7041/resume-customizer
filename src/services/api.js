@@ -1,3 +1,4 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
 // src/services/api.js
 import { supabase } from './supabase';
 import * as Sentry from '@sentry/react';
@@ -116,11 +117,13 @@ const attachErrorDebug = (error, response, data = {}) => {
 
 // Helper to get auth headers
 export const getAuthHeaders = async (options = {}) => {
+  const revision = options.expectedRevision ?? getPrivateSessionRevision();
   const { requireAuth = false, authRequiredMessage } = options;
   const headers = { "Content-Type": "application/json" };
 
   try {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    assertPrivateSession(revision, session?.user?.id ?? null);
 
     if (sessionError) {
       console.warn('[API] Failed to retrieve auth session:', summarizeErrorForConsole(sessionError));
@@ -135,7 +138,8 @@ export const getAuthHeaders = async (options = {}) => {
       console.warn('[API] No active session found - request will be sent without authentication');
     }
   } catch (error) {
-    if (isAuthRequiredError(error)) {
+      if (error?.cancelled) throw error;
+    if (isAuthRequiredError(error) || error?.cancelled) {
       throw error;
     }
     console.error('[API] Unexpected error retrieving auth session:', summarizeErrorForConsole(error));
@@ -162,6 +166,7 @@ async function retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
     try {
       return await fn();
     } catch (error) {
+      if (error?.cancelled) throw error;
       lastError = error;
       if (error.cancelled || error.name === 'AbortError') throw error;
 
@@ -274,6 +279,7 @@ const fileToBase64 = async (file) => {
 };
 
 export const parseResume = async (resumeInput, options = {}) => {
+  const privateRevision = getPrivateSessionRevision();
   let payload;
 
   // Reuse the extracted payload across network retries.
@@ -385,8 +391,8 @@ export const parseResume = async (resumeInput, options = {}) => {
       options.onStage?.('preparing');
 
       const headers = options.guestPreview
-        ? await getAuthHeaders({ requireAuth: false })
-        : await getAuthHeaders({
+        ? await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: false })
+        : await getAuthHeaders({ expectedRevision: privateRevision,
           requireAuth: true,
           authRequiredMessage: AUTH_REQUIRED_RESUME_MESSAGE,
         });
@@ -407,10 +413,12 @@ export const parseResume = async (resumeInput, options = {}) => {
       });
 
       const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
       recordSuccess('openrouter-ai');
       return data.document;
 
     } catch (error) {
+      if (error?.cancelled) throw error;
       // Handle user-initiated cancellation
       if (error.name === 'AbortError') {
         const cancelError = new Error('Upload cancelled');
@@ -462,6 +470,7 @@ export const parseResume = async (resumeInput, options = {}) => {
 };
 
 export const analyzeResumeWithAI = async (resumeText, jobDescription, language = 'en', options = {}) => {
+  const privateRevision = getPrivateSessionRevision();
   if (!resumeText?.plainText && typeof resumeText !== "string") {
     throw new Error("Resume text is required");
   }
@@ -488,15 +497,16 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
       // (always billed normally) — both send mode:'verify' but only the
       // former should ever consume the free grant.
       const verifyKind = options.verifyKind === 'applied_subset' ? 'applied_subset' : undefined;
-      const headers = await getAuthHeaders({ requireAuth: !freePreview });
+      const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: !freePreview });
 
       const response = await fetch(MATCH_ENDPOINT, {
         method: "POST",
         headers,
-        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}), ...(mode ? { mode } : {}), ...(verifyKind ? { verifyKind } : {}) }),
+        body: JSON.stringify({ resumeText, jobText: jobDescription, language, ...(freePreview ? { freePreview } : {}), ...(mode ? { mode } : {}), ...(verifyKind ? { verifyKind } : {}), ...((options.requireFreeVerify === true || freePreview) ? { requireFreeVerify: true } : {}) }),
       });
 
       const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
 
       recordSuccess('openrouter-ai');
       // Sanitize response to match expected frontend format and handle potential NaN/nulls
@@ -517,6 +527,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
       };
 
     } catch (error) {
+      if (error?.cancelled) throw error;
       console.error("Match failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
@@ -558,7 +569,7 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
       // The UI needs to know when analysis fails to inform the user
       throw error;
     }
-  }, 3, 2000); // 3 retries, 2s base delay
+  }, options.mode === 'verify' ? 0 : 3, 2000); // 3 retries, 2s base delay
 };
 
 /**
@@ -574,7 +585,8 @@ export const analyzeResumeWithAI = async (resumeText, jobDescription, language =
  * @returns {Promise<{ value: object, confidence: 'low'|'medium'|'high' }>}
  */
 export const onboardExtract = async ({ slot, userText, currentIntent, signal } = {}) => {
-  const headers = await getAuthHeaders({ requireAuth: false });
+  const privateRevision = getPrivateSessionRevision();
+  const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: false });
 
   const response = await fetch(ONBOARD_EXTRACT_ENDPOINT, {
     method: 'POST',
@@ -592,16 +604,18 @@ export const onboardExtract = async ({ slot, userText, currentIntent, signal } =
   });
 
   const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
   return { value: data.value || {}, confidence: data.confidence || 'low' };
 };
 
-export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, freePreview = false }) => {
+export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, freePreview = false, expectedSessionRevision = undefined }) => {
+  const privateRevision = expectedSessionRevision ?? getPrivateSessionRevision();
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
   return (async () => {
     try {
-      const headers = await getAuthHeaders({ requireAuth: !freePreview });
+      const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: !freePreview });
 
       const response = await fetch(OPTIMIZE_ENDPOINT, {
         method: "POST",
@@ -610,12 +624,14 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
         body: JSON.stringify({ resumeText, jobText: jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, ...(freePreview ? { freePreview } : {}) }),
       });
 
-      if (response.status === 202) return await waitForOptimization({ resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview });
+      if (response.status === 202) return await waitForOptimization({ expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview });
       const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
       recordSuccess('openrouter-ai');
       return data;
 
     } catch (error) {
+      if (error?.cancelled) throw error;
       console.error("Optimization failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
@@ -667,12 +683,13 @@ export const optimizeResume = async ({ resumeText, jobDesc, mode, preview, langu
  * @returns {Promise<{ improved: string, issue: string, rationale: string, evidence?: object, evidenceSources?: object[], evidenceInputOmissions?: object }>}
  */
 export const refineBullet = async ({ original, currentImproved, userInstruction, jobContext = '', resumeText, language = 'en' }) => {
+  const privateRevision = getPrivateSessionRevision();
   if (isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders({ requireAuth: true });
+      const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: true });
 
       const response = await fetch(REFINE_BULLET_ENDPOINT, {
         method: 'POST',
@@ -681,6 +698,7 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
       });
 
       const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
       recordSuccess('openrouter-ai');
       return {
         improved: typeof data.improved === 'string' ? data.improved : currentImproved,
@@ -691,6 +709,7 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
         evidenceInputOmissions: data.evidenceInputOmissions,
       };
     } catch (error) {
+      if (error?.cancelled) throw error;
       console.error('[RefineBullet] Refine failed:', summarizeErrorForConsole(error));
       error.status = error.status || 500;
 
@@ -739,8 +758,9 @@ export const refineBullet = async ({ original, currentImproved, userInstruction,
  * }>, complete?: boolean, unavailable?: boolean }>}
  */
 export const generateClarifications = async ({ resumeText, jobDesc, language = 'en', regenerate, history, round }) => {
+  const privateRevision = getPrivateSessionRevision();
   try {
-    const headers = await getAuthHeaders({ requireAuth: true });
+    const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: true });
     const response = await fetch(CLARIFY_ENDPOINT, {
       method: 'POST',
       headers,
@@ -759,6 +779,7 @@ export const generateClarifications = async ({ resumeText, jobDesc, language = '
     }
     return await response.json();
   } catch (error) {
+      if (error?.cancelled) throw error;
     if (isAuthRequiredError(error)) {
       throw error;
     }
@@ -781,8 +802,9 @@ async function waitForOptimization(params, onStatus) {
   while (Date.now() < deadline) {
     await new Promise(resolve => setTimeout(resolve, 1500));
     try {
-      return await optimizeResumeStream({ ...params, cacheOnly: true }, onStatus);
+      return await optimizeResumeStream({ ...params, recoverOnly: false, cacheOnly: true }, onStatus);
     } catch (error) {
+      if (error?.cancelled) throw error;
       if (error.jobPending) continue;
       if (error.jobFailed) throw error;
       // A failed status lookup says nothing about the running worker's debit.
@@ -792,11 +814,40 @@ async function waitForOptimization(params, onStatus) {
     }
   }
   throw Object.assign(new Error('Optimization is still running. Retry to retrieve this same request.'), {
-    status: 504, code: 'OPTIMIZE_JOB_PENDING', isBillingStateUnknown: true,
+    status: 504, code: 'OPTIMIZE_JOB_PENDING', operationId: params.operationId, isBillingStateUnknown: true,
   });
 }
 
-export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false }, onStatus) => {
+export const optimizeResumeStream = async (params, onStatus) => {
+  params = { ...params, expectedSessionRevision: params.expectedSessionRevision ?? getPrivateSessionRevision() };
+  try {
+    if (params.recoverOnly) {
+      try {
+        return await runOptimizeResumeStream({ ...params, cacheOnly: true }, onStatus);
+      } catch (error) {
+        if (!error.jobPending) throw error;
+        return await waitForOptimization({ ...params, recoverOnly: false, operationId: error.operationId }, onStatus);
+      }
+    }
+    return await runOptimizeResumeStream(params, onStatus);
+  } catch (error) {
+    // Poll failures are retried by the owning request; report only its final outcome.
+    if (!params.cacheOnly && !error.cancelled && !error.jobPending && error.code !== 'OPTIMIZE_JOB_PENDING' &&
+        ![400, 401, 402, 403, 422, 429].includes(error.status)) {
+      const code = /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(error.code || '') ? error.code : 'OPTIMIZE_FAILED';
+      const operationId = /^[a-f0-9-]{36}$/i.test(error.operationId || '') ? error.operationId : undefined;
+      Sentry.captureException(new Error('Optimization failed'), { tags: {
+        feature: 'optimize', stage: error.jobFailed ? 'background' : 'streaming',
+        status: String(error.status || 0), code, ...(operationId ? { operationId } : {}),
+        release: import.meta.env.VITE_SENTRY_RELEASE || 'unknown',
+      } });
+    }
+    throw error;
+  }
+};
+
+const runOptimizeResumeStream = async ({ resumeText, jobDesc, mode, preview, language = 'en', workHistory, userClarifications, userHardStops, cacheOnly = false, freePreview = false, operationId, expectedSessionRevision = undefined }, onStatus) => {
+  const privateRevision = expectedSessionRevision ?? getPrivateSessionRevision();
   if (!cacheOnly && isCircuitOpen('openrouter-ai')) {
     throw new Error('AI service is experiencing high load. Please wait 30 seconds and try again.');
   }
@@ -808,6 +859,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
       if (delay) await new Promise(resolve => setTimeout(resolve, delay));
       try {
         const recovered = await optimizeResumeStream({
+        expectedSessionRevision: privateRevision,
         resumeText,
         jobDesc,
         mode,
@@ -821,14 +873,15 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
         }, onStatus);
         return recovered;
       } catch (recoveryErr) {
-        if (recoveryErr.jobPending) return waitForOptimization({ resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
+        if (recoveryErr?.cancelled || recoveryErr.jobFailed) throw recoveryErr;
+        if (recoveryErr.jobPending) return waitForOptimization({ operationId: recoveryErr.operationId, expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
         // Only a cache miss can become a hit while the original request finishes.
         if (!recoveryErr.cacheOnlyMiss) break;
       }
     }
     return null;
   };
-  const headers = await getAuthHeaders({ requireAuth: !freePreview });
+  const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: !freePreview });
   // Remove Content-Type for SSE request compatibility — the body is still JSON
   // but we need to accept text/event-stream response
   const response = await fetch(OPTIMIZE_STREAM_ENDPOINT, {
@@ -845,10 +898,11 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   });
 
   if (response.status === 202) {
+    const pending = await response.json().catch(() => ({}));
     if (cacheOnly) throw Object.assign(new Error('Optimization is still running.'), {
-      cacheOnlyMiss: true, jobPending: true, isBillingStateUnknown: true,
+      cacheOnlyMiss: true, jobPending: true, operationId: pending.operationId || operationId, isBillingStateUnknown: true,
     });
-    return waitForOptimization({ resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
+    return waitForOptimization({ operationId: pending.operationId, expectedSessionRevision: privateRevision, resumeText, jobDesc, mode, preview, language, workHistory, userClarifications, userHardStops, freePreview }, onStatus);
   }
 
   // Non-streaming error responses (4xx, 5xx with JSON body) — server rejected before
@@ -858,11 +912,13 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
     const error = new Error(data.error || 'Optimization failed');
     error.status = response.status;
     error.code = data.code;
+    error.operationId = data.operationId || operationId;
+    error.retryable = data.retryable === true;
     error.cacheOnlyMiss = data.cacheOnlyMiss === true;
     error.jobFailed = data.jobFailed === true;
     // Gateway failures can occur after processing: never start a paid fallback.
     error.isBillingStateUnknown = typeof data.billingStateUnknown === 'boolean' ? data.billingStateUnknown : response.status >= 500;
-    if (error.isBillingStateUnknown) {
+    if (error.isBillingStateUnknown && !error.jobFailed) {
       const recovered = await recoverFromCacheOnly();
       if (recovered) return recovered;
     }
@@ -911,6 +967,7 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
       const error = new Error(parsed.error || 'Optimization failed');
       error.retryable = parsed.retryable === true;
       error.code = parsed.code;
+      error.operationId = parsed.operationId || operationId;
       error.status = parsed.status;
       error.isBillingStateUnknown = parsed.billingStateUnknown === true;
       attachErrorDebug(error, response, parsed);
@@ -979,7 +1036,8 @@ export const optimizeResumeStream = async ({ resumeText, jobDesc, mode, preview,
   return result;
 };
 
-export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null) => {
+export const analyzeVision2030 = async (resumeText, language = 'en', jobDescription = null, signal) => {
+  const privateRevision = getPrivateSessionRevision();
   if (!resumeText?.plainText && typeof resumeText !== "string") {
     throw new Error("Resume text is required");
   }
@@ -991,10 +1049,11 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
 
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders({ requireAuth: true });
+      const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: true });
 
       const response = await fetch(VISION2030_ENDPOINT, {
         method: "POST",
+        signal,
         headers,
         body: JSON.stringify({
           resumeText: text,
@@ -1004,9 +1063,11 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
       });
 
       const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
       return data;
 
     } catch (error) {
+      if (error?.cancelled) throw error;
       console.error("Vision 2030 alignment analysis failed:", summarizeErrorForConsole(error));
 
       // Enrich error with status for retry logic
@@ -1035,6 +1096,7 @@ export const analyzeVision2030 = async (resumeText, language = 'en', jobDescript
 };
 
 export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en', userHardStops }) => {
+  const privateRevision = getPrivateSessionRevision();
   const text = resumeText?.plainText || resumeText;
   if (!text?.trim()) {
     throw new Error("Resume text is required");
@@ -1046,7 +1108,7 @@ export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en', use
 
   return retryWithBackoff(async () => {
     try {
-      const headers = await getAuthHeaders({ requireAuth: true });
+      const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: true });
 
       const response = await fetch(TRUTH_CHECK_ENDPOINT, {
         method: "POST",
@@ -1055,6 +1117,7 @@ export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en', use
       });
 
       const data = await handleResponse(response);
+      assertPrivateSession(privateRevision);
       recordSuccess('openrouter-ai');
       return {
         overallRisk: ['low', 'medium', 'high'].includes(data.overallRisk) ? data.overallRisk : 'medium',
@@ -1066,6 +1129,7 @@ export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en', use
         debug: data.debug,
       };
     } catch (error) {
+      if (error?.cancelled) throw error;
       console.error("Resume Truth Check failed:", summarizeErrorForConsole(error));
       error.status = error.status || 500;
 
@@ -1099,8 +1163,9 @@ export const analyzeResumeTruthCheck = async ({ resumeText, language = 'en', use
 
 
 export const extractJobMetadata = async (jobText, language = 'en') => {
+  const privateRevision = getPrivateSessionRevision();
   try {
-    const headers = await getAuthHeaders({ requireAuth: true });
+    const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: true });
     const response = await fetch(FUNCTION_BASE_PATH + '/extract-job-metadata', {
       method: 'POST',
       headers,
@@ -1133,6 +1198,7 @@ export const extractJobMetadata = async (jobText, language = 'en') => {
       needsUserConfirmation: data.needsUserConfirmation ?? true,
     };
   } catch (error) {
+      if (error?.cancelled) throw error;
     console.warn('[API] extractJobMetadata failed (non-fatal):', summarizeErrorForConsole(error));
     return {
       companyName: null,
@@ -1164,8 +1230,9 @@ const jobUrlFailure = (failureReason, sourceUrl, details = {}) => ({
 });
 
 export const importJobFromUrl = async (url, language = 'en') => {
+  const privateRevision = getPrivateSessionRevision();
   try {
-    const headers = await getAuthHeaders({ requireAuth: false });
+    const headers = await getAuthHeaders({ expectedRevision: privateRevision, requireAuth: false });
     const response = await fetch(FUNCTION_BASE_PATH + '/import-job-url', {
       method: 'POST',
       headers,
@@ -1190,6 +1257,7 @@ export const importJobFromUrl = async (url, language = 'en') => {
       finalUrl: data?.finalUrl,
     });
   } catch (error) {
+      if (error?.cancelled) throw error;
     console.warn('[API] importJobFromUrl failed (non-fatal):', summarizeErrorForConsole(error));
     return jobUrlFailure('unreachable', url);
   }

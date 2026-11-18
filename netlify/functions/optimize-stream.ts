@@ -222,11 +222,11 @@ export default async function handler(request: Request): Promise<Response> {
     return Response.json(await attachLiveCredits(job.result, userEmail, freePreview));
   }
   if (job?.state === 'failed' && (cacheOnly || job.error?.billingStateUnknown)) {
-    return Response.json({ ...job.error, jobFailed: true }, { status: job.error?.status || 500 });
+    return Response.json({ ...job.error, operationId: job.operationId, jobFailed: true }, { status: job.error?.status || 500 });
   }
   if (cacheOnly) {
     return job && (job.state === 'queued' || job.state === 'running')
-      ? Response.json({ pending: true }, { status: 202 })
+      ? Response.json({ pending: true, operationId: job.operationId }, { status: 202 })
       : Response.json({ error: 'No cached optimization result is available yet.', cacheOnlyMiss: true }, { status: 409 });
   }
   console.log('[optimize-stream] Cache MISS — preparing background optimization.');
@@ -251,7 +251,7 @@ export default async function handler(request: Request): Promise<Response> {
   // Generation runs in a native background function, outside this route's 30s limit.
   // Both ordinary retries and interrupted handoffs retain the same worker ownership.
   try {
-    if (job?.state === 'running') return Response.json({ pending: true }, { status: 202 });
+    if (job?.state === 'running') return Response.json({ pending: true, operationId: job.operationId }, { status: 202 });
     const body = JSON.stringify({ ...parseResult.data, freePreview: freePreviewRequested });
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (authHeader) headers.authorization = authHeader;
@@ -264,9 +264,9 @@ export default async function handler(request: Request): Promise<Response> {
     if (job.state === 'succeeded' && hasCurrentEvidenceCards(job.result)) {
       return Response.json(await attachLiveCredits(job.result, userEmail, freePreview));
     }
-    if (job.state === 'failed') return Response.json({ ...job.error, jobFailed: true }, { status: job.error?.status || 500 });
-    if (job.state === 'queued') await dispatchOptimizationJob(jobKey, job, headers);
-    return Response.json({ pending: true }, { status: 202 });
+    if (job.state === 'failed') return Response.json({ ...job.error, operationId: job.operationId, jobFailed: true }, { status: job.error?.status || 500 });
+    if (job.state === 'queued') await dispatchOptimizationJob(jobKey, job, headers, request.url);
+    return Response.json({ pending: true, operationId: job.operationId }, { status: 202 });
   } catch (error) {
     if (error instanceof Error && 'status' in error && error.status === 413) {
       return Response.json({ error: error.message, billingStateUnknown: job?.state === 'queued' }, { status: 413 });

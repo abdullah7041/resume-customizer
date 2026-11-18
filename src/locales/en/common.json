@@ -11,6 +11,7 @@
     "export": "Export PDF",
     "loading": "Loading...",
     "error": "An error occurred",
+    "sessionUnavailable": "Your saved workspace could not be opened. Reload to try again.",
     "retry": "Try Again",
     "cancel": "Cancel",
     "save": "Save",
@@ -20,6 +21,9 @@
     "yes": "Yes",
     "submitting": "Sending...",
     "signIn": "Sign In",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithLinkedIn": "Continue with LinkedIn",
+    "signInFailed": "Sign-in could not start. Try again or choose another option.",
     "signOut": "Sign Out",
     "byAuthor": "By Abdullah bin Ahmed",
     "language": "Language",
@@ -34,6 +38,19 @@
     "copy": "Copy",
     "copied": "Copied!",
     "updated": "Updated",
-    "download": "Download"
+    "download": "Download",
+    "clear": "Clear",
+    "credits": "credits"
+  },
+  "sections": {
+    "optimize": {
+      "failure": {
+        "reference": "Support reference",
+        "pending": "Optimization is still processing",
+        "retrieve": "Check for results",
+        "copied": "Support reference copied",
+        "copy": "Copy support reference"
+      }
+    }
   }
 }
