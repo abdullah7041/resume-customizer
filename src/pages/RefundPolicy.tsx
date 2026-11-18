@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { usePaymentConfig } from '@/hooks/usePaymentConfig';
 
 const REFUND_POLICY_EFFECTIVE_DATE = new Date('2026-08-15T00:00:00.000Z');
 const REFUND_POLICY_DATE_FORMATTERS = {
@@ -8,6 +9,7 @@ const REFUND_POLICY_DATE_FORMATTERS = {
 
 export function RefundPolicy() {
   const { t, i18n } = useTranslation();
+  const paymentConfig = usePaymentConfig();
   const isArabic = i18n.language === 'ar';
   const effectiveDate = REFUND_POLICY_DATE_FORMATTERS[isArabic ? 'ar' : 'en'].format(REFUND_POLICY_EFFECTIVE_DATE);
 
@@ -27,18 +29,18 @@ export function RefundPolicy() {
             {t('refund.sections.intro.title', 'Introduction')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
-            {t('refund.sections.intro.content', "This policy explains when payments for Watheq's paid plans and credit packs are refundable. It follows the Saudi E-Commerce Law and its Implementing Regulations, and nothing in it limits your statutory rights.")}
+            {paymentConfig?.enabled ? t('pricing.pack.refundIntro', 'This policy explains refunds for Watheq one-time credit packs. Your statutory rights remain unchanged.') : t('refund.sections.intro.content', "This policy explains when payments for Watheq's paid plans and credit packs are refundable. It follows the Saudi E-Commerce Law and its Implementing Regulations, and nothing in it limits your statutory rights.")}
           </p>
         </section>
 
-        <section className="mb-8 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
+        {!paymentConfig?.enabled && <section className="mb-8 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-2">
             {t('refund.sections.beta.title', 'Current Beta Status')}
           </h2>
           <p className="text-[color:var(--ink-muted)] leading-relaxed">
             {t('refund.sections.beta.content', 'Watheq beta does not currently offer paid checkout. This policy will apply when paid plans launch and will be reviewed before checkout is enabled.')}
           </p>
-        </section>
+        </section>}
 
         {/* Credit Packs */}
         <section className="mb-8">
@@ -51,7 +53,7 @@ export function RefundPolicy() {
         </section>
 
         {/* Monthly Subscription */}
-        <section className="mb-8">
+        {!paymentConfig?.enabled && <section className="mb-8">
           <h2 className="text-xl font-semibold text-[color:var(--ink)] mb-4">
             {t('refund.sections.subscription.title', 'Monthly Subscription')}
           </h2>
@@ -59,7 +61,7 @@ export function RefundPolicy() {
             <li>{t('refund.sections.subscription.cancel', 'Cancel anytime. You keep your access and remaining credits until the end of the paid period, and you will not be charged again.')}</li>
             <li>{t('refund.sections.subscription.statutory', 'If you have not used the service, you can get a full refund within 7 days of starting any new subscription.')}</li>
           </ul>
-        </section>
+        </section>}
 
         {/* Failed or Undelivered Service */}
         <section className="mb-8">

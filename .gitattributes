@@ -1,3 +1,4 @@
 *.jpeg filter=lfs diff=lfs merge=lfs -text
 # keep SVG and config files as normal text
+public/.well-known/apple-developer-merchantid-domain-association -text
 

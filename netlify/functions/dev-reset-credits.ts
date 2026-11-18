@@ -43,14 +43,9 @@ const handler: Handler = async (event) => {
         };
       }
 
-      const { data, error } = await supabase
-        .from('user_credits')
-        .update({
-          credits_remaining: 20,
-          last_reset_date: new Date().toISOString(),
-        })
-        .eq('email', email)
-        .select();
+      const { data, error } = await supabase.rpc('reset_free_credits', {
+        p_email: email, p_amount: 20,
+      });
 
       if (error) throw error;
 
@@ -59,22 +54,27 @@ const handler: Handler = async (event) => {
         body: JSON.stringify({
           success: true,
           message: `Credits reset for user ${email}`,
-          data: data[0],
+          data,
         }),
       };
     }
 
     if (event.httpMethod === 'POST') {
       // Reset all users
-      const { count, error } = await supabase
+      const { data: users, error } = await supabase
         .from('user_credits')
-        .update({
-          credits_remaining: 20,
-          last_reset_date: new Date().toISOString(),
-        })
+        .select('email')
         .not('email', 'is', null); // Update all real users
 
       if (error) throw error;
+      let count = 0;
+      for (const user of users ?? []) {
+        const { error: resetError } = await supabase.rpc('reset_free_credits', {
+          p_email: user.email, p_amount: 20,
+        });
+        if (resetError) throw resetError;
+        count++;
+      }
 
       return {
         statusCode: 200,

@@ -94,7 +94,7 @@ function createCreditManagerError(status, code, message) {
  * @param {Object} options - Additional options
  * @param {string} options.ipAddress - User's IP address for abuse detection
  * @param {boolean} options.emailVerified - Whether user's email is verified
- * @returns {Promise<{credits_remaining: number, credits_total: number, feedback_credits_earned: number, referral_credits_earned: number | null, last_reset_date: string, signup_metadata: ({pending_initial_grant?: boolean} | null)} | null>}
+ * @returns {Promise<{credits_remaining: number, credits_total: number, free_credits_remaining?: number, purchased_credits_remaining?: number, feedback_credits_earned: number, referral_credits_earned: number | null, last_reset_date: string, signup_metadata: ({pending_initial_grant?: boolean} | null)} | null>}
  */
 export async function getUserCredits(email, options = {}) {
   const { ipAddress, emailVerified } = options;
@@ -102,7 +102,7 @@ export async function getUserCredits(email, options = {}) {
 
   const { data, error } = await supabase
     .from('user_credits')
-    .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
+    .select('*')
     .eq('email', email)
     .single();
 
@@ -210,13 +210,14 @@ export async function getUserCredits(email, options = {}) {
       return {
         ...data,
         credits_remaining: grant.credits_remaining,
-        credits_total: creditsToGive,
+        credits_total: (data.credits_total ?? 0) + creditsToGive,
+        ...(typeof data.free_credits_remaining === 'number' ? { free_credits_remaining: data.free_credits_remaining + creditsToGive } : {}),
       };
     }
 
     const { data: winnerData, error: refetchError } = await supabase
       .from('user_credits')
-      .select('credits_remaining, credits_total, feedback_credits_earned, referral_credits_earned, last_reset_date, signup_metadata')
+      .select('*')
       .eq('email', email)
       .single();
 
@@ -259,6 +260,7 @@ export async function checkCredits(email, feature, options = {}) {
     hasCredits: available >= requiredCredits,
     required: requiredCredits,
     available,
+    ...(typeof credits?.purchased_credits_remaining === 'number' ? { paidAccounting: true } : {}),
   };
 }
 
@@ -267,7 +269,7 @@ export async function checkCredits(email, feature, options = {}) {
  * @param {string} userId - User ID
  * @param {keyof typeof FEATURE_COSTS} feature - Feature name
  * @param {number} [amount] - Optional custom amount (defaults to FEATURE_COSTS[feature])
- * @returns {Promise<{success: boolean, creditsRemaining: number}>}
+ * @returns {Promise<{success: boolean, creditsRemaining: number, debitId?: string}>}
  */
 export async function consumeCredits(email, feature, amount = null) {
   const supabase = getSupabaseClient();
@@ -292,6 +294,30 @@ export async function consumeCredits(email, feature, amount = null) {
 
   const creditsBefore = check.available;
   const creditsAfter = creditsBefore - creditsToConsume;
+
+  if (process.env.GEIDEA_PAYMENTS_ENABLED === 'true' || check.paidAccounting) {
+    const receiptRequired = feature === 'vision2030';
+    const { data, error } = await supabase.rpc(receiptRequired ? 'consume_user_credits_with_receipt' : 'consume_user_credits', {
+      p_email: email, p_amount: creditsToConsume,
+    });
+    if (error) {
+      if (error.message?.includes('Insufficient credits')) return { success: false, creditsRemaining: check.available };
+      throw createCreditManagerError(503, 'CONSUME_CREDITS_RPC_FAILED', 'Unable to consume credits');
+    }
+    const remaining = receiptRequired ? data?.credits_remaining : data;
+    if (!Number.isInteger(remaining) || remaining < 0 || (receiptRequired && !data?.debit_id)) {
+      throw createCreditManagerError(503, 'CONSUME_CREDITS_RPC_FAILED', 'Invalid credit accounting result');
+    }
+    Promise.resolve(supabase.from('credit_transactions').insert({
+      email, feature, amount: -creditsToConsume, credits_before: remaining + creditsToConsume,
+      credits_after: remaining, transaction_type: 'consumption', metadata: { debit_id: data?.debit_id ?? null },
+    })).catch((error) => console.error('[CreditManager] Failed to log consumption:', summarizeErrorForLog(error)));
+    try {
+      const { completeReferral } = await import('./referral-manager.js');
+      await completeReferral(email);
+    } catch (error) { console.warn('[CreditManager] Referral completion failed:', summarizeErrorForLog(error)); }
+    return { success: true, creditsRemaining: remaining, ...(receiptRequired ? { debitId: data.debit_id } : {}) };
+  }
 
   // 2. Atomic update using RPC (Postgres function) - More reliable than client-side subtraction
   const { error: updateError } = await supabase.rpc('consume_user_credits', {
@@ -376,6 +402,13 @@ export async function consumeCredits(email, feature, amount = null) {
 export async function addCredits(email, amount, type, metadata = {}) {
   const supabase = getSupabaseClient();
 
+  if (type === 'refund' && (metadata.debitId || process.env.GEIDEA_PAYMENTS_ENABLED === 'true')) {
+    if (!metadata.debitId) throw createCreditManagerError(400, 'CREDIT_REFUND_RECEIPT_REQUIRED', 'Original credit debit is required');
+    const { data, error } = await supabase.rpc('refund_credit_debit', { p_email: email, p_debit_id: metadata.debitId });
+    if (error || !Number.isInteger(data?.credits_remaining)) throw createCreditManagerError(503, 'CREDIT_REFUND_FAILED', 'Unable to restore credits');
+    return { success: true, creditsRemaining: data.credits_remaining };
+  }
+
   const { data: rpcData, error: rpcError } = await supabase.rpc('add_credits', {
     p_email: email,
     p_amount: amount,
@@ -390,7 +423,7 @@ export async function addCredits(email, amount, type, metadata = {}) {
     return { success: true, creditsRemaining };
   }
 
-  if (rpcError.code !== '42883') {
+  if (rpcError.code !== '42883' || process.env.GEIDEA_PAYMENTS_ENABLED === 'true') {
     console.error('[CreditManager] Failed to add credits:', summarizeErrorForLog(rpcError));
     throw createCreditManagerError(500, 'ADD_CREDITS_RPC_FAILED', 'Failed to add credits');
   }

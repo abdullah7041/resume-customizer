@@ -17,6 +17,8 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../../services/supabase';
 import { analytics } from '../../services/analytics';
 import { PRO_LAUNCH_PRICE_SAR } from '../../constants/pricing';
+import { usePaymentConfig } from '@/hooks/usePaymentConfig';
+import { CreditPack } from '@/components/Credits/CreditPack';
 
 type PricingIntent = 'pack_9_sar' | 'monthly_29_sar' | 'not_sure';
 
@@ -40,6 +42,7 @@ export function PricingWaitlistModal({
   showPricingIntentSurvey = false,
 }: PricingWaitlistModalProps) {
   const { t, i18n } = useTranslation();
+  const paymentConfig = usePaymentConfig(isOpen);
   const [email, setEmail] = useState('');
   const [pricingIntent, setPricingIntent] = useState<PricingIntent | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,6 +145,18 @@ export function PricingWaitlistModal({
       setIsSubmitting(false);
     }
   };
+
+  if (paymentConfig?.enabled) return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-ink/35 p-4 backdrop-blur-sm" dir={i18n.dir()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="credit-pack-title" className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-line bg-surface p-6 sm:p-8">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 id="credit-pack-title" className="text-xl font-bold text-ink">{t('pricing.checkout.title', 'Buy credits')}</h2>
+          <button type="button" onClick={handleDismiss} autoFocus aria-label={t('common.closeDialog', 'Close dialog')} className="rounded-full p-3 text-ink-muted hover:bg-ink/5"><X className="h-5 w-5" /></button>
+        </div>
+        <CreditPack />
+      </div>
+    </div>, document.body,
+  );
 
   const modal = (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6" dir={i18n.dir()}>

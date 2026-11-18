@@ -129,3 +129,4 @@ describe('PricingWaitlistModal', () => {
     expect(await screen.findByText("You're already on the waitlist!")).toBeInTheDocument();
   });
 });
+vi.mock('@/hooks/usePaymentConfig', () => ({ usePaymentConfig: () => ({ enabled: false, priceSar: 29, credits: 100, environment: 'sandbox' }) }));

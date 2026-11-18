@@ -64,7 +64,7 @@ vi.mock('react-i18next', () => ({
       };
       return translations[key] ?? fallback ?? key;
     },
-    i18n: { language: 'en' },
+    i18n: { language: 'en', dir: () => 'ltr' },
   }),
 }));
 
@@ -166,9 +166,17 @@ describe('App compliance navigation', () => {
     setPath('/');
     headerProps.calls.length = 0;
     window.localStorage.clear();
+    window.sessionStorage.clear();
     // Returning user: skip the first-run onboarding gate so the workspace renders.
     window.localStorage.setItem('watheq:onboarded', 'true');
     window.localStorage.setItem('watheq:guestMode', 'true');
+  });
+
+  it('resumes checkout after OAuth returns to the configured root URL', async () => {
+    window.sessionStorage.setItem('watheq:checkoutReturn', '?checkout=1');
+    render(<App />);
+    expect(await screen.findByRole('button', { name: /sign in to buy credits or check your payment/i })).toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
   });
 
   it('renders workspace for the default app path', () => {
@@ -208,6 +216,18 @@ describe('App compliance navigation', () => {
     expect(headerProps.calls.at(-1)?.showDecorativeSkyline).toBe(false);
   });
 
+  it('routes sandbox payments to the restricted page outside onboarding', async () => {
+    window.localStorage.removeItem('watheq:onboarded');
+    window.localStorage.setItem('watheq:landingSeen', 'true');
+    setPath('/dev/payments');
+    render(<App />);
+
+    expect(await screen.findByText('Sandbox checkout is restricted to administrators.')).toBeInTheDocument();
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /complete onboarding/i })).not.toBeInTheDocument();
+    expect(headerProps.calls.at(-1)?.showMarketingNav).toBe(false);
+  });
+
   it('keeps the normal app shell visible after signed-out onboarding enters guest mode', async () => {
     window.localStorage.removeItem('watheq:onboarded');
     // Signed-out onboarding now opens only after the visitor enters from the landing
@@ -242,3 +262,4 @@ describe('App compliance navigation', () => {
     await waitFor(() => expect(scrollTo).toHaveBeenCalledWith({ top: 640, behavior: 'auto' }));
   });
 });
+vi.mock('@/hooks/usePaymentConfig', () => ({ usePaymentConfig: () => ({ enabled: false, priceSar: 29, credits: 100, environment: 'sandbox' }) }));

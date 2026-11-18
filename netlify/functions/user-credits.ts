@@ -65,6 +65,10 @@ const baseHandler: Handler = async (event) => {
       body: JSON.stringify({
         creditsRemaining: credits?.credits_remaining ?? 0,
         creditsTotal: credits?.credits_total ?? 0,
+        ...(typeof credits?.purchased_credits_remaining === 'number' ? {
+          freeCreditsRemaining: credits.free_credits_remaining,
+          purchasedCreditsRemaining: credits.purchased_credits_remaining,
+        } : {}),
         feedbackCreditsEarned: credits?.feedback_credits_earned ?? 0,
         referralCreditsEarned: credits?.referral_credits_earned ?? 0,
         lastResetDate: credits?.last_reset_date ?? null,
