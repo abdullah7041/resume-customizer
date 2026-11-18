@@ -105,8 +105,10 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "DENY"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
-    Content-Security-Policy-Report-Only = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mixpanel.com https://api-js.mixpanel.com https://unpkg.com; worker-src 'self' blob:"
+    # Checkout can resume after OAuth at the SPA root. Only Watheq and GEIDEA
+    # may use the payment feature, and the SDK delegates it to the checkout frame.
+    Permissions-Policy = 'camera=(), microphone=(), geolocation=(), payment=(self "https://www.ksamerchant.geidea.net")'
+    Content-Security-Policy-Report-Only = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js; frame-src 'self' https://www.ksamerchant.geidea.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://api.mixpanel.com https://api-js.mixpanel.com https://unpkg.com; worker-src 'self' blob:"
     
     # Cache Control (Default for HTML)
     Cache-Control = "public, max-age=0, must-revalidate"

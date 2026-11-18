@@ -14,10 +14,14 @@ const checkoutSchema = z.object({
       && url.pathname === '/hpp/checkout/' && !url.username && !url.password
       && /^\?[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(url.search) && !url.hash;
   }),
-});
+}).transform(({ checkoutUrl, ...checkout }) => ({
+  ...checkout,
+  sessionId: new URL(checkoutUrl).search.slice(1),
+}));
 const statusSchema = z.object({
   paymentId: z.uuid(),
   status: z.enum(['created', 'pending', 'succeeded', 'failed', 'cancelled', 'refunded']),
+  orderId: z.string().nullable(),
   environment,
   creditsGranted: z.boolean(),
   refundedMinor: z.number().int().min(0),

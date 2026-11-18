@@ -79,7 +79,13 @@ export async function createCheckoutSession(config: GeideaConfig, reference: str
     paymentOperation: 'Pay',
     cardOnFile: false,
     language,
-    ...(customerPack ? { customer: { email: customerPack.email } } : {}),
+    ...(customerPack ? {
+      customer: { email: customerPack.email },
+      appearance: {
+        merchant: { name: language === 'ar' ? 'واثق' : 'Watheq', logoUrl: `${config.siteUrl}/logo-circle.png` },
+        styles: { headerColor: '#064e3b' },
+      },
+    } : {}),
   });
   const parsed = z.object({ ...successCodes, session: z.object({ id: uuid }) }).safeParse(result);
   if (!parsed.success) throw new GeideaError(502, 'payment/session-failed', 'Unable to create checkout session');

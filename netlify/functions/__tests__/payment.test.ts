@@ -79,7 +79,16 @@ describe('GEIDEA checkout endpoint', () => {
     expect(response.statusCode).toBe(200);
     expect(body).toEqual({ paymentId: row?.id, checkoutUrl: `https://www.ksamerchant.geidea.net/hpp/checkout/?${sessionId}`, environment: 'live' });
     expect(row).toMatchObject({ user_id: id, amount_minor: 2900, email: user.email, environment: 'live', currency: 'SAR', status: 'pending', session_id: sessionId });
-    expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toMatchObject({ amount: 29, customer: { email: user.email }, callbackUrl: 'https://watheq.example/.netlify/functions/payment-webhook', returnUrl: `https://watheq.example/checkout?payment=${row?.id}` });
+    expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toMatchObject({
+      amount: 29,
+      customer: { email: user.email },
+      appearance: {
+        merchant: { name: 'Watheq', logoUrl: 'https://watheq.example/logo-circle.png' },
+        styles: { headerColor: '#064e3b' },
+      },
+      callbackUrl: 'https://watheq.example/.netlify/functions/payment-webhook',
+      returnUrl: `https://watheq.example/checkout?payment=${row?.id}`,
+    });
     expect(response.body).not.toContain('password');
     expect(response.headers).toMatchObject({ 'Cache-Control': 'no-store' });
   });
