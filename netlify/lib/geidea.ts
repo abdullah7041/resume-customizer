@@ -75,7 +75,11 @@ export async function createCheckoutSession(config: GeideaConfig, reference: str
     merchantReferenceId: reference,
     signature: signature(config, `${config.publicKey}${amount.toFixed(2)}SAR${reference}${timestamp}`),
     callbackUrl: `${config.siteUrl}/.netlify/functions/${customerPack ? 'payment-webhook' : 'geidea-webhook'}`,
-    ...(customerPack?.embedded ? {} : {
+    ...(customerPack?.embedded ? {
+      appearance: {
+        styles: { hppProfile: 'compressed', headerColor: '#064e3b' },
+      },
+    } : {
       returnUrl: `${config.siteUrl}/${customerPack ? 'checkout' : 'dev/payments'}?payment=${reference}`,
     }),
     paymentOperation: 'Pay',
