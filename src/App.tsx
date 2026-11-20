@@ -219,7 +219,7 @@ export default function App() {
                 <MainContent />
               )}
             </Suspense>
-            {!needsOnboarding && !isSignedOutLanding && !showLandingOverride && <Footer />}
+            {!needsOnboarding && !isSignedOutLanding && !showLandingOverride && currentPath !== "/checkout" && <Footer />}
             <ConsentBanner />
             <FeedbackPromptController />
 

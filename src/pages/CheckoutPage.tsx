@@ -81,10 +81,10 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     let finished = false;
 
     async function mountForm(container: HTMLDivElement) {
-      const Checkout = await loadGeideaCheckout();
-      if (!active) return;
       createRequest.current ??= createPayment(language);
-      const { paymentId, sessionId } = await createRequest.current;
+      const [Checkout, { paymentId, sessionId }] = await Promise.all([
+        loadGeideaCheckout(), createRequest.current,
+      ]);
       if (!active) return;
 
       saveReference(ownerId, { paymentId });

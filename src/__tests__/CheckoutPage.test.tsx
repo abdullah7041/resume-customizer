@@ -55,6 +55,7 @@ describe('customer checkout', () => {
     createPayment.mockResolvedValue({ paymentId, sessionId, environment: 'live' });
 
     const view = render(<StrictMode><CheckoutPage /></StrictMode>);
+    expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');
     expect(await screen.findByTitle('Secure payment')).toBeVisible();
     expect(startPayment).toHaveBeenCalledWith(sessionId, null, 'watheq-payment-form');
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');

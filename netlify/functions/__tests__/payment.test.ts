@@ -95,6 +95,7 @@ describe('GEIDEA checkout endpoint', () => {
     expect(response.statusCode).toBe(200);
     const providerRequest = JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string);
     expect(providerRequest.language).toBe('ar');
+    expect(providerRequest.appearance.styles).toEqual({ hppProfile: 'compressed', headerColor: '#064e3b' });
     expect(providerRequest).not.toHaveProperty('returnUrl');
   });
   it('does not expose a checkout when saving the provider session fails', async () => {
