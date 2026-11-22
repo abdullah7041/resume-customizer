@@ -64,7 +64,7 @@ async function request(config: GeideaConfig, path: string, body?: unknown): Prom
 }
 
 const successCodes = { responseCode: z.literal('000'), detailedResponseCode: z.literal('000') };
-export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string }) {
+export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string; embedded?: boolean }) {
   uuid.parse(reference);
   const amount = customerPack ? GEIDEA_PACK_PRICE_SAR : GEIDEA_TEST_AMOUNT;
   const timestamp = new Date().toISOString();
@@ -75,7 +75,9 @@ export async function createCheckoutSession(config: GeideaConfig, reference: str
     merchantReferenceId: reference,
     signature: signature(config, `${config.publicKey}${amount.toFixed(2)}SAR${reference}${timestamp}`),
     callbackUrl: `${config.siteUrl}/.netlify/functions/${customerPack ? 'payment-webhook' : 'geidea-webhook'}`,
-    returnUrl: `${config.siteUrl}/${customerPack ? 'checkout' : 'dev/payments'}?payment=${reference}`,
+    ...(customerPack?.embedded ? {} : {
+      returnUrl: `${config.siteUrl}/${customerPack ? 'checkout' : 'dev/payments'}?payment=${reference}`,
+    }),
     paymentOperation: 'Pay',
     cardOnFile: false,
     language,
@@ -129,12 +131,29 @@ export async function verifyCreditOrder(config: GeideaConfig, orderId: string, r
   uuid.parse(orderId);
   uuid.parse(reference);
   const result = await request(config, `/pgw/api/v1/direct/order/${orderId}`);
-  const parsed = z.object({ ...successCodes, order: orderSchema.extend({ isTest: z.boolean() }) }).safeParse(result);
+  const parsed = z.object({ ...successCodes, order: creditOrderSchema }).safeParse(result);
   if (!parsed.success) throw new GeideaError(502, 'payment/invalid-order', 'Unable to verify payment order');
-  const order = parsed.data.order;
+  if (parsed.data.order.orderId.toLowerCase() !== orderId.toLowerCase()) {
+    throw new GeideaError(409, 'payment/order-mismatch', 'Payment order does not match');
+  }
+  return creditOrderResult(config, parsed.data.order, reference, environment);
+}
+
+const creditOrderSchema = orderSchema.extend({ isTest: z.boolean() });
+
+export async function recoverCreditOrder(config: GeideaConfig, reference: string, environment: PaymentEnvironment) {
+  uuid.parse(reference);
+  const result = await request(config, `/pgw/api/v1/direct/order?MerchantReferenceId=${reference}`);
+  const parsed = z.object({ ...successCodes, orders: z.array(creditOrderSchema).max(1) }).safeParse(result);
+  if (!parsed.success) throw new GeideaError(502, 'payment/invalid-order', 'Unable to identify the payment order');
+  const [order] = parsed.data.orders;
+  return order ? creditOrderResult(config, order, reference, environment) : null;
+}
+
+function creditOrderResult(config: GeideaConfig, order: z.infer<typeof creditOrderSchema>, reference: string, environment: PaymentEnvironment) {
   const equalGuid = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
   const refundedMinor = Math.round(order.totalRefundedAmount * 100);
-  if (!equalGuid(order.orderId, orderId) || !equalGuid(order.merchantReferenceId, reference) || !equalGuid(order.merchantPublicKey, config.publicKey) ||
+  if (!equalGuid(order.merchantReferenceId, reference) || !equalGuid(order.merchantPublicKey, config.publicKey) ||
     order.amount !== GEIDEA_PACK_PRICE_SAR || order.currency !== 'SAR' || order.isTest !== (environment === 'sandbox') ||
     order.totalCapturedAmount > GEIDEA_PACK_PRICE_SAR || refundedMinor > GEIDEA_PACK_PRICE_SAR * 100 ||
     Math.abs(order.totalRefundedAmount * 100 - refundedMinor) > 0.000001 || order.totalRefundedAmount > order.totalCapturedAmount) {

@@ -73,11 +73,11 @@ describe('GEIDEA checkout endpoint', () => {
     expect((await invoke(checkout, body)).statusCode).toBe(400);
     expect(row).toBeNull();
   });
-  it('persists an owner-bound payment and returns only the hosted checkout link', async () => {
+  it('persists an owner-bound payment and returns the embedded checkout session', async () => {
     const response = await invoke(checkout);
     const body = JSON.parse(response.body!);
     expect(response.statusCode).toBe(200);
-    expect(body).toEqual({ paymentId: row?.id, checkoutUrl: `https://www.ksamerchant.geidea.net/hpp/checkout/?${sessionId}`, environment: 'live' });
+    expect(body).toEqual({ paymentId: row?.id, sessionId, checkoutUrl: `https://www.ksamerchant.geidea.net/hpp/checkout/?${sessionId}`, environment: 'live' });
     expect(row).toMatchObject({ user_id: id, amount_minor: 2900, email: user.email, environment: 'live', currency: 'SAR', status: 'pending', session_id: sessionId });
     expect(JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string)).toMatchObject({ amount: 29, customer: { email: user.email }, callbackUrl: 'https://watheq.example/.netlify/functions/payment-webhook', returnUrl: `https://watheq.example/checkout?payment=${row?.id}` });
     expect(response.body).not.toContain('password');
@@ -89,6 +89,13 @@ describe('GEIDEA checkout endpoint', () => {
     expect(response.statusCode).toBe(503);
     expect(fetch).not.toHaveBeenCalled();
     expect(response.body).not.toContain('private');
+  });
+  it('leaves navigation to the SDK for an embedded Arabic payment', async () => {
+    const response = await invoke(checkout, { action: 'create', language: 'ar', embedded: true });
+    expect(response.statusCode).toBe(200);
+    const providerRequest = JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string);
+    expect(providerRequest.language).toBe('ar');
+    expect(providerRequest).not.toHaveProperty('returnUrl');
   });
   it('does not expose a checkout when saving the provider session fails', async () => {
     vi.mocked(fetch).mockImplementation(async () => {
@@ -108,6 +115,22 @@ describe('GEIDEA checkout endpoint', () => {
   it('does not disclose another owner payment', async () => {
     row = { id, user_id: 'someone-else', status: 'succeeded' };
     expect((await invoke(checkout, { action: 'status', paymentId: id })).statusCode).toBe(404);
+  });
+  it('recovers a verified order after reload without a browser order ID', async () => {
+    row = { id, user_id: id, status: 'pending', session_id: sessionId, order_id: null, environment: 'live', refunded_minor: 0 };
+    vi.mocked(fetch).mockResolvedValue(new Response(JSON.stringify({ responseCode: '000', detailedResponseCode: '000', orders: [order] })));
+    const response = await invoke(checkout, { action: 'status', paymentId: id, recover: true });
+    expect(response.statusCode).toBe(200);
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`?MerchantReferenceId=${id}`), expect.anything());
+    expect(rpc).toHaveBeenCalledWith('record_credit_purchase', { p_purchase_id: id, p_order_id: orderId, p_status: 'succeeded', p_refunded_minor: 0 });
+  });
+  it('confirms an already granted purchase without requiring a second Geidea request', async () => {
+    row = { id, user_id: id, status: 'succeeded', session_id: sessionId, order_id: orderId,
+      environment: 'live', granted_at: '2026-11-10T12:00:00Z', remaining_credits: 100, refunded_minor: 0 };
+    const response = await invoke(checkout, { action: 'status', paymentId: id, orderId, recover: true });
+    expect(JSON.parse(response.body!)).toMatchObject({ status: 'succeeded', creditsGranted: true, remainingCredits: 100 });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
   });
   it('exposes only public pack configuration, defaults sandbox, and needs no credentials', async () => {
     vi.stubEnv('GEIDEA_ENVIRONMENT', undefined);

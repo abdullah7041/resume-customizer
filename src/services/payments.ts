@@ -3,17 +3,13 @@ import { supabase } from '@/services/supabase';
 import type { PaymentCheckout, PaymentConfig, PaymentStatus } from '@/types/payments';
 
 const endpoint = '/.netlify/functions/payment-checkout';
+export const geideaGuid = z.string().regex(/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i);
 const environment = z.enum(['sandbox', 'live']);
 const configSchema = z.object({ enabled: z.boolean(), priceSar: z.literal(29), credits: z.literal(100), environment });
 const checkoutSchema = z.object({
   paymentId: z.uuid(),
   environment,
-  checkoutUrl: z.url().refine((value) => {
-    const url = new URL(value);
-    return url.origin === 'https://www.ksamerchant.geidea.net'
-      && url.pathname === '/hpp/checkout/' && !url.username && !url.password
-      && /^\?[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(url.search) && !url.hash;
-  }),
+  sessionId: geideaGuid,
 });
 const statusSchema = z.object({
   paymentId: z.uuid(),
@@ -21,6 +17,8 @@ const statusSchema = z.object({
   environment,
   creditsGranted: z.boolean(),
   refundedMinor: z.number().int().min(0),
+  noOrder: z.boolean().optional(),
+  expired: z.boolean().optional(),
 });
 
 let configRequest: Promise<PaymentConfig> | undefined;
@@ -39,25 +37,25 @@ export function getPaymentConfig(): Promise<PaymentConfig> {
   return configRequest;
 }
 
-async function paymentRequest(body: Record<string, string>, signal?: AbortSignal): Promise<unknown> {
+async function paymentRequest(body: Record<string, string | boolean>, signal?: AbortSignal): Promise<unknown> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new Error('Authentication required');
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
     body: JSON.stringify(body),
-    signal: signal ?? AbortSignal.timeout(20000),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error('Payment request failed');
   return response.json();
 }
 
 export async function createPayment(language: 'ar' | 'en'): Promise<PaymentCheckout> {
-  return checkoutSchema.parse(await paymentRequest({ action: 'create', language }));
+  return checkoutSchema.parse(await paymentRequest({ action: 'create', language, embedded: true }));
 }
 
 export async function readPaymentStatus(paymentId: string, orderId?: string, signal?: AbortSignal): Promise<PaymentStatus> {
-  const result = statusSchema.parse(await paymentRequest({ action: 'status', paymentId, ...(orderId ? { orderId } : {}) }, signal));
+  const result = statusSchema.parse(await paymentRequest({ action: 'status', paymentId, recover: true, ...(orderId ? { orderId } : {}) }, signal));
   if (result.paymentId !== paymentId) throw new Error('Payment reference mismatch');
   return result;
 }
