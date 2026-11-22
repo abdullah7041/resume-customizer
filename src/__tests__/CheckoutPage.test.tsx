@@ -1,5 +1,5 @@
 import { StrictMode } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { auth, config, createPayment, readPaymentStatus, refetch, loadGeideaCheckout } = vi.hoisted(() => ({
@@ -26,6 +26,7 @@ vi.mock('react-i18next', async () => {
   };
 });
 import CheckoutPage from '@/pages/CheckoutPage';
+import { PaymentRequestError } from '@/services/payments';
 
 const paymentId = '00000000-0000-4000-8000-000000000001';
 const pending = { paymentId, status: 'pending', environment: 'live', creditsGranted: false, refundedMinor: 0 };
@@ -56,7 +57,7 @@ describe('customer checkout', () => {
 
     const view = render(<StrictMode><CheckoutPage /></StrictMode>);
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');
-    expect(await screen.findByTitle('Secure payment')).toBeVisible();
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
     expect(startPayment).toHaveBeenCalledWith(sessionId, null, 'watheq-payment-form');
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');
 
@@ -71,6 +72,44 @@ describe('customer checkout', () => {
     expect(await screen.findByText(successMessage)).toBeInTheDocument();
     expect(createPayment).toHaveBeenCalledTimes(1);
     expect(location.search).toBe('');
+  });
+
+  it('reopens the same unpaid session after refresh', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000002';
+    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId } }, '', '/checkout');
+    readPaymentStatus.mockResolvedValue({ ...pending, noOrder: true, expired: false, sessionId });
+    const startPayment = vi.fn((_id: string, _options: null, host: string) => {
+      document.getElementById(host)?.append(document.createElement('iframe'));
+    });
+    loadGeideaCheckout.mockResolvedValue(class { startPayment = startPayment; });
+    render(<CheckoutPage />);
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
+    expect(startPayment).toHaveBeenCalledWith(sessionId, null, 'watheq-payment-form');
+    expect(createPayment).not.toHaveBeenCalled();
+  });
+
+  it('retries an SDK startup failure with the original unpaid session', async () => {
+    const sessionId = '00000000-0000-4000-8000-000000000002';
+    createPayment.mockResolvedValue({ paymentId, sessionId, environment: 'live' });
+    loadGeideaCheckout.mockResolvedValueOnce(class { startPayment() { throw new Error('SDK unavailable'); } })
+      .mockResolvedValueOnce(class {
+        startPayment(_id: string, _options: null, host: string) {
+          document.getElementById(host)?.append(document.createElement('iframe'));
+        }
+      });
+    render(<CheckoutPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
+    expect(createPayment).toHaveBeenCalledTimes(1);
+    expect(readPaymentStatus).not.toHaveBeenCalled();
+  });
+
+  it('shows the missing purchase message for a permanent lookup failure', async () => {
+    window.history.replaceState({}, '', `/checkout?payment=${paymentId}`);
+    readPaymentStatus.mockRejectedValue(new PaymentRequestError(404, 'payment/not-found', 'Payment not found'));
+    render(<CheckoutPage />);
+    expect(await screen.findByText(/couldn’t find this payment/i)).toBeVisible();
+    expect(createPayment).not.toHaveBeenCalled();
   });
 
   it('does not trust a success query string', async () => {

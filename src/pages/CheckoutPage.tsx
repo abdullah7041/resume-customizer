@@ -6,7 +6,7 @@ import { usePaymentConfig } from '@/hooks/usePaymentConfig';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import { getSkylineUrls } from '@/lib/assets';
 import { loadGeideaCheckout } from '@/services/geideaCheckout';
-import { createPayment, geideaGuid, readPaymentStatus } from '@/services/payments';
+import { createPayment, geideaGuid, PaymentRequestError, readPaymentStatus } from '@/services/payments';
 import type { PaymentCheckout, PaymentConfig, PaymentStatus } from '@/types/payments';
 
 const returnStorageKey = 'watheq:checkoutReturn';
@@ -54,6 +54,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const { t } = useTranslation();
   const { refetch } = useUserCredits();
   const [reference, setReference] = useState(() => readReference(ownerId));
+  const [lookupError, setLookupError] = useState<'invalid' | 'error' | null>(null);
   const [invalidReturn] = useState(() => {
     const params = returnedPayment();
     return (params.has('payment') || params.has('paymentId')) && !reference;
@@ -70,7 +71,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const formTitle = t('pricing.checkout.formTitle');
 
   useEffect(() => {
-    saveReference(ownerId, reference);
+    if (reference || !createRequest.current) saveReference(ownerId, reference);
     sessionStorage.removeItem(returnStorageKey);
   }, [ownerId, reference]);
 
@@ -81,7 +82,10 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     let finished = false;
 
     async function mountForm(container: HTMLDivElement) {
-      createRequest.current ??= createPayment(language);
+      createRequest.current ??= createPayment(language).catch((error: unknown) => {
+        createRequest.current = null;
+        throw error;
+      });
       const [Checkout, { paymentId, sessionId }] = await Promise.all([
         loadGeideaCheckout(), createRequest.current,
       ]);
@@ -102,13 +106,13 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
         checkout.startPayment(sessionId, null, containerId);
         const iframe = container.querySelector('iframe');
         if (!iframe) {
-          finish(undefined);
+          setStartupError(true);
           return;
         }
         iframe.title = formTitle;
         if (!finished) setFormReady(true);
       } catch {
-        finish(undefined);
+        setStartupError(true);
       }
     }
 
@@ -138,7 +142,20 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
           window.clearTimeout(slowCheck);
           return;
         }
-      } catch {
+        if (enabled && status.noOrder && status.sessionId && payment.cancelled === undefined && !payment.orderId) {
+          createRequest.current = Promise.resolve({ paymentId: payment.paymentId, sessionId: status.sessionId, environment: status.environment });
+          setCheckingLonger(false);
+          setReference(null);
+          return;
+        }
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        if (error instanceof PaymentRequestError && error.status >= 400 && error.status < 500
+          && ![408, 429].includes(error.status) && !(error.status === 409 && orderId)) {
+          window.clearTimeout(slowCheck);
+          setLookupError(error.status === 404 ? 'invalid' : 'error');
+          return;
+        }
         // A browser-supplied order hint may be stale. Fall back to Geidea's merchant reference lookup.
         orderId = undefined;
       }
@@ -153,7 +170,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       window.clearTimeout(nextCheck);
       window.clearTimeout(slowCheck);
     };
-  }, [reference]);
+  }, [enabled, reference]);
 
   useEffect(() => {
     if (!result?.creditsGranted || result === lastRefreshed.current) return;
@@ -162,7 +179,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   }, [result, refetch]);
 
   function retry() {
-    createRequest.current = null;
+    if (!startupError) createRequest.current = null;
     setFormReady(false);
     setStartupError(false);
     setResult(null);
@@ -173,9 +190,9 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
 
   const finalStatus = reference && result ? outcome(result, reference) : null;
   const canRetry = enabled && (startupError || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
-  const statusMessage = reference
+  const statusMessage = lookupError ?? (invalidReturn ? 'invalid' : reference
     ? finalStatus ?? (checkingLonger ? 'pendingLonger' : 'pending')
-    : invalidReturn ? 'invalid' : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'error' : !formReady ? 'loading' : null;
+    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'error' : !formReady ? 'loading' : null);
   const isSandbox = (result?.environment ?? config?.environment) === 'sandbox' && Boolean(enabled || result);
 
   return <>
