@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 // src/components/TemplateRenderer.jsx
 // Renders resume templates with user data injection
 
@@ -346,6 +347,7 @@ interface TemplateRendererProps {
 const EMPTY_USER_DATA: UserData = {};
 
 export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA, contentDirection }: TemplateRendererProps) {
+  const { t } = useTranslation();
   // Get display options from store (user's formatting preferences)
   const displayOptions = useResumeStore((state) => state.displayOptions);
 
@@ -375,6 +377,9 @@ export default function TemplateRenderer({ template, userData = EMPTY_USER_DATA,
   // Check if this is a known template from the registry
   // If so, use the proper component with the resume prop structure
   if (['modern-professional', 'technical-engineer', 'ats-optimized', 'executive-professional'].includes(template.id)) {
+    if (!userData.basics || typeof userData.basics !== 'object') {
+      return <p role="status">{t('sections.templates.emptyResume', 'Upload or paste a resume to preview and export it.')}</p>;
+    }
     // Registry templates expect { resume, displayOptions } props
     return (
       <div

@@ -118,7 +118,8 @@ describe('role terms derive from the user, not a tech vocabulary', () => {
     );
 
     expect(feed.kept[0].posting.id).toBe('ai');
-    expect(feed.kept[0].score).toBeGreaterThan(feed.kept[1].score);
+    expect(feed.kept.map(row => row.posting.id)).toEqual(['ai']);
+    expect(feed.dropped).toContainEqual({posting: expect.objectContaining({id:'backend'}),reason:'role'});
   });
 
   it('works for a non-tech role', () => {
@@ -146,9 +147,10 @@ describe('scoring', () => {
       seniorEngineer,
     );
 
-    expect(feed.kept.map((k) => k.posting.id)).toEqual(['strong', 'weak']);
+    expect(feed.kept.map((k) => k.posting.id)).toEqual(['strong']);
     expect(feed.kept[0].matched).toContain('engineer');
     expect(feed.dropped).toEqual([
+      { posting: expect.objectContaining({ id: 'weak' }), reason: 'role' },
       { posting: expect.objectContaining({ id: 'out' }), reason: 'seniority' },
     ]);
   });

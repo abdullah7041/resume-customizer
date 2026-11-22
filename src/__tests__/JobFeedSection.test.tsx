@@ -90,7 +90,9 @@ function posting(overrides: Record<string, unknown> = {}) {
     title: 'Senior AI Engineer',
     location: 'Riyadh, Saudi Arabia',
     applyUrl: 'https://apply.workable.com/salla/j/ABC/',
-    postedAt: daysAgo(2),
+    postedAt: daysAgo(0.1),
+    publicationKind: 'published',
+    publicationPrecision: 'timestamp',
     firstSeenAt: daysAgo(2),
     ...overrides,
   };
@@ -143,6 +145,9 @@ it('verifies only the active resume and hides other resumes matches', async () =
   });
 
   render(<JobFeedSection />);
+  const verify = await screen.findByRole('button', { name: 'Check jobs against my CV' });
+  expect(mockVerifyFeedPosting).not.toHaveBeenCalled();
+  fireEvent.click(verify);
 
   await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalled());
   expect(mockVerifyFeedPosting.mock.calls[0][1]).toEqual([{ id: 'universal', fingerprint: 'u1', text: 'software' }]);
@@ -175,6 +180,9 @@ it('checks the first ten deterministic candidates and waits for an explicit requ
   });
 
   render(<JobFeedSection />);
+  const verify = await screen.findByRole('button', { name: 'Check jobs against my CV' });
+  expect(mockVerifyFeedPosting).not.toHaveBeenCalled();
+  fireEvent.click(verify);
 
   await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(10));
   expect(screen.getByRole('button', { name: /check 10 more/i })).toBeInTheDocument();
@@ -196,8 +204,10 @@ it('ignores a late result from the previously selected resume', async () => {
     : Promise.resolve({ results: [{ resumeId: 'b', resumeFingerprint: 'b1', cached: false, match: { score: 82, strategicRealityCheck: null } }], failures: [], error: null }));
 
   render(<JobFeedSection />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Check jobs against my CV' }));
   await waitFor(() => expect(mockVerifyFeedPosting).toHaveBeenCalled());
   act(() => useResumeLibraryStore.setState({ activeResumeId: 'b' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Check jobs against my CV' }));
   expect(await screen.findByText(/82%/)).toBeInTheDocument();
   await act(async () => resolveA({ results: [{ resumeId: 'a', resumeFingerprint: 'a1', cached: false, match: { score: 96, strategicRealityCheck: null } }], failures: [], error: null }));
   expect(screen.queryByText(/96%/)).not.toBeInTheDocument();
@@ -217,6 +227,8 @@ it('keeps the same two checks in flight when the display clock advances', async 
     // Flush the resolved load promises and verification effect before ticking time.
     // waitFor polling also uses setInterval, which this test deliberately freezes.
     await act(async () => { render(<JobFeedSection />); });
+    expect(mockVerifyFeedPosting).not.toHaveBeenCalled();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Check jobs against my CV' })));
     expect(mockVerifyFeedPosting).toHaveBeenCalledTimes(2);
     const initialSignals = mockVerifyFeedPosting.mock.calls.map(call => call[3] as AbortSignal);
     act(() => vi.advanceTimersByTime(60_000));
@@ -597,43 +609,16 @@ describe('recency', () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
   });
 
-  it('widens the window once rather than opening on an empty feed, and says it did', async () => {
-    /*
-     * Measured on the live starter boards 2026-08-31: Careem had 20 open roles and
-     * none posted inside seven days; HALA 4 of 16, Tamara 3 of 36, Salla 3 of 27.
-     * A hard week shows a first-time follower of one company nothing at all, which
-     * reads as broken rather than narrow.
-     */
-    mockListPostings.mockResolvedValue({
-      postings: [posting({ postedAt: daysAgo(20), firstSeenAt: daysAgo(20) })],
-      error: null,
-    });
-
+  it('keeps the strict default empty until the user explicitly widens it', async () => {
+    mockListPostings.mockResolvedValue({ postings: [posting({ postedAt: daysAgo(20) })], error: null });
     render(<JobFeedSection />);
-
-    expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
-    // Widening silently would be its own small lie about how current the feed is.
-    expect(
-      screen.getByText('Nothing was posted in the last week, so this is the last 30 days.'),
-    ).toBeInTheDocument();
-  });
-
-  it('never widens behind a window the user chose', async () => {
-    mockListPostings.mockResolvedValue({
-      postings: [posting({ postedAt: daysAgo(20), firstSeenAt: daysAgo(20) })],
-      error: null,
-    });
-
-    render(<JobFeedSection />);
-    await screen.findByText('Senior AI Engineer');
-
-    fireEvent.click(screen.getByRole('button', { name: '24 hours' }));
-
     expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
-    expect(screen.queryByText('Senior AI Engineer')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('Nothing was posted in the last week, so this is the last 30 days.'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Senior AI Engineer' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Past 24 hours' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: '30 days' }));
+    expect(await screen.findByRole('heading', { name: 'Senior AI Engineer' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Past 24 hours' }));
+    expect(await screen.findByText('Nothing posted in that window.')).toBeInTheDocument();
   });
 
   it('names the window as the rule when even the widened one is empty, and offers a way past it', async () => {
@@ -662,6 +647,8 @@ describe('recency', () => {
     });
 
     render(<JobFeedSection />);
+    await screen.findByText('Nothing posted in that window.');
+    fireEvent.click(screen.getByRole('button', { name: 'Any time' }));
 
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
     expect(screen.getByText('jobFeed.date.seen')).toBeInTheDocument();
@@ -677,6 +664,8 @@ describe('recency', () => {
     });
 
     render(<JobFeedSection />);
+    await screen.findByText('Nothing posted in that window.');
+    fireEvent.click(screen.getByRole('button', { name: 'Any time' }));
 
     expect(await screen.findByText('Senior AI Engineer')).toBeInTheDocument();
     expect(screen.queryByText('jobFeed.date.seen')).not.toBeInTheDocument();
@@ -717,10 +706,10 @@ describe('every kept row explains why it is there', () => {
   // JobFeedSection.savedRow.test.tsx, whose mock interpolates.
   it('renders the title-match sentence rather than a bare fraction', async () => {
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
-    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior Engineer' })], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior AI Researcher' })], error: null });
 
     render(<JobFeedSection />);
-    await screen.findByText('Senior Engineer');
+    await screen.findByText('Senior AI Researcher');
 
     expect(screen.getByText('jobFeed.why.titleMatch')).toBeInTheDocument();
     expect(screen.queryByText('1/2')).not.toBeInTheDocument();
@@ -730,12 +719,12 @@ describe('every kept row explains why it is there', () => {
     // Those bands belong to the Match tab, which reads the JD and the CV. Wearing
     // them here made a count of title keywords look like the same judgement.
     mockListTracked.mockResolvedValue({ companies: [company], error: null });
-    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior Engineer' })], error: null });
+    mockListPostings.mockResolvedValue({ postings: [posting({ title: 'Senior AI Researcher' })], error: null });
 
-    const { container } = render(<JobFeedSection />);
-    await screen.findByText('Senior Engineer');
+    render(<JobFeedSection />);
+    await screen.findByText('Senior AI Researcher');
 
-    expect(container.innerHTML).not.toMatch(/emerald|amber|rose/);
+    expect(screen.getByText('jobFeed.why.titleMatch').outerHTML).not.toMatch(/emerald|amber|rose/);
   });
 });
 
@@ -1064,7 +1053,9 @@ describe('the age window is not widened by a filter the user applied', () => {
           companyId: 'c2',
           companyName: 'Tabby',
           title: 'Senior AI Scientist',
-          postedAt: daysAgo(2),
+          postedAt: daysAgo(0.1),
+    publicationKind: 'published',
+    publicationPrecision: 'timestamp',
           firstSeenAt: daysAgo(2),
         }),
       ],
@@ -1088,7 +1079,7 @@ describe('the age window is not widened by a filter the user applied', () => {
       screen.queryByText('Nothing was posted in the last week, so this is the last 30 days.'),
     ).not.toBeInTheDocument();
     // And the window the user is on is still the one they were given.
-    expect(screen.getByRole('button', { name: '7 days' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Past 24 hours' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

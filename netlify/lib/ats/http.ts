@@ -18,6 +18,7 @@ export interface JsonResponse {
   status: number | null;
   body: unknown;
   error?: string;
+  retryAt?: string;
 }
 
 async function request(url: string, init: RequestOptions, timeoutMs: number): Promise<JsonResponse> {
@@ -30,7 +31,13 @@ async function request(url: string, init: RequestOptions, timeoutMs: number): Pr
     });
 
     if (response.status !== 200) {
-      return { ok: false, status: response.status, body: null, error: `HTTP ${response.status}` };
+      const retry = response.headers?.get('retry-after');
+      const retryTime = retry && /^\d+$/.test(retry) ? Date.now() + Number(retry) * 1000 : retry ? Date.parse(retry) : NaN;
+      const retryAt = (response.status === 429 || (response.status === 503 && retry))
+        ? new Date(Number.isFinite(retryTime) && Math.abs(retryTime) < 8640000000000000
+          ? Math.max(Date.now() + 1000, retryTime) : Date.now() + 3600000).toISOString()
+        : undefined;
+      return { ok: false, status: response.status, body: null, error: `HTTP ${response.status}`, ...(retryAt ? { retryAt } : {}) };
     }
 
     const text = await response.text();
@@ -58,7 +65,7 @@ async function request(url: string, init: RequestOptions, timeoutMs: number): Pr
  * the load on a board that already said no.
  */
 function isTransient(response: JsonResponse): boolean {
-  if (response.ok) return false;
+  if (response.ok || response.retryAt) return false;
   if (response.status === null) return true;
   return response.status >= 500;
 }

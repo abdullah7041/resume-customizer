@@ -1,4 +1,6 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
+import { privateStorage } from '@/lib/auth/privateSession';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TFunction } from 'i18next';
 import { GlassCard } from '../ui/GlassCard';
@@ -262,7 +264,12 @@ export function InterviewSection({
   onUpdate
 }: InterviewSectionProps) {
   const { t, i18n } = useTranslation();
-  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { refetch: refetchCredits } = useUserCredits();
+  const requestRef = useRef<AbortController | null>(null);
+  const contextKey = JSON.stringify([resumeText, jobDescription, i18n.language]);
+  const currentContext = useRef(contextKey);
+  currentContext.current = contextKey;
+  useEffect(() => () => requestRef.current?.abort(), [contextKey]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [roleLevel, setRoleLevel] = useState('');
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
@@ -350,6 +357,11 @@ export function InterviewSection({
       return;
     }
 
+    const controller = new AbortController();
+    requestRef.current?.abort();
+    requestRef.current = controller;
+    const revision = getPrivateSessionRevision();
+    const isCurrent = () => !controller.signal.aborted && revision === getPrivateSessionRevision() && currentContext.current === contextKey;
     setIsLoading(true);
     setError(null);
 
@@ -357,6 +369,7 @@ export function InterviewSection({
       // Get authenticated headers (includes Authorization Bearer token)
       const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
       const headers = await getAuthHeaders();
+      if (!isCurrent()) return;
 
       // Extract structured work history for vulnerability detection
       const workEntries = (resumeData?.work || resumeData?.data?.work || [])
@@ -365,6 +378,7 @@ export function InterviewSection({
         );
 
       const response = await fetch(PREDICT_ENDPOINT, {
+        signal: controller.signal,
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -377,6 +391,7 @@ export function InterviewSection({
       });
 
       // Handle insufficient credits (403)
+      if (!isCurrent()) return;
       if (response.status === 403) {
         setShowUpgradeModal(true);
         setIsLoading(false);
@@ -385,6 +400,7 @@ export function InterviewSection({
 
       if (!response.ok) throw new Error(`Failed to predict questions: ${response.statusText}`);
       const data = await response.json();
+      if (!isCurrent()) return;
       if (data.error) throw new Error(data.error);
 
       const normalized = (data.questions || []).flatMap((q: unknown, i: number) => {
@@ -397,7 +413,8 @@ export function InterviewSection({
 
       // Save to localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        privateStorage.setItem(STORAGE_KEY, JSON.stringify({
+          contextKey,
           questions: normalized,
           roleLevel: data.roleLevel || data.role_level,
           focusAreas: data.focusAreas || data.focus_areas,
@@ -423,11 +440,12 @@ export function InterviewSection({
       // Refetch credits to update balance (credits were consumed by backend)
       setTimeout(() => refetchCredits(), 500);
     } catch (err) {
+      if (!isCurrent()) return;
       setError((err as Error).message || t('sections.interview.errors.failed', 'Failed to generate questions'));
     } finally {
-      setIsLoading(false);
+      if (isCurrent()) setIsLoading(false);
     }
-  }, [jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, t, i18n.language]);
+  }, [contextKey, jobDescription, resumeText, extractQuestionsFromData, onUpdate, resumeData, refetchCredits, t, i18n.language]);
 
   // State to track which question type was selected
   const [pendingQuestionType, setPendingQuestionType] = useState<'behavioral' | 'technical'>('behavioral');
@@ -452,6 +470,9 @@ export function InterviewSection({
 
   // Auto-load on mount from props or localStorage
   useEffect(() => {
+    setQuestions([]);
+    setSavedAnswers({});
+    setError(null);
     // First, try to load from props
     const existingData = extractQuestionsFromData();
     if (existingData) {
@@ -468,10 +489,10 @@ export function InterviewSection({
     // If no data from props, try localStorage
     if (typeof window !== 'undefined') {
       try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = privateStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (parsed.questions?.length) {
+          if (parsed.contextKey === contextKey && parsed.questions?.length) {
             setQuestions(parsed.questions);
             setRoleLevel(parsed.roleLevel || '');
             setFocusAreas(parsed.focusAreas || []);
@@ -481,7 +502,7 @@ export function InterviewSection({
         console.warn('[InterviewSection] Failed to load from localStorage:', err);
       }
     }
-  }, [extractQuestionsFromData]);
+  }, [contextKey, extractQuestionsFromData]);
 
   const toggleQuestion = (key: string) => {
     setExpandedQuestions(prev => {
@@ -519,7 +540,7 @@ export function InterviewSection({
   // Clear interview cache and reset state
   const clearInterviewCache = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(STORAGE_KEY);
+      privateStorage.removeItem(STORAGE_KEY);
     }
     setQuestions([]);
     setRoleLevel('');
@@ -1121,7 +1142,6 @@ export function InterviewSection({
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        creditsRemaining={credits?.remaining || 0}
         dismissKey="watheq:upgradeDismissed-interview"
       />
 

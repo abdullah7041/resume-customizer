@@ -9,7 +9,6 @@ interface LeverJob {
   categories?: { location?: string };
   hostedUrl?: string;
   applyUrl?: string;
-  createdAt?: number;
   descriptionPlain?: string;
   description?: string;
 }
@@ -25,7 +24,7 @@ export const lever: AtsProvider = {
   async fetchPostings(ref: CompanyRef): Promise<FetchOutcome> {
     const response = await getJson(postingsUrl(ref.token));
     if (!response.ok) {
-      return { ok: false, status: response.status, postings: [], error: response.error };
+      return { ok: false, status: response.status, postings: [], error: response.error, ...(response.retryAt ? { retryAt: response.retryAt } : {}) };
     }
     if (!Array.isArray(response.body)) {
       return { ok: false, status: 200, postings: [], error: 'unexpected lever payload' };
@@ -36,8 +35,7 @@ export const lever: AtsProvider = {
       title: (job.text ?? '').trim(),
       location: (job.categories?.location ?? '').trim(),
       applyUrl: job.hostedUrl ?? job.applyUrl ?? '',
-      postedAt:
-        typeof job.createdAt === 'number' ? new Date(job.createdAt).toISOString() : null,
+      postedAt: null, // createdAt records creation without establishing publication time.
       description: boundDescription(
         (job.descriptionPlain ?? stripHtml(job.description ?? '')).trim(),
       ),

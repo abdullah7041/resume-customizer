@@ -1,17 +1,40 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { captureExceptionMock } = vi.hoisted(() => ({
+const { captureExceptionMock, flushMock } = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
+  flushMock: vi.fn(),
 }));
 
 vi.mock('@sentry/node', () => ({
   captureException: captureExceptionMock,
+  flush: flushMock,
   init: vi.fn(),
 }));
 
-const { captureError, sanitizeSentryContext, redactForLog, summarizeErrorForLog } = await import('../sentry.js');
+const { captureError, flushSentry, sanitizeSentryContext, redactForLog, summarizeErrorForLog } = await import('../sentry.js');
 
 describe('sentry context redaction', () => {
+  it('bounds telemetry delivery without changing a worker outcome on transport failure', async () => {
+    flushMock.mockRejectedValueOnce(new Error('Telemetry unavailable'));
+    await expect(flushSentry()).resolves.toBeUndefined();
+    expect(flushMock).toHaveBeenLastCalledWith(1500);
+  });
+  it('indexes only a validated support operation UUID as a searchable tag', () => {
+    const operationId = '31e7fedf-f455-457b-94cf-932f4f38f98c';
+    captureError(new Error('Optimization failed'), { operationId });
+    expect(captureExceptionMock).toHaveBeenLastCalledWith(expect.any(Error), {
+      extra: { operationId }, tags: { operationId },
+    });
+    captureError(new Error('Optimization failed'), { operationId: 'user@example.com' });
+    expect(captureExceptionMock).toHaveBeenLastCalledWith(expect.any(Error), {
+      extra: { operationId: '[REDACTED]' },
+    });
+  });
+  it('retains a validated operation UUID without treating numeric segments as a phone', () => {
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    expect(sanitizeSentryContext({ operationId })).toEqual({ operationId });
+    expect(sanitizeSentryContext({ operationId: 'user@example.com' })).toEqual({ operationId: '[REDACTED]' });
+  });
   it('redacts resume, job, and identity fields from nested context', () => {
     const sanitized = sanitizeSentryContext({
       function: 'ai-match',

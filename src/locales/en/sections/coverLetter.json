@@ -26,7 +26,9 @@
       "tipText": "Review and edit the generated text to add your personal touch before sending.",
       "errors": {
         "missing": "Please provide both resume and job description",
-        "failed": "Failed to generate cover letter"
+        "failed": "Failed to generate cover letter",
+        "restore": "Your saved letter could not be restored. It has been preserved for recovery.",
+        "save": "Your edits could not be saved. Keep a copy and try again."
       },
       "inputs": {
         "company": "Company Name",

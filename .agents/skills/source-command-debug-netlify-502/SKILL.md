@@ -22,7 +22,7 @@ Use this skill when the user asks to run the migrated source command `debug-netl
 
 ## Key Insight
 
-Netlify returns 502 when the **function crashes before returning its own response**. The function code never returns HTTP 502 itself. A 502 means an unhandled error escaped the function entirely.
+Inspect the response body first. A structured application error such as `payment/provider-unavailable` identifies a handled upstream failure. For a platform-generated 502, inspect the Netlify invocation log for a crash or startup failure.
 
 ## Protocol (MANDATORY)
 
@@ -175,4 +175,4 @@ const ratelimit = new Ratelimit({
 - Startup diagnostics visible in Netlify function logs
 - Rate limiter degrades gracefully when Upstash is unavailable
 - OpenRouter failures trigger Gemini fallback when key is available
-- Quality checks pass (`npm run quality:parallel`)
+- Scoped checks from AGENTS.md pass

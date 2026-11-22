@@ -17,6 +17,7 @@ const statusSchema = z.object({
   environment,
   creditsGranted: z.boolean(),
   refundedMinor: z.number().int().min(0),
+  sessionId: geideaGuid.optional(),
   noOrder: z.boolean().optional(),
   expired: z.boolean().optional(),
 });
@@ -37,16 +38,28 @@ export function getPaymentConfig(): Promise<PaymentConfig> {
   return configRequest;
 }
 
+export class PaymentRequestError extends Error {
+  constructor(public status: number, public code: string, message: string) {
+    super(message);
+  }
+}
+
 async function paymentRequest(body: Record<string, string | boolean>, signal?: AbortSignal): Promise<unknown> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error('Authentication required');
+  if (!session?.access_token) throw new PaymentRequestError(401, 'payment/unauthorized', 'Authentication required');
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
     body: JSON.stringify(body),
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
+    signal: signal && typeof AbortSignal.any === 'function'
+      ? AbortSignal.any([signal, AbortSignal.timeout(20000)])
+      : signal ?? AbortSignal.timeout(20000),
   });
-  if (!response.ok) throw new Error('Payment request failed');
+  if (!response.ok) {
+    const failure = z.object({ error: z.object({ code: z.string(), message: z.string() }) })
+      .safeParse(await response.json().catch(() => null)).data?.error;
+    throw new PaymentRequestError(response.status, failure?.code ?? 'payment/request-failed', failure?.message ?? 'Payment request failed');
+  }
   return response.json();
 }
 

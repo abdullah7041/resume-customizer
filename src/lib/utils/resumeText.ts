@@ -77,18 +77,11 @@ export const loadPdfjs = async () => {
   // PDF.js 5 no longer accepts getDocument({ disableWorker: true }). Load its
   // worker module in this realm so PDF.js uses the supplied main-thread handler
   // instead of waiting for a module-worker handshake that can stall.
-  // Keep workerSrc valid for the library's fallback path too.
   pdfjsLibPromise = Promise.all([
     import("pdfjs-dist/legacy/build/pdf.mjs"),
-    import("pdfjs-dist/legacy/build/pdf.worker.mjs?url"),
     import("pdfjs-dist/legacy/build/pdf.worker.mjs"),
   ])
-    .then(([module, workerModule]) => {
-      if (module?.GlobalWorkerOptions) {
-        module.GlobalWorkerOptions.workerSrc = workerModule.default;
-      }
-      return module;
-    })
+    .then(([module]) => module)
     .catch(() => null);
   return pdfjsLibPromise;
 };

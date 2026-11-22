@@ -34,6 +34,8 @@ async function attachLiveCredits<T extends Record<string, unknown>>(
 
 export const runOptimization = async (event: HandlerEvent) => {
   let billingStateUnknown = false;
+  let stage = 'cache';
+  let evidenceFailures: Record<string, number> | undefined;
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
@@ -204,6 +206,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     const evidenceSources = buildRequestEvidenceSources(resumeText, userClarifications);
 
     // Use dedicated optimizeResume function for faster, focused optimization
+    stage = 'provider';
     const optimization = await optimizeResume(
       requestEvidenceResumeText(evidenceSources),
       jobText,
@@ -243,8 +246,15 @@ export const runOptimization = async (event: HandlerEvent) => {
     }
 
     // Map to frontend expected format (Cards)
+    stage = 'evidence';
     const { cards, diagnostics } = await buildEvidenceBackedOptimizationCards(optimization, { logPrefix: '[optimize]', sources: evidenceSources });
-    if (cards.length === 0) throw new Error('AI optimization produced no usable evidence-backed edits');
+    evidenceFailures = {};
+    for (const diagnostic of diagnostics) for (const reason of diagnostic.reasons ?? []) {
+      evidenceFailures[reason] = (evidenceFailures[reason] ?? 0) + 1;
+    }
+    if (cards.length === 0) throw Object.assign(new Error('AI optimization produced no usable evidence-backed edits'), {
+      status: 422, code: 'OPTIMIZE_NO_VERIFIED_EDITS',
+    });
 
     // Log processing summary
     console.log('[optimize] Processing complete:', {
@@ -253,6 +263,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     });
 
     // Use AI-calculated match score, or calculate from category_scores as fallback
+    stage = 'scoring';
     let scores: ReturnType<typeof calculateScores>;
     try {
       scores = calculateScores(optimization, { cards, logPrefix: '[optimize]' });
@@ -277,6 +288,7 @@ export const runOptimization = async (event: HandlerEvent) => {
     ].filter((k: string, i: number, arr: string[]) => arr.indexOf(k) === i); // dedupe
 
     // Consume credits AFTER successful optimization
+    stage = 'billing';
     billingStateUnknown = !freePreview && Boolean(userEmail);
     const creditResult = freePreview || !userEmail
       ? { success: true, creditsRemaining: null }
@@ -296,6 +308,7 @@ export const runOptimization = async (event: HandlerEvent) => {
       };
     }
 
+    stage = 'delivery';
     const responsePayload = {
       evidenceVersion: 2,
       cards: cards,
@@ -393,31 +406,16 @@ export const runOptimization = async (event: HandlerEvent) => {
     const errorDetails = error as any;
     console.error("Optimization error:", summarizeErrorForLog(error));
 
-    // Don't send timeout errors to Sentry (expected behavior under load)
-    if (errorDetails?.name !== 'TimeoutError') {
-      // Strip PII before sending to Sentry - only send metadata
-      let rawBody: Record<string, unknown> = {};
-      try {
-        rawBody = event.body ? JSON.parse(event.body) : {};
-      } catch {
-        rawBody = {};
-      }
-      captureError(error, {
-        function: 'optimize',
-        payload: {
-          resumeTextLength: typeof rawBody.resumeText === 'string' ? rawBody.resumeText.length : 0,
-          jobTextLength: typeof rawBody.jobText === 'string' ? rawBody.jobText.length : 0,
-          hasResumeText: Boolean(rawBody.resumeText),
-          hasJobText: Boolean(rawBody.jobText),
-        },
-      });
-    }
-
-    // Return 504 for timeout errors, 500 for other errors
+    // Preserve actionable pre-charge failures and keep unexpected errors generic.
     const isTimeout = errorDetails?.name === 'TimeoutError' || errorDetails?.status === 504;
+    const status = isTimeout ? 504 : [422, 502].includes(errorDetails?.status) ? errorDetails.status : 500;
+    const code = typeof errorDetails?.code === 'string' && /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(errorDetails.code)
+      ? errorDetails.code : isTimeout ? 'OPTIMIZE_TIMEOUT' : 'OPTIMIZE_FAILED';
+    captureError(new Error('Optimization failed'), { function: 'optimize', stage,
+      status, code, evidenceFailures, operationId: event.headers['x-watheq-operation-id'] });
 
     return {
-      statusCode: isTimeout ? 504 : 500,
+      statusCode: status,
       headers: {
         'Content-Type': 'application/json',
         ...(isTimeout && {
@@ -427,9 +425,12 @@ export const runOptimization = async (event: HandlerEvent) => {
       },
       body: JSON.stringify({
         error: isTimeout
-          ? 'Optimization timed out. Retrying automatically...'
-          : 'Failed to optimize resume',
-        retryable: isTimeout,
+          ? 'Optimization timed out. Your answers are saved; please retry.'
+          : code === 'OPTIMIZE_NO_VERIFIED_EDITS'
+            ? 'No source-verified edits could be generated. No credits were charged. Review your resume and try again.'
+            : 'Failed to optimize resume',
+        code,
+        retryable: isTimeout || errorDetails?.retryable === true,
         billingStateUnknown,
       }),
     };
@@ -438,7 +439,7 @@ export const runOptimization = async (event: HandlerEvent) => {
 
 // Legacy callers share the same durable job ownership as the modern endpoint.
 export const handler: Handler = async (event) => {
-  const origin = process.env.DEPLOY_URL || process.env.URL || 'https://watheqai.app';
+  const origin = event.rawUrl || process.env.DEPLOY_URL || process.env.URL || 'https://watheqai.app';
   const response = await dispatchOptimization(new Request(new URL('/api/optimize-stream', origin), {
     method: event.httpMethod,
     headers: Object.fromEntries(Object.entries(event.headers).filter((entry): entry is [string, string] => typeof entry[1] === 'string')),

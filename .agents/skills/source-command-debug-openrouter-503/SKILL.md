@@ -122,7 +122,7 @@ UPSTASH_REDIS_REST_TOKEN
      -d '{"resumeText":"test","jobText":"test"}'
    ```
    Expected: 200, or a clean JSON 4xx/5xx — never a hung/raw 503 for an authenticated call.
-4. `npm run quality:parallel` passes.
+4. Scoped checks from AGENTS.md pass.
 
 ## Anti-Patterns (DO NOT)
 

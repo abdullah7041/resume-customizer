@@ -99,7 +99,7 @@ test('score should be 95 after uploading optimized resume', () => {
 
 3. Run quality checks:
 ```bash
-npm run quality:parallel
+# Follow the scoped verification commands in the root AGENTS.md
 ```
 
 4. Verify the test now passes
@@ -139,5 +139,5 @@ npm run quality:parallel
 - ✅ Failing test written capturing expected behavior
 - ✅ Fix implemented at ROOT CAUSE (not symptom)
 - ✅ Test passes after fix
-- ✅ Quality checks pass (`quality:parallel`)
+- ✅ Scoped checks from AGENTS.md pass
 - ✅ User confirms score is now "genuine not random"

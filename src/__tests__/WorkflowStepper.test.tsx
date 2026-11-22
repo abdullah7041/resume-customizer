@@ -15,6 +15,7 @@ describe('WorkflowStepper', () => {
   it('renders all five workflow steps including Export / Pipeline', () => {
     render(<WorkflowStepper steps={buildSteps()} onStepClick={vi.fn()} />);
 
+    expect(screen.getByRole('list')).toHaveClass('grid', 'auto-cols-fr', 'grid-flow-col');
     expect(screen.getByText('Resume')).toBeInTheDocument();
     expect(screen.getByText('Job Ad')).toBeInTheDocument();
     expect(screen.getByText('Match')).toBeInTheDocument();

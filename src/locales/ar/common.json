@@ -11,6 +11,7 @@
     "export": "تصدير PDF",
     "loading": "يحمّل...",
     "error": "حدث خطأ",
+    "sessionUnavailable": "تعذر فتح مساحة عملك المحفوظة. أعد تحميل الصفحة للمحاولة مرة أخرى.",
     "retry": "جرّب مرة ثانية",
     "cancel": "إلغاء",
     "save": "حفظ",
@@ -20,6 +21,9 @@
     "yes": "نعم",
     "submitting": "جاري الإرسال...",
     "signIn": "تسجيل الدخول",
+    "continueWithGoogle": "المتابعة باستخدام Google",
+    "continueWithLinkedIn": "المتابعة باستخدام LinkedIn",
+    "signInFailed": "تعذّر بدء تسجيل الدخول. حاول مرة أخرى أو اختر طريقة أخرى.",
     "signOut": "تسجيل الخروج",
     "byAuthor": "من تطوير عبدالله بن أحمد",
     "language": "اللغة",
@@ -34,6 +38,19 @@
     "copied": "تم النسخ!",
     "updated": "آخر تحديث",
     "download": "تحميل",
-    "dismiss": "تجاهل"
+    "dismiss": "تجاهل",
+    "clear": "مسح",
+    "credits": "أرصدة"
+  },
+  "sections": {
+    "optimize": {
+      "failure": {
+        "reference": "مرجع الدعم",
+        "pending": "لا يزال التحسين قيد المعالجة",
+        "retrieve": "التحقق من النتائج",
+        "copied": "تم نسخ مرجع الدعم",
+        "copy": "نسخ مرجع الدعم"
+      }
+    }
   }
 }

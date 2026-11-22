@@ -1,5 +1,6 @@
 {
   "pipeline": {
+    "recoveryFailed": "Could not verify the saved job. Your edits are retained.",
     "title": "My Pipeline",
     "tabLabel": "Pipeline",
     "saveJob": "Save this job to pipeline",
@@ -50,6 +51,7 @@
     "emptyStateFeed": "You can also save roles straight from the Job Feed, before uploading anything.",
     "viewPosting": "View posting",
     "showDescription": "Show job description",
-    "hideDescription": "Hide job description"
+    "hideDescription": "Hide job description",
+    "draftRestored": "Unsaved changes restored. Save to finish the update."
   }
 }

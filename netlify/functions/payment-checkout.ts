@@ -44,7 +44,6 @@ const baseHandler: Handler = async (event) => {
       if (error) throw new GeideaError(503, 'payment/persistence-unavailable', 'Unable to read payment status');
       if (!payment) throw new GeideaError(404, 'payment/not-found', 'Payment not found');
       const recordedOutcome = recover && (
-        (payment.status === 'succeeded' && (payment.environment === 'sandbox' || payment.granted_at)) ||
         payment.status === 'refunded' || payment.status === 'failed' || payment.status === 'cancelled'
       );
       const reconcileId = orderId ?? payment.order_id;
@@ -69,7 +68,7 @@ const baseHandler: Handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ paymentId: payment.id, status: payment.status, orderId: payment.order_id,
         environment: payment.environment, creditsGranted: payment.environment === 'live' && Boolean(payment.granted_at),
         remainingCredits: payment.remaining_credits, refundedMinor: payment.refunded_minor,
-        ...(noOrder ? { noOrder, expired: Date.now() - Date.parse(payment.updated_at) >= 16 * 60 * 1000 } : {}) }) };
+        ...(noOrder ? { noOrder, sessionId: payment.session_id, expired: Date.now() - Date.parse(payment.updated_at) >= 16 * 60 * 1000 } : {}) }) };
     }
     if (process.env.GEIDEA_PAYMENTS_ENABLED !== 'true') throw new GeideaError(503, 'payment/disabled', 'Checkout is currently unavailable');
     const environment = getPaymentEnvironment();

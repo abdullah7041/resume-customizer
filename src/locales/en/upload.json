@@ -129,6 +129,7 @@
       "possible_missing_certs": "Your summary mentions certifications, but none were parsed into the Certificates section.",
       "incomplete_languages": "We may have missed your languages — please review or add them.",
       "unreadable_file": "We couldn't read selectable text from that file. Upload a text-based PDF/DOCX, TXT, or Markdown file, or paste your resume text."
-    }
+    },
+    "draftSaveFailed": "Your draft could not be saved. Keep a copy before leaving this page."
   }
 }

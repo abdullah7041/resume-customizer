@@ -7,12 +7,6 @@ const { pdfGetDocument, pdfWorkerOptions } = vi.hoisted(() => ({
 }));
 
 vi.doMock(
-  "pdfjs-dist/legacy/build/pdf.worker.mjs?url",
-  () => ({ default: "/assets/pdf.worker.test.mjs" }),
-  { virtual: true }
-);
-
-vi.doMock(
   "pdfjs-dist/legacy/build/pdf.mjs",
   () => ({
       getDocument: pdfGetDocument,
@@ -89,7 +83,6 @@ describe("resume text helpers", () => {
         standardFontDataUrl: "https://unpkg.com/pdfjs-dist@5.7.284/standard_fonts/",
       })
     );
-    expect(pdfWorkerOptions.workerSrc).toBe("/assets/pdf.worker.test.mjs");
   });
 
   it("bounds concurrent PDF page extraction", async () => {

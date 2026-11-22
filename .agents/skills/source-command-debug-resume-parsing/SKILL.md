@@ -122,7 +122,7 @@ Don't stop at "no error." A parse that drops a section is still a failure.
 ### Step 6: Verify
 
 ```bash
-npm run quality:parallel
+# Follow the scoped verification commands in the root AGENTS.md
 ```
 
 - Run the real upload flow (`npm run dev:netlify`) with the failing file → succeeds
@@ -164,4 +164,4 @@ npm run quality:parallel
 - ✅ Real failing file now parses FULLY — all sections present, `incompleteSections` empty
 - ✅ No garbage/placeholder/`[object Object]`; readability gate intact
 - ✅ Tested with the real file in a dev run, not just mocks
-- ✅ `npm run quality:parallel` passes
+- ✅ Scoped checks from AGENTS.md pass

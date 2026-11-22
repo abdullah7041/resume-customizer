@@ -9,6 +9,7 @@
       "originalVersion": "Original version",
       "compare": "View changes",
       "downloadPdf": "Download PDF",
+      "downloadPdfAnyway": "Download PDF anyway",
       "downloadDocx": "Download DOCX",
       "mobilePdf": "PDF file",
       "mobileDocx": "DOCX file",
@@ -35,6 +36,8 @@
         "download": "Download PDF",
         "ats": "ATS-Friendly",
         "styled": "Styled",
+        "pdfCompatibility": "PDF compatibility",
+        "arabicPdfWarning": "Some PDF readers may change the order of Arabic letters or miss words in a search. If the application accepts Word files, you can also download a Word version.",
         "arabicLayout": "Arabic PDFs use DejaVu Sans with template colors, emphasis and spacing. Copied text may include standard text direction marks.",
         "styledUnsupported": "This Arabic PDF could not preserve every character safely. Choose DOCX or review the Text PDF layout.",
         "failed": "Export failed. Please try again, or switch to the ATS-friendly template and retry.",
@@ -69,7 +72,8 @@
       "resumeLanguage": "Resume Language",
       "languageEnglish": "English",
       "languageArabic": "Arabic",
-      "languageMixed": "Mixed"
+      "languageMixed": "Mixed",
+      "emptyResume": "Upload or paste a resume to preview and export it."
     }
   }
 }

@@ -1,3 +1,4 @@
+import { publication } from './publication.js';
 // Greenhouse job-board API.
 //
 // There is a SINGLE global API host. `boards-api.eu.greenhouse.io` does not
@@ -32,7 +33,7 @@ export const greenhouse: AtsProvider = {
   async fetchPostings(ref: CompanyRef): Promise<FetchOutcome> {
     const response = await getJson(listUrl(ref.token, true));
     if (!response.ok) {
-      return { ok: false, status: response.status, postings: [], error: response.error };
+      return { ok: false, status: response.status, postings: [], error: response.error, ...(response.retryAt ? { retryAt: response.retryAt } : {}) };
     }
 
     const jobs = (response.body as { jobs?: GreenhouseJob[] })?.jobs;
@@ -45,7 +46,7 @@ export const greenhouse: AtsProvider = {
       title: (job.title ?? '').trim(),
       location: (job.location?.name ?? '').trim(),
       applyUrl: job.absolute_url ?? '',
-      postedAt: normalizeDate(job.first_published ?? job.updated_at),
+      ...publication(job.first_published),
       description: boundDescription(stripHtml(job.content ?? '')),
     }));
 
@@ -60,9 +61,3 @@ export const greenhouse: AtsProvider = {
     return { found: true, count: jobs.length };
   },
 };
-
-function normalizeDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
-}

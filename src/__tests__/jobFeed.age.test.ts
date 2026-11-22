@@ -65,14 +65,15 @@ describe('age filtering in buildFeed', () => {
     expect(feed.dropped).toEqual([{ posting: old, reason: 'age' }]);
   });
 
-  it('keeps a posting from a board that publishes no dates, however old it is', () => {
+  it('keeps an undated posting in a broad view but excludes it from the strict default', () => {
     // Tabby is the largest verified board in the starter registry and Pinpoint
     // gives it no dates. A window that tests first-seen would delete it entirely.
     const undated = posting({ id: 'tabby', postedAt: null, firstSeenAt: daysAgo(120) });
 
     const feed = buildFeed([undated], intent, { maxAgeDays: DEFAULT_MAX_AGE_DAYS, now: NOW });
 
-    expect(feed.kept.map((scored) => scored.posting.id)).toEqual(['tabby']);
+    expect(feed.kept).toHaveLength(0);
+    expect(buildFeed([undated], intent, { maxAgeDays: 7, now: NOW }).kept.map(({ posting }) => posting.id)).toEqual(['tabby']);
   });
 
   it('keeps a posting inside the window', () => {

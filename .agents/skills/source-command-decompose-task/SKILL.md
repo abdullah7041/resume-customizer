@@ -73,7 +73,7 @@ After agents complete:
 ### Step 5: Execute with Quality Checks
 
 1. Implement based on consolidated plan
-2. Run `quality:parallel` after each file modification
+2. Verify the completed change with the scoped checks in the root AGENTS.md
 3. Track progress with Tasks (not Todos)
 
 ## Example: "Add Authentication"
@@ -119,7 +119,7 @@ Subtask #3: Explore API Protection Patterns
 - ✅ All domains explored in parallel
 - ✅ Findings consolidated before implementation
 - ✅ Plan Mode used for architecture decisions
-- ✅ Quality checks pass (`quality:parallel`)
+- ✅ Scoped checks from AGENTS.md pass
 - ✅ Tasks created for multi-session work
 
 ---

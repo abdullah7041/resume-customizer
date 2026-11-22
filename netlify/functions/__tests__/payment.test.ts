@@ -95,6 +95,7 @@ describe('GEIDEA checkout endpoint', () => {
     expect(response.statusCode).toBe(200);
     const providerRequest = JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string);
     expect(providerRequest.language).toBe('ar');
+    expect(providerRequest.appearance.styles).toEqual({ hppProfile: 'compressed', headerColor: '#064e3b' });
     expect(providerRequest).not.toHaveProperty('returnUrl');
   });
   it('does not expose a checkout when saving the provider session fails', async () => {
@@ -124,13 +125,20 @@ describe('GEIDEA checkout endpoint', () => {
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining(`?MerchantReferenceId=${id}`), expect.anything());
     expect(rpc).toHaveBeenCalledWith('record_credit_purchase', { p_purchase_id: id, p_order_id: orderId, p_status: 'succeeded', p_refunded_minor: 0 });
   });
-  it('confirms an already granted purchase without requiring a second Geidea request', async () => {
+  it('returns the existing session after an owner lookup confirms there is no order', async () => {
+    row = { id, user_id: id, status: 'pending', session_id: sessionId, environment: 'live', updated_at: new Date().toISOString() };
+    vi.mocked(fetch).mockResolvedValue(Response.json({ responseCode: '000', detailedResponseCode: '000', orders: [] }));
+    const response = await invoke(checkout, { action: 'status', paymentId: id, recover: true });
+    expect(JSON.parse(response.body!)).toMatchObject({ sessionId, noOrder: true, expired: false });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it('reconciles a missed refund on an already granted purchase', async () => {
     row = { id, user_id: id, status: 'succeeded', session_id: sessionId, order_id: orderId,
       environment: 'live', granted_at: '2026-11-10T12:00:00Z', remaining_credits: 100, refunded_minor: 0 };
+    vi.mocked(fetch).mockResolvedValue(Response.json({ responseCode: '000', detailedResponseCode: '000', order: { ...order, totalRefundedAmount: 29 } }));
     const response = await invoke(checkout, { action: 'status', paymentId: id, orderId, recover: true });
-    expect(JSON.parse(response.body!)).toMatchObject({ status: 'succeeded', creditsGranted: true, remainingCredits: 100 });
-    expect(fetch).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('record_credit_purchase', { p_purchase_id: id, p_order_id: orderId, p_status: 'refunded', p_refunded_minor: 2900 });
   });
   it('exposes only public pack configuration, defaults sandbox, and needs no credentials', async () => {
     vi.stubEnv('GEIDEA_ENVIRONMENT', undefined);

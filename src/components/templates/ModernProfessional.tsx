@@ -1,11 +1,11 @@
-import type { TemplateProps } from './BaseTemplate';
-import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from './BaseTemplate';
-import { useSectionLabel } from '../../hooks/useSectionLabel';
+import type { TemplateProps } from '@/components/templates/BaseTemplate';
+import { ATSResume, A4_STYLES, safeString, scaledFontSize, safeLang, cleanHighlight, filterEducationHighlights } from '@/components/templates/BaseTemplate';
+import { useSectionLabel } from '@/hooks/useSectionLabel';
 import { normalizeUrl, otherProfileUrls, resolveProfileUrl } from '@/lib/utils/profileUrl';
 
 // Default display options if not provided
 const DEFAULT_OPTIONS = {
-  baseFontSize: 10.5,
+  baseFontSize: 11,
   headingSize: 13,
   nameSize: 20,
   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
@@ -53,7 +53,7 @@ export function ModernProfessional({
   // Helper for scaled fonts - use displayOptions.baseFontSize or legacy fontScale
   const fs = (pt: number) => {
     if (displayOptions?.baseFontSize) {
-      const scaleFactor = displayOptions.baseFontSize / 10.5;
+      const scaleFactor = displayOptions.baseFontSize / 11;
       return scaledFontSize(pt, scaleFactor);
     }
     return scaledFontSize(pt, fontScale);
@@ -85,8 +85,10 @@ export function ModernProfessional({
         transformOrigin: 'top left',
         width: A4_STYLES.width,
         minHeight: A4_STYLES.minHeight,
+        boxSizing: 'border-box',
+        overflowWrap: 'anywhere',
         paddingTop: `${opts.marginTop * 25.4}mm`,
-        paddingBottom: `${opts.marginTop * 25.4}mm`,
+        paddingBottom: `${opts.marginBottom * 25.4}mm`,
         paddingLeft: `${opts.marginSide * 25.4}mm`,
         paddingRight: `${opts.marginSide * 25.4}mm`,
         fontFamily: opts.fontFamily,
@@ -136,7 +138,7 @@ export function ModernProfessional({
           {basics.phone && (
             <>
               <span className="text-gray-300">·</span>
-              <span>{basics.phone}</span>
+              <bdi dir="ltr">{basics.phone}</bdi>
             </>
           )}
           {(linkedInUrl || linkedInLabel) && (
@@ -174,7 +176,7 @@ export function ModernProfessional({
             className="text-gray-900"
             style={{ ...headingStyle, marginBottom: `${opts.paragraphSpacing}px` }}
           >
-            {getSectionLabel('about')}
+            {getSectionLabel('summary')}
           </h2>
           <p className="text-gray-700" style={{ lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
             {basics.summary}
@@ -194,17 +196,17 @@ export function ModernProfessional({
               paddingBottom: '8px'
             }}
           >
-            {getSectionLabel('experience')}
+            {getSectionLabel('workExperience')}
           </h2>
           <div className="space-y-5">
           {work.map((job, jobIndex) => (
             <div key={`${job.name}-${job.position}-${job.startDate}-${job.endDate}-${jobIndex}`} style={{ breakInside: (job.highlights && job.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (job.highlights && job.highlights.length > 4) ? 'avoid' : 'auto' }}>
-                  <div className="flex justify-between items-baseline mb-1">
-                    <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0, overflow: 'hidden' }}>
+                  <div className="flex flex-wrap gap-x-2 justify-between items-baseline mb-1">
+                    <h3 className="text-gray-900" style={{ fontSize: fs(12), fontWeight: '700', minWidth: 0, overflowWrap: 'anywhere' }}>
                       {safeString(job.position)}
                     </h3>
-                    <span className="text-gray-600 font-medium" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                    <span className="text-gray-600 font-medium" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '8px' }}>
                       {job.startDate} — {job.endDate || 'Present'}
                     </span>
                   </div>
@@ -213,11 +215,11 @@ export function ModernProfessional({
                     {job.location && ` | ${job.location}`}
                   </p>
                 </div>
-                {job.description && <p className="mb-1 text-gray-600" style={{ fontSize: fs(10.5) }}>{job.description}</p>}
+                {job.description && <p className="mb-1 text-gray-600" style={{ fontSize: fs(11) }}>{job.description}</p>}
                 {job.highlights && job.highlights.length > 0 && (
-                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                  <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {job.highlights.map((h, j) => (
-                      <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                      <li key={j} className="text-gray-600" style={{ fontSize: fs(11), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {cleanHighlight(h)}
                       </li>
                     ))}
@@ -251,13 +253,13 @@ export function ModernProfessional({
                     {safeString(project.name)}
                   </h3>
                   {project.description && (
-                    <p className="text-gray-600 mb-1" style={{ fontSize: fs(10.5), orphans: 2, widows: 2 }}>{project.description}</p>
+                    <p className="text-gray-600 mb-1" style={{ fontSize: fs(11), orphans: 2, widows: 2 }}>{project.description}</p>
                   )}
                 </div>
                 {project.highlights && project.highlights.length > 0 && (
-                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                  <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {project.highlights.map((h, j) => (
-                      <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                      <li key={j} className="text-gray-600" style={{ fontSize: fs(11), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {cleanHighlight(h)}
                       </li>
                     ))}
@@ -282,12 +284,12 @@ export function ModernProfessional({
           {education.map((edu, educationIndex) => (
             <div key={`${edu.institution}-${edu.studyType}-${educationIndex}`} style={{ breakInside: (edu.highlights && edu.highlights.length > 4) ? 'auto' : 'avoid' }}>
                 <div style={{ breakAfter: (edu.highlights && edu.highlights.length > 4) ? 'avoid' : 'auto' }}>
-                  <div className="flex justify-between items-baseline">
-                    <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                  <div className="flex flex-wrap gap-x-2 justify-between items-baseline">
+                    <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                       <h3 className="text-gray-900" style={{ fontSize: fs(11), fontWeight: '700' }}>
                         {safeString(edu.institution)}
                       </h3>
-                      <p className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                      <p className="text-gray-600" style={{ fontSize: fs(11) }}>
                         {safeString(edu.studyType)}
                         {edu.area && ` in ${edu.area}`}
                       </p>
@@ -302,15 +304,15 @@ export function ModernProfessional({
                         </p>
                       )}
                     </div>
-                    <span className="text-gray-600 font-medium" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', marginLeft: '8px' }}>
+                    <span className="text-gray-600 font-medium" style={{ fontSize: fs(10), flexShrink: 0, whiteSpace: 'nowrap', direction: 'ltr', unicodeBidi: 'isolate', marginInlineStart: '8px' }}>
                       {edu.startDate} — {edu.endDate}
                     </span>
                   </div>
                 </div>
                 {filterEducationHighlights(edu.highlights).length > 0 && (
-                  <ul style={{ paddingLeft: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
+                  <ul style={{ paddingInlineStart: '16px', margin: '2px 0 0 0', listStyleType: 'disc' }}>
                     {filterEducationHighlights(edu.highlights).map((h, j) => (
-                      <li key={j} className="text-gray-600" style={{ fontSize: fs(10.5), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
+                      <li key={j} className="text-gray-600" style={{ fontSize: fs(11), marginBottom: '1px', lineHeight: String(opts.lineHeight), orphans: 2, widows: 2 }}>
                         {h}
                       </li>
                     ))}
@@ -331,25 +333,9 @@ export function ModernProfessional({
           >
             {getSectionLabel('skills')}
           </h2>
-          <div className="flex flex-wrap gap-2">
-            {skills.map((skillItem, skillIndex) => {
-              // Handle both string and object formats
-              if (typeof skillItem === 'string') {
-                return (
-                  <span key={`${skillItem}-${skillIndex}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: fs(10) }}>
-                    {skillItem}
-                  </span>
-                );
-              }
-              // Object format
-              const keywords = skillItem.keywords || [skillItem.name];
-              return keywords.map((skill: string, keywordIndex: number) => (
-                  <span key={`${skillItem.name}-${skill}-${skillIndex}-${keywordIndex}`} className="px-3 py-1 bg-gray-100 text-gray-800 rounded-md font-medium" style={{ fontSize: fs(10) }}>
-                  {skill}
-                </span>
-              ));
-            })}
-          </div>
+          <p style={{ fontSize: fs(11) }}>
+            {skills.flatMap(skill => typeof skill === 'string' ? [skill] : (skill.keywords?.length ? skill.keywords : [skill.name])).filter(Boolean).join(', ')}
+          </p>
         </section>
       )}
 
@@ -364,13 +350,13 @@ export function ModernProfessional({
           </h2>
           <div className="space-y-2">
             {certificates.map((cert, certificateIndex) => (
-              <div key={`${cert.name}-${cert.date}-${certificateIndex}`} className="flex justify-between items-baseline">
+              <div key={`${cert.name}-${cert.date}-${certificateIndex}`} className="flex flex-wrap gap-x-2 justify-between items-baseline">
                 <div>
-                  <h3 className="text-gray-900" style={{ fontSize: fs(10.5), fontWeight: '600' }}>
+                  <h3 className="text-gray-900" style={{ fontSize: fs(11), fontWeight: '600' }}>
                     {safeString(cert.name)}
                   </h3>
                   {cert.issuer && (
-                    <p className="text-gray-500" style={{ fontSize: fs(10.5) }}>
+                    <p className="text-gray-500" style={{ fontSize: fs(11) }}>
                       {cert.issuer}
                     </p>
                   )}
@@ -399,7 +385,7 @@ export function ModernProfessional({
             {languages.map((lang, languageIndex) => {
               const { language, fluency } = safeLang(lang);
               return (
-                <span key={`${language}-${languageIndex}`} className="text-gray-600" style={{ fontSize: fs(10.5) }}>
+                <span key={`${language}-${languageIndex}`} className="text-gray-600" style={{ fontSize: fs(11) }}>
                   <strong className="text-gray-900">{language}</strong>{fluency ? `: ${fluency}` : ''}
                 </span>
               );

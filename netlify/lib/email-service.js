@@ -80,6 +80,15 @@ async function callResend(operation) {
 }
 
 const sendEmailViaResend = (payload) => callResend((resend) => resend.emails.send(payload));
+export function prepareJobAlertEmail(email, language, content) {
+  if (!isValidEmail(email)) throw new Error('Invalid email address');
+  return { from: `${getSenderName(language)} <${SENDER_EMAIL}>`, to: email, replyTo: REPLY_TO_EMAIL, ...content };
+}
+export async function sendJobAlertEmail(payload, idempotencyKey) {
+  const response = await callResend(resend => resend.emails.send(payload, { idempotencyKey }));
+  if (response.error || !response.data?.id) throw new Error(response.error?.message || 'Email acceptance unknown');
+  return response.data.id;
+}
 const sendBatchViaResend = (payloads, options) => callResend((resend) => resend.batch.send(payloads, options));
 
 // Configuration

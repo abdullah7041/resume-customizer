@@ -1,3 +1,5 @@
+import { privateStorage } from '@/lib/auth/privateSession';
+import { getPrivateSessionRevision } from "@/lib/auth/privateSession";
 import { lazy, Suspense, Component, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, FileText, Sparkles, Target, MessageSquare, Mail, LayoutTemplate, Trash2, AlertTriangle, Briefcase, Building2, Lock, LogIn, MoreHorizontal, ShieldCheck } from "lucide-react";
@@ -12,7 +14,7 @@ import {
   isAuthRequiredError,
   AI_DEFAULT_TEMPERATURE,
 } from "../../services/api.js";
-import { type ClarificationQuestion } from "../modals/ClarificationModal";
+import { ClarificationModal, type ClarificationQuestion } from "@/components/modals/ClarificationModal";
 import {
   filterClarificationQuestionsByHardStops,
   appendClarificationHistory,
@@ -44,16 +46,16 @@ const CoverLetterSection = lazy(() => import("../sections/CoverLetterSection").t
 const Vision2030Section = lazy(() => import("../Vision2030/Vision2030Section").then(m => ({ default: m.Vision2030Section })));
 const LandingPage = lazy(() => import("../../pages/LandingPage"));
 const PipelineSection = lazy(() => import("../sections/PipelineSection").then(m => ({ default: m.PipelineSection })));
-const JobFeedSection = lazy(() => import("../sections/JobFeedSection").then(m => ({ default: m.JobFeedSection })));
+const JobFeedSection = lazy(() => import("@/components/sections/JobsFirstSection"));
 const TemplateGallery = lazy(() => import("../sections/TemplatesSection"));
 const OnboardingChat = lazy(() => import("../onboarding/OnboardingChat"));
-const ClarificationModal = lazy(() => import("../modals/ClarificationModal").then(m => ({ default: m.ClarificationModal })));
 
 import type { Tab } from "../ui/GlassTabs";
 import { MobileWorkflowNav, type MobileWorkflowItem } from "../ui/MobileWorkflowNav";
 import { WorkflowStepper, type WorkflowStep, type WorkflowStepStatus } from "../ui/WorkflowStepper";
 import Toast, { ToastContainer } from "../ui/Toast";
 import { GlassButton } from "../ui/GlassButton";
+import { SignInDialog } from "@/components/ui/SignInDialog";
 import { GlassCard } from "../ui/GlassCard";
 import { ParallaxContainer } from "../ui/ParallaxSection";
 import { attachExportToJobApplication, createJobApplication, updateJobApplication } from "@/services/pipeline";
@@ -275,7 +277,7 @@ const loadCachedTruthCheck = (
 ): ResumeTruthCheckResult | null => {
   if (typeof window === "undefined" || !resumeText) return null;
   try {
-    const stored = window.localStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
+    const stored = privateStorage.getItem(TRUTH_CHECK_STORAGE_KEY);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as {
       contractVersion?: number;
@@ -299,7 +301,7 @@ const loadCachedTruthCheck = (
       : null;
   } catch (error) {
     console.warn("[MainContent] Failed to load cached Truth Check:", error);
-    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     return null;
   }
 };
@@ -424,11 +426,13 @@ const buildAiDebugSnapshot = (
 
 export default function MainContent() {
   const { t, i18n } = useTranslation();
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading } = useAuth();
+  const sessionRevision = useRef(getPrivateSessionRevision()).current;
+  const [hasPendingResumeInput, setHasPendingResumeInput] = useState(false);
   const { refetch: refetchCredits, applyCreditsRemaining } = useUserCredits();
   const [guestMode, setGuestMode] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
+    return privateStorage.getItem(GUEST_MODE_STORAGE_KEY) === "true";
   });
   const isGuestMode = !user && guestMode;
   const isPremium = Boolean(
@@ -437,7 +441,7 @@ export default function MainContent() {
     user?.app_metadata?.plan === "premium"
   );
 
-  const [activeTab, setActiveTab] = useState("resume");
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get("tab") === "job-feed" ? "job-feed" : "resume");
   const [exportReviewSectionIds, setExportReviewSectionIds] = useState<string[]>([]);
   const [legacyExportConfirmation, setLegacyExportConfirmation] = useState<{ documentFingerprint: string; confirmedAt: string }>();
   const [pendingLegacyExport, setPendingLegacyExport] = useState<{ variant: string; exportMethod: string; documentFingerprint: string; documentText: string } | null>(null);
@@ -462,7 +466,7 @@ export default function MainContent() {
   const [storedResumeData, setResumeData] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
-      const stored = window.localStorage.getItem(RESUME_STORAGE_KEY);
+      const stored = privateStorage.getItem(RESUME_STORAGE_KEY);
       if (!stored) return "";
 
       const parsed = JSON.parse(stored);
@@ -479,7 +483,7 @@ export default function MainContent() {
 
         if (isBinary) {
           console.warn("Detected corrupted resume data in localStorage, clearing it");
-          window.localStorage.removeItem(RESUME_STORAGE_KEY);
+          privateStorage.removeItem(RESUME_STORAGE_KEY);
           return "";
         }
       }
@@ -487,7 +491,7 @@ export default function MainContent() {
       return parsed;
     } catch (error) {
       console.warn("Failed to parse resume data from localStorage:", error);
-      window.localStorage.removeItem(RESUME_STORAGE_KEY);
+      privateStorage.removeItem(RESUME_STORAGE_KEY);
       return "";
     }
   });
@@ -586,7 +590,7 @@ export default function MainContent() {
   const [viewTextModalOpen, setViewTextModalOpen] = useState(false);
   const [jobDescription, setJobDescriptionState] = useState(() => {
     if (typeof window === "undefined") return "";
-    return window.localStorage.getItem(JOB_STORAGE_KEY) || "";
+    return privateStorage.getItem(JOB_STORAGE_KEY) || "";
   });
   const [matchAnalysis, setMatchAnalysis] = useState<MatchResult | null>(null);
   const [historicalMatch, setHistoricalMatch] = useState<{ status: 'legacy' | 'outdated'; result: MatchResult } | null>(null);
@@ -772,11 +776,11 @@ export default function MainContent() {
   latestOptimizeInput.current = optimizeInput;
   const previousOptimizeInput = useRef(optimizeInput);
   const isCurrentOptimize = useCallback((request: OptimizeRequest) =>
-    optimizeRequest.current === request &&
+    getPrivateSessionRevision() === sessionRevision && optimizeRequest.current === request &&
     sameMatchInput(request.input, latestOptimizeInput.current) &&
     Boolean(request.context && latestOptimizeContext.current &&
       canAcceptAssessment(optimizeRequest.current?.id ?? null, request.id,
-        request.context, latestOptimizeContext.current)), []);
+        request.context, latestOptimizeContext.current)), [sessionRevision]);
   const [previewUsed, setPreviewUsed] = useState(false);
   const [toasts, setToasts] = useState([]);
   const [aiDebug, setAiDebug] = useState<AiDebugSnapshot | null>(null);
@@ -788,9 +792,13 @@ export default function MainContent() {
   // Clarification interrogation state
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [optimizationFailure, setOptimizationFailure] = useState<string | null>(null);
+  const [optimizationReference, setOptimizationReference] = useState<string | null>(null);
+  const [optimizationPending, setOptimizationPending] = useState(false);
   const [clarificationError, setClarificationError] = useState<string | null>(null);
   const completedClarificationContext = useRef('');
-  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean } | null>(null);
+  const retryOptimizeArgs = useRef<{ mode: string; freePreview?: boolean; recovery?: {
+    workHistory?: WorkEntry[]; userClarifications?: string; userHardStops?: string[];
+  } } | null>(null);
   const [isCheckingClarifications, setIsCheckingClarifications] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [clarificationQuestions, setClarificationQuestions] = useState<ClarificationQuestion[]>([]);
@@ -855,15 +863,15 @@ export default function MainContent() {
 
   useEffect(() => {
     if (!user || !guestMode || typeof window === "undefined") return;
-    window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+    privateStorage.removeItem(GUEST_MODE_STORAGE_KEY);
     window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     setGuestMode(false);
   }, [guestMode, user]);
 
   const enterGuestMode = useCallback(() => {
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
-      window.localStorage.setItem("watheq:landingSeen", "true");
+      privateStorage.setItem(GUEST_MODE_STORAGE_KEY, "true");
+      privateStorage.setItem("watheq:landingSeen", "true");
       window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     }
     analytics.trackGuestPreviewStarted("landing_preview");
@@ -878,7 +886,7 @@ export default function MainContent() {
   const handleLandingGetStarted = useCallback(() => {
     if (flags.onboardingChat && !isOnboarded()) {
       if (typeof window !== "undefined") {
-        window.localStorage.setItem("watheq:landingSeen", "true");
+        privateStorage.setItem("watheq:landingSeen", "true");
         window.dispatchEvent(new Event("watheq:enter-onboarding"));
       }
       analytics.trackGuestPreviewStarted("landing_preview");
@@ -889,7 +897,7 @@ export default function MainContent() {
 
   const exitGuestMode = useCallback(() => {
     if (typeof window !== "undefined") {
-      window.localStorage.removeItem(GUEST_MODE_STORAGE_KEY);
+      privateStorage.removeItem(GUEST_MODE_STORAGE_KEY);
       window.dispatchEvent(new Event(GUEST_MODE_CHANGED_EVENT));
     }
     setGuestMode(false);
@@ -982,17 +990,21 @@ export default function MainContent() {
     setOptimizationData(null);
     setOptimizationKeywords({ add: [], remove: [], neutral: [] });
     resumeStore.setOptimizeRun(restored?.optimizeRun ?? null);
-    if (typeof window !== 'undefined') window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    if (typeof window !== 'undefined') privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     resetPipelineContext();
     confirmResumeSwitch(active.name);
   }, [activeResumeId, libraryEntries, libraryInitialized, resetPipelineContext, resumeData, snapshotActiveResumeResults, jobDescription, setJobDescription, i18n.language, t, confirmResumeSwitch]);
 
+  const savedJobContext = JSON.stringify([user?.id, jobDescription, currentLibraryResumeKey()]);
+  const latestSavedJobContext = useRef(savedJobContext);
+  latestSavedJobContext.current = savedJobContext;
   const handleJobSavedToPipeline = useCallback((application: JobApplication) => {
+    if (savedJobContext !== latestSavedJobContext.current || getPrivateSessionRevision() !== sessionRevision) return;
     setActiveJobApplicationId(application.id);
     setActiveJobApplication(application);
     setPendingAttachment(null);
     setExportedJobApplicationId(null);
-  }, []);
+  }, [savedJobContext, sessionRevision]);
 
   // Silent pipeline automation: every successfully analyzed job for a signed-in
   // user lands in the pipeline as 'saved' (createJobApplication dedupes
@@ -1162,13 +1174,6 @@ export default function MainContent() {
     });
   }, [guestProtectedActionDescription, guestProtectedActionTitle, pushToast]);
 
-  const handleGuestSignIn = useCallback((source: "guest_banner" | "guest_protected_action" = "guest_banner") => {
-    if (isGuestMode) {
-      analytics.trackGuestPreviewSigninStarted(source);
-    }
-    void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
-  }, [isGuestMode, signInWithGoogle]);
-
   useEffect(() => {
     const host = typeof window !== "undefined" ? window : globalThis;
     const timers = toastTimers.current;
@@ -1199,7 +1204,7 @@ export default function MainContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const storedTab = window.localStorage.getItem(TAB_STORAGE_KEY);
+    const storedTab = privateStorage.getItem(TAB_STORAGE_KEY);
     if (storedTab && tabs.some((tab) => tab.value === storedTab)) {
       setActiveTab(storedTab);
     }
@@ -1208,7 +1213,7 @@ export default function MainContent() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setPreviewUsed(window.localStorage.getItem("watheq:previewQuotaUsed") === "true");
+    setPreviewUsed(privateStorage.getItem("watheq:previewQuotaUsed") === "true");
   }, []);
 
   // Persist resume data to localStorage
@@ -1216,7 +1221,7 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
     if (resumeData && resumeData.plainText) {
       try {
-        window.localStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resumeData));
+        privateStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify(resumeData));
       } catch (error) {
         console.warn("Failed to save resume to localStorage:", error);
       }
@@ -1231,13 +1236,13 @@ export default function MainContent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (jobDescription) {
-      window.localStorage.setItem(JOB_STORAGE_KEY, jobDescription);
+      privateStorage.setItem(JOB_STORAGE_KEY, jobDescription);
     }
   }, [jobDescription]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setJobDescription(window.localStorage.getItem(JOB_STORAGE_KEY) || "");
+    setJobDescription(privateStorage.getItem(JOB_STORAGE_KEY) || "");
   }, [variantRestoreNonce, setJobDescription]);
 
   // Warn user before closing tab with unsaved changes
@@ -1289,7 +1294,7 @@ export default function MainContent() {
 
     setActiveTab(value);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(TAB_STORAGE_KEY, value);
+      privateStorage.setItem(TAB_STORAGE_KEY, value);
     }
   }, [hasResume, pushToast, resumeGateReason, t, tabs]);
 
@@ -1324,7 +1329,7 @@ export default function MainContent() {
 
       setJobDescription(trimmed);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(JOB_STORAGE_KEY, trimmed);
+        privateStorage.setItem(JOB_STORAGE_KEY, trimmed);
       }
 
       // Reuse the feed's verified comparison for the selected resume. This is the
@@ -1381,7 +1386,7 @@ export default function MainContent() {
     if (!hasResume && !isReachableWithoutResume(activeTab)) {
       setActiveTab("resume");
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+        privateStorage.setItem(TAB_STORAGE_KEY, "resume");
       }
     }
   }, [activeTab, hasResume]);
@@ -1394,7 +1399,7 @@ export default function MainContent() {
     if (activeTabConfig && !isFlagEnabled(activeTabConfig) && activeTab !== "resume") {
       setActiveTab("resume");
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(TAB_STORAGE_KEY, "resume");
+        privateStorage.setItem(TAB_STORAGE_KEY, "resume");
       }
     }
   }, [activeTab, isFlagEnabled, t]);
@@ -1407,6 +1412,11 @@ export default function MainContent() {
   }, [activeNavValue, tabs]);
 
   const handleContinue = useCallback(() => {
+    if (activeNavValue === 'resume' && useResumeStore.getState().originalResume?.basics) {
+      setActiveTab('truth-check');
+      privateStorage.setItem(TAB_STORAGE_KEY, 'truth-check');
+      return;
+    }
     const index = tabs.findIndex((tab) => tab.value === activeNavValue);
     if (index >= 0 && index < tabs.length - 1) {
       handleTabChange(tabs[index + 1].value);
@@ -1462,15 +1472,15 @@ export default function MainContent() {
       },
       {
         id: "optimize",
-        label: t("workspace.stepper.optimize", "Optimize"),
-        hint: t("workspace.stepper.optimizeHint", "Improve resume"),
+        label: t("workspace.stepper.optimize", "Tailor"),
+        hint: t("workspace.stepper.optimizeHint", "Adapt your CV for each role"),
         status: gatedStatus(activeTab === "optimize" ? "active" : hasOptimization ? "completed" : "upcoming"),
         targetTab: "optimize",
         lockedReason: resumeGateReason,
       },
       {
         id: "export",
-        label: t("workspace.stepper.export", "Export / Pipeline"),
+        label: t("workspace.stepper.export", "Export & track"),
         hint: t("workspace.stepper.exportHint", "Save and track"),
         status: gatedStatus(isExportStep ? "active" : "upcoming"),
         targetTab: "templates",
@@ -1486,7 +1496,7 @@ export default function MainContent() {
 
   const persistPreviewUsage = useCallback(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem("watheq:previewQuotaUsed", "true");
+    privateStorage.setItem("watheq:previewQuotaUsed", "true");
     setPreviewUsed(true);
   }, []);
 
@@ -1502,9 +1512,9 @@ export default function MainContent() {
     if (typeof window === "undefined") return;
 
     // Clear all stored data
-    window.localStorage.removeItem(RESUME_STORAGE_KEY);
-    window.localStorage.removeItem(JOB_STORAGE_KEY);
-    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    privateStorage.removeItem(RESUME_STORAGE_KEY);
+    privateStorage.removeItem(JOB_STORAGE_KEY);
+    privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     clearStoredMatchAnalysis();
 
     // Reset local state
@@ -1546,8 +1556,8 @@ export default function MainContent() {
     // `resetForNewUpload` rather than `clearAll`: the target role is job-search
     // intent, not resume data, and the feed now runs on it with no CV at all.
     useResumeStore.getState().resetForNewUpload();
-    window.localStorage.removeItem(RESUME_STORAGE_KEY);
-    window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+    privateStorage.removeItem(RESUME_STORAGE_KEY);
+    privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
     clearStoredMatchAnalysis();
     setResumeData("");
     // Also clear dependent data
@@ -1641,11 +1651,6 @@ export default function MainContent() {
     async (resumeInput, signal?: AbortSignal, onStage?: (stage: 'reading' | 'preparing') => void) => {
       const { parseInput, storage, fileName } = normalizeResumePayload(resumeInput);
 
-      // Clear old localStorage data to prevent corruption issues
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem(RESUME_STORAGE_KEY);
-      }
-
       try {
         setFlowProgress(18);
 
@@ -1677,7 +1682,7 @@ export default function MainContent() {
             );
           },
         });
-        if (signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
+        if (getPrivateSessionRevision() !== sessionRevision || signal?.aborted) throw new DOMException('Upload cancelled', 'AbortError');
         setFlowProgress(88);
         const enriched =
           parsed
@@ -1710,12 +1715,14 @@ export default function MainContent() {
               ? libraryError.message : t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.');
           }
         }
+        if (getPrivateSessionRevision() !== sessionRevision || signal?.aborted) throw new DOMException("Session changed", "AbortError");
+        if (librarySaveFailure) throw Object.assign(new Error(librarySaveFailure), { status: 507, code: 'resume/storage-failed' });
         setResumeData(enriched);
         setMatchAnalysis(null);
         setTruthCheckResult(null);
         clearStoredMatchAnalysis();
         if (typeof window !== "undefined") {
-          window.localStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
+          privateStorage.removeItem(TRUTH_CHECK_STORAGE_KEY);
         }
         setJobDescription("");
         setOptimizations([]);
@@ -1724,14 +1731,6 @@ export default function MainContent() {
         useResumeStore.getState().setOptimizeRun(null);
         resetPipelineContext();
         emitHRSuperSaudEvent('resume.uploaded');
-        if (librarySaveFailure) pushToast(
-          {
-            type: "warning",
-            title: t('upload.library.saveFailed', 'Resume parsed, but could not be added to your device library.'),
-            description: librarySaveFailure,
-          },
-          { id: TOAST_IDS.upload }
-        );
         setFlowProgress(100);
         scheduleTimeout(() => setFlowProgress(0), 800);
         return enriched;
@@ -1769,7 +1768,7 @@ export default function MainContent() {
         throw error;
       }
     },
-    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, setJobDescription, t]
+    [isGuestMode, normalizeResumePayload, pushToast, resetPipelineContext, setJobDescription, t, sessionRevision]
   );
 
   const handleAnalyzeMatchAI = useCallback(
@@ -1796,6 +1795,7 @@ export default function MainContent() {
       matchRequest.current = request;
       const isCurrent = () => {
         const active = matchRequest.current;
+        if (getPrivateSessionRevision() !== sessionRevision) return false;
         if (!active || active.id !== request.id || request.failed || !sameMatchInput(request.input, latestMatchInput.current)) return false;
         return !request.context || Boolean(active.context &&
           canAcceptAssessment(active.id, request.id, request.context, active.context));
@@ -1955,7 +1955,7 @@ export default function MainContent() {
         if (matchRequest.current === request) setIsAnalyzing(false);
       }
     },
-    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, setJobDescription, t]
+    [autoSaveJobToPipeline, i18n.language, pushToast, resetPipelineContext, resumeData, setJobDescription, t, sessionRevision]
   );
 
   const handleAnalyzeTruthCheck = useCallback(async () => {
@@ -2002,12 +2002,12 @@ export default function MainContent() {
         language: truthCheckLanguage,
         userHardStops,
       }) as ResumeTruthCheckResult;
-      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+      if (getPrivateSessionRevision() !== sessionRevision || requestedResumeKey !== currentLibraryResumeKey()) return null;
 
       setAiDebug(buildAiDebugSnapshot(result, "success"));
       setTruthCheckResult(result);
       if (typeof window !== "undefined") {
-        window.localStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
+        privateStorage.setItem(TRUTH_CHECK_STORAGE_KEY, JSON.stringify({
           contractVersion: TRUTH_CHECK_CONTRACT_VERSION,
           resumeHash,
           resumeId: useResumeLibraryStore.getState().activeResumeId,
@@ -2033,7 +2033,7 @@ export default function MainContent() {
       );
       return result;
     } catch (error) {
-      if (requestedResumeKey !== currentLibraryResumeKey()) return null;
+      if (getPrivateSessionRevision() !== sessionRevision || requestedResumeKey !== currentLibraryResumeKey()) return null;
       setAiDebug(buildAiDebugSnapshot(error, "error"));
       pushToast(
         {
@@ -2045,9 +2045,9 @@ export default function MainContent() {
       );
       throw error;
     } finally {
-      if (requestedResumeKey === currentLibraryResumeKey()) setIsTruthChecking(false);
+      if (getPrivateSessionRevision() === sessionRevision && requestedResumeKey === currentLibraryResumeKey()) setIsTruthChecking(false);
     }
-  }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t]);
+  }, [i18n.language, isGuestMode, pushToast, requireSignInForGuestAction, resumeData?.plainText, t, sessionRevision]);
 
   // Internal: runs the real SSE optimize call with optional clarifications baked in
   const handleOptimizeActual = useCallback(
@@ -2055,6 +2055,8 @@ export default function MainContent() {
       if (!isCurrentOptimize(request)) return null;
       const { resumeText, jobDescription, language } = request.input;
       if (!resumeText || !jobDescription) return null;
+      const recovery = retryOptimizeArgs.current?.recovery;
+      if (recovery) ({ workHistory, userClarifications, userHardStops } = recovery);
       try {
         setIsOptimizing(true);
         setFlowProgress(32);
@@ -2110,6 +2112,7 @@ export default function MainContent() {
               userClarifications,
               userHardStops,
               freePreview,
+                recoverOnly: Boolean(recovery),
             },
             // onStatus callback: update toast with real-time progress
             (phase) => {
@@ -2136,13 +2139,13 @@ export default function MainContent() {
             // Force-refresh credit balance so the UI reflects what actually happened.
             refetchCredits().catch(() => { /* non-blocking */ });
             // Retain the actual transport/provider code and request trace.
-            streamError.message = `${t('credits.connectionInterrupted',
+            if (streamError.code !== 'OPTIMIZE_JOB_PENDING') streamError.message = `${t('credits.connectionInterrupted',
               'The connection was interrupted while optimization was running. Your credits may have already been used. Please refresh your balance before trying again.')} (${streamError.message})`;
             throw streamError;
           }
           // Only an unavailable route warrants a legacy request. Application
           // errors, authentication failures and timeouts must not silently rerun AI.
-          if (![404, 405].includes(streamError.status)) throw streamError;
+          if (recovery || ![404, 405].includes(streamError.status)) throw streamError;
           // Server explicitly rejected before processing (non-2xx, SSE error event) —
           // billing state is known-safe, fall back to legacy endpoint.
           console.warn('[optimize] SSE rejected before processing; using legacy endpoint');
@@ -2162,6 +2165,7 @@ export default function MainContent() {
         }
         if (!isCurrentOptimize(request)) return null;
         setAiDebug(buildAiDebugSnapshot(result, "success"));
+        if (retryOptimizeArgs.current) delete retryOptimizeArgs.current.recovery;
         // Fired exactly once here, after the SSE-vs-legacy-fallback branch above
         // has already resolved to a single successful `result` — never inside
         // either branch — so a user-initiated run counts once regardless of
@@ -2309,6 +2313,14 @@ export default function MainContent() {
         return result;
       } catch (error: any) {
         if (!isCurrentOptimize(request)) return null;
+        if (error.isBillingStateUnknown && retryOptimizeArgs.current) {
+          retryOptimizeArgs.current.recovery = { workHistory, userClarifications, userHardStops };
+        } else if (error.jobFailed === true && error.isBillingStateUnknown === false && retryOptimizeArgs.current) {
+          delete retryOptimizeArgs.current.recovery;
+        }
+        const pending = error.code === 'OPTIMIZE_JOB_PENDING';
+        setOptimizationPending(pending);
+        setOptimizationReference(typeof error.operationId === 'string' ? error.operationId : null);
         setOptimizationFailure(error?.message ?? 'Optimization failed');
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
@@ -2334,8 +2346,8 @@ export default function MainContent() {
 
         pushToast(
           {
-            type: "danger",
-            title: t("toasts.optimizationFailed"),
+            type: pending ? "info" : "danger",
+            title: pending ? t("sections.optimize.failure.pending", "Optimization is still processing") : t("toasts.optimizationFailed"),
             description: descriptionParts.filter(Boolean).join(" • "),
           },
           { id: TOAST_IDS.optimize }
@@ -2366,7 +2378,8 @@ export default function MainContent() {
       if (optimizeRequest.current?.inFlight || isOptimizing || isInterrogating || isCheckingClarifications) return null;
       setOptimizationFailure(null);
       setClarificationError(null);
-      retryOptimizeArgs.current = { mode, freePreview: options?.freePreview };
+      setOptimizationReference(null);
+      retryOptimizeArgs.current = { ...retryOptimizeArgs.current, mode, freePreview: options?.freePreview };
 
       const input: AssessmentInput = { resumeText: resumeData.plainText, jobDescription,
         language: i18n.language === 'ar' ? 'ar' : 'en', kind: 'optimize',
@@ -2767,6 +2780,7 @@ export default function MainContent() {
           return;
         }
 
+        if (getPrivateSessionRevision() !== sessionRevision) return;
         const state = useResumeStore.getState();
         if (state.optimizationOrigin === 'guest_preview' && state.optimizations.some(edit => edit.applied)) {
           handleTabChange('templates');
@@ -2809,6 +2823,7 @@ export default function MainContent() {
           skipPrint: true, // Don't trigger print, just return HTML
         });
 
+        if (getPrivateSessionRevision() !== sessionRevision) return;
         const canSaveToSupabase = exportMethod === "supabase" && isSupabaseExportAvailable() && Boolean(user);
 
         if (exportMethod === "supabase" && isSupabaseExportAvailable() && !user) {
@@ -2824,6 +2839,7 @@ export default function MainContent() {
           // Export to Supabase Storage
           const result = await exportToSupabase({
             htmlContent,
+            expectedSessionRevision: sessionRevision,
             fileName: "Resume_Optimized",
             metadata: {
               variant: normalizedVariant,
@@ -2832,6 +2848,7 @@ export default function MainContent() {
             },
           });
 
+          if (getPrivateSessionRevision() !== sessionRevision) return;
           pushToast({
             type: "success",
             title: t("toasts.savedToAccount"),
@@ -2869,6 +2886,7 @@ export default function MainContent() {
           });
         }
       } catch (error) {
+        if (getPrivateSessionRevision() !== sessionRevision || error?.cancelled) return;
         console.error("Export error:", error);
         emitHRSuperSaudEvent('error.generic');
         pushToast({
@@ -2878,7 +2896,7 @@ export default function MainContent() {
         });
       }
     },
-    [activeJobApplicationId, handleTabChange, isGuestMode, jobDescription, legacyExportConfirmation, pushToast, requireSignInForGuestAction, resumeData, user, t]
+    [activeJobApplicationId, handleTabChange, isGuestMode, jobDescription, legacyExportConfirmation, pushToast, requireSignInForGuestAction, resumeData, user, t, sessionRevision]
   );
 
   const renderedToasts = useMemo(
@@ -2928,10 +2946,12 @@ export default function MainContent() {
           {guestProtectedActionDescription}
         </p>
       </div>
-      <GlassButton variant="primary" onClick={() => handleGuestSignIn("guest_protected_action")}>
-        <LogIn className="h-4 w-4 me-2" />
-        {t("workspace.guest.signInCta", "Sign in to save progress")}
-      </GlassButton>
+      <SignInDialog source="landing_get_started" onStart={() => analytics.trackGuestPreviewSigninStarted("guest_protected_action")}>
+        <GlassButton variant="primary">
+          <LogIn className="h-4 w-4 me-2" />
+          {t("workspace.guest.signInCta", "Sign in to save progress")}
+        </GlassButton>
+      </SignInDialog>
     </GlassCard>
   );
 
@@ -2993,7 +3013,7 @@ export default function MainContent() {
   );
 
   const workspace = (
-    <ParallaxContainer enableLayers={false} className="py-1">
+    <ParallaxContainer enableLayers={false} className="pb-1">
       <div className="space-y-3 sm:space-y-3 text-gray-900 dark:text-surface-50">
         {isGuestMode && (
           <div className="rounded-xl border border-emerald-900/10 bg-emerald-50/50 px-4 py-3 dark:border-emerald-200/14 dark:bg-emerald-900/20">
@@ -3002,10 +3022,12 @@ export default function MainContent() {
                 {guestNotice}
               </p>
               <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
-                <GlassButton variant="primary" size="sm" onClick={() => handleGuestSignIn("guest_banner")}>
-                  <LogIn className="h-4 w-4 me-2" />
-                  {t("workspace.guest.signInCta", "Sign in to save progress")}
-                </GlassButton>
+                <SignInDialog source="landing_get_started" onStart={() => analytics.trackGuestPreviewSigninStarted("guest_banner")}>
+                  <GlassButton variant="primary" size="sm">
+                    <LogIn className="h-4 w-4 me-2" />
+                    {t("workspace.guest.signInCta", "Sign in to save progress")}
+                  </GlassButton>
+                </SignInDialog>
                 <GlassButton variant="secondary" size="sm" onClick={exitGuestMode}>
                   {t("workspace.guest.backToLanding", "Back to landing")}
                 </GlassButton>
@@ -3014,27 +3036,26 @@ export default function MainContent() {
           </div>
         )}
 
-        {/* The desktop action column gives the selector its own row below More tools. */}
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-3">
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:col-start-2 md:row-start-1 md:w-64 lg:w-72">
+        <div className="flex flex-col gap-2" data-workspace-chrome>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 empty:hidden" data-workspace-controls>
+            {!isGuestMode && libraryEntries.length > 0 && (
+              <div className="me-auto min-w-0 max-w-full flex-1 sm:max-w-sm">
+                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
+              </div>
+            )}
             <GlassButton
               type="button"
               variant={activeNavValue === "more-tools" ? "primary" : "secondary"}
               size="sm"
               onClick={() => handleTabChange("more-tools")}
-              className="hidden whitespace-nowrap md:col-start-1 md:row-start-1 md:inline-flex md:min-h-11 md:w-full"
+              className="hidden min-h-11 shrink-0 whitespace-nowrap md:inline-flex"
             >
               <MoreHorizontal className="h-4 w-4 me-1.5" />
               {t("tabs.moreTools", "More tools")}
             </GlassButton>
-            {!isGuestMode && libraryEntries.length > 0 && (
-              <div className="col-start-1 row-start-1 min-w-0 md:col-span-2 md:row-start-2">
-                <ResumeSelector entries={libraryEntries} activeResumeId={activeResumeId} onActivate={activateLibraryResume} />
-              </div>
-            )}
             {renderClearAllAction(false)}
           </div>
-          <div className="min-w-0 md:col-start-1 md:row-start-1">
+          <div className="w-full min-w-0" data-workspace-steps>
             <div className="md:hidden">
               <MobileWorkflowNav
                 primarySteps={mobilePrimarySteps}
@@ -3054,6 +3075,13 @@ export default function MainContent() {
           </div>
         </div>
 
+        {flowProgress > 0 && (
+          <div className="rounded-lg border border-emerald-600/20 bg-emerald-500/5 px-3 py-2" role="progressbar" aria-label={t('toasts.generatingOptimizations')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(flowProgress)}>
+            <div className="mb-1.5 flex justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-200"><span>{t('toasts.generatingOptimizations')}</span><span>{Math.round(flowProgress)}%</span></div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-emerald-100 dark:bg-emerald-900/40"><div className="h-full rounded-full bg-emerald-600 transition-[width] duration-300 motion-reduce:transition-none" style={{width:`${flowProgress}%`}} /></div>
+          </div>
+        )}
+
         <div className="workspace-panel relative min-h-[420px] p-4 transition-shadow duration-300 sm:min-h-[480px] sm:p-5 lg:p-6">
           {/* Parse-quality warning — shown on all tabs so the user always sees it */}
           {activeTab !== "resume" && <ParsingWarningsBanner className="mb-4" />}
@@ -3061,6 +3089,8 @@ export default function MainContent() {
             <>
               <UploadSection
                 onParseResume={handleParseResume}
+                onContinue={handleContinue}
+                onPendingInputChange={setHasPendingResumeInput}
                 onActivateResume={activateLibraryResume}
                 parseNotificationsHandled={true}
                 isGuestMode={isGuestMode}
@@ -3146,13 +3176,15 @@ export default function MainContent() {
           {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
               {optimizationFailure && (
-                <div role="alert" aria-label={t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
-                  <p className="font-semibold">{t('sections.optimize.failure.title', 'Optimization failed')}</p>
+                <div role={optimizationPending ? "status" : "alert"} aria-label={optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
+                  <p className="font-semibold">{optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')}</p>
                   <p className="mt-1 text-sm">{optimizationFailure}</p>
+                  {optimizationReference && <p className="mt-1 break-all text-sm">{t('sections.optimize.failure.reference', 'Support reference')}: {optimizationReference}</p>}
                   <GlassButton variant="secondary" className="mt-3" disabled={isOptimizing || isCheckingClarifications} onClick={() => {
                     const args = retryOptimizeArgs.current;
                     if (args) void handleOptimize(args.mode, { freePreview: args.freePreview });
-                  }}>{t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                  }}>{optimizationPending ? t('sections.optimize.failure.retrieve', 'Check for results') : t('sections.optimize.failure.retry', 'Retry optimization')}</GlassButton>
+                  {optimizationReference && <GlassButton variant="secondary" className="ms-2 mt-3" onClick={() => void navigator.clipboard?.writeText(optimizationReference).then(() => pushToast({ type: 'success', title: t('sections.optimize.failure.copied', 'Support reference copied') })).catch(() => { /* The visible reference remains selectable. */ })}>{t('sections.optimize.failure.copy', 'Copy support reference')}</GlassButton>}
                 </div>
               )}
               <Suspense fallback={<SectionSkeleton />}>
@@ -3260,7 +3292,7 @@ export default function MainContent() {
                      network round trip and an analytics event to arrive at
                      "Resume required". The feed hides the button when the prop is
                      absent. */
-                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} />}
+                  : <JobFeedSection onMatchPosting={hasResume ? handleFeedMatchPosting : undefined} onToast={pushToast} />}
               </Suspense>
             </LazyErrorBoundary>
           )}
@@ -3279,8 +3311,10 @@ export default function MainContent() {
           <div className="flex justify-center sm:justify-end mt-4">
             <GlassButton
               variant="secondary"
-              onClick={handleContinue}
-              disabled={!hasResume}
+              type={activeTab === "resume" ? "submit" : "button"}
+              form={activeTab === "resume" ? "resume-upload-form" : undefined}
+              onClick={activeTab === "resume" ? undefined : handleContinue}
+              disabled={!hasResume && !hasPendingResumeInput}
               title={!hasResume ? resumeGateReason : undefined}
               className="justify-center"
             >
@@ -3311,7 +3345,7 @@ export default function MainContent() {
         <Suspense fallback={<SectionSkeleton />}>
           <LandingPage
             onGetStarted={handleLandingGetStarted}
-            onSignIn={() => handleGuestSignIn()}
+            showSignIn
           />
         </Suspense>
       </div>
@@ -3435,18 +3469,8 @@ export default function MainContent() {
           </div>
         </div>
       )}
-      <div className={`${containerClass} space-y-4 sm:space-y-10 lg:space-y-12 text-gray-900 dark:text-surface-50 p-4 sm:p-6 lg:p-8`}>
+      <div className={`${containerClass} space-y-4 px-4 pb-4 pt-2 text-gray-900 sm:space-y-10 sm:px-6 sm:pb-6 lg:space-y-12 lg:px-8 lg:pb-8 dark:text-surface-50`}>
         <div>
-          {flowProgress > 0 && (
-            <div className="mb-6 h-1.5 w-full overflow-hidden rounded-full bg-emerald-900/10 dark:bg-black/45">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 transition-[width] duration-300"
-                style={{ width: `${flowProgress}%` }}
-                aria-hidden="true"
-              />
-            </div>
-          )}
-
           {loading ? (
             <div className="space-y-6">
               <div className="h-8 w-40 rounded-full bg-emerald-900/10 dark:bg-white/10" />

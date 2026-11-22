@@ -1,3 +1,4 @@
+@import "./styles/arabic-interface.css";
 @import "./styles/theme.css";
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -1739,8 +1740,7 @@
       grid-template-columns: auto 1fr;
     }
 
-    .majlis-nav-links,
-    .majlis-signin {
+    .majlis-nav-links {
       display: none;
     }
 
@@ -2157,6 +2157,13 @@
   }
 
   /* Workspace-specific surface utilities */
+  .jobs-workspace,
+  .workflow-stepper {
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
+  }
+
   .workspace-panel {
     background: var(--workspace-surface);
     border: 1px solid var(--workspace-border);

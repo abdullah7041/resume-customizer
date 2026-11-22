@@ -19,8 +19,46 @@ describe('optimize-cards', () => {
     }, { logPrefix, sources });
     expect(result.cards).toHaveLength(1);
     expect(result.cards[0]?.evidence).toMatchObject({ targetId: 'work-a', status: 'needs_review' });
-    expect(result.diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.' }]);
+    expect(result.diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.', reasons: ['wrong_target'] }]);
     expect(JSON.stringify(result.diagnostics)).not.toContain('Cut costs');
+  });
+
+  it.each([
+    { target_id: undefined, evidence_references: [{ sourceId: 'private-source-id', quote: 'Private resume claim' }], reasons: ['missing_target'] },
+    { target_id: 'private-target-id', evidence_references: undefined, reasons: ['missing_source'] },
+    { target_id: undefined, evidence_references: undefined, reasons: ['missing_target', 'missing_source'] },
+    { target_id: undefined, evidence_references: [], reasons: ['missing_target', 'missing_source'] },
+    { target_id: 'private-target-id', evidence_references: [], reasons: ['missing_source'] },
+  ])('reports only fixed reason codes for missing target/references: $reasons', async ({ reasons, ...fields }) => {
+    const text = 'Private resume claim';
+    const result = await buildEvidenceBackedOptimizationCards({ bullet_improvements: [{
+      ...fields, original: text, improved: 'Private proposed claim',
+    }] }, { logPrefix, sources: [{ id: 'private-source-id', kind: 'resume', targetId: 'private-target-id', text, fingerprint: fingerprintEvidenceText(text) }] });
+    expect(result.cards).toEqual([]);
+    expect(result.diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.', reasons }]);
+    expect(JSON.stringify(result.diagnostics)).not.toMatch(/Private|private-source-id|private-target-id/);
+  });
+
+  it('distinguishes invalid citation quotes from a mismatched target', async () => {
+    const text = 'Private resume claim';
+    const result = await buildEvidenceBackedOptimizationCards({ bullet_improvements: [{
+      target_id: 'private-target-id', original: text, improved: 'Private proposed claim',
+      evidence_references: [{ sourceId: 'private-source-id', quote: 'Unstated private claim' }],
+    }] }, { logPrefix, sources: [{ id: 'private-source-id', kind: 'resume', targetId: 'private-target-id', text, fingerprint: fingerprintEvidenceText(text) }] });
+    expect(result.cards).toEqual([]);
+    expect(result.diagnostics).toEqual([{ status: 422, code: 'EVIDENCE_INVALID', message: 'An optimization item lacked valid source evidence.', reasons: ['missing_source'] }]);
+  });
+
+  it('continues to reject an original spanning separate resume sources', async () => {
+    const sources = ['Built reports', 'for weekly reviews'].map((text, index) => ({
+      id: `source-${index}`, kind: 'resume' as const, targetId: `target-${index}`, text, fingerprint: fingerprintEvidenceText(text),
+    }));
+    const result = await buildEvidenceBackedOptimizationCards({ bullet_improvements: [{
+      target_id: sources[0].targetId, original: sources.map(source => source.text).join('\n'), improved: 'Created weekly reports',
+      evidence_references: [{ sourceId: sources[0].id, quote: sources[0].text }],
+    }] }, { logPrefix, sources });
+    expect(result.cards).toEqual([]);
+    expect(result.diagnostics[0].reasons).toEqual(['wrong_target']);
   });
 
   it('rejects a fresh headline rewrite without source evidence', async () => {
@@ -35,6 +73,7 @@ describe('optimize-cards', () => {
     const result = await buildEvidenceBackedOptimizationCards({ bullet_improvements: [{ target_id: 'work-a', original: 'Improved service', improved: 'Improved service by 40% (verify)', evidence_references: [{ sourceId: 'a', quote: 'Improved service' }] }] }, { logPrefix, sources });
     expect(result.cards).toEqual([]);
     expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0].reasons).toEqual(['new_number', 'semantic_review']);
   });
   it('keeps source-backed headline and summary rewrites for candidate review', async () => {
     const sources = [

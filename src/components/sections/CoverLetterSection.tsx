@@ -1,3 +1,4 @@
+import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GlassCard } from '../ui/GlassCard';
@@ -65,7 +66,7 @@ const getToneLabel = (value: string, fallback: string, isArabic: boolean) => {
 
 export function CoverLetterSection({ resumeText, jobDescription, resumeData }: CoverLetterSectionProps) {
   const { t, i18n } = useTranslation();
-  const { credits, refetch: refetchCredits } = useUserCredits();
+  const { refetch: refetchCredits } = useUserCredits();
   const isArabic = i18n.language === 'ar';
   const documentDirection = isArabic ? 'rtl' : 'ltr';
 
@@ -86,25 +87,49 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
   // Auto-fill tracking removed - fields are now manual entry only
 
-  // Load from localStorage
+  const contextKey = JSON.stringify([resumeText ?? '', jobDescription ?? '']);
+  const generationController = useRef<AbortController | null>(null);
+  const [loadedContext, setLoadedContext] = useState('');
+  const saveLetter = useCallback((text: string, highlights = keyHighlights) => {
+    const raw = getCompatibleStorageItem(STORAGE_KEY);
+    const previous = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+    const drafts = previous.drafts && typeof previous.drafts === 'object' ? previous.drafts : {};
+    setCompatibleStorageItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      // Unscoped old letters remain recoverable but are never assigned to a new context.
+      legacy: previous.legacy ?? (previous.coverLetter ? previous : undefined),
+      drafts: { ...drafts, [contextKey]: {
+        contextKey, coverLetter: text, companyName, hiringManager, tone,
+        keyHighlights: highlights, signatureName, savedAt: new Date().toISOString(),
+      } },
+    }));
+  }, [contextKey, companyName, hiringManager, tone, keyHighlights, signatureName]);
+
+  // Load only the current resume/job's letter; never use another candidate's draft.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const stored = getCompatibleStorageItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          const data = JSON.parse(stored);
-          setCoverLetter(data.coverLetter || '');
-          setCompanyName(data.companyName || '');
-          setHiringManager(data.hiringManager || '');
-          setTone(data.tone || 'professional');
-          setKeyHighlights(data.keyHighlights || []);
-          setSignatureName(data.signatureName || '');
-        } catch (e) {
-          console.error('Failed to load cover letter:', e);
-        }
-      }
+    try {
+      const raw = getCompatibleStorageItem(STORAGE_KEY);
+      const bundle = raw ? JSON.parse(raw) : {};
+      const data = bundle.drafts?.[contextKey] ?? (bundle.contextKey === contextKey ? bundle : {});
+      const text = (value: unknown) => typeof value === 'string' ? value : '';
+      setCoverLetter(text(data.coverLetter));
+      setCompanyName(text(data.companyName));
+      setHiringManager(text(data.hiringManager));
+      setTone(text(data.tone) || 'professional');
+      setKeyHighlights(Array.isArray(data.keyHighlights) ? data.keyHighlights.filter((value: unknown) => typeof value === 'string') : []);
+      setSignatureName(text(data.signatureName));
+      setIsEditing(false);
+      setLoadedContext(contextKey);
+    } catch (error) {
+      setCoverLetter('');
+      setLoadedContext(contextKey);
+      setError(t('sections.coverLetter.errors.restore', 'Your saved letter could not be restored. It has been preserved for recovery.'));
+      console.warn('[CoverLetter] Failed to restore draft:', error);
     }
-  }, []);
+    return () => generationController.current?.abort();
+  // A language change must not reload an older saved copy over unsaved edits.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextKey]);
 
   // Auto-fill signature once from resume data, only if the user hasn't typed one.
   // Keyed on the resume name so editing/clearing the signature can't re-trigger it
@@ -135,6 +160,10 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       return;
     }
 
+    const controller = new AbortController();
+    generationController.current?.abort();
+    generationController.current = controller;
+    const sessionRevision = getPrivateSessionRevision();
     setIsGenerating(true);
     setError(null);
 
@@ -142,9 +171,11 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       // Get authenticated headers (includes Authorization Bearer token)
       const { getAuthHeaders } = await import('../../lib/auth/authHeaders');
       const headers = await getAuthHeaders();
+      if (controller.signal.aborted || getPrivateSessionRevision() !== sessionRevision) return;
 
       const response = await fetch(GENERATE_ENDPOINT, {
         method: 'POST',
+        signal: controller.signal,
         headers,
         body: JSON.stringify({
           resumeText,
@@ -165,6 +196,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
 
       if (!response.ok) throw new Error(`Failed to generate: ${response.statusText}`);
       const data = await response.json();
+      if (controller.signal.aborted || getPrivateSessionRevision() !== sessionRevision) return;
       if (data.error) throw new Error(data.error);
 
       let generatedKeyHighlights = data.keyHighlights || [];
@@ -189,27 +221,20 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       // Track cover letter generation
       analytics.trackCoverLetter(calculatedWordCount);
 
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        setCompatibleStorageItem(STORAGE_KEY, JSON.stringify({
-          coverLetter: data.coverLetter,
-          companyName,
-          hiringManager,
-          tone,
-          keyHighlights: data.keyHighlights,
-          signatureName,
-          generatedAt: new Date().toISOString()
-        }));
-      }
+      saveLetter(generatedText, generatedKeyHighlights);
 
       // Refetch credits to update balance (credits were consumed by backend)
       setTimeout(() => refetchCredits(), 500);
     } catch (err) {
+      if (controller.signal.aborted || getPrivateSessionRevision() !== sessionRevision) return;
       setError((err as Error).message || t('sections.coverLetter.errors.failed', 'Failed to generate cover letter'));
     } finally {
-      setIsGenerating(false);
+      if (generationController.current === controller && getPrivateSessionRevision() === sessionRevision) {
+        generationController.current = null;
+        setIsGenerating(false);
+      }
     }
-  }, [resumeText, jobDescription, companyName, hiringManager, tone, signatureName, refetchCredits, t, i18n.language]);
+  }, [resumeText, jobDescription, companyName, hiringManager, tone, refetchCredits, t, i18n.language, saveLetter]);
 
   // Wrapper function that shows confirmation modal first
   const generateCoverLetter = () => {
@@ -546,7 +571,7 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       )}
 
       {/* Result Display */}
-      {!isGenerating && coverLetter && (
+      {!isGenerating && loadedContext === contextKey && coverLetter && (
         <GlassCard className="overflow-hidden border-t-4 border-t-emerald-500/50">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-gray-200 dark:border-white/10">
             <div>
@@ -603,7 +628,13 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
             {/* Edit Toggle Button */}
             <button
               type="button"
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                if (isEditing) {
+                  try { saveLetter(coverLetter); }
+                  catch { setError(t('sections.coverLetter.errors.save', 'Your edits could not be saved. Keep a copy and try again.')); return; }
+                }
+                setIsEditing(!isEditing);
+              }}
               className={cn(
                 "absolute top-6 right-6 z-10 flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-[color,background-color,box-shadow]",
                 isEditing
@@ -700,7 +731,6 @@ export function CoverLetterSection({ resumeText, jobDescription, resumeData }: C
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
-        creditsRemaining={credits?.remaining || 0}
         dismissKey="watheq:upgradeDismissed-coverletter"
       />
 

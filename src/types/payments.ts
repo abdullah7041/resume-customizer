@@ -17,6 +17,7 @@ export interface PaymentStatus {
   environment: 'sandbox' | 'live';
   creditsGranted: boolean;
   refundedMinor: number;
+  sessionId?: string;
   noOrder?: boolean;
   expired?: boolean;
 }

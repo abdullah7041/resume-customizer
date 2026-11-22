@@ -6,6 +6,7 @@ import Header from '../components/Layout/Header';
 const authState = vi.hoisted(() => ({
   user: null as null | { id: string; email: string; app_metadata: Record<string, unknown>; user_metadata: Record<string, unknown> },
   signInWithGoogle: vi.fn(),
+  signInWithLinkedIn: vi.fn(),
   signOut: vi.fn(),
 }));
 
@@ -58,9 +59,6 @@ vi.mock('../components/Credits/CreditUsageModal', () => ({
 vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: () => null,
 }));
-vi.mock('../components/Credits/PricingWaitlistModal', () => ({
-  PricingWaitlistModal: () => null,
-}));
 
 vi.mock('../components/Settings/SettingsModal', () => ({
   SettingsModal: () => null,
@@ -101,6 +99,21 @@ describe('Header feedback action', () => {
     render(<Header />);
 
     expect(screen.queryByRole('button', { name: /feedback/i })).not.toBeInTheDocument();
+  });
+
+  it('offers LinkedIn alongside Google from the signed-out header', async () => {
+    authState.signInWithLinkedIn.mockResolvedValueOnce('https://example.test/authorize');
+    render(<Header />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'common.signIn' }));
+    const dialog = within(await screen.findByRole('dialog'));
+    expect(dialog.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+    fireEvent.click(dialog.getByRole('button', { name: 'Continue with LinkedIn' }));
+
+    expect(authState.signInWithLinkedIn).toHaveBeenCalledWith({
+      intent: 'signin',
+      source: 'header_desktop',
+    });
   });
 
   it('shows Feedback for authenticated users in the account menu', async () => {
@@ -209,9 +222,9 @@ describe('Header feedback action', () => {
     expect(content).toHaveClass('flex-1', 'overflow-y-auto');
     expect(footer).not.toHaveClass('absolute');
 
-    // Secondary tools (credits, plans, invite) remain reachable.
+    // Secondary tools (credits, credit pack, invite) remain reachable.
     expect(navQueries.getAllByText(/credits/i).length).toBeGreaterThan(0);
-    expect(navQueries.getByText(/view plans/i)).toBeInTheDocument();
+    expect(navQueries.getByText(/get more credits/i)).toBeInTheDocument();
     expect(navQueries.getByText(/invite friends/i)).toBeInTheDocument();
 
     // Feedback still opens the existing modal.

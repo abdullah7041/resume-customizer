@@ -6,6 +6,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { getSkylineUrls } from "../../lib/assets";
 import { LanguageSwitcher } from "../ui/LanguageSwitcher";
 import { GlassButton } from "../ui/GlassButton";
+import { SignInDialog, SignInOptions } from "@/components/ui/SignInDialog";
 import { CreditBalance } from "../Credits/CreditBalance";
 import { useFeatureFlag } from "@/hooks/useFeatureFlag";
 import { useTheme } from "../../hooks/useTheme";
@@ -13,10 +14,9 @@ import { useExitPresence } from "@/hooks/useExitPresence";
 
 // Header modals are state-gated overlays — lazy-load them so they stay out of the entry chunk.
 const CreditUsageModal = lazy(() => import("../Credits/CreditUsageModal").then((m) => ({ default: m.CreditUsageModal })));
-const PricingWaitlistModal = lazy(() => import("../Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
+const UpgradeModal = lazy(() => import("../Credits/UpgradeModal").then((m) => ({ default: m.UpgradeModal })));
 const SettingsModal = lazy(() => import("../Settings/SettingsModal").then((m) => ({ default: m.SettingsModal })));
 const FeedbackModal = lazy(() => import("../Feedback/FeedbackModal").then((m) => ({ default: m.FeedbackModal })));
-import { useUserCredits } from "../../hooks/useUserCredits";
 import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
 
@@ -40,7 +40,7 @@ interface HeaderProps {
 
 export default function Header({ showDecorativeSkyline = true, showMarketingNav = true }: HeaderProps) {
   const { t, i18n } = useTranslation();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const skylineUrls = useMemo(() => getSkylineUrls(), []);
   const [skylineLoaded, setSkylineLoaded] = useState(false);
   const [animateSkyline, setAnimateSkyline] = useState(false);
@@ -64,7 +64,6 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
   const settingsModalPresence = useExitPresence(showSettingsModal);
   const feedbackModalPresence = useExitPresence(showFeedbackModal);
   const feedbackEnabled = useFeatureFlag("feedback");
-  const { credits } = useUserCredits();
   const isSignedOutHeader = !user;
   const showFixedSkyline = showDecorativeSkyline;
 
@@ -224,7 +223,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
         !isSignedOutHeader && "hero-bg-animate",
         isSignedOutHeader
           ? "bg-[color:var(--bg)] text-slate-950 dark:bg-[#06130f] dark:text-white pb-0"
-          : "text-gray-900 dark:text-white pb-4"
+          : "text-gray-900 dark:text-white"
       )}
     >
       {/* Animated background effects */}
@@ -387,7 +386,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                             role="menuitem"
                           >
                             <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
-                            <span>{t('pricing.workspaceCta', 'Need more credits? View plans')}</span>
+                            <span>{t('pricing.workspaceCta', 'Get more credits')}</span>
                           </button>
                           <button
                             type="button"
@@ -461,17 +460,16 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                   {theme === "dark" ? <Sun className="h-4 w-4 text-emerald-400" /> : <Moon className="h-4 w-4 text-[#2b8994]" />}
                   </button>
                   <LanguageSwitcher />
-                  <GlassButton
-                    onClick={() => {
-                      void signInWithGoogle({ intent: "signin", source: "header_desktop" });
-                    }}
-                    variant="prominent"
-                    size="md"
-                    className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    {t("common.signIn")}
-                  </GlassButton>
+                  <SignInDialog source="header_desktop">
+                    <GlassButton
+                      variant="prominent"
+                      size="md"
+                      className="group relative font-bold bg-[#0b1026] text-white hover:bg-[#2b8994] dark:bg-white dark:text-slate-950 dark:hover:bg-emerald-200"
+                    >
+                      <LogIn className="h-4 w-4 mr-2" />
+                      {t("common.signIn")}
+                    </GlassButton>
+                  </SignInDialog>
                 </>
               )}
             </div>
@@ -620,7 +618,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                     className="btn-spring w-full flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-100 dark:hover:bg-emerald-400/15"
                   >
                     <Sparkles className="h-4 w-4" />
-                    <span>{t('pricing.workspaceCta', 'Need more credits? View plans')}</span>
+                    <span>{t('pricing.workspaceCta', 'Get more credits')}</span>
                   </button>
 
                   {/* Invite Friends Button (Mobile) */}
@@ -683,17 +681,7 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
                     )}
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void signInWithGoogle({ intent: "signin", source: "header_mobile" });
-                      setMobileNavOpen(false);
-                    }}
-                    className="btn-metal w-full flex items-center justify-center gap-2.5 rounded-xl px-5 py-3.5 min-h-[48px] text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 dark:bg-transparent"
-                  >
-                    <LogIn className="h-4 w-4" />
-                    <span>{t("common.signIn")}</span>
-                  </button>
+                  <SignInOptions source="header_mobile" />
                 )}
               </div>
             </div>
@@ -730,14 +718,12 @@ export default function Header({ showDecorativeSkyline = true, showMarketingNav 
           />
         )}
 
-        {/* Quiet authenticated pricing-waitlist CTA */}
+        {/* Credit pack dialog */}
         {showPlansModal && (
-          <PricingWaitlistModal
+          <UpgradeModal
             isOpen={showPlansModal}
             onClose={() => setShowPlansModal(false)}
-            creditsRemaining={credits?.remaining ?? 0}
-            dismissKey="watheq:headerPricingWaitlist"
-            source="pricing"
+            dismissKey=""
           />
         )}
 

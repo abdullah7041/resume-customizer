@@ -1,0 +1,532 @@
+[
+  {
+    "source": "workable",
+    "token": "salla",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/salla?details=true",
+    "checkedAt": "2026-11-16T10:26:33.871741+00:00",
+    "readable": true,
+    "jobCount": 28,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Makkah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Makkah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Jeddah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Jeddah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Al Khobar\", \"region\": \"Eastern Province\", \"hidden\": false}], \"city\": \"Al Khobar\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Salla",
+    "careersUrl": "https://apply.workable.com/salla/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "mozn-ai",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/mozn-ai?details=true",
+    "checkedAt": "2026-11-16T10:26:33.946495+00:00",
+    "readable": true,
+    "jobCount": 23,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"\", \"region\": null, \"hidden\": false}], \"city\": \"\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Mozn",
+    "careersUrl": "https://apply.workable.com/mozn-ai/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "innovationteam",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/innovationteam?details=true",
+    "checkedAt": "2026-11-16T10:26:34.028754+00:00",
+    "readable": true,
+    "jobCount": 62,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"\", \"region\": null, \"hidden\": false}], \"city\": \"\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Ar Riyāḍ\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "InnovationTeam",
+    "careersUrl": "https://apply.workable.com/innovationteam/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "foodics",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/foodics?details=true",
+    "checkedAt": "2026-11-16T10:26:34.093868+00:00",
+    "readable": true,
+    "jobCount": 30,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Ar Riyāḍ\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Madinah\", \"region\": \"Al Madinah Province\", \"hidden\": false}], \"city\": \"Madinah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Foodics",
+    "careersUrl": "https://apply.workable.com/foodics/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "lucidya",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/lucidya?details=true",
+    "checkedAt": "2026-11-16T10:26:35.145306+00:00",
+    "readable": true,
+    "jobCount": 51,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"\", \"region\": null, \"hidden\": false}], \"city\": \"\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Jeddah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Jeddah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Lucidya",
+    "careersUrl": "https://apply.workable.com/lucidya/",
+    "category": "startup",
+    "sector": "Software",
+    "classificationSource": "https://apply.workable.com/lucidya/"
+  },
+  {
+    "source": "workable",
+    "token": "invygo",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/invygo?details=true",
+    "checkedAt": "2026-11-16T10:26:38.429492+00:00",
+    "readable": true,
+    "jobCount": 6,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "invygo",
+    "careersUrl": "https://apply.workable.com/invygo/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "tamara",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/tamara/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:39.448789+00:00",
+    "readable": true,
+    "jobCount": 35,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"name\": \"Riyadh Saudi Arabia,   Dubai United Arab Emirates \"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"name\": \"Riyadh Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Tamara",
+    "careersUrl": "https://job-boards.greenhouse.io/tamara",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "scaleai",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/scaleai/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:40.979123+00:00",
+    "readable": true,
+    "jobCount": 170,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Scale AI",
+    "careersUrl": "https://job-boards.greenhouse.io/scaleai",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "pronto",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/pronto/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.026501+00:00",
+    "readable": true,
+    "jobCount": 33,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, KSA\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Pronto",
+    "careersUrl": "https://job-boards.greenhouse.io/pronto",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "kitchenpark",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/kitchenpark/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.450255+00:00",
+    "readable": true,
+    "jobCount": 12,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, KSA\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "KitchenPark",
+    "careersUrl": "https://job-boards.greenhouse.io/kitchenpark",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "beyondtrust",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/beyondtrust/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:41.736136+00:00",
+    "readable": true,
+    "jobCount": 36,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Remote Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"name\": \"Remote Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "BeyondTrust",
+    "careersUrl": "https://job-boards.greenhouse.io/beyondtrust",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "datadog",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/datadog/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:42.212990+00:00",
+    "readable": true,
+    "jobCount": 384,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Datadog",
+    "careersUrl": "https://job-boards.greenhouse.io/datadog",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "elastic",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/elastic/jobs?content=false",
+    "checkedAt": "2026-11-16T10:26:43.217957+00:00",
+    "readable": true,
+    "jobCount": 401,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Elastic",
+    "careersUrl": "https://job-boards.greenhouse.io/elastic",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "lever",
+    "token": "lalamove",
+    "evidenceUrl": "https://api.lever.co/v0/postings/lalamove?mode=json",
+    "checkedAt": "2026-11-16T10:26:43.856844+00:00",
+    "readable": true,
+    "jobCount": 140,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": \"SA\", \"categories\": {\"commitment\": \"Full-time\", \"department\": \"City Teams\", \"location\": \"Riyadh\", \"team\": \"Saudi Arabia\", \"allLocations\": [\"Riyadh\"]}, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Lalamove",
+    "careersUrl": "https://jobs.lever.co/lalamove",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "ashby",
+    "token": "LeanTech",
+    "evidenceUrl": "https://api.ashbyhq.com/posting-api/job-board/LeanTech",
+    "checkedAt": "2026-11-16T10:26:44.647191+00:00",
+    "readable": true,
+    "jobCount": 8,
+    "saudiLocations": [
+      "{\"location\": \"Riyadh, Saudi Arabia\", \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Lean Technologies",
+    "careersUrl": "https://jobs.ashbyhq.com/LeanTech",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "pinpoint",
+    "token": "tabby",
+    "evidenceUrl": "https://tabby.pinpointhq.com/postings.json",
+    "checkedAt": "2026-11-16T10:26:46.026696+00:00",
+    "readable": true,
+    "jobCount": 63,
+    "saudiLocations": [
+      "{\"location\": {\"id\": \"25430\", \"city\": \"Riyadh\", \"name\": \"KSA\", \"postal_code\": \"\", \"province\": \"Saudi Arabia\", \"street_address\": \"\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}",
+      "{\"location\": {\"id\": \"41979\", \"city\": \"Riyadh\", \"name\": \"KSA\", \"postal_code\": \"\", \"province\": \"Riyadh\", \"street_address\": \"\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Tabby",
+    "careersUrl": "https://tabby.pinpointhq.com/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workday",
+    "token": "novartis:wd3:Novartis_Careers",
+    "evidenceUrl": "https://novartis.wd3.myworkdayjobs.com/wday/cxs/novartis/Novartis_Careers/jobs",
+    "checkedAt": "2026-11-16T10:26:46.134867+00:00",
+    "readable": true,
+    "jobCount": 4,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Novartis",
+    "careersUrl": "https://novartis.wd3.myworkdayjobs.com/Novartis_Careers",
+    "category": "enterprise",
+    "sector": "Healthcare",
+    "classificationSource": "https://www.novartis.com/about"
+  },
+  {
+    "source": "workday",
+    "token": "roche:wd3:roche-ext",
+    "evidenceUrl": "https://roche.wd3.myworkdayjobs.com/wday/cxs/roche/roche-ext/jobs",
+    "checkedAt": "2026-11-16T10:26:48.196138+00:00",
+    "readable": true,
+    "jobCount": 3,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Roche",
+    "careersUrl": "https://roche.wd3.myworkdayjobs.com/roche-ext",
+    "category": "enterprise",
+    "sector": "Healthcare",
+    "classificationSource": "https://www.roche.com/about"
+  },
+  {
+    "source": "workday",
+    "token": "kbr:wd5:KBR_Careers",
+    "evidenceUrl": "https://kbr.wd5.myworkdayjobs.com/wday/cxs/kbr/KBR_Careers/jobs",
+    "checkedAt": "2026-11-16T10:26:49.560383+00:00",
+    "readable": true,
+    "jobCount": 20,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Al-Kharj, Saudi Arabia\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Jubail, Saudi Arabia\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Saudi Arabia, Rabigh\"}"
+    ],
+    "saudiVerified": true,
+    "displayName": "KBR",
+    "careersUrl": "https://kbr.wd5.myworkdayjobs.com/KBR_Careers",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "qiddiya-investment-company-1",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/qiddiya-investment-company-1?details=true",
+    "checkedAt": "2026-11-16T14:10:28.921893+00:00",
+    "readable": true,
+    "jobCount": 272,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": null, \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Qiddiya Investment Company",
+    "careersUrl": "https://apply.workable.com/qiddiya-investment-company-1/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "jasarapmc",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/jasarapmc?details=true",
+    "checkedAt": "2026-11-16T14:10:28.924428+00:00",
+    "readable": true,
+    "jobCount": 144,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Jeddah\", \"region\": \"Makkah Province\", \"hidden\": false}], \"city\": \"Jeddah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}",
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Madinah\", \"region\": \"Al Madinah Province\", \"hidden\": false}], \"city\": \"Madinah\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "JASARA PMC",
+    "careersUrl": "https://apply.workable.com/jasarapmc/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "syarah",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/syarah?details=true",
+    "checkedAt": "2026-11-16T14:10:28.925467+00:00",
+    "readable": true,
+    "jobCount": 11,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Syarah",
+    "careersUrl": "https://apply.workable.com/syarah/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "webook",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/webook?details=true",
+    "checkedAt": "2026-11-16T14:10:28.926365+00:00",
+    "readable": true,
+    "jobCount": 26,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "webook.com",
+    "careersUrl": "https://apply.workable.com/webook/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workable",
+    "token": "gathern",
+    "evidenceUrl": "https://apply.workable.com/api/v1/widget/accounts/gathern?details=true",
+    "checkedAt": "2026-11-16T14:10:35.388784+00:00",
+    "readable": true,
+    "jobCount": 9,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": [{\"country\": \"Saudi Arabia\", \"countryCode\": \"SA\", \"city\": \"Riyadh\", \"region\": \"Riyadh Province\", \"hidden\": false}], \"city\": \"Riyadh\", \"country\": \"Saudi Arabia\", \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Gathern",
+    "careersUrl": "https://apply.workable.com/gathern/",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "tenableinc",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/tenableinc/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.078630+00:00",
+    "readable": true,
+    "jobCount": 46,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Saudi Arabia - Remote\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Tenable",
+    "careersUrl": "https://job-boards.greenhouse.io/tenableinc",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "recordedfuture",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/recordedfuture/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:16.080287+00:00",
+    "readable": true,
+    "jobCount": 47,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Recorded Future",
+    "careersUrl": "https://job-boards.greenhouse.io/recordedfuture",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "greenhouse",
+    "token": "purestorage",
+    "evidenceUrl": "https://boards-api.greenhouse.io/v1/boards/purestorage/jobs?content=false",
+    "checkedAt": "2026-11-16T14:11:17.716533+00:00",
+    "readable": true,
+    "jobCount": 376,
+    "saudiLocations": [
+      "{\"location\": {\"name\": \"Riyadh, Saudi Arabia\"}, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": null}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Pure Storage",
+    "careersUrl": "https://job-boards.greenhouse.io/purestorage",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workday",
+    "token": "philips:wd3:jobs-and-careers",
+    "evidenceUrl": "https://philips.wd3.myworkdayjobs.com/wday/cxs/philips/jobs-and-careers/jobs",
+    "checkedAt": "2026-11-16T14:12:45.997589+00:00",
+    "readable": true,
+    "jobCount": 1,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Philips",
+    "careersUrl": "https://philips.wd3.myworkdayjobs.com/jobs-and-careers",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workday",
+    "token": "thales:wd3:Careers",
+    "evidenceUrl": "https://thales.wd3.myworkdayjobs.com/wday/cxs/thales/Careers/jobs",
+    "checkedAt": "2026-11-16T14:12:46.670919+00:00",
+    "readable": true,
+    "jobCount": 11,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Khobar\"}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Thales",
+    "careersUrl": "https://thales.wd3.myworkdayjobs.com/Careers",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  },
+  {
+    "source": "workday",
+    "token": "sanofi:wd3:SanofiCareers",
+    "evidenceUrl": "https://sanofi.wd3.myworkdayjobs.com/wday/cxs/sanofi/SanofiCareers/jobs",
+    "checkedAt": "2026-11-16T14:12:46.944571+00:00",
+    "readable": true,
+    "jobCount": 3,
+    "saudiLocations": [
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Riyadh\"}",
+      "{\"location\": null, \"locations\": null, \"city\": null, \"country\": null, \"categories\": null, \"locationsText\": \"Al Khobar\"}"
+    ],
+    "saudiVerified": true,
+    "displayName": "Sanofi",
+    "careersUrl": "https://sanofi.wd3.myworkdayjobs.com/SanofiCareers",
+    "category": "unclassified",
+    "sector": null,
+    "classificationSource": null
+  }
+]

@@ -29,7 +29,7 @@ const translations: Record<string, Record<string, string>> = {
     'referrals.inviteShort': 'Invite',
     'referrals.inviteFriends': 'Invite Friends',
     'referrals.creditsBonus': '+5 Credits',
-    'pricing.workspaceCta': 'Need more credits? View plans',
+    'pricing.workspaceCta': 'Get more credits',
     'settings.accountInformation': 'Account information',
     'settings.verifiedAccount': 'Verified account',
     'settings.dataPrivacy': 'Data & Privacy',
@@ -63,7 +63,7 @@ const translations: Record<string, Record<string, string>> = {
     'referrals.inviteShort': 'دعوة',
     'referrals.inviteFriends': 'دعوة الأصدقاء',
     'referrals.creditsBonus': '+5 رصيد',
-    'pricing.workspaceCta': 'تحتاج رصيدًا أكثر؟ عرض الباقات',
+    'pricing.workspaceCta': 'احصل على رصيد إضافي',
     'settings.accountInformation': 'معلومات الحساب',
     'settings.verifiedAccount': 'حساب موثّق',
     'settings.dataPrivacy': 'البيانات والخصوصية',
@@ -159,9 +159,6 @@ vi.mock('../components/Credits/CreditUsageModal', () => ({
 vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Plans modal</div> : null),
 }));
-vi.mock('../components/Credits/PricingWaitlistModal', () => ({
-  PricingWaitlistModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Pricing waitlist modal</div> : null),
-}));
 
 describe('Arabic workspace localization', () => {
   beforeEach(() => {
@@ -201,7 +198,7 @@ describe('Arabic workspace localization', () => {
     const menu = screen.getByRole('dialog');
     expect(screen.getAllByRole('button', { name: 'اللغة' })).toHaveLength(2);
     expect(within(menu).queryByRole('button', { name: 'اللغة' })).not.toBeInTheDocument();
-    expect(within(menu).getByText('تحتاج رصيدًا أكثر؟ عرض الباقات')).toBeInTheDocument();
+    expect(within(menu).getByText('احصل على رصيد إضافي')).toBeInTheDocument();
     expect(within(menu).getByText('دعوة الأصدقاء')).toBeInTheDocument();
     expect(within(menu).getByText('الإعدادات')).toBeInTheDocument();
     expect(within(menu).queryByText(/COMMON\.LANGUAGE|common\.language|Invite Friends|Settings|Need more credits|View plans/)).not.toBeInTheDocument();
@@ -220,7 +217,7 @@ describe('Arabic workspace localization', () => {
     const menu = screen.getByRole('menu');
     expect(screen.getAllByRole('button', { name: 'اللغة' })).toHaveLength(2);
     expect(within(menu).queryByRole('button', { name: 'اللغة' })).not.toBeInTheDocument();
-    expect(within(menu).getByText('تحتاج رصيدًا أكثر؟ عرض الباقات')).toBeInTheDocument();
+    expect(within(menu).getByText('احصل على رصيد إضافي')).toBeInTheDocument();
     expect(within(menu).getByText('دعوة الأصدقاء')).toBeInTheDocument();
     expect(within(menu).getByText('الإعدادات')).toBeInTheDocument();
     expect(within(menu).getByText('خروج')).toBeInTheDocument();

@@ -1,3 +1,5 @@
+import { assertPrivateSession, getPrivateSessionRevision } from '@/lib/auth/privateSession';
+import { sanitizeJobMetadataField } from '@/lib/utils/jobMetadata';
 // src/services/pipeline.ts
 // Service layer for job application pipeline (Supabase RLS)
 
@@ -11,6 +13,8 @@ import type {
 } from '@/types/pipeline';
 
 const TABLE = 'job_applications';
+const normalizeApplication = (row: JobApplication): JobApplication => row && 'location' in row
+  ? { ...row, location: sanitizeJobMetadataField(row.location) || null } : row;
 
 function summarizeError(error: unknown) {
   const e = error as { message?: string; code?: string; status?: number };
@@ -60,7 +64,7 @@ async function findRecentDuplicate(
     .limit(1);
 
   if (error || !data || data.length === 0) return null;
-  return data[0] as JobApplication;
+  return normalizeApplication(data[0] as JobApplication);
 }
 
 /**
@@ -71,6 +75,7 @@ export async function createJobApplication(
   options: CreateJobApplicationOptions = {},
 ): Promise<{ data: JobApplication | null; error: string | null; isDuplicate?: boolean }> {
   try {
+    const revision = getPrivateSessionRevision();
     const {
       data: { user },
       error: authError,
@@ -79,9 +84,11 @@ export async function createJobApplication(
     if (authError || !user) {
       return { data: null, error: 'Authentication required. Please sign in.' };
     }
+    assertPrivateSession(revision, user.id);
 
     // Deduplication check
     const duplicate = await findRecentDuplicate(user.id, input.company_name, input.job_title);
+    assertPrivateSession(revision, user.id);
     if (duplicate) {
       const status = input.status || duplicate.status;
       const timestampUpdates = buildTimestampFields(duplicate, status);
@@ -97,6 +104,7 @@ export async function createJobApplication(
           }
         : {
             ...input,
+            ...(input.location !== undefined ? { location: sanitizeJobMetadataField(input.location) || null } : {}),
             status,
             metadata: mergedMetadata,
             ...timestampUpdates,
@@ -115,14 +123,14 @@ export async function createJobApplication(
         return { data: null, error: error.message, isDuplicate: true };
       }
 
-      return { data: data as JobApplication, error: null, isDuplicate: true };
+      return { data: normalizeApplication(data as JobApplication), error: null, isDuplicate: true };
     }
 
     const { data, error } = await supabase
       .from(TABLE)
       .insert({
         ...input,
-        user_id: user.id,
+        ...(input.location !== undefined ? { location: sanitizeJobMetadataField(input.location) || null } : {}),        user_id: user.id,
         status: input.status || 'saved',
       })
       .select()
@@ -133,7 +141,7 @@ export async function createJobApplication(
       return { data: null, error: error.message };
     }
 
-    return { data: data as JobApplication, error: null };
+    return { data: normalizeApplication(data as JobApplication), error: null };
   } catch (error) {
     console.warn('[PipelineService] createJobApplication exception:', summarizeError(error));
     return { data: null, error: 'Failed to save job application.' };
@@ -148,6 +156,7 @@ export async function updateJobApplication(
   input: UpdateJobApplicationInput
 ): Promise<{ data: JobApplication | null; error: string | null }> {
   try {
+    const revision = getPrivateSessionRevision();
     const {
       data: { user },
       error: authError,
@@ -156,6 +165,7 @@ export async function updateJobApplication(
     if (authError || !user) {
       return { data: null, error: 'Authentication required. Please sign in.' };
     }
+    assertPrivateSession(revision, user.id);
 
     // If status is changing, fetch current record to apply timestamp rules
     let timestampUpdates: Partial<Pick<JobApplication, 'applied_at' | 'outcome_at'>> = {};
@@ -170,11 +180,12 @@ export async function updateJobApplication(
       timestampUpdates = buildTimestampFields(current as JobApplication | null, input.status);
     }
 
+    assertPrivateSession(revision, user.id);
     const { data, error } = await supabase
       .from(TABLE)
       .update({
         ...input,
-        ...timestampUpdates,
+        ...(input.location !== undefined ? { location: sanitizeJobMetadataField(input.location) || null } : {}),        ...timestampUpdates,
       })
       .eq('id', id)
       .eq('user_id', user.id)
@@ -186,7 +197,7 @@ export async function updateJobApplication(
       return { data: null, error: error.message };
     }
 
-    return { data: data as JobApplication, error: null };
+    return { data: normalizeApplication(data as JobApplication), error: null };
   } catch (error) {
     console.warn('[PipelineService] updateJobApplication exception:', summarizeError(error));
     return { data: null, error: 'Failed to update job application.' };
@@ -201,6 +212,7 @@ export async function listJobApplications(): Promise<{
   error: string | null;
 }> {
   try {
+    const revision = getPrivateSessionRevision();
     const {
       data: { user },
       error: authError,
@@ -209,6 +221,7 @@ export async function listJobApplications(): Promise<{
     if (authError || !user) {
       return { data: [], error: 'Authentication required. Please sign in.' };
     }
+    assertPrivateSession(revision, user.id);
 
     const { data, error } = await supabase
       .from(TABLE)
@@ -221,7 +234,7 @@ export async function listJobApplications(): Promise<{
       return { data: [], error: error.message };
     }
 
-    return { data: (data || []) as JobApplication[], error: null };
+    return { data: ((data || []) as JobApplication[]).map(normalizeApplication), error: null };
   } catch (error) {
     console.warn('[PipelineService] listJobApplications exception:', summarizeError(error));
     return { data: [], error: 'Failed to load pipeline.' };
@@ -233,6 +246,7 @@ export async function listJobApplications(): Promise<{
  */
 export async function deleteJobApplication(id: string): Promise<{ error: string | null }> {
   try {
+    const revision = getPrivateSessionRevision();
     const {
       data: { user },
       error: authError,
@@ -241,6 +255,7 @@ export async function deleteJobApplication(id: string): Promise<{ error: string 
     if (authError || !user) {
       return { error: 'Authentication required. Please sign in.' };
     }
+    assertPrivateSession(revision, user.id);
 
     const { error } = await supabase.from(TABLE).delete().eq('id', id).eq('user_id', user.id);
 

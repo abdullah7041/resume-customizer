@@ -23,7 +23,7 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy").then((m) => ({ 
 const TermsOfService = lazy(() => import("./pages/TermsOfService").then((m) => ({ default: m.TermsOfService })));
 const RefundPolicy = lazy(() => import("./pages/RefundPolicy").then((m) => ({ default: m.RefundPolicy })));
 const AdminFeedbackPage = lazy(() => import("./pages/AdminFeedbackPage").then((m) => ({ default: m.AdminFeedbackPage })));
-const PricingWaitlistModal = lazy(() => import("./components/Credits/PricingWaitlistModal").then((m) => ({ default: m.PricingWaitlistModal })));
+const UpgradeModal = lazy(() => import("./components/Credits/UpgradeModal").then((m) => ({ default: m.UpgradeModal })));
 // Shown as an in-app overlay when a signed-in / guest user clicks a header
 // marketing link (How it works / Pricing / FAQ). Same chunk as MainContent's
 // landing import, so no extra bundle.
@@ -58,7 +58,7 @@ const getCurrentPath = () => {
 };
 
 export default function App() {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [currentPath, setCurrentPath] = useState(getCurrentPath);
   const [guestModeActive, setGuestModeActive] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -149,7 +149,7 @@ export default function App() {
   }, [landingSection]);
 
   // Credit system integration
-  const { credits, showUpgrade, setShowUpgrade, upgradeDismissedKey } = useUserCredits();
+  const { showUpgrade, setShowUpgrade, upgradeDismissedKey } = useUserCredits();
 
   // Onboarding tour (Joyride removed — run is permanently false)
   const { run } = useOnboardingTour();
@@ -213,31 +213,23 @@ export default function App() {
                 <LandingPage
                   initialSection={landingSection ?? undefined}
                   onGetStarted={clearLanding}
-                  onSignIn={
-                    !user
-                      ? () => {
-                          void signInWithGoogle({ intent: "signin", source: "landing_get_started" });
-                        }
-                      : undefined
-                  }
+                  showSignIn={!user}
                 />
               ) : (
                 <MainContent />
               )}
             </Suspense>
-            {!needsOnboarding && !isSignedOutLanding && !showLandingOverride && <Footer />}
+            {!needsOnboarding && !isSignedOutLanding && !showLandingOverride && currentPath !== "/checkout" && <Footer />}
             <ConsentBanner />
             <FeedbackPromptController />
 
-            {/* Low-credits pricing-waitlist modal (lazy: only when shown) */}
+            {/* Credit pack dialog for low balances */}
             {showUpgrade && (
               <Suspense fallback={null}>
-                <PricingWaitlistModal
+                <UpgradeModal
                   isOpen={showUpgrade}
                   onClose={() => setShowUpgrade(false)}
-                  creditsRemaining={credits?.remaining || 0}
                   dismissKey={upgradeDismissedKey || ''}
-                  source="credits"
                 />
               </Suspense>
             )}

@@ -12,6 +12,8 @@ export interface FeedPosting {
   location: string;
   applyUrl: string;
   postedAt: string | null;
+  publicationKind?: 'published' | 'unknown';
+  publicationPrecision?: 'timestamp' | 'date' | 'unknown';
   firstSeenAt: string;
 }
 

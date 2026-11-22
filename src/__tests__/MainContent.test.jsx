@@ -78,8 +78,7 @@ vi.mock("../pages/LandingPage", () => {
       return React.createElement(
         "div",
         { "data-testid": "landing-page-mock" },
-        React.createElement("button", { onClick: props.onGetStarted }, "Preview the workflow"),
-        React.createElement("button", { onClick: props.onSignIn }, "Sign in only when you want to save progress")
+        React.createElement("button", { onClick: props.onGetStarted }, "Preview the workflow")
       );
     },
   };
@@ -96,11 +95,11 @@ vi.mock("../components/sections/UploadSection", () => {
   };
 });
 
-vi.mock("../components/sections/JobFeedSection", () => {
+vi.mock("../components/sections/JobsFirstSection", () => {
   const React = require("react");
   return {
     __esModule: true,
-    JobFeedSection: (props) => {
+    default: (props) => {
       jobFeedMockProps.current = props;
       return React.createElement("div", { "data-testid": "job-feed-mock" });
     },
@@ -325,7 +324,7 @@ vi.mock("../hooks/useUserCredits", () => ({
     credits: { remaining: 100, total: 100, feedbackCreditsEarned: 0, referralCreditsEarned: 0, resetDate: new Date().toISOString() },
     isLoading: false,
     error: null,
-    refetch: vi.fn(),
+    refetch: vi.fn().mockResolvedValue(undefined),
     showUpgrade: false,
     setShowUpgrade: vi.fn(),
     upgradeDismissedKey: null,
@@ -390,6 +389,23 @@ describe("MainContent resume parsing", () => {
     const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
     return { promise, resolve, reject };
   };
+  it('advances with the Continue callback captured before the first resume finished preparing', async () => {
+    const parsed = { basics: { name: 'First candidate' } };
+    parseResumeMock.mockResolvedValueOnce({ data: parsed, plainText: 'First candidate resume text' });
+    const originalSave = useResumeLibraryStore.getState().saveResume;
+    useResumeLibraryStore.setState({ saveResume: vi.fn().mockResolvedValue({ id: 'new-resume' }) });
+    try {
+      render(<MainContent />);
+      await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
+      const captured = resumeUploadMockProps.current;
+      await act(async () => {
+        await captured.onParseResume({ plainText: 'First candidate resume text' });
+        useResumeStore.getState().setOriginalResume(parsed);
+        captured.onContinue();
+      });
+      expect(localStorage.getItem('watheq:lastActiveTab')).toBe('truth-check');
+    } finally { useResumeLibraryStore.setState({ saveResume: originalSave }); }
+  });
   const openMatch = async (job = '') => {
     useResumeStore.setState({ parsedResumeText: '', analysisCache: {}, baselineMatchScore: null });
     localStorage.setItem('watheq:lastActiveTab', 'match');
@@ -934,6 +950,7 @@ describe("MainContent resume parsing", () => {
     render(<MainContent />);
 
     fireEvent.click(await screen.findByRole("button", { name: /sign in to save progress/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue with Google" }));
 
     expect(analyticsMock.trackGuestPreviewSigninStarted).toHaveBeenCalledWith("guest_banner");
     expect(authMockState.signInWithGoogle).toHaveBeenCalledWith({
@@ -1326,7 +1343,8 @@ describe("MainContent resume parsing", () => {
 
     render(<MainContent />);
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
-    fireEvent.click(await screen.findByRole("button", { name: "I don't have Excel experience" }));
+    // Context fingerprints use real asynchronous crypto, which can exceed 1s in the full suite.
+    fireEvent.click(await screen.findByRole("button", { name: "I don't have Excel experience" }, { timeout: 5000 }));
     fireEvent.click(screen.getByRole("button", { name: /submit answers/i }));
 
     await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledWith(
@@ -1382,12 +1400,22 @@ describe("MainContent resume parsing", () => {
     try {
       render(<MainContent />);
       await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
-      await act(async () => { await resumeUploadMockProps.current.onParseResume({ plainText: 'Input resume' }); });
+      await act(async () => { await expect(resumeUploadMockProps.current.onParseResume({ plainText: 'Input resume' })).rejects.toThrow('Device storage is full'); });
       const notifications = screen.getAllByTestId('toast-mock');
       expect(notifications).toHaveLength(1);
-      expect(notifications[0]).toHaveAttribute('data-toast-type', 'warning');
+      expect(notifications[0]).toHaveAttribute('data-toast-type', 'danger');
       expect(notifications[0]).toHaveTextContent('Device storage is full');
     } finally { useResumeLibraryStore.setState({ saveResume: originalSave }); }
+  });
+  it('preserves the previous durable document when a replacement parse fails', async () => {
+    const original = { plainText: 'Existing resume source', fileName: 'existing.pdf', data: { basics: { name: 'Original Candidate' } } };
+    localStorage.setItem('watheq:resumeData', JSON.stringify(original));
+    parseResumeMock.mockRejectedValueOnce(new Error('Synthetic parse failure'));
+    render(<MainContent />);
+    await waitFor(() => expect(resumeUploadMockProps.current).not.toBeNull());
+    const bytes = localStorage.getItem('watheq:resumeData');
+    await act(async () => { await expect(resumeUploadMockProps.current.onParseResume({ plainText: 'Replacement' })).rejects.toThrow('Synthetic parse failure'); });
+    expect(localStorage.getItem('watheq:resumeData')).toBe(bytes);
   });
 
   it("keeps optimization pending through clarification and resolves after submission", async () => {
@@ -1490,6 +1518,40 @@ describe("MainContent resume parsing", () => {
       expect(optimizeResumeStreamMock.mock.calls[1][0].userClarifications).toContain(`${topic} dashboards`);
     }
     expect(screen.queryByRole('alert', { name: 'Optimization failed' })).not.toBeInTheDocument();
+  });
+
+  it.each([false, true])('retrieves an uncertain operation and permits a new run only after known-safe failure (%s)', async (terminalFailure) => {
+    localStorage.setItem('watheq:lastActiveTab', 'optimize');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Parsed resume', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', 'Analytics role');
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    generateClarificationsMock.mockResolvedValueOnce({ clarifications: [{ id: 'excel', theme: 'Excel', question: 'Verify Excel',
+      rationale: 'Add evidence', type: 'single', allowOther: false, options: [{ value: 'yes', label: 'Built dashboards' }] }] });
+    optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error('Still running'), { operationId, status: 504,
+      code: 'OPTIMIZE_JOB_PENDING', isBillingStateUnknown: true }));
+    const completed = { cards: [], keywords: { add: [], neutral: [], remove: [] }, source: 'gemini' };
+    if (terminalFailure) optimizeResumeStreamMock
+      .mockRejectedValueOnce(Object.assign(new Error('Provider failed; credits restored'), { jobFailed: true, isBillingStateUnknown: false, status: 500 }))
+      .mockResolvedValueOnce(completed);
+    else optimizeResumeStreamMock.mockResolvedValueOnce(completed);
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole('button', { name: /run optimize/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Built dashboards' }));
+    fireEvent.click(screen.getByRole('button', { name: /^optimize now$/i }));
+    const failure = await screen.findByRole('status', { name: 'Optimization is still processing' });
+    expect(failure).toHaveTextContent(operationId);
+    fireEvent.click(screen.getByRole('button', { name: 'Check for results' }));
+    await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(2));
+    expect(optimizeResumeStreamMock.mock.calls[1][0]).toMatchObject({ recoverOnly: true,
+      userClarifications: optimizeResumeStreamMock.mock.calls[0][0].userClarifications });
+    expect(generateClarificationsMock).toHaveBeenCalledTimes(1);
+    expect(optimizeResumeMock).not.toHaveBeenCalled();
+    if (terminalFailure) {
+      fireEvent.click(await screen.findByRole('button', { name: 'Retry optimization' }));
+      await waitFor(() => expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(3));
+      expect(optimizeResumeStreamMock.mock.calls[2][0].recoverOnly).not.toBe(true);
+      expect(optimizeResumeStreamMock.mock.calls[2][0].userClarifications).toContain('Built dashboards');
+    }
   });
 
   it("keeps a follow-up failure visible with saved answers and permits an explicit retry", async () => {
@@ -1921,7 +1983,7 @@ describe("MainContent resume parsing", () => {
     await waitFor(() => expect(analyzeResumeMock).toHaveBeenCalled());
 
     const workflow = screen.getByRole("navigation", { name: /resume workflow/i });
-    fireEvent.click(within(workflow).getByRole("button", { name: /optimize improve resume/i }));
+    fireEvent.click(within(workflow).getByRole("button", { name: /tailor adapt your cv/i }));
     fireEvent.click(await screen.findByRole("button", { name: /run optimize/i }));
 
     expect(generateClarificationsMock).not.toHaveBeenCalled();
@@ -2112,8 +2174,8 @@ describe("MainContent resume parsing", () => {
     expect(within(workflow).getByRole("button", { name: /resume upload or paste/i })).toBeInTheDocument();
     // Job Ad is removed from stepper; Match now shows "Add job ad" hint when no job description
     expect(within(workflow).getByRole("button", { name: /match add job ad/i })).toBeInTheDocument();
-    expect(within(workflow).getByRole("button", { name: /optimize improve resume/i })).toBeInTheDocument();
-    expect(within(workflow).getByRole("button", { name: /export \/ pipeline save and track/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /tailor adapt your cv/i })).toBeInTheDocument();
+    expect(within(workflow).getByRole("button", { name: /export & track save and track/i })).toBeInTheDocument();
     expect(within(workflow).queryByRole("button", { name: /tabs\.interview/i })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /more tools/i }).length).toBeGreaterThan(0);
 
@@ -2643,6 +2705,18 @@ describe("MainContent final export review", () => {
     expect(exportPdfMock).not.toHaveBeenCalled();
     expect(exportToSupabaseMock).not.toHaveBeenCalled();
     expect(optimizeSectionMockProps.current.reviewSectionIds).toEqual(["summary-1"]);
+  });
+  it('does not send an earlier owner’s rendered resume to the account that replaced it', async () => {
+    let finish;
+    exportPdfMock.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    supabaseAvailableMock.mockReturnValue(true);
+    await openExport({ optimizations: [] });
+    let pending;
+    await act(async () => { pending = optimizeSectionMockProps.current.onExport('styled', 'supabase'); });
+    await waitFor(() => expect(exportPdfMock).toHaveBeenCalled());
+    localStorage.setItem('watheq:privateOwner', 'user:b');
+    await act(async () => { finish('<html>Private A resume</html>'); await pending; });
+    expect(exportToSupabaseMock).not.toHaveBeenCalled();
   });
 
   it("exports the captured composition when the store changes during review hashing", async () => {

@@ -16,9 +16,9 @@
       "matchHint": "Analyze fit",
       "matchHintNoJobAd": "Add job ad",
       "matchHintReady": "Match ready",
-      "optimize": "Optimize",
-      "optimizeHint": "Improve resume",
-      "export": "Export / Pipeline",
+      "optimize": "Tailor",
+      "optimizeHint": "Adapt your CV for each role",
+      "export": "Export & track",
       "exportHint": "Save and track"
     },
     "resumeRequiredTitle": "Resume required",
