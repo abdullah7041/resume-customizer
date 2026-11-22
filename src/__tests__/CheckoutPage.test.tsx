@@ -57,7 +57,7 @@ describe('customer checkout', () => {
 
     const view = render(<StrictMode><CheckoutPage /></StrictMode>);
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');
-    expect(await screen.findByTitle('Secure payment')).toBeVisible();
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
     expect(startPayment).toHaveBeenCalledWith(sessionId, null, 'watheq-payment-form');
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');
 
@@ -83,7 +83,7 @@ describe('customer checkout', () => {
     });
     loadGeideaCheckout.mockResolvedValue(class { startPayment = startPayment; });
     render(<CheckoutPage />);
-    expect(await screen.findByTitle('Secure payment')).toBeVisible();
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
     expect(startPayment).toHaveBeenCalledWith(sessionId, null, 'watheq-payment-form');
     expect(createPayment).not.toHaveBeenCalled();
   });
@@ -99,7 +99,7 @@ describe('customer checkout', () => {
       });
     render(<CheckoutPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
-    expect(await screen.findByTitle('Secure payment')).toBeVisible();
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
     expect(createPayment).toHaveBeenCalledTimes(1);
     expect(readPaymentStatus).not.toHaveBeenCalled();
   });
