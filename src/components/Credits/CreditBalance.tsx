@@ -9,6 +9,7 @@ import { Coins, RefreshCw } from 'lucide-react';
 import { useUserCredits } from '../../hooks/useUserCredits';
 import { cn } from '../../lib/utils/cn';
 import { useTranslation } from 'react-i18next';
+import { usePaymentConfig } from '@/hooks/usePaymentConfig';
 import { useMemo, useState, type MouseEvent } from 'react';
 
 interface CreditBalanceProps {
@@ -22,6 +23,7 @@ export function CreditBalance({ onClick, variant = 'default', iconOnly = false }
   const { t, i18n } = useTranslation();
   const isArabic = i18n.language === 'ar';
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const paymentConfig = usePaymentConfig(!iconOnly);
   const isCompact = variant === 'compact';
 
   // Calculate time until next reset (30 days from last_reset_date)
@@ -151,6 +153,12 @@ export function CreditBalance({ onClick, variant = 'default', iconOnly = false }
           )}
         </div>}
       </button>
+
+      {!iconOnly && paymentConfig?.enabled && (
+        <a href="/checkout" className="inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-semibold text-ink-accent underline">
+          {t('pricing.pack.cta')}
+        </a>
+      )}
 
       {/* Refresh Button */}
       {!isCompact && (

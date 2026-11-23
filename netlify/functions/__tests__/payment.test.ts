@@ -6,6 +6,15 @@ const { getUser, from, rpc, getClient } = vi.hoisted(() => ({ getUser: vi.fn(), 
 vi.mock('../../lib/supabase-client.js', () => ({ getSupabaseClient: getClient }));
 vi.mock('../../lib/rate-limiter.js', () => ({ withRateLimit: (_key: string, handler: unknown) => handler }));
 vi.mock('../../lib/credit-manager.js', () => ({ getUserCredits: vi.fn().mockResolvedValue({credits_remaining:20}), isEmailVerified: (u: {email_confirmed_at?:string}) => Boolean(u.email_confirmed_at) }));
+const directState = vi.hoisted(() => new Map<string, string>());
+vi.mock('../../lib/redis-cache.js', () => ({ getRedis: () => ({
+  get: async (key: string) => directState.get(key),
+  set: async (key: string, value: string, options: { nx?: boolean }) => {
+    if (options.nx && directState.has(key)) return null;
+    directState.set(key, value);
+    return 'OK';
+  },
+}) }));
 const { handler: checkout } = await import('../payment-checkout.js');
 const { handler: webhook } = await import('../payment-webhook.js');
 const id = '00000000-0000-4000-8000-000000000001';
@@ -45,6 +54,10 @@ beforeEach(() => {
       update: (input: Record<string, unknown>) => { update = input; return query; },
       select: () => query,
       eq: (key: string, value: unknown) => { if (row && row[key] !== value) row = null; return query; },
+      is: (key: string, value: unknown) => { if (row && row[key] !== value) row = null; return query; },
+      not: (key: string, _op: string, value: unknown) => { if (row && row[key] === value) row = null; return query; },
+      order: () => query,
+      limit: () => Promise.resolve({ data: row ? [row] : [], error: dbError }),
       single: async () => result(),
       maybeSingle: async () => result(),
       then: (resolve: (result: unknown) => unknown) => Promise.resolve(result()).then(resolve),
@@ -56,6 +69,39 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('GEIDEA checkout endpoint', () => {
+  it('ties Direct API authentication to the owner and submits the same order only once', async () => {
+    directState.clear();
+    const purchase = { id, user_id: id, session_id: sessionId, order_id: null, environment: 'live', status: 'pending', created_at: new Date().toISOString() };
+    const method = { cardNumber: '4440000042200014', cardholderName: 'Test Buyer', cvv: '100', expiryDate: { month: '01', year: '39' } };
+    const ok = { responseCode: '000', detailedResponseCode: '000' };
+    row = { ...purchase, user_id: 'other' };
+    const start = { action: 'initiate', paymentId: id, cardNumber: method.cardNumber };
+    expect((await invoke(checkout, start)).statusCode).toBe(404);
+    expect(fetch).not.toHaveBeenCalled();
+    row = purchase;
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ ...ok, orderId }));
+    expect(JSON.parse((await invoke(checkout, start)).body!)).toEqual({ orderId, methodHtml: null });
+    expect((await invoke(checkout, { action: 'pay', paymentId: id, paymentMethod: method })).statusCode).toBe(409);
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ ...ok, orderId, gatewayDecision: 'ContinueToPay', threeDSecureId: sessionId, htmlBodyContent: 'bank challenge' }));
+    expect(JSON.parse((await invoke(checkout, { action: 'authenticate', paymentId: id, paymentMethod: method, language: 'ar', userAgent: 'test', timeZone: -180 })).body!)).toEqual({ challengeHtml: 'bank challenge' });
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json(ok));
+    for (let attempt = 0; attempt < 2; attempt++) {
+      expect((await invoke(checkout, { action: 'pay', paymentId: id, paymentMethod: method })).statusCode).toBe(200);
+    }
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(rpc).not.toHaveBeenCalled();
+    expect([...directState.values()]).toEqual([sessionId, '1']);
+  });
+
+  it('shows an existing live credit grant once and excludes another owner’s grants', async () => {
+    const granted_at = new Date().toISOString();
+    row = { id, user_id: id, environment: 'live', granted_at };
+    expect(JSON.parse((await invoke(checkout, { action: 'history' })).body!)).toEqual([{ id, createdAt: granted_at, amount: 100 }]);
+    row = { ...row, user_id: 'other' };
+    expect(JSON.parse((await invoke(checkout, { action: 'history' })).body!)).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it('rejects methods, unauthenticated callers, and unverified users', async () => {
     expect((await invoke(checkout, {}, '', 'DELETE')).statusCode).toBe(405);
     expect((await invoke(checkout, {}, '')).statusCode).toBe(401);

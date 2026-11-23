@@ -9,6 +9,8 @@ import { loadGeideaCheckout } from '@/services/geideaCheckout';
 import { createPayment, geideaGuid, PaymentRequestError, readPaymentStatus } from '@/services/payments';
 import type { PaymentCheckout, PaymentConfig, PaymentStatus } from '@/types/payments';
 
+import { DirectCardForm } from '@/components/Credits/DirectCardForm';
+
 const returnStorageKey = 'watheq:checkoutReturn';
 const containerId = 'watheq-payment-form';
 const referenceSchema = z.object({
@@ -59,6 +61,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     const params = returnedPayment();
     return (params.has('payment') || params.has('paymentId')) && !reference;
   });
+  const [hosted, setHosted] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [formReady, setFormReady] = useState(false);
   const [startupError, setStartupError] = useState(false);
@@ -77,7 +80,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
 
   useEffect(() => {
     const host = hostRef.current;
-    if (reference || invalidReturn || !enabled || !host) return;
+    if (!hosted || reference || invalidReturn || !enabled || !host) return;
     let active = true;
     let finished = false;
 
@@ -123,7 +126,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       active = false;
       host.replaceChildren();
     };
-  }, [attempt, enabled, formTitle, invalidReturn, language, ownerId, reference]);
+  }, [attempt, hosted, enabled, formTitle, invalidReturn, language, ownerId, reference]);
 
   useEffect(() => {
     if (!reference) return;
@@ -145,6 +148,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
         if (enabled && status.noOrder && status.sessionId && payment.cancelled === undefined && !payment.orderId) {
           createRequest.current = Promise.resolve({ paymentId: payment.paymentId, sessionId: status.sessionId, environment: status.environment });
           setCheckingLonger(false);
+          setHosted(true);
           setReference(null);
           return;
         }
@@ -192,15 +196,18 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const canRetry = enabled && (startupError || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
   const statusMessage = lookupError ?? (invalidReturn ? 'invalid' : reference
     ? finalStatus ?? (checkingLonger ? 'pendingLonger' : 'pending')
-    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'error' : !formReady ? 'loading' : null);
+    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'error' : hosted && !formReady ? 'loading' : null);
   const isSandbox = (result?.environment ?? config?.environment) === 'sandbox' && Boolean(enabled || result);
 
   return <>
     {isSandbox && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">{t('pricing.checkout.sandbox')}</p>}
+    {enabled && !reference && !invalidReturn && !hosted && <DirectCardForm language={language}
+      onWallet={() => setHosted(true)}
+      remember={(paymentId, orderId) => saveReference(ownerId, { paymentId, orderId })}
+      onSubmitted={(paymentId, orderId) => setReference({ paymentId, orderId })} />}
     <div id={containerId} ref={hostRef} className="min-w-0 [&>iframe]:block [&>iframe]:max-w-full [&>iframe]:border-0" hidden={!formReady || Boolean(reference)} />
     <p role="status" className="empty:sr-only">{statusMessage && t(`pricing.checkout.${statusMessage}`)}</p>
     {canRetry && <button type="button" className={actionClass} onClick={retry}>{t('pricing.checkout.new')}</button>}
-    {finalStatus === 'success' && <a href="/" className={actionClass}>{t('pricing.checkout.back')}</a>}
   </>;
 }
 
@@ -230,7 +237,8 @@ export default function CheckoutPage() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-emerald-950/50 md:bg-emerald-950/65" />
       <div className="grid w-full min-w-0 max-w-lg gap-4 rounded-2xl bg-surface-strong p-4 shadow-xl sm:p-6 md:max-w-6xl md:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] md:items-center md:gap-12 md:bg-transparent md:p-0 md:shadow-none">
         <section className="min-w-0 space-y-1.5 md:space-y-4 md:text-white">
-          <a href="/" className={`${linkClass} text-xl font-bold no-underline md:text-4xl`}>{t('common.appName')}</a>
+          <a href="/" className={linkClass}>{t('pricing.checkout.back')}</a>
+          <p className="text-xl font-bold md:text-4xl">{t('common.appName')}</p>
           <h1 className="sr-only md:not-sr-only md:text-xl md:font-semibold">{t('pricing.pack.title')}</h1>
           <p className="text-lg font-semibold md:text-4xl">{t('pricing.checkout.summary')}</p>
           <p className="text-sm text-ink-muted md:text-base md:text-white">{t('pricing.checkout.packNote')}</p>

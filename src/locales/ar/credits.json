@@ -22,6 +22,8 @@
       "title": "استخدام الرصيد",
       "feedbackEarned": "من الملاحظات",
       "referralEarned": "من الإحالات",
+      "purchasedRemaining": "الرصيد المشترى المتبقي",
+      "historyError": "تعذّر تحميل بعض العمليات. حدّث القائمة للمحاولة مرة ثانية.",
       "history": "النشاط الأخير",
       "noTransactions": "لا يوجد نشاط حتى الآن",
       "time": {
@@ -31,6 +33,7 @@
         "daysAgo": "قبل {{count}} يوم"
       },
       "features": {
+        "purchase": "شراء باقة أرصدة",
         "parse_resume": "تحليل السيرة",
         "ai_match": "مطابقة الوظيفة",
         "vision2030": "رؤية 2030",

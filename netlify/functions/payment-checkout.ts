@@ -7,10 +7,14 @@ import { getUserCredits, isEmailVerified } from '../lib/credit-manager.js';
 import { getClientIP } from '../lib/ip-utils.js';
 import { withRateLimit } from '../lib/rate-limiter.js';
 
+import { directActions, directPayment } from '../lib/geidea-direct.js';
+
 const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const fields = 'id,status,order_id,session_id,environment,remaining_credits,granted_at,refunded_minor,updated_at';
 const schema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('create'), language: z.enum(['en', 'ar']).default('en'), embedded: z.boolean().optional() }).strict(),
+  ...directActions,
+  z.object({ action: z.literal('history') }).strict(),
+  z.object({ action: z.literal('create'), language: z.enum(['en', 'ar']).default('en'), embedded: z.boolean().optional(), direct: z.literal(true).optional() }).strict(),
   z.object({ action: z.literal('status'), paymentId: z.string().uuid(), orderId: geideaGuid.optional(), recover: z.boolean().optional() }).strict(),
 ]);
 
@@ -37,6 +41,18 @@ const baseHandler: Handler = async (event) => {
     }
     const parsed = schema.safeParse(body);
     if (!parsed.success) throw new GeideaError(400, 'payment/invalid-request', 'Invalid payment request');
+    if (parsed.data.action === 'initiate' || parsed.data.action === 'authenticate' || parsed.data.action === 'pay') {
+      return { statusCode: 200, headers, body: JSON.stringify(await directPayment(client, user.id, parsed.data)) };
+    }
+    if (parsed.data.action === 'history') {
+      const { data, error } = await client.from('credit_purchases').select('id,granted_at')
+        .eq('user_id', user.id).eq('environment', 'live').not('granted_at', 'is', null)
+        .order('granted_at', { ascending: false }).limit(20);
+      if (error) throw new GeideaError(503, 'payment/history-unavailable', 'Unable to read purchase history');
+      return { statusCode: 200, headers, body: JSON.stringify(data.map(purchase => ({
+        id: purchase.id, createdAt: purchase.granted_at, amount: GEIDEA_PACK_CREDITS,
+      }))) };
+    }
     if (parsed.data.action === 'status') {
       const { paymentId, orderId, recover } = parsed.data;
       const lookup = () => client.from('credit_purchases').select(fields).eq('id', paymentId).eq('user_id', user.id).maybeSingle();
@@ -79,7 +95,7 @@ const baseHandler: Handler = async (event) => {
       id: paymentId, user_id: user.id, email: user.email, amount_minor: GEIDEA_PACK_PRICE_SAR * 100, currency: 'SAR', environment, status: 'created',
     });
     if (insertError) throw new GeideaError(503, 'payment/persistence-unavailable', 'Unable to save payment');
-    const sessionId = await createCheckoutSession(config, paymentId, parsed.data.language, { email: user.email, embedded: parsed.data.embedded });
+    const sessionId = await createCheckoutSession(config, paymentId, parsed.data.language, { email: user.email, embedded: parsed.data.embedded, direct: parsed.data.direct });
     const { data, error: updateError } = await client.from('credit_purchases')
       .update({ session_id: sessionId, status: 'pending', updated_at: new Date().toISOString() }).eq('id', paymentId).eq('status', 'created').select('id').single();
     if (updateError || !data) throw new GeideaError(503, 'payment/persistence-unavailable', 'Unable to save checkout session');

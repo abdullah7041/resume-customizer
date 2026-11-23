@@ -56,6 +56,10 @@ describe('customer checkout', () => {
     createPayment.mockResolvedValue({ paymentId, sessionId, environment: 'live' });
 
     const view = render(<StrictMode><CheckoutPage /></StrictMode>);
+    expect(screen.getByLabelText('pricing.card.number')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Back to Watheq' })).toHaveAttribute('href', '/');
+    expect(createPayment).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'pricing.card.wallet' }));
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en');
     await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
     expect(startPayment).toHaveBeenCalledWith(sessionId, null, 'watheq-payment-form');
@@ -98,6 +102,7 @@ describe('customer checkout', () => {
         }
       });
     render(<CheckoutPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'pricing.card.wallet' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
     expect(createPayment).toHaveBeenCalledTimes(1);

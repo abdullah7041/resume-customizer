@@ -18,6 +18,8 @@ import type { CreditTransaction } from '../../types/credits';
 import { ReferralLink } from '../Referrals/ReferralLink';
 import { ReferralStats } from '../Referrals/ReferralStats';
 import { useFeatureFlag } from '@/hooks/useFeatureFlag';
+import { usePaymentConfig } from '@/hooks/usePaymentConfig';
+import { readPurchaseHistory } from '@/services/payments';
 import { useExitPresence } from '@/hooks/useExitPresence';
 
 interface CreditUsageModalProps {
@@ -43,6 +45,7 @@ const getTransactionColor = (type: string) => {
   switch (type) {
     case 'consumption':
       return 'text-red-400';
+    case 'purchase':
     case 'feedback_reward':
     case 'referral_reward':
     case 'celebration_bonus':
@@ -58,7 +61,11 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
   const { user } = useAuth();
   const { credits, refetch } = useUserCredits();
   const { t, i18n } = useTranslation();
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  type Activity = Pick<CreditTransaction, 'id' | 'feature' | 'amount' | 'createdAt'> & { creditsAfter?: number; transactionType: string };
+  const [transactions, setTransactions] = useState<Activity[]>([]);
+  const [refresh, setRefresh] = useState(0);
+  const [historyError, setHistoryError] = useState(false);
+  const paymentConfig = usePaymentConfig(isOpen && viewMode === 'full');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isArabic = i18n.language === 'ar';
@@ -69,42 +76,30 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
   useEffect(() => {
     if (!isOpen || !user || viewMode !== 'full') return;
 
+    const controller = new AbortController();
+    setIsLoading(true);
+    setHistoryError(false);
     async function fetchTransactions() {
-      try {
-        const { data, error } = await supabase
-          .from('credit_transactions')
-          .select('*')
-          .eq('email', user.email)
-          .order('created_at', { ascending: false })
-          .limit(20);
-
-        if (error) {
-          console.error('[CreditUsageModal] Fetch error:', error);
-          throw error;
-        }
-
-        setTransactions(
-          (data || []).map((tx) => ({
-            id: tx.id,
-            email: tx.email,
-            feature: tx.feature,
-            amount: tx.amount,
-            creditsBefore: tx.credits_before,
-            creditsAfter: tx.credits_after,
-            transactionType: tx.transaction_type,
-            metadata: tx.metadata || {},
-            createdAt: tx.created_at,
-          }))
-        );
-      } catch (err) {
-        console.error('[CreditUsageModal] Failed to fetch transactions:', err);
-      } finally {
-        setIsLoading(false);
+      const [ledger, purchases] = await Promise.allSettled([
+        supabase.from('credit_transactions').select('id,feature,amount,credits_after,transaction_type,created_at')
+          .eq('email', user.email).order('created_at', { ascending: false }).limit(20).abortSignal(controller.signal),
+        readPurchaseHistory(controller.signal),
+      ]);
+      if (controller.signal.aborted) return;
+      const rows: Activity[] = ledger.status === 'fulfilled' && !ledger.value.error
+        ? (ledger.value.data ?? []).map(tx => ({ id: tx.id, feature: tx.feature, amount: tx.amount,
+          creditsAfter: tx.credits_after, transactionType: tx.transaction_type, createdAt: tx.created_at }))
+        : [];
+      if (purchases.status === 'fulfilled') {
+        rows.push(...purchases.value.map(tx => ({ ...tx, feature: 'purchase', transactionType: 'purchase' })));
       }
+      setTransactions(rows.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 20));
+      setHistoryError(ledger.status === 'rejected' || Boolean(ledger.value.error) || purchases.status === 'rejected');
+      setIsLoading(false);
     }
-
-    fetchTransactions();
-  }, [isOpen, user, viewMode]);
+    void fetchTransactions();
+    return () => controller.abort();
+  }, [isOpen, user, viewMode, refresh]);
 
   if (!shouldRender) return null;
 
@@ -131,6 +126,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    setRefresh(value => value + 1);
     try {
       await refetch();
     } catch (error) {
@@ -233,11 +229,11 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                       </span>
                     </p>
                   </div>
-                  <Coins className="w-12 h-12 text-emerald-500 dark:text-emerald-400 opacity-50" />
+                  {paymentConfig?.enabled && <a href="/checkout" className="inline-flex min-h-11 items-center rounded-lg bg-emerald-700 px-3 text-sm font-semibold text-white">{t('pricing.pack.cta')}</a>}
                 </div>
 
                 {/* Earned credits */}
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                <div className="grid grid-cols-2 gap-4 pt-4 sm:grid-cols-3 border-t border-gray-200 dark:border-white/10">
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                       {t('credits.usage.feedbackEarned')}
@@ -254,6 +250,10 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                       +{credits.referralCreditsEarned}
                     </p>
                   </div>
+                  {credits.purchasedRemaining != null && <div>
+                    <p className="text-xs text-ink-muted mb-1">{t('credits.usage.purchasedRemaining')}</p>
+                    <p className="text-sm font-medium text-ink">{credits.purchasedRemaining}</p>
+                  </div>}
                 </div>
               </div>
             )}
@@ -273,6 +273,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                 {t('credits.usage.history')}
               </h4>
 
+              {historyError && <p role="status">{t('credits.usage.historyError')}</p>}
               {isLoading ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -285,7 +286,7 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                     </div>
                   ))}
                 </div>
-              ) : transactions.length === 0 ? (
+              ) : transactions.length === 0 && !historyError ? (
                 <div className={cn(glass.card, 'p-6 text-center')}>
                   <p className="text-gray-600 dark:text-gray-400">
                     {t('credits.usage.noTransactions')}
@@ -326,9 +327,9 @@ export function CreditUsageModal({ isOpen, onClose, viewMode = 'full' }: CreditU
                             {isPositive ? '+' : ''}
                             {tx.amount}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {tx.creditsAfter != null && <p className="text-xs text-gray-500 dark:text-gray-400">
                             {t('credits.transactionTotal', { total: tx.creditsAfter })}
-                          </p>
+                          </p>}
                         </div>
                       </div>
                     );
