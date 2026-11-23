@@ -22,6 +22,8 @@
       "title": "Credit Usage",
       "feedbackEarned": "From feedback",
       "referralEarned": "From referrals",
+      "purchasedRemaining": "Purchased credits remaining",
+      "historyError": "Some activity could not be loaded. Refresh to try again.",
       "history": "Recent activity",
       "noTransactions": "No activity yet",
       "time": {
@@ -31,6 +33,7 @@
         "daysAgo": "{{count}}d ago"
       },
       "features": {
+        "purchase": "Credit pack purchase",
         "parse_resume": "Resume parsing",
         "ai_match": "Job match",
         "vision2030": "Vision 2030",

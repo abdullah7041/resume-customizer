@@ -44,7 +44,7 @@ function signature(config: GeideaConfig, data: string) {
   return createHmac('sha256', config.apiPassword).update(data).digest('base64');
 }
 
-async function request(config: GeideaConfig, path: string, body?: unknown): Promise<unknown> {
+export async function geideaRequest(config: GeideaConfig, path: string, body?: unknown): Promise<unknown> {
   try {
     const response = await fetch(`${API_ORIGIN}${path}`, {
       method: body ? 'POST' : 'GET',
@@ -64,18 +64,20 @@ async function request(config: GeideaConfig, path: string, body?: unknown): Prom
 }
 
 const successCodes = { responseCode: z.literal('000'), detailedResponseCode: z.literal('000') };
-export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string; embedded?: boolean }) {
+export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string; embedded?: boolean; direct?: boolean }) {
   uuid.parse(reference);
   const amount = customerPack ? GEIDEA_PACK_PRICE_SAR : GEIDEA_TEST_AMOUNT;
   const timestamp = new Date().toISOString();
-  const result = await request(config, '/payment-intent/api/v2/direct/session', {
+  const result = await geideaRequest(config, '/payment-intent/api/v2/direct/session', {
     amount,
     currency: 'SAR',
     timestamp,
     merchantReferenceId: reference,
     signature: signature(config, `${config.publicKey}${amount.toFixed(2)}SAR${reference}${timestamp}`),
     callbackUrl: `${config.siteUrl}/.netlify/functions/${customerPack ? 'payment-webhook' : 'geidea-webhook'}`,
-    ...(customerPack?.embedded ? {
+    ...(customerPack?.direct ? {
+      returnUrl: `${config.siteUrl}/.netlify/functions/payment-bank-return?payment=${reference}&`,
+    } : customerPack?.embedded ? {
       appearance: {
         styles: { hppProfile: 'compressed', headerColor: '#064e3b' },
       },
@@ -134,7 +136,7 @@ const orderSchema = signedOrderSchema.extend({
 export async function verifyCreditOrder(config: GeideaConfig, orderId: string, reference: string, environment: PaymentEnvironment) {
   uuid.parse(orderId);
   uuid.parse(reference);
-  const result = await request(config, `/pgw/api/v1/direct/order/${orderId}`);
+  const result = await geideaRequest(config, `/pgw/api/v1/direct/order/${orderId}`);
   const parsed = z.object({ ...successCodes, order: creditOrderSchema }).safeParse(result);
   if (!parsed.success) throw new GeideaError(502, 'payment/invalid-order', 'Unable to verify payment order');
   if (parsed.data.order.orderId.toLowerCase() !== orderId.toLowerCase()) {
@@ -147,7 +149,7 @@ const creditOrderSchema = orderSchema.extend({ isTest: z.boolean() });
 
 export async function recoverCreditOrder(config: GeideaConfig, reference: string, environment: PaymentEnvironment) {
   uuid.parse(reference);
-  const result = await request(config, `/pgw/api/v1/direct/order?MerchantReferenceId=${reference}`);
+  const result = await geideaRequest(config, `/pgw/api/v1/direct/order?MerchantReferenceId=${reference}`);
   const parsed = z.object({ ...successCodes, orders: z.array(creditOrderSchema).max(1) }).safeParse(result);
   if (!parsed.success) throw new GeideaError(502, 'payment/invalid-order', 'Unable to identify the payment order');
   const [order] = parsed.data.orders;
@@ -166,7 +168,7 @@ function creditOrderResult(config: GeideaConfig, order: z.infer<typeof creditOrd
   const captured = order.totalCapturedAmount === GEIDEA_PACK_PRICE_SAR;
   const status = captured && refundedMinor === GEIDEA_PACK_PRICE_SAR * 100 ? 'refunded'
     : captured && (refundedMinor > 0 || (order.status === 'Success' && order.detailedStatus === 'Paid')) ? 'succeeded'
-    : order.status === 'Failed' ? 'failed'
+    : order.status === 'Failed' || (order.status === 'InProgress' && order.detailedStatus === 'PayFailed' && order.totalCapturedAmount === 0) ? 'failed'
     : ['Cancelled', 'Canceled', 'Expired'].includes(order.status) ? 'cancelled' : 'pending';
   return { orderId: order.orderId, status, refundedMinor };
 }
@@ -174,7 +176,7 @@ function creditOrderResult(config: GeideaConfig, order: z.infer<typeof creditOrd
 export async function verifyOrder(config: GeideaConfig, orderId: string, reference: string) {
   uuid.parse(orderId);
   uuid.parse(reference);
-  const result = await request(config, `/pgw/api/v1/direct/order/${orderId}`);
+  const result = await geideaRequest(config, `/pgw/api/v1/direct/order/${orderId}`);
   const parsed = z.object({ ...successCodes, order: orderSchema }).safeParse(result);
   if (!parsed.success) throw new GeideaError(502, 'payment/invalid-order', 'Unable to verify sandbox order');
   const order = parsed.data.order;
@@ -184,7 +186,7 @@ export async function verifyOrder(config: GeideaConfig, orderId: string, referen
   }
   const status = order.totalRefundedAmount > 0 ? 'refunded'
     : order.status === 'Success' && order.detailedStatus === 'Paid' && order.totalCapturedAmount === GEIDEA_TEST_AMOUNT ? 'succeeded'
-    : order.status === 'Failed' ? 'failed'
+    : order.status === 'Failed' || (order.status === 'InProgress' && order.detailedStatus === 'PayFailed' && order.totalCapturedAmount === 0) ? 'failed'
     : ['Cancelled', 'Canceled', 'Expired'].includes(order.status) ? 'cancelled' : 'pending';
   return { orderId, status, brand: order.paymentMethod?.brand ?? null };
 }

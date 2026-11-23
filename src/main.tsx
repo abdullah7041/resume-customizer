@@ -1,7 +1,8 @@
 import * as Sentry from "@sentry/react";
 import { scrubSentryEvent } from "@/lib/utils/scrubSentryEvent";
 
-Sentry.init({
+const isCheckout = /^\/checkout\/?$/.test(window.location.pathname) || Boolean(sessionStorage.getItem('watheq:checkoutReturn'));
+if (!isCheckout) Sentry.init({
   dsn: import.meta.env.VITE_SENTRY_DSN,
   integrations: [
     Sentry.browserTracingIntegration(),
@@ -46,7 +47,7 @@ import "./lib/i18n";
 import "./index.css";
 
 // Initialize analytics (respects consent)
-void analytics.init();
+if (!isCheckout) void analytics.init();
 
 // React 19 reports render failures through root callbacks. Never attach private error content.
 const reportRenderFailure = (_error: unknown, info: ErrorInfo) => {

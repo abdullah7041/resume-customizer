@@ -44,7 +44,7 @@ export class PaymentRequestError extends Error {
   }
 }
 
-async function paymentRequest(body: Record<string, string | boolean>, signal?: AbortSignal): Promise<unknown> {
+export async function paymentRequest(body: Record<string, unknown>, signal?: AbortSignal): Promise<unknown> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.access_token) throw new PaymentRequestError(401, 'payment/unauthorized', 'Authentication required');
   const response = await fetch(endpoint, {
@@ -63,8 +63,13 @@ async function paymentRequest(body: Record<string, string | boolean>, signal?: A
   return response.json();
 }
 
-export async function createPayment(language: 'ar' | 'en'): Promise<PaymentCheckout> {
-  return checkoutSchema.parse(await paymentRequest({ action: 'create', language, embedded: true }));
+export async function readPurchaseHistory(signal: AbortSignal) {
+  const history = z.array(z.object({ id: z.uuid(), createdAt: z.iso.datetime({ offset: true }), amount: z.number().int().positive() }));
+  return history.parse(await paymentRequest({ action: 'history' }, signal));
+}
+
+export async function createPayment(language: 'ar' | 'en', embedded = true): Promise<PaymentCheckout> {
+  return checkoutSchema.parse(await paymentRequest({ action: 'create', language, ...(embedded ? { embedded: true } : { direct: true }) }));
 }
 
 export async function readPaymentStatus(paymentId: string, orderId?: string, signal?: AbortSignal): Promise<PaymentStatus> {

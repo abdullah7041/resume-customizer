@@ -160,6 +160,8 @@ vi.mock('../components/Credits/UpgradeModal', () => ({
   UpgradeModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div role="dialog">Plans modal</div> : null),
 }));
 
+vi.mock('@/hooks/usePaymentConfig', () => ({ usePaymentConfig: () => ({ enabled: true }) }));
+
 describe('Arabic workspace localization', () => {
   beforeEach(() => {
     language = 'ar';
