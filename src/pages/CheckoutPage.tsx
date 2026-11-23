@@ -5,8 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePaymentConfig } from '@/hooks/usePaymentConfig';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import { getSkylineUrls } from '@/lib/assets';
-import { loadExpressCheckout } from '@/services/geideaCheckout';
-import { createPayment, geideaGuid, PaymentRequestError, readPaymentStatus } from '@/services/payments';
+import { loadExpressCheckout, loadHostedCheckout } from '@/services/geideaCheckout';
+import { createPayment, geideaGuid, paymentRequest, PaymentRequestError, readPaymentStatus } from '@/services/payments';
 import type { PaymentCheckout, PaymentConfig, PaymentStatus } from '@/types/payments';
 
 import { DirectCardForm } from '@/components/Credits/DirectCardForm';
@@ -34,7 +34,7 @@ function readReference(ownerId: string): Reference | null {
 }
 
 function saveReference(ownerId: string, reference: Reference | null) {
-  window.history.replaceState({ ...window.history.state, watheqPayment: reference && { ...reference, ownerId } }, '', '/checkout');
+  window.history.replaceState({ ...window.history.state, watheqPayment: reference && { ...reference, ownerId } }, '', returnedPayment().get('walletTest') === '1' ? '/checkout?walletTest=1' : '/checkout');
 }
 
 function outcome(payment: PaymentStatus, reference: Reference) {
@@ -52,7 +52,7 @@ function outcome(payment: PaymentStatus, reference: Reference) {
 const actionClass = 'inline-flex min-h-11 items-center rounded-xl bg-emerald-800 px-5 py-2.5 font-semibold text-white hover:bg-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink-accent';
 const linkClass = 'inline-flex min-h-11 items-center rounded-sm underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-accent';
 
-function PaymentPanel({ ownerId, language, config }: { ownerId: string; language: CheckoutLanguage; config: PaymentConfig | null }) {
+function PaymentPanel({ ownerId, language, config, express }: { express: boolean; ownerId: string; language: CheckoutLanguage; config: PaymentConfig | null }) {
   const { t } = useTranslation();
   const { refetch } = useUserCredits();
   const [reference, setReference] = useState(() => readReference(ownerId));
@@ -76,7 +76,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const createRequest = useRef<Promise<PaymentCheckout> | null>(null);
   const lastRefreshed = useRef<PaymentStatus | null>(null);
   const enabled = config?.enabled;
-  const formTitle = 'Apple Pay';
+  const formTitle = express ? 'Apple Pay' : t('pricing.checkout.formTitle');
 
   useEffect(() => {
     if (reference || !createRequest.current) saveReference(ownerId, reference);
@@ -90,13 +90,11 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     let finished = false;
 
     async function mountForm(container: HTMLDivElement) {
-      createRequest.current ??= createPayment(language, 'apple-pay').catch((error: unknown) => {
+      createRequest.current ??= createPayment(language, express ? 'apple-pay' : 'hosted').catch((error: unknown) => {
         createRequest.current = null;
         throw error;
       });
-      const [Checkout, { paymentId, sessionId }] = await Promise.all([
-        loadExpressCheckout(), createRequest.current,
-      ]);
+      const { paymentId, sessionId } = await createRequest.current;
       if (!active) return;
 
       saveReference(ownerId, { paymentId });
@@ -110,11 +108,19 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       };
 
       try {
-        const checkout = await new Checkout().create({
-          sessionId, onSuccess: finish, onError: finish, onCancel: payload => finish(payload, true),
-        });
-        if (!active) return;
-        checkout.mount(`#${containerId}`);
+        if (express) {
+          const Checkout = await loadExpressCheckout();
+          if (!active) return;
+          const checkout = await new Checkout().create({
+            sessionId, onSuccess: finish, onError: finish, onCancel: payload => finish(payload, true),
+          });
+          if (!active) return;
+          checkout.mount(`#${containerId}`);
+        } else {
+          const Checkout = await loadHostedCheckout();
+          if (!active) return;
+          new Checkout(finish, finish, payload => finish(payload, true)).startPayment(sessionId, null, containerId);
+        }
         const iframe = container.querySelector('iframe');
         if (!iframe) {
           setStartupError(true);
@@ -134,7 +140,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       active = false;
       host.replaceChildren();
     };
-  }, [attempt, walletSelected, enabled, formTitle, invalidReturn, language, ownerId, reference]);
+  }, [express, attempt, walletSelected, enabled, formTitle, invalidReturn, language, ownerId, reference]);
 
   useEffect(() => {
     if (!reference) return;
@@ -156,7 +162,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
         if (enabled && status.noOrder && status.sessionId && payment.cancelled === undefined && !payment.orderId) {
           createRequest.current = Promise.resolve({ paymentId: payment.paymentId, sessionId: status.sessionId, environment: status.environment });
           setCheckingLonger(false);
-          setWalletSelected(supportsApplePay);
+          setWalletSelected(!express || supportsApplePay);
           setReference(null);
           return;
         }
@@ -182,7 +188,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       window.clearTimeout(nextCheck);
       window.clearTimeout(slowCheck);
     };
-  }, [enabled, reference, supportsApplePay]);
+  }, [enabled, express, reference, supportsApplePay]);
 
   useEffect(() => {
     if (!result?.creditsGranted || result === lastRefreshed.current) return;
@@ -204,18 +210,18 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const canRetry = enabled && (startupError || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
   const statusMessage = lookupError ?? (invalidReturn ? 'invalid' : reference
     ? finalStatus ?? (checkingLonger ? 'pendingLonger' : 'pending')
-    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'walletUnavailable' : walletSelected && !formReady ? 'loading' : null);
+    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? (express ? 'walletUnavailable' : 'error') : walletSelected && !formReady ? 'loading' : null);
   const isSandbox = (result?.environment ?? config?.environment) === 'sandbox' && Boolean(enabled || result);
 
   return <>
     {isSandbox && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">{t('pricing.checkout.sandbox')}</p>}
     {enabled && !reference && !invalidReturn && !walletSelected && <DirectCardForm language={language}
-      onWallet={supportsApplePay ? () => setWalletSelected(true) : undefined}
+      express={express} onWallet={!express || supportsApplePay ? () => setWalletSelected(true) : undefined}
       remember={(paymentId, orderId) => saveReference(ownerId, { paymentId, orderId })}
       onSubmitted={(paymentId, orderId) => setReference({ paymentId, orderId })} />}
     <div id={containerId} ref={hostRef} className="min-w-0 [&>iframe]:block [&>iframe]:max-w-full [&>iframe]:border-0" hidden={!formReady || Boolean(reference)} />
     <p role="status" className="empty:sr-only">{statusMessage && t(`pricing.checkout.${statusMessage}`)}</p>
-    {walletSelected && !reference && <button type="button" className={linkClass} onClick={() => {
+    {express && walletSelected && !reference && <button type="button" className={linkClass} onClick={() => {
       setWalletSelected(false);
       createRequest.current = null;
       setFormReady(false);
@@ -224,6 +230,21 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     }}>{t('pricing.card.useCard')}</button>}
     {canRetry && <button type="button" className={actionClass} onClick={retry}>{t('pricing.checkout.new')}</button>}
   </>;
+}
+
+function AccountCheckout(props: Omit<Parameters<typeof PaymentPanel>[0], 'express'>) {
+  const [requested] = useState(() => returnedPayment().get('walletTest') === '1');
+  const [express, setExpress] = useState<boolean | null>(requested ? null : false);
+  const { t } = useTranslation();
+  useEffect(() => {
+    if (!requested) return;
+    const controller = new AbortController();
+    void paymentRequest({ action: 'wallet-access' }, controller.signal)
+      .then(value => { if (!controller.signal.aborted) setExpress(value === true); })
+      .catch(() => { if (!controller.signal.aborted) setExpress(false); });
+    return () => controller.abort();
+  }, [requested]);
+  return express === null ? <p role="status">{t('pricing.checkout.loading')}</p> : <PaymentPanel {...props} express={express} />;
 }
 
 export default function CheckoutPage() {
@@ -260,7 +281,7 @@ export default function CheckoutPage() {
         </section>
         <section aria-label={t('pricing.checkout.formTitle')} className="min-w-0 space-y-3 md:rounded-2xl md:bg-surface-strong md:p-5 md:shadow-xl">
           {loading ? <p role="status">{t('pricing.checkout.loading')}</p>
-            : user ? <PaymentPanel key={user.id} ownerId={user.id} language={language} config={config} />
+            : user ? <AccountCheckout key={user.id} ownerId={user.id} language={language} config={config} />
               : !config ? <p role="status">{t('pricing.checkout.loading')}</p>
                 : config.enabled || hasReturn ? <button type="button" className={actionClass} onClick={() => void signIn()}>{t('pricing.checkout.signIn')}</button>
                   : <p role="status">{t('pricing.checkout.disabled')}</p>}

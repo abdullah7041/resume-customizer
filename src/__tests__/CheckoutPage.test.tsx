@@ -2,17 +2,17 @@ import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { auth, config, createPayment, readPaymentStatus, refetch, loadExpressCheckout } = vi.hoisted(() => ({
-  auth: vi.fn(), config: vi.fn(), createPayment: vi.fn(), readPaymentStatus: vi.fn(), refetch: vi.fn(), loadExpressCheckout: vi.fn(),
+const { auth, config, createPayment, readPaymentStatus, refetch, loadExpressCheckout, paymentRequest, loadHostedCheckout } = vi.hoisted(() => ({
+  auth: vi.fn(), config: vi.fn(), createPayment: vi.fn(), readPaymentStatus: vi.fn(), refetch: vi.fn(), loadExpressCheckout: vi.fn(), paymentRequest: vi.fn(), loadHostedCheckout: vi.fn(),
 }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: auth }));
 vi.mock('@/hooks/usePaymentConfig', () => ({ usePaymentConfig: config }));
 vi.mock('@/hooks/useUserCredits', () => ({ useUserCredits: () => ({ refetch }) }));
 vi.mock('@/services/supabase', () => ({ supabase: {} }));
 vi.mock('@/services/payments', async (original) => ({
-  ...await original<typeof import('@/services/payments')>(), createPayment, readPaymentStatus,
+  ...await original<typeof import('@/services/payments')>(), createPayment, readPaymentStatus, paymentRequest,
 }));
-vi.mock('@/services/geideaCheckout', () => ({ loadExpressCheckout }));
+vi.mock('@/services/geideaCheckout', () => ({ loadExpressCheckout, loadHostedCheckout }));
 vi.mock('react-i18next', async () => {
   const { default: en } = await import('@/locales/en/pricing.json');
   return {
@@ -37,7 +37,8 @@ afterEach(() => vi.unstubAllGlobals());
 beforeEach(() => {
   vi.stubGlobal('ApplePaySession', { canMakePayments: () => true });
   vi.clearAllMocks();
-  window.history.replaceState({}, '', '/checkout');
+  paymentRequest.mockResolvedValue(true);
+  window.history.replaceState({}, '', '/checkout?walletTest=1');
   sessionStorage.clear();
   auth.mockReturnValue({ user: { id: 'user' }, loading: false, signInWithGoogle: vi.fn() });
   config.mockReturnValue({ enabled: true, priceSar: 29, credits: 100, environment: 'live' });
@@ -46,10 +47,22 @@ beforeEach(() => {
 });
 
 describe('customer checkout', () => {
-  it.each([undefined, { canMakePayments: () => false }])('keeps card checkout available on unsupported devices', (wallet) => {
+  it.each(['/checkout', '/checkout?walletTest=1'])('keeps the hosted option for ordinary customers at %s', async path => {
+    window.history.replaceState({}, '', path);
+    paymentRequest.mockResolvedValue(false);
+    loadHostedCheckout.mockResolvedValue(class { startPayment() { mountWallet('#watheq-payment-form'); } });
+    createPayment.mockResolvedValue({ paymentId, sessionId: paymentId });
+    render(<CheckoutPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'pricing.card.hosted' }));
+    await waitFor(() => expect(loadHostedCheckout).toHaveBeenCalledOnce());
+    expect(createPayment).toHaveBeenCalledWith('en', 'hosted');
+    expect(loadExpressCheckout).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, { canMakePayments: () => false }])('keeps card checkout available on unsupported devices', async (wallet) => {
     vi.stubGlobal('ApplePaySession', wallet);
     render(<CheckoutPage />);
-    expect(screen.getByLabelText('pricing.card.number')).toBeVisible();
+    expect(await screen.findByLabelText('pricing.card.number')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'pricing.card.wallet' })).toBeNull();
     expect(createPayment).not.toHaveBeenCalled();
     expect(loadExpressCheckout).not.toHaveBeenCalled();
@@ -67,10 +80,10 @@ describe('customer checkout', () => {
     createPayment.mockResolvedValue({ paymentId, sessionId, environment: 'live' });
 
     const view = render(<StrictMode><CheckoutPage /></StrictMode>);
-    expect(screen.getByLabelText('pricing.card.number')).toBeVisible();
+    expect(await screen.findByLabelText('pricing.card.number')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Back to Watheq' })).toHaveAttribute('href', '/');
     expect(createPayment).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'pricing.card.wallet' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pricing.card.wallet' }));
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en', 'apple-pay');
     await waitFor(() => expect(screen.getByTitle('Apple Pay')).toBeVisible());
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ sessionId }));
@@ -87,12 +100,12 @@ describe('customer checkout', () => {
     render(<CheckoutPage />);
     expect(await screen.findByText(successMessage)).toBeInTheDocument();
     expect(createPayment).toHaveBeenCalledTimes(1);
-    expect(location.search).toBe('');
+    expect(location.search).toBe('?walletTest=1');
   });
 
   it('reopens the same unpaid session after refresh', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000002';
-    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId } }, '', '/checkout');
+    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId } }, '', '/checkout?walletTest=1');
     readPaymentStatus.mockResolvedValue({ ...pending, noOrder: true, expired: false, sessionId });
     const create = vi.fn(async () => ({ mount: mountWallet }));
     loadExpressCheckout.mockResolvedValue(class { create = create; });
@@ -108,7 +121,7 @@ describe('customer checkout', () => {
     loadExpressCheckout.mockResolvedValueOnce(class { create() { throw new Error('SDK unavailable'); } })
       .mockResolvedValueOnce(class { async create() { return { mount: mountWallet }; } });
     render(<CheckoutPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'pricing.card.wallet' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pricing.card.wallet' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(screen.getByTitle('Apple Pay')).toBeVisible());
     expect(createPayment).toHaveBeenCalledTimes(1);
@@ -163,10 +176,10 @@ describe('customer checkout', () => {
     expect(createPayment).not.toHaveBeenCalled();
   });
 
-  it('prevents new checkout creation while disabled', () => {
+  it('prevents new checkout creation while disabled', async () => {
     config.mockReturnValue({ enabled: false, environment: 'sandbox' });
     render(<CheckoutPage />);
-    expect(screen.getByText('Checkout is currently unavailable.')).toBeInTheDocument();
+    expect(await screen.findByText('Checkout is currently unavailable.')).toBeInTheDocument();
     expect(loadExpressCheckout).not.toHaveBeenCalled();
     expect(createPayment).not.toHaveBeenCalled();
   });

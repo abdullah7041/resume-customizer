@@ -17,6 +17,7 @@
       "expiry": "تاريخ الانتهاء (MM/YY)",
       "code": "رمز الأمان",
       "pay": "ادفع ٢٩ ريال",
+      "hosted": "Apple Pay أو طرق دفع أخرى",
       "useCard": "الدفع بالبطاقة",
       "walletDevice": "لاستخدام Apple Pay، افتح صفحة الدفع في سفاري على جهاز Apple يدعم الخدمة.",
       "wallet": "Apple Pay",

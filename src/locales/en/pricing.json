@@ -17,6 +17,7 @@
       "expiry": "Expiry (MM/YY)",
       "code": "Security code",
       "pay": "Pay SAR 29",
+      "hosted": "Apple Pay or other payment methods",
       "useCard": "Pay by card",
       "walletDevice": "To use Apple Pay, open checkout in Safari on an Apple Pay–compatible device.",
       "wallet": "Apple Pay",

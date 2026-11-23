@@ -4,10 +4,15 @@ type ExpressCheckoutConstructor = new () => {
     Promise<{ mount(selector: string): void }>;
 };
 
-let sdkRequest: Promise<ExpressCheckoutConstructor> | undefined;
+type HostedCheckoutConstructor = new (success: WalletCallback, error: WalletCallback, cancel: WalletCallback) => {
+  startPayment(sessionId: string, options: null, containerId: string): void;
+};
+type CheckoutWindow = Window & { GeideaCheckout?: HostedCheckoutConstructor; GeideaExpressCheckout?: ExpressCheckoutConstructor };
 
-export function loadExpressCheckout(): Promise<ExpressCheckoutConstructor> {
-  sdkRequest ??= new Promise<ExpressCheckoutConstructor>((resolve, reject) => {
+let sdkRequest: Promise<void> | undefined;
+
+function loadSdk() {
+  sdkRequest ??= new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js';
     script.async = false;
@@ -19,10 +24,9 @@ export function loadExpressCheckout(): Promise<ExpressCheckoutConstructor> {
     const timeout = window.setTimeout(fail, 12000);
     script.onerror = fail;
     script.onload = () => {
-      const checkout = (window as Window & { GeideaExpressCheckout?: ExpressCheckoutConstructor }).GeideaExpressCheckout;
-      if (typeof checkout !== 'function') return fail();
+      if (!(window as CheckoutWindow).GeideaCheckout && !(window as CheckoutWindow).GeideaExpressCheckout) return fail();
       window.clearTimeout(timeout);
-      resolve(checkout);
+      resolve();
     };
     document.head.append(script);
   }).catch((error: unknown) => {
@@ -30,4 +34,18 @@ export function loadExpressCheckout(): Promise<ExpressCheckoutConstructor> {
     throw error;
   });
   return sdkRequest;
+}
+
+export async function loadHostedCheckout() {
+  await loadSdk();
+  const Checkout = (window as CheckoutWindow).GeideaCheckout;
+  if (!Checkout) throw new Error('Hosted checkout unavailable');
+  return Checkout;
+}
+
+export async function loadExpressCheckout() {
+  await loadSdk();
+  const Checkout = (window as CheckoutWindow).GeideaExpressCheckout;
+  if (!Checkout) throw new Error('Express checkout unavailable');
+  return Checkout;
 }

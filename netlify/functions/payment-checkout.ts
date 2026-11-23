@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Handler } from '@netlify/functions';
 import { z } from 'zod';
 import { createCheckoutSession, GEIDEA_CHECKOUT_ORIGIN, GEIDEA_PACK_CREDITS, GEIDEA_PACK_PRICE_SAR, GeideaError, geideaGuid, getGeideaConfig, getPaymentEnvironment, recoverCreditOrder, verifyCreditOrder } from '../lib/geidea.js';
@@ -13,6 +13,7 @@ const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store
 const fields = 'id,status,order_id,session_id,environment,remaining_credits,granted_at,refunded_minor,updated_at';
 const schema = z.discriminatedUnion('action', [
   ...directActions,
+  z.object({ action: z.literal('wallet-access') }).strict(),
   z.object({ action: z.literal('history') }).strict(),
   z.object({ action: z.literal('create'), language: z.enum(['en', 'ar']).default('en'), wallet: z.literal('apple-pay').optional(), embedded: z.boolean().optional(), direct: z.literal(true).optional() }).strict(),
   z.object({ action: z.literal('status'), paymentId: z.string().uuid(), orderId: geideaGuid.optional(), recover: z.boolean().optional() }).strict(),
@@ -41,6 +42,14 @@ const baseHandler: Handler = async (event) => {
     }
     const parsed = schema.safeParse(body);
     if (!parsed.success) throw new GeideaError(400, 'payment/invalid-request', 'Invalid payment request');
+    const testerHash = process.env.GEIDEA_WALLET_TEST_USER_HASH ?? '89880323485f93f45c529bfc82f2d71f75000a1dc6a010c81f2f7b8cbc53d7cd';
+    const walletTester = createHash('sha256').update(user.id).digest('hex') === testerHash;
+    if (parsed.data.action === 'wallet-access') {
+      return { statusCode: 200, headers, body: JSON.stringify(walletTester) };
+    }
+    if (parsed.data.action === 'create' && parsed.data.wallet && !walletTester) {
+      throw new GeideaError(403, 'payment/wallet-restricted', 'Wallet test is restricted');
+    }
     if (parsed.data.action === 'initiate' || parsed.data.action === 'authenticate' || parsed.data.action === 'pay') {
       return { statusCode: 200, headers, body: JSON.stringify(await directPayment(client, user.id, parsed.data)) };
     }
