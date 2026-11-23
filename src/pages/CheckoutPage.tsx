@@ -61,6 +61,11 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     const params = returnedPayment();
     return (params.has('payment') || params.has('paymentId')) && !reference;
   });
+  const [supportsApplePay] = useState(() => {
+    const wallet = (window as Window & { ApplePaySession?: { canMakePayments(): boolean } }).ApplePaySession;
+    try { return wallet?.canMakePayments() === true; }
+    catch { return false; }
+  });
   const [walletSelected, setWalletSelected] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [formReady, setFormReady] = useState(false);
@@ -151,7 +156,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
         if (enabled && status.noOrder && status.sessionId && payment.cancelled === undefined && !payment.orderId) {
           createRequest.current = Promise.resolve({ paymentId: payment.paymentId, sessionId: status.sessionId, environment: status.environment });
           setCheckingLonger(false);
-          setWalletSelected(true);
+          setWalletSelected(supportsApplePay);
           setReference(null);
           return;
         }
@@ -177,7 +182,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       window.clearTimeout(nextCheck);
       window.clearTimeout(slowCheck);
     };
-  }, [enabled, reference]);
+  }, [enabled, reference, supportsApplePay]);
 
   useEffect(() => {
     if (!result?.creditsGranted || result === lastRefreshed.current) return;
@@ -205,7 +210,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   return <>
     {isSandbox && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">{t('pricing.checkout.sandbox')}</p>}
     {enabled && !reference && !invalidReturn && !walletSelected && <DirectCardForm language={language}
-      onWallet={() => setWalletSelected(true)}
+      onWallet={supportsApplePay ? () => setWalletSelected(true) : undefined}
       remember={(paymentId, orderId) => saveReference(ownerId, { paymentId, orderId })}
       onSubmitted={(paymentId, orderId) => setReference({ paymentId, orderId })} />}
     <div id={containerId} ref={hostRef} className="min-w-0 [&>iframe]:block [&>iframe]:max-w-full [&>iframe]:border-0" hidden={!formReady || Boolean(reference)} />

@@ -18,6 +18,7 @@
       "code": "Security code",
       "pay": "Pay SAR 29",
       "useCard": "Pay by card",
+      "walletDevice": "To use Apple Pay, open checkout in Safari on an Apple Pay–compatible device.",
       "wallet": "Apple Pay",
       "bank": "Complete bank verification",
       "popup": "Allow the bank verification window and try again.",

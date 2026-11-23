@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { auth, config, createPayment, readPaymentStatus, refetch, loadExpressCheckout } = vi.hoisted(() => ({
   auth: vi.fn(), config: vi.fn(), createPayment: vi.fn(), readPaymentStatus: vi.fn(), refetch: vi.fn(), loadExpressCheckout: vi.fn(),
@@ -33,7 +33,9 @@ const paymentId = '00000000-0000-4000-8000-000000000001';
 const pending = { paymentId, status: 'pending', environment: 'live', creditsGranted: false, refundedMinor: 0 };
 const successMessage = '100 credits have been added to your account.';
 
+afterEach(() => vi.unstubAllGlobals());
 beforeEach(() => {
+  vi.stubGlobal('ApplePaySession', { canMakePayments: () => true });
   vi.clearAllMocks();
   window.history.replaceState({}, '', '/checkout');
   sessionStorage.clear();
@@ -44,6 +46,15 @@ beforeEach(() => {
 });
 
 describe('customer checkout', () => {
+  it.each([undefined, { canMakePayments: () => false }])('keeps card checkout available on unsupported devices', (wallet) => {
+    vi.stubGlobal('ApplePaySession', wallet);
+    render(<CheckoutPage />);
+    expect(screen.getByLabelText('pricing.card.number')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'pricing.card.wallet' })).toBeNull();
+    expect(createPayment).not.toHaveBeenCalled();
+    expect(loadExpressCheckout).not.toHaveBeenCalled();
+  });
+
   it('mounts one embedded session and resumes automatic confirmation after reload', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000002';
     let finish: (response: unknown) => void = () => {};
