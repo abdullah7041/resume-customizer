@@ -1,12 +1,13 @@
-type CheckoutCallback = (result: unknown) => void;
-type CheckoutConstructor = new (success: CheckoutCallback, error: CheckoutCallback, cancel: CheckoutCallback) => {
-  startPayment(sessionId: string, options: null, containerId: string): void;
+type WalletCallback = (result: unknown) => void;
+type ExpressCheckoutConstructor = new () => {
+  create(config: { sessionId: string; onSuccess: WalletCallback; onError: WalletCallback; onCancel: WalletCallback }):
+    Promise<{ mount(selector: string): void }>;
 };
 
-let sdkRequest: Promise<CheckoutConstructor> | undefined;
+let sdkRequest: Promise<ExpressCheckoutConstructor> | undefined;
 
-export function loadGeideaCheckout(): Promise<CheckoutConstructor> {
-  sdkRequest ??= new Promise<CheckoutConstructor>((resolve, reject) => {
+export function loadExpressCheckout(): Promise<ExpressCheckoutConstructor> {
+  sdkRequest ??= new Promise<ExpressCheckoutConstructor>((resolve, reject) => {
     const script = document.createElement('script');
     script.src = 'https://www.ksamerchant.geidea.net/hpp/geideaCheckout.min.js';
     script.async = false;
@@ -18,7 +19,7 @@ export function loadGeideaCheckout(): Promise<CheckoutConstructor> {
     const timeout = window.setTimeout(fail, 12000);
     script.onerror = fail;
     script.onload = () => {
-      const checkout = (window as Window & { GeideaCheckout?: CheckoutConstructor }).GeideaCheckout;
+      const checkout = (window as Window & { GeideaExpressCheckout?: ExpressCheckoutConstructor }).GeideaExpressCheckout;
       if (typeof checkout !== 'function') return fail();
       window.clearTimeout(timeout);
       resolve(checkout);

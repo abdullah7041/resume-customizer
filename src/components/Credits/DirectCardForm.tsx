@@ -69,7 +69,7 @@ export function DirectCardForm({ language, onSubmitted, remember, onWallet }: {
     setBusy(true);
     setError('');
     try {
-      const { paymentId } = await createPayment(language, false);
+      const { paymentId } = await createPayment(language, 'card');
       controller.signal.throwIfAborted();
       const step = (body: Record<string, unknown>) => paymentRequest({ ...body, paymentId }, controller.signal);
       const start = z.object({ orderId: geideaGuid, methodHtml: z.string().nullable() }).parse(await step({ action: 'initiate', cardNumber }));

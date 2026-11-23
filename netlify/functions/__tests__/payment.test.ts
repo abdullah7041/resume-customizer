@@ -136,6 +136,14 @@ describe('GEIDEA checkout endpoint', () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(response.body).not.toContain('private');
   });
+  it('requests only the Apple Pay wallet for express checkout', async () => {
+    const response = await invoke(checkout, { action: 'create', language: 'ar', wallet: 'apple-pay' });
+    expect(response.statusCode).toBe(200);
+    const request = JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string);
+    expect(request.expressCheckouts).toEqual([{ wallet: 'apple-pay', label: 'Apple Pay' }]);
+    expect(request).not.toHaveProperty('appearance');
+    expect(request.merchantReferenceId).toBe(row?.id);
+  });
   it('leaves navigation to the SDK for an embedded Arabic payment', async () => {
     const response = await invoke(checkout, { action: 'create', language: 'ar', embedded: true });
     expect(response.statusCode).toBe(200);

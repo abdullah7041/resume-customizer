@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePaymentConfig } from '@/hooks/usePaymentConfig';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import { getSkylineUrls } from '@/lib/assets';
-import { loadGeideaCheckout } from '@/services/geideaCheckout';
+import { loadExpressCheckout } from '@/services/geideaCheckout';
 import { createPayment, geideaGuid, PaymentRequestError, readPaymentStatus } from '@/services/payments';
 import type { PaymentCheckout, PaymentConfig, PaymentStatus } from '@/types/payments';
 
@@ -61,7 +61,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
     const params = returnedPayment();
     return (params.has('payment') || params.has('paymentId')) && !reference;
   });
-  const [hosted, setHosted] = useState(false);
+  const [walletSelected, setWalletSelected] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [formReady, setFormReady] = useState(false);
   const [startupError, setStartupError] = useState(false);
@@ -71,7 +71,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const createRequest = useRef<Promise<PaymentCheckout> | null>(null);
   const lastRefreshed = useRef<PaymentStatus | null>(null);
   const enabled = config?.enabled;
-  const formTitle = t('pricing.checkout.formTitle');
+  const formTitle = 'Apple Pay';
 
   useEffect(() => {
     if (reference || !createRequest.current) saveReference(ownerId, reference);
@@ -80,17 +80,17 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!hosted || reference || invalidReturn || !enabled || !host) return;
+    if (!walletSelected || reference || invalidReturn || !enabled || !host) return;
     let active = true;
     let finished = false;
 
     async function mountForm(container: HTMLDivElement) {
-      createRequest.current ??= createPayment(language).catch((error: unknown) => {
+      createRequest.current ??= createPayment(language, 'apple-pay').catch((error: unknown) => {
         createRequest.current = null;
         throw error;
       });
       const [Checkout, { paymentId, sessionId }] = await Promise.all([
-        loadGeideaCheckout(), createRequest.current,
+        loadExpressCheckout(), createRequest.current,
       ]);
       if (!active) return;
 
@@ -105,8 +105,11 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       };
 
       try {
-        const checkout = new Checkout(finish, finish, (payload) => finish(payload, true));
-        checkout.startPayment(sessionId, null, containerId);
+        const checkout = await new Checkout().create({
+          sessionId, onSuccess: finish, onError: finish, onCancel: payload => finish(payload, true),
+        });
+        if (!active) return;
+        checkout.mount(`#${containerId}`);
         const iframe = container.querySelector('iframe');
         if (!iframe) {
           setStartupError(true);
@@ -115,7 +118,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
         iframe.title = formTitle;
         if (!finished) setFormReady(true);
       } catch {
-        setStartupError(true);
+        if (active) setStartupError(true);
       }
     }
 
@@ -126,7 +129,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
       active = false;
       host.replaceChildren();
     };
-  }, [attempt, hosted, enabled, formTitle, invalidReturn, language, ownerId, reference]);
+  }, [attempt, walletSelected, enabled, formTitle, invalidReturn, language, ownerId, reference]);
 
   useEffect(() => {
     if (!reference) return;
@@ -148,7 +151,7 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
         if (enabled && status.noOrder && status.sessionId && payment.cancelled === undefined && !payment.orderId) {
           createRequest.current = Promise.resolve({ paymentId: payment.paymentId, sessionId: status.sessionId, environment: status.environment });
           setCheckingLonger(false);
-          setHosted(true);
+          setWalletSelected(true);
           setReference(null);
           return;
         }
@@ -196,17 +199,24 @@ function PaymentPanel({ ownerId, language, config }: { ownerId: string; language
   const canRetry = enabled && (startupError || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
   const statusMessage = lookupError ?? (invalidReturn ? 'invalid' : reference
     ? finalStatus ?? (checkingLonger ? 'pendingLonger' : 'pending')
-    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'error' : hosted && !formReady ? 'loading' : null);
+    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? 'walletUnavailable' : walletSelected && !formReady ? 'loading' : null);
   const isSandbox = (result?.environment ?? config?.environment) === 'sandbox' && Boolean(enabled || result);
 
   return <>
     {isSandbox && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">{t('pricing.checkout.sandbox')}</p>}
-    {enabled && !reference && !invalidReturn && !hosted && <DirectCardForm language={language}
-      onWallet={() => setHosted(true)}
+    {enabled && !reference && !invalidReturn && !walletSelected && <DirectCardForm language={language}
+      onWallet={() => setWalletSelected(true)}
       remember={(paymentId, orderId) => saveReference(ownerId, { paymentId, orderId })}
       onSubmitted={(paymentId, orderId) => setReference({ paymentId, orderId })} />}
     <div id={containerId} ref={hostRef} className="min-w-0 [&>iframe]:block [&>iframe]:max-w-full [&>iframe]:border-0" hidden={!formReady || Boolean(reference)} />
     <p role="status" className="empty:sr-only">{statusMessage && t(`pricing.checkout.${statusMessage}`)}</p>
+    {walletSelected && !reference && <button type="button" className={linkClass} onClick={() => {
+      setWalletSelected(false);
+      createRequest.current = null;
+      setFormReady(false);
+      setStartupError(false);
+      saveReference(ownerId, null);
+    }}>{t('pricing.card.useCard')}</button>}
     {canRetry && <button type="button" className={actionClass} onClick={retry}>{t('pricing.checkout.new')}</button>}
   </>;
 }

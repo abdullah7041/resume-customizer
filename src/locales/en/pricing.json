@@ -17,12 +17,14 @@
       "expiry": "Expiry (MM/YY)",
       "code": "Security code",
       "pay": "Pay SAR 29",
-      "wallet": "Apple Pay or other payment methods",
+      "useCard": "Pay by card",
+      "wallet": "Apple Pay",
       "bank": "Complete bank verification",
       "popup": "Allow the bank verification window and try again.",
       "error": "Card verification could not be completed. Please try again."
     },
     "checkout": {
+      "walletUnavailable": "Apple Pay could not load. Try again or pay by card.",
       "sandboxSuccess": "Test payment verified. No spendable credits were added.",
       "title": "Buy credits",
       "sandbox": "Test mode. Use GEIDEA test cards. Test purchases do not add spendable credits.",

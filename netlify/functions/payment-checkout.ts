@@ -14,7 +14,7 @@ const fields = 'id,status,order_id,session_id,environment,remaining_credits,gran
 const schema = z.discriminatedUnion('action', [
   ...directActions,
   z.object({ action: z.literal('history') }).strict(),
-  z.object({ action: z.literal('create'), language: z.enum(['en', 'ar']).default('en'), embedded: z.boolean().optional(), direct: z.literal(true).optional() }).strict(),
+  z.object({ action: z.literal('create'), language: z.enum(['en', 'ar']).default('en'), wallet: z.literal('apple-pay').optional(), embedded: z.boolean().optional(), direct: z.literal(true).optional() }).strict(),
   z.object({ action: z.literal('status'), paymentId: z.string().uuid(), orderId: geideaGuid.optional(), recover: z.boolean().optional() }).strict(),
 ]);
 
@@ -95,7 +95,7 @@ const baseHandler: Handler = async (event) => {
       id: paymentId, user_id: user.id, email: user.email, amount_minor: GEIDEA_PACK_PRICE_SAR * 100, currency: 'SAR', environment, status: 'created',
     });
     if (insertError) throw new GeideaError(503, 'payment/persistence-unavailable', 'Unable to save payment');
-    const sessionId = await createCheckoutSession(config, paymentId, parsed.data.language, { email: user.email, embedded: parsed.data.embedded, direct: parsed.data.direct });
+    const sessionId = await createCheckoutSession(config, paymentId, parsed.data.language, { email: user.email, wallet: parsed.data.wallet, embedded: parsed.data.embedded, direct: parsed.data.direct });
     const { data, error: updateError } = await client.from('credit_purchases')
       .update({ session_id: sessionId, status: 'pending', updated_at: new Date().toISOString() }).eq('id', paymentId).eq('status', 'created').select('id').single();
     if (updateError || !data) throw new GeideaError(503, 'payment/persistence-unavailable', 'Unable to save checkout session');
