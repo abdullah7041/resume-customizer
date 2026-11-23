@@ -20,7 +20,7 @@
       "hosted": "Apple Pay or other payment methods",
       "useCard": "Pay by card",
       "walletDevice": "To use Apple Pay, open checkout in Safari on an Apple Pay–compatible device.",
-      "wallet": "Apple Pay",
+      "wallet": "Pay with Apple Pay",
       "bank": "Complete bank verification",
       "popup": "Allow the bank verification window and try again.",
       "error": "Card verification could not be completed. Please try again."
