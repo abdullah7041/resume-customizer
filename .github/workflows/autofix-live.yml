@@ -1,0 +1,59 @@
+name: Watheq production incident verification
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  verify:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      github.event.pull_request.merged == true &&
+      github.event.sender.type == 'User' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'codex/autofix-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    environment: autofix
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - name: Observe deployment and run the affected safe probe
+        run: node scripts/autofix/live.mjs
+        env:
+          AUTOFIX_LIVE_REPORT: ${{ runner.temp }}/watheq-live-verification.txt
+          GH_TOKEN: ${{ github.token }}
+          AUTOFIX_PRODUCTION_ORIGIN: ${{ vars.AUTOFIX_PRODUCTION_ORIGIN }}
+          AUTOFIX_PROBE_TOKEN: ${{ secrets.AUTOFIX_PROBE_TOKEN }}
+          AUTOFIX_SYNTHETIC_SUPABASE_ORIGIN: ${{ vars.AUTOFIX_SYNTHETIC_SUPABASE_ORIGIN }}
+          AUTOFIX_SYNTHETIC_SUPABASE_PUBLIC_KEY: ${{ secrets.AUTOFIX_SYNTHETIC_SUPABASE_PUBLIC_KEY }}
+          AUTOFIX_SYNTHETIC_EMAIL: ${{ secrets.AUTOFIX_SYNTHETIC_EMAIL }}
+          AUTOFIX_SYNTHETIC_PASSWORD: ${{ secrets.AUTOFIX_SYNTHETIC_PASSWORD }}
+      - name: Report observed production evidence
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, "scripts/autofix")
+          from incident import send_report
+          report = Path(os.environ["AUTOFIX_LIVE_REPORT"])
+          if report.is_file():
+              send_report(report.read_text().strip())
+          else:
+              send_report("Watheq repair PR #" + os.environ["PR_NUMBER"] + " was merged. Production verification pending. Check the deployment verification run.")
+          PY
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          AUTOFIX_LIVE_REPORT: ${{ runner.temp }}/watheq-live-verification.txt
+          TELEGRAM_BOT_TOKEN: ${{ secrets.AUTOFIX_TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.AUTOFIX_TELEGRAM_CHAT }}

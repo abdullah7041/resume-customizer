@@ -1312,8 +1312,10 @@ export default function MainContent() {
   const matchDescription = activeResumeId && projectedResumeId.current !== activeResumeId ? '' : jobDescription;
   useEffect(() => {
     if (pendingFeedDescription === null) return;
-    if (activeTab !== 'match' || !flags.aiMatch || !matchDescription) reportUserOutcome('job_handoff_missing');
-    else if (matchDescription !== pendingFeedDescription) reportUserOutcome('job_handoff_mismatch');
+    if (flags.aiMatch) {
+      if (activeTab !== 'match' || !matchDescription) reportUserOutcome('job_handoff_missing');
+      else if (matchDescription !== pendingFeedDescription) reportUserOutcome('job_handoff_mismatch');
+    }
     setPendingFeedDescription(null);
   }, [pendingFeedDescription, activeTab, flags.aiMatch, matchDescription]);
 

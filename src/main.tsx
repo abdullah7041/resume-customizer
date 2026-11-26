@@ -7,6 +7,7 @@ if (!isCheckout) Sentry.init({
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration({
+      beforeErrorSampling: event => !event.tags?.['watheq.outcome'],
       maskAllText: true,  // Privacy: mask PII in session replays
       blockAllMedia: true,
     }),

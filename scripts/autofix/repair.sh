@@ -22,15 +22,7 @@ TOML
 opts=(--rm --user "$(id -u):$(id -g)" --cap-drop ALL --security-opt no-new-privileges --pids-limit 512 --memory 5g
       -v "$source_dir:/work" -w /work -e HOME=/home/repair -v "$RUNNER_TEMP/model-home:/home/repair")
 docker run "${opts[@]}" -e PUPPETEER_SKIP_DOWNLOAD=true watheq-repair npm ci --no-audit --no-fund
-network="watheq-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-gateway="$network-gateway"
-trap 'docker rm -f "$gateway" >/dev/null 2>&1 || true; docker network rm "$network" >/dev/null 2>&1 || true' EXIT
-docker network create --internal "$network" >/dev/null
-gateway_opts=(--user 101:101 --cap-drop ALL --security-opt no-new-privileges --read-only
-              --tmpfs /etc/nginx/conf.d:mode=1777 --tmpfs /var/cache/nginx:mode=1777 --tmpfs /var/run:mode=1777
-              -v "$GITHUB_WORKSPACE/scripts/autofix/gateway.conf.template:/etc/nginx/templates/default.conf.template:ro")
-docker run -d --name "$gateway" "${gateway_opts[@]}" -e OPENROUTER_API_KEY nginx:stable-alpine >/dev/null
-docker network connect --alias model-gateway "$network" "$gateway"
+source scripts/autofix/gateway.sh
 location=$(python3 scripts/autofix/incident.py location)
 prompt="Investigate Watheq functional incident $ISSUE: signal $SIGNAL, exception type $KIND, release $RELEASE. Application frame: $location.
 Use only this source tree and synthetic local fixtures. Never contact a live application or use customer data.

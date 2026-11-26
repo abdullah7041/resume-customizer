@@ -19,8 +19,6 @@ const alert = z.object({
   }) }),
 });
 
-const clientFeatures = new Set(['parseResume', 'analyzeResumeWithAI', 'optimizeResume', 'refineBullet',
-  'analyzeVision2030', 'analyzeResumeTruthCheck', 'optimize', 'pdf-extract', 'render']);
 const errorTypes = new Set(['TypeError', 'ReferenceError', 'RangeError', 'SyntaxError', 'AbortError', 'TimeoutError']);
 
 export function incidentInputs(body: unknown, project: string) {
@@ -35,7 +33,7 @@ export function incidentInputs(body: unknown, project: string) {
   const feature = tags.api_function ?? tags.feature ?? tags.area ?? tags.stage;
   let signal: string;
   if (origin === 'browser') {
-    signal = signals.outcomes.includes(outcome) ? outcome : clientFeatures.has(feature) ? feature : 'browser_error';
+    signal = signals.outcomes.includes(outcome) ? outcome : signals.browser.includes(feature) ? feature : 'browser_error';
   } else if (origin === 'user-function' && signals.functions.includes(fn)) {
     signal = fn;
   } else return null;

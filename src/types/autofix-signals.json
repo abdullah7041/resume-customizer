@@ -1,4 +1,5 @@
 {
+  "browser": ["parseResume", "analyzeResumeWithAI", "optimizeResume", "refineBullet", "analyzeVision2030", "analyzeResumeTruthCheck", "optimize", "pdf-extract", "render"],
   "outcomes": [
     "feed_load_failed",
     "feed_verification_failed",

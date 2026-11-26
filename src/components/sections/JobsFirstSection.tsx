@@ -167,7 +167,6 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
         if (check?.jobFingerprint && globalThis.crypto?.subtle) {
           const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(description.trim().slice(0, 5000)));
           if (Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('') === check.jobFingerprint) match = check.match;
-          else reportUserOutcome('job_handoff_mismatch');
         }
         if (!isCurrent(key)) return;
         notify('success', text('Job ready for review and tailoring', 'الوظيفة جاهزة للمراجعة والتخصيص'));

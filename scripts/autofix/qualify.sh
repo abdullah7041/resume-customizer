@@ -3,6 +3,15 @@
 # against a throwaway local remote. This run never calls a model, GitHub API or Telegram.
 set -euo pipefail
 tools_dir="$(pwd)/scripts/autofix"
+export GITHUB_WORKSPACE="$(pwd)" GITHUB_RUN_ATTEMPT=1 GITHUB_RUN_ID=1
+export OPENROUTER_API_KEY=qualification-placeholder
+source scripts/autofix/gateway.sh
+# Exercise the same Docker network and gateway without making a provider request.
+docker run --rm --network "$network" node:22-bookworm node --input-type=module -e '
+  const response = await fetch("http://model-gateway:8080/health", {signal:AbortSignal.timeout(5000)});
+  if (response.status !== 404) throw Error("Unexpected model gateway response");
+  const escaped = await fetch("https://example.com", {signal:AbortSignal.timeout(2000)}).then(() => true, () => false);
+  if (escaped) throw Error("Runner unexpectedly reached the public network");'
 export RUNNER_TEMP=$(mktemp -d)
 export ISSUE=42 KIND=Error SIGNAL=feed_load_failed GITHUB_REPOSITORY=synthetic/watheq GITHUB_RUN_ID=1
 export GITHUB_OUTPUT="$RUNNER_TEMP/outputs"
@@ -13,7 +22,7 @@ git init -q -b main
 git config user.name Fixture
 git config user.email fixture@example.test
 npm pkg set 'scripts.lint=node --check src/feed.js' 'scripts.type:check=tsc --allowJs --checkJs --noEmit --skipLibCheck src/feed.js'
-echo 'export function rows(feed) { return feed.postings[0]; }' > src/feed.js
+echo '/** @param {{postings: string[]}} feed */ export function rows(feed) { return feed.postings[0]; }' > src/feed.js
 git add .
 git commit -qm fixture
 export RELEASE=$(git rev-parse HEAD)
@@ -30,7 +39,7 @@ it('shows an empty feed after a successful empty search', () => {
   expect(rows({postings: []})).toEqual([]);
 });
 TEST
-echo 'export function rows(feed) { return feed.postings; }' > "$RUNNER_TEMP/source/src/feed.js"
+echo '/** @param {{postings: string[]}} feed */ export function rows(feed) { return feed.postings; }' > "$RUNNER_TEMP/source/src/feed.js"
 python3 -B "$tools_dir/patch.py" collect "$RUNNER_TEMP/metadata" "$RUNNER_TEMP/source" "$RUNNER_TEMP/repair"
 bash "$tools_dir/verify.sh"
 cat > "$RUNNER_TEMP/bin/gh" <<'GH'

@@ -120,9 +120,18 @@ it('checks real selectable, corrupt, visually blank and image-only PDFs with PDF
     import { checkPdfBlob } from './src/lib/utils/pdfTextCheck.ts';
     const expected = { fields: [{ id: 'name', text: 'Fixture' }] };
     const inspect = async (blob) => { const result = await checkPdfBlob(blob, expected); return result.reason ?? result.state; };
-    const pdf = new jsPDF();
+    const { readFileSync } = await import('node:fs');
+    const font = readFileSync('netlify/assets/fonts/DejaVuSans.ttf').toString('base64');
+    function fixturePdf() {
+      const doc = new jsPDF();
+      doc.addFileToVFS('Fixture.ttf', font);
+      doc.addFont('Fixture.ttf', 'Fixture', 'normal');
+      doc.setFont('Fixture', 'normal');
+      return doc;
+    }
+    const pdf = fixturePdf();
     pdf.text('Fixture', 10, 20);
-    const whiteText = new jsPDF();
+    const whiteText = fixturePdf();
     whiteText.setTextColor(255,255,255);
     whiteText.text('Fixture', 10, 20);
     const image = (shade) => {

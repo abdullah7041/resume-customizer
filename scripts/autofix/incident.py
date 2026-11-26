@@ -10,15 +10,13 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[2]
 SIGNALS = json.loads((ROOT / "src/types/autofix-signals.json").read_text())
-BROWSER = {"browser_error", "parseResume", "analyzeResumeWithAI", "optimizeResume", "refineBullet",
-           "analyzeVision2030", "analyzeResumeTruthCheck", "optimize", "pdf-extract", "render"}
 KINDS = {"Error", "TypeError", "ReferenceError", "RangeError", "SyntaxError", "AbortError", "TimeoutError"}
 
 
 def incident():
     issue, release, signal, kind = (os.environ[k] for k in ("ISSUE", "RELEASE", "SIGNAL", "KIND"))
     if not (re.fullmatch(r"\d{1,20}", issue) and re.fullmatch(r"[0-9a-f]{40}|unknown", release)
-            and signal in BROWSER.union(SIGNALS["functions"], SIGNALS["outcomes"]) and kind in KINDS):
+            and signal in ["browser_error", *SIGNALS["browser"], *SIGNALS["functions"], *SIGNALS["outcomes"]] and kind in KINDS):
         raise ValueError("Invalid incident metadata")
     return issue, release, signal, kind
 
