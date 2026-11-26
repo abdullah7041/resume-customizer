@@ -8,8 +8,8 @@ it('treats an employer URL as its own source and offers to save the supplied pag
   const probes = NAME_PROBEABLE.map(provider => vi.spyOn(provider, 'probe').mockResolvedValue({found:true,count:1}));
   const page = vi.spyOn(jsonld, 'fetchPostings').mockResolvedValue({ok:false, status:200, postings:[], error:'no published openings'});
   const report = await resolveCompany('https://careers.example.org/jobs/?utm_medium=email#roles');
-  expect(report).toMatchObject({candidates:[], coverageUrl:'https://careers.example.org/jobs'});
-  expect(page).toHaveBeenCalledWith({source:'jsonld', token:'https://careers.example.org/jobs'});
+  expect(report).toMatchObject({candidates:[], coverageUrl:'https://careers.example.org/jobs/'});
+  expect(page).toHaveBeenCalledWith({source:'jsonld', token:'https://careers.example.org/jobs/'});
   for (const probe of probes) expect(probe).not.toHaveBeenCalled();
 });
 

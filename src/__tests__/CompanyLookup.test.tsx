@@ -67,7 +67,7 @@ it('lets a candidate follow a saved employer when a verified board becomes avail
   const view = render(<CompanyLookup />);
   fireEvent.click(await screen.findByRole('button',{name:'Coverage available · Follow jobs'}));
   expect(await screen.findByText('Company followed. Board check requested.')).toBeVisible();
-  expect(mocks.track).toHaveBeenCalledWith({source:'ashby',token:'Example',displayName:'Example',coverageRequestUrl:url});
+  expect(mocks.track).toHaveBeenCalledWith({source:'ashby',token:'Example',displayName:'Example',coverageRequestUrl:undefined});
   view.rerender(<CompanyLookup directory={[{...company, company_category:'unclassified', sector:null, last_status:'ok', last_fetched_at:null, followed:true}]} />);
   expect(await screen.findByText('Following jobs')).toBeVisible();
 });

@@ -45,6 +45,14 @@ it('searches the verified directory directly before probing an external board',a
  expect(screen.getByRole('heading',{name:'Example employer'})).toBeVisible();
  expect(screen.queryByRole('heading',{name:'Other employer'})).not.toBeInTheDocument();
 });
+it('labels the directory total accurately when a newly followed board is listed', async () => {
+ mocks.search.mockResolvedValue({ postings:[posting], companies:[company,{...company,id:'new',display_name:'New board',followed:true,last_status:'pending',last_fetched_at:null}], nextOffset:null });
+ render(<JobsFirstSection />);
+ await screen.findByText('AI Engineer');
+ fireEvent.click(screen.getByRole('button',{name:'Explore companies'}));
+ expect(await screen.findByText('2 companies')).toBeVisible();
+ expect(screen.getByRole('heading',{name:'New board'})).toBeVisible();
+});
 it('searches without follows, checks explicit matches, and hands the selected description to tailoring',async()=>{
  render(<JobsFirstSection onMatchPosting={mocks.handoff}/>);
  await screen.findByText('AI Engineer');

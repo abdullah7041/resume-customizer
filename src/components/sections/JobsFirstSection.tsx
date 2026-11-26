@@ -227,14 +227,14 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
           <button className={outlineClass} onClick={() => setTab('jobs')}><ArrowLeft className={arrowClass} aria-hidden="true" />{text('Back to jobs', 'العودة للوظائف')}</button>
           <Suspense fallback={<p role="status">{text('Loading applications…', 'جارٍ تحميل الطلبات…')}</p>}><Applications /></Suspense>
         </div> : tab === 'companies' ? <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">{text('Discover companies', 'اكتشف الشركات')}</h3><span className="text-xs text-ink-muted">{text(`${page?.companies.length ?? 0} verified employers`, `${page?.companies.length ?? 0} صاحب عمل موثق`)}</span></div>
+          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">{text('Discover companies', 'اكتشف الشركات')}</h3><span className="text-xs text-ink-muted">{text(`${page?.companies.length ?? 0} companies`, `${page?.companies.length ?? 0} شركة`)}</span></div>
           <CompanyLookup key={getPrivateSessionRevision()} onQueryChange={value => { setCompanyQuery(value); setCompanyCategory(''); }} onFollowed={() => setRefresh(value => value + 1)} directory={page?.companies} />
           <div className="flex flex-wrap gap-2" aria-label={text('Company categories', 'فئات الشركات')}>
             {['', 'startup', 'scaleup', 'enterprise', 'public_sector'].map(category => <button key={category} className={`${buttonClass} ${companyCategory === category ? 'bg-emerald-700 text-white' : 'bg-emerald-500/10 text-ink'}`} aria-pressed={companyCategory === category} onClick={() => setCompanyCategory(category)}>{category ? companyType(category) : text('All companies', 'كل الشركات')}</button>)}
           </div>
           {error && <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-sm text-destructive">{error}</p>}
           {feedback && <p role="status" className="text-sm text-ink-muted">{feedback.title}</p>}
-          {loading && !page?.companies.length && <p role="status">{text('Loading verified companies…', 'جارٍ تحميل الشركات الموثقة…')}</p>}
+          {loading && !page?.companies.length && <p role="status">{text('Loading companies…', 'جارٍ تحميل الشركات…')}</p>}
           {!loading && !error && !companies.length && <p className="text-sm text-ink-muted">{text('No companies in the directory match these filters.', 'لا توجد شركات في الدليل تطابق هذه التصفية.')}</p>}
           <div className="grid gap-3 sm:grid-cols-2">{companies.map(company => <article key={company.id} className="space-y-3 rounded-xl border border-line bg-background p-4">
             <div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-lg font-bold text-white" aria-hidden="true">{company.display_name.slice(0, 1)}</span><h3 className="font-semibold">{company.display_name}</h3></div>

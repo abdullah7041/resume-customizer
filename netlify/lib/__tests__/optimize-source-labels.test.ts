@@ -16,3 +16,14 @@ it('round-trips short model citations and rejects guesses and citations borrowed
   expect((await check('T2', 'S2', sources[1].text)).status).toBe('rejected');
   expect((await check('T1', 'unknown', sources[0].text)).status).toBe('rejected');
 });
+
+it('restores citations in position and project suggestions', () => {
+  const [source] = buildRequestEvidenceSources('Built finance reports.');
+  const { restore } = labelOptimizeSources([source]);
+  const references = [{ sourceId: 'S1', quote: source.text }];
+  const result = restore({ project_improvements: [{ evidence_references: references }],
+    position_name_suggestion: { evidence_references: references } });
+  const expected = [{ sourceId: source.id, quote: source.text }];
+  expect(result.project_improvements[0].evidence_references).toEqual(expected);
+  expect(result.position_name_suggestion.evidence_references).toEqual(expected);
+});

@@ -30,6 +30,18 @@ describe('sentry context redaction', () => {
     expect(event).toMatchObject({ environment: 'production', release: 'a'.repeat(24) });
     expect(JSON.stringify(event)).not.toContain('PRIVATE');
   });
+  it('groups dispatcher failures and strips their request data', async () => {
+    initSentry();
+    captureError(new Error('PRIVATE dispatch error'), { function: 'optimize-dispatch', stage: 'queue', code: 'OPTIMIZE_DISPATCH_FAILED' });
+    const [error, captured] = captureExceptionMock.mock.lastCall!;
+    expect(error.message).toBe('Optimize queue: OPTIMIZE_DISPATCH_FAILED');
+    expect(captured.fingerprint).toEqual(['optimize', 'queue', 'OPTIMIZE_DISPATCH_FAILED']);
+    expect(captured.tags.workflow).toBe('optimize');
+    const beforeSend = vi.mocked(init).mock.calls[0][0]!.beforeSend!;
+    const event = await beforeSend({ type: undefined, tags: captured.tags, request: { data: 'PRIVATE' },
+      breadcrumbs: [{ message: 'PRIVATE' }] }, {});
+    expect(JSON.stringify(event)).not.toContain('PRIVATE');
+  });
   it('bounds telemetry delivery without changing a worker outcome on transport failure', async () => {
     flushMock.mockRejectedValueOnce(new Error('Telemetry unavailable'));
     await expect(flushSentry()).resolves.toBeUndefined();

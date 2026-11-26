@@ -161,8 +161,8 @@ export function redactForLog(value: unknown): unknown {
 export function captureError(error: Error | unknown, context?: Record<string, unknown>) {
     const extra = sanitizeSentryContext(context) as Record<string, unknown> | undefined;
     const operationId = extra?.operationId;
-    if (context?.function === 'optimize' || context?.function === 'optimize-background') {
-        const stage = typeof context.stage === 'string' && /^(cache|provider|evidence|scoring|billing|delivery|claim|pipeline|persist-result|persist-failure)$/.test(context.stage) ? context.stage : 'pipeline';
+    if (context?.function === 'optimize' || context?.function === 'optimize-background' || context?.function === 'optimize-dispatch') {
+        const stage = typeof context.stage === 'string' && /^(queue|cache|provider|evidence|scoring|billing|delivery|claim|pipeline|persist-result|persist-failure)$/.test(context.stage) ? context.stage : 'pipeline';
         const code = publicOptimizeCode(context.code);
         const tags: Record<string, string> = { workflow: 'optimize', stage, code };
         if (typeof operationId === 'string' && operationId !== REDACTED) tags.operationId = operationId;

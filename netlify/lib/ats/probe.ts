@@ -164,7 +164,8 @@ export function canonicalCareersUrl(input: string): string | undefined {
       if (/^utm_|^(fbclid|gclid)$/i.test(key)) url.searchParams.delete(key);
     }
     url.searchParams.sort();
-    const canonical = url.href.replace(/\/(?=\?|$)/, '');
+    // Keep existing origin-only request keys while preserving directory paths.
+    const canonical = url.pathname === '/' ? url.origin + url.search : url.href;
     return canonical.length <= 2048 ? canonical : undefined;
   } catch { return; }
 }

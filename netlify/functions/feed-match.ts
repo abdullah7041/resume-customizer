@@ -91,6 +91,11 @@ export const handler: Handler = async (event) => {
       };
       const cached = await getCached<MatchResult>(cacheKey);
       if (cached) return record(cached, true);
+      if (history.error) {
+        captureError(new Error('Feed check history read failed'), { function: 'feed-match' });
+        return { ok: false as const, resumeId: resume.id, code: 'history_unavailable',
+          error: 'Could not read your saved CV check. Try again.' };
+      }
 
       const rate = await checkCostBearingRateLimitForIdentifier('feed-match', user.id);
       if (!rate.allowed) {

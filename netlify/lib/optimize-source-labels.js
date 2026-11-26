@@ -18,16 +18,20 @@ export function labelOptimizeSources(sources) {
   function references(refs) {
     return refs?.map(ref => ({ ...ref, sourceId: sourceIds.get(ref.sourceId) ?? '' }));
   }
+  function restoreReferences(item) {
+    return { ...item, evidence_references: references(item.evidence_references) };
+  }
   function restore(result) {
     return { ...result,
       headline_target_id: targetIds.get(result.headline_target_id) ?? '',
       headline_evidence_references: references(result.headline_evidence_references),
       summary_target_id: targetIds.get(result.summary_target_id) ?? '',
       summary_evidence_references: references(result.summary_evidence_references),
-      bullet_improvements: result.bullet_improvements?.map(bullet => ({ ...bullet,
+      bullet_improvements: result.bullet_improvements?.map(bullet => ({ ...restoreReferences(bullet),
         target_id: targetIds.get(bullet.target_id) ?? '',
-        evidence_references: references(bullet.evidence_references),
       })),
+      project_improvements: result.project_improvements?.map(restoreReferences),
+      position_name_suggestion: result.position_name_suggestion && restoreReferences(result.position_name_suggestion),
     };
   }
   return { sources: labelled, restore };

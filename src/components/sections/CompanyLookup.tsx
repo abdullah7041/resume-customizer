@@ -135,7 +135,7 @@ export function CompanyLookup({ onFollowed, onQueryChange, directory = [] }: Pro
       {requests.map(row => <div key={row.careers_url} className="flex flex-wrap items-center gap-2 rounded-lg border border-line p-3 text-sm">
         <a href={row.careers_url} className="break-all underline" target="_blank" rel="noreferrer">{row.company?.display_name ?? row.careers_url}</a>
         {row.company ? directory.some(company => company.id === row.company?.id && company.followed) ? <span>{text('Following jobs', 'تتابع الوظائف')}</span>
-          : <button className={button} disabled={!!busy} onClick={() => void follow(row.company!.source, row.company!.token, row.company!.display_name, row.careers_url)}>{text('Coverage available · Follow jobs', 'التغطية متاحة · تابع الوظائف')}</button>
+          : <button className={button} disabled={!!busy} onClick={() => void follow(row.company!.source, row.company!.token, row.company!.display_name)}>{text('Coverage available · Follow jobs', 'التغطية متاحة · تابع الوظائف')}</button>
           : <><span>{text('Coverage requested', 'طُلبت التغطية')}</span><button className={button} disabled={!!busy} onClick={() => void search(row.careers_url)}>{text('Check coverage', 'تحقق من التغطية')}</button></>}
       </div>)}
     </section>}

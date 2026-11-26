@@ -14,7 +14,7 @@ beforeEach(()=>{
  mocks.from.mockImplementation((table:string)=>{
   let operation='read';
   const q={select:()=>q,eq:()=>q,is:()=>q,or:()=>q,single:()=>q,maybeSingle:()=>q,
-   upsert:(value:unknown)=>{operation='upsert';mocks.writes(table,value);return q;},update:()=>{operation='update';return q;},
+   upsert:(value:unknown)=>{operation='upsert';mocks.writes(table,value);return q;},update:(value:unknown)=>{operation='update';mocks.writes(table,value);return q;},
    then:(resolve:(value:unknown)=>unknown)=>Promise.resolve({count:0,error:null,data:table==='ats_companies'?{id:'company',last_fetched_at:null}:operation==='read'?[]:null}).then(resolve)};
   return q;
  });
@@ -40,10 +40,21 @@ it('returns verified resolver candidates and explicit exhausted fallback without
  expect(JSON.parse(result.body ?? '{}')).toMatchObject({candidates:[],unreliable:['workable'],exhausted:true,fallback:'paste_job_url'});
 });
 
+it.each([false, true])('links a saved page only when it resolves to the chosen board (%s)', async matched => {
+ const url='https://careers.example.org/jobs';
+ mocks.resolve.mockResolvedValueOnce({candidates:[{source:'ashby',token:matched?'known':'different'}]});
+ const result=await call({...follow,coverageRequestUrl:url});
+ expect(result.statusCode).toBe(matched?200:409);
+ if (matched) {
+  expect(mocks.resolve).toHaveBeenCalledWith(url);
+  expect(mocks.writes).toHaveBeenCalledWith('company_coverage_requests',{company_id:'company'});
+ } else expect(mocks.writes).not.toHaveBeenCalled();
+});
+
 it('records a canonical coverage request under the authenticated user without starting a crawl', async()=>{
  const result=await call({action:'request_coverage',careersUrl:'https://CAREERS.example.org/jobs/?utm_source=test#openings',userId:'another'});
  expect(result.statusCode).toBe(200);
- expect(mocks.writes).toHaveBeenCalledWith('company_coverage_requests',{user_id:'owner',careers_url:'https://careers.example.org/jobs'});
+ expect(mocks.writes).toHaveBeenCalledWith('company_coverage_requests',{user_id:'owner',careers_url:'https://careers.example.org/jobs/'});
  expect(mocks.fetch).not.toHaveBeenCalled();
 });
 

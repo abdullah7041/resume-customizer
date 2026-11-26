@@ -211,6 +211,16 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
     };
   }
 
+  let coverageUrl: string | undefined;
+  if (input.coverageRequestUrl) {
+    coverageUrl = canonicalCareersUrl(input.coverageRequestUrl);
+    if (!coverageUrl) return { statusCode: 400, headers: jsonHeaders, body: errorBody(400, 'coverage/invalid-url', 'Enter a public HTTPS careers page.') };
+    const report = await resolveCompany(coverageUrl);
+    if (!report.candidates.some(candidate => candidate.source === input.source && candidate.token === input.token)) {
+      return { statusCode: 409, headers: jsonHeaders, body: errorBody(409, 'coverage/board-mismatch', 'Could not verify this board for the saved careers page. Check coverage again.') };
+    }
+  }
+
   // The registry is shared: a company another user already added is reused rather
   // than duplicated, which is what keeps crawl cost tied to distinct companies.
   const { error: upsertError } = await supabase
@@ -241,13 +251,10 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
     return { statusCode: 500, headers: jsonHeaders, body: errorBody(500, 'server/error', 'Could not track that company') };
   }
 
-  if (input.coverageRequestUrl) {
-    const url = canonicalCareersUrl(input.coverageRequestUrl);
-    if (url) {
-      const { error } = await supabase.from('company_coverage_requests').update({company_id: company.id})
-        .eq('user_id', userId).eq('careers_url', url);
-      if (error) return {statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'coverage/link-failed', 'Company followed. Retry to update the saved page.')};
-    }
+  if (coverageUrl) {
+    const { error } = await supabase.from('company_coverage_requests').update({ company_id: company.id })
+      .eq('user_id', userId).eq('careers_url', coverageUrl).is('company_id', null);
+    if (error) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'coverage/link-failed', 'Company followed. Retry to update the saved page.') };
   }
 
   // Cold start: without an immediate crawl the feed sits empty until the next cron

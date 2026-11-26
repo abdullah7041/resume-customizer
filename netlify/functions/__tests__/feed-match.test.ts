@@ -66,6 +66,19 @@ describe('feed-match', () => {
     expect(checkRateLimitMock).not.toHaveBeenCalled();
     expect(getCachedMock).not.toHaveBeenCalled();
   });
+  it.each([null, { score: 77 }])('preserves quota when history cannot be read and Redis returns %j', async cached => {
+    const history = query({ data: null, error: new Error('history offline') });
+    fromMock.mockImplementation((table: string) => table === 'user_tracked_companies' ? query({ data: [{ company_id: 'company' }] })
+      : table === 'user_job_feed_checks' ? history : query({ data: { description: 'A specific role' } }));
+    getCachedMock.mockResolvedValue(cached);
+    const response = await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'cv', fingerprint: 'f', text: 'CV text' }] });
+    const body = JSON.parse(response.body ?? '{}');
+    if (cached) expect(body.results[0]).toMatchObject({ match: cached, cached: true, historySaved: false });
+    else expect(body.failures[0]).toMatchObject({ code: 'history_unavailable' });
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(processMatchOnlyMock).not.toHaveBeenCalled();
+  });
+
   it('records the full posting and CV revision for the authenticated owner even on a cache hit', async () => {
     const saved = query({ data: null, error: null });
     const { createHash } = await import('node:crypto');
