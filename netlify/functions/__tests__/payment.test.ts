@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -135,6 +135,24 @@ describe('GEIDEA checkout endpoint', () => {
     expect(response.statusCode).toBe(503);
     expect(fetch).not.toHaveBeenCalled();
     expect(response.body).not.toContain('private');
+  });
+  it('denies the wallet test before creating a purchase for a different account', async () => {
+    vi.stubEnv('GEIDEA_WALLET_TEST_USER_HASH', createHash('sha256').update(orderId).digest('hex'));
+    expect(JSON.parse((await invoke(checkout, { action: 'wallet-access' })).body)).toBe(false);
+    expect((await invoke(checkout, { action: 'create', wallet: 'apple-pay' })).statusCode).toBe(403);
+    expect(from).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('requests only the Apple Pay wallet for express checkout', async () => {
+    vi.stubEnv('GEIDEA_WALLET_TEST_USER_HASH', createHash('sha256').update(user.id).digest('hex'));
+    expect(JSON.parse((await invoke(checkout, { action: 'wallet-access' })).body)).toBe(true);
+    const response = await invoke(checkout, { action: 'create', language: 'ar', wallet: 'apple-pay' });
+    expect(response.statusCode).toBe(200);
+    const request = JSON.parse(vi.mocked(fetch).mock.calls[0][1]?.body as string);
+    expect(request.expressCheckouts).toEqual([{ wallet: 'apple-pay', label: 'Apple Pay' }]);
+    expect(request).not.toHaveProperty('appearance');
+    expect(request.merchantReferenceId).toBe(row?.id);
   });
   it('leaves navigation to the SDK for an embedded Arabic payment', async () => {
     const response = await invoke(checkout, { action: 'create', language: 'ar', embedded: true });

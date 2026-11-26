@@ -64,7 +64,7 @@ export async function geideaRequest(config: GeideaConfig, path: string, body?: u
 }
 
 const successCodes = { responseCode: z.literal('000'), detailedResponseCode: z.literal('000') };
-export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string; embedded?: boolean; direct?: boolean }) {
+export async function createCheckoutSession(config: GeideaConfig, reference: string, language: 'ar' | 'en', customerPack?: { email: string; wallet?: 'apple-pay'; embedded?: boolean; direct?: boolean }) {
   uuid.parse(reference);
   const amount = customerPack ? GEIDEA_PACK_PRICE_SAR : GEIDEA_TEST_AMOUNT;
   const timestamp = new Date().toISOString();
@@ -75,7 +75,9 @@ export async function createCheckoutSession(config: GeideaConfig, reference: str
     merchantReferenceId: reference,
     signature: signature(config, `${config.publicKey}${amount.toFixed(2)}SAR${reference}${timestamp}`),
     callbackUrl: `${config.siteUrl}/.netlify/functions/${customerPack ? 'payment-webhook' : 'geidea-webhook'}`,
-    ...(customerPack?.direct ? {
+    ...(customerPack?.wallet ? {
+      expressCheckouts: [{ wallet: customerPack.wallet, label: 'Apple Pay' }],
+    } : customerPack?.direct ? {
       returnUrl: `${config.siteUrl}/.netlify/functions/payment-bank-return?payment=${reference}&`,
     } : customerPack?.embedded ? {
       appearance: {

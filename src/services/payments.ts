@@ -68,8 +68,8 @@ export async function readPurchaseHistory(signal: AbortSignal) {
   return history.parse(await paymentRequest({ action: 'history' }, signal));
 }
 
-export async function createPayment(language: 'ar' | 'en', embedded = true): Promise<PaymentCheckout> {
-  return checkoutSchema.parse(await paymentRequest({ action: 'create', language, ...(embedded ? { embedded: true } : { direct: true }) }));
+export async function createPayment(language: 'ar' | 'en', method: 'card' | 'apple-pay' | 'hosted'): Promise<PaymentCheckout> {
+  return checkoutSchema.parse(await paymentRequest({ action: 'create', language, ...(method === 'apple-pay' ? { wallet: method } : method === 'hosted' ? { embedded: true } : { direct: true }) }));
 }
 
 export async function readPaymentStatus(paymentId: string, orderId?: string, signal?: AbortSignal): Promise<PaymentStatus> {
