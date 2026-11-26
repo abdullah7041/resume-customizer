@@ -21,6 +21,19 @@ const event = {
 };
 const incident = { issue: '12', release, signal: 'generate-pdf', merge, pr: 13 };
 
+test('browser handoff verifies synthetic UI data without a server login or probe secret', async () => {
+  const supabase = 'https://fixture.supabase.example';
+  const calls = [];
+  const report = await verifyProduction({ ...incident, signal: 'job_handoff_mismatch' }, {
+    AUTOFIX_PRODUCTION_ORIGIN: origin, AUTOFIX_SYNTHETIC_SUPABASE_ORIGIN: supabase,
+  }, {
+    fetcher: async url => { assert.ok(url.startsWith(origin + '/autofix-release.json?')); return Response.json({ commit: merge }); },
+    browserHandoff: async (...args) => { calls.push(args); return { passed: true, observation: 'The selected description matched.' }; },
+  });
+  assert.deepEqual(calls, [[origin, supabase]]);
+  assert.match(report, /^Partial verification.*selected description matched/);
+});
+
 test('identifies same-repository incident merges attributed to the human actor', () => {
   assert.deepEqual(incidentFromMerge(event, repo.full_name, human), incident);
   assert.equal(incidentFromMerge(event, repo.full_name, { type: 'Bot', login: 'human' }), null);

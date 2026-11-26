@@ -3,9 +3,16 @@ import puppeteer from 'puppeteer-core';
 
 // Exercise the deployed UI with a fresh authenticated browser, two distinct
 // postings, and synthetic responses. Only static production assets reach the network.
-export async function checkBrowserHandoff(origin, { supabase, session }) {
-  const browser = await puppeteer.launch({ channel: 'chrome', headless: true,
-    args: ['--no-sandbox', '--disable-background-networking', '--disable-dev-shm-usage'] });
+export async function checkBrowserHandoff(origin, supabase) {
+  const user = { id: randomUUID(), aud: 'authenticated', role: 'authenticated',
+    email: 'fixture@example.test', app_metadata: {}, user_metadata: {}, identities: [], created_at: new Date().toISOString() };
+  const session = { access_token: 'synthetic-offline-session', refresh_token: 'unused-fixture',
+    expires_at: Math.floor(Date.now() / 1000) + 3600, token_type: 'bearer', user };
+  const browser = await puppeteer.launch({ channel: 'chrome', executablePath: process.env.PDF_TEST_BROWSER || undefined,
+    env: { PATH: process.env.PATH, HOME: process.env.HOME || process.env.USERPROFILE, SystemRoot: process.env.SystemRoot },
+    headless: true,
+    args: ['--no-sandbox', '--disable-background-networking', '--disable-dev-shm-usage',
+      '--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE ' + new URL(origin).hostname] });
   const posting = (title) => ({ id: randomUUID(), companyId: 'fixture', companyName: 'Watheq Fixture',
     title, location: 'Riyadh', applyUrl: 'https://example.test/job', postedAt: new Date().toISOString(),
     firstSeenAt: new Date().toISOString(), publicationKind: 'published', publicationPrecision: 'timestamp' });
@@ -15,6 +22,9 @@ export async function checkBrowserHandoff(origin, { supabase, session }) {
   let fetchedSelected = false;
   try {
     const page = await browser.newPage();
+    const network = await page.createCDPSession();
+    await network.send('Network.enable');
+    await network.send('Network.setBlockedURLs', { urls: ['ws://*', 'wss://*'] });
     await page.setBypassServiceWorker(true);
     await page.setRequestInterception(true);
     page.on('request', async req => {

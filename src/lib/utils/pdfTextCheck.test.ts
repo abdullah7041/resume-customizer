@@ -145,8 +145,10 @@ it('checks real selectable, corrupt, visually blank and image-only PDFs with PDF
       whiteText.output('blob'), image(255), image(0)];
     const outcomes = [];
     for (const item of cases) outcomes.push(await inspect(item));
+    const arabic = new Blob([readFileSync('scripts/pdf-qualification/fixtures/minimal-mixed.pdf')]);
+    outcomes.push((await checkPdfBlob(arabic, { fields: [{ id: 'name', text: 'اسم' }] })).state);
     console.log(JSON.stringify(outcomes));
   `;
   const output = execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', program], { encoding: 'utf8', timeout: 45000 });
-  expect(JSON.parse(output.trim().split('\n').at(-1)!)).toEqual(['text_checked', 'corrupt', 'empty_text', 'empty_text', 'empty_text', 'raster_only']);
+  expect(JSON.parse(output.trim().split('\n').at(-1)!)).toEqual(['text_checked', 'corrupt', 'empty_text', 'empty_text', 'empty_text', 'raster_only', 'text_checked']);
 }, 50000);

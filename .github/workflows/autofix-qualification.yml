@@ -14,3 +14,14 @@ jobs:
       - uses: actions/checkout@v4
         with: {persist-credentials: false}
       - run: bash scripts/autofix/qualify.sh
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - run: npm ci --ignore-scripts
+      - name: Check the selected job reaches the editor in the built app
+        env:
+          VITE_SUPABASE_URL: https://fixture.supabase.example
+          VITE_SUPABASE_ANON_KEY: sb_publishable_fixture
+          VITE_JOB_CATALOGUE_ENABLED: 'true'
+        run: |
+          npm run build
+          node scripts/autofix/qualify-browser.mjs

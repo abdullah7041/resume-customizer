@@ -173,15 +173,16 @@ export async function verifyProduction(incident, env, {
     return 'Verification pending. Production served the merged release marker. The affected journey requires a separate safe production check.';
   }
   const token = env.AUTOFIX_PROBE_TOKEN;
-  if (!/^[a-zA-Z0-9_-]{32,128}$/.test(token ?? '')) {
+  if (!handoff && !/^[a-zA-Z0-9_-]{32,128}$/.test(token ?? '')) {
     return 'Verification pending. Production served the merged release marker. The synthetic probe credential is unavailable.';
   }
   const headers = { 'Content-Type': 'application/json', 'x-watheq-autofix-probe': token };
   let result;
   try {
     if (handoff) {
-      const credentials = await syntheticSession(fetcher, env);
-      result = credentials.session ? await browserHandoff(origin, credentials, token) : credentials;
+      const supabase = httpsOrigin(env.AUTOFIX_SYNTHETIC_SUPABASE_ORIGIN);
+      result = supabase ? await browserHandoff(origin, supabase)
+        : { passed: false, observation: 'The public Supabase origin for the isolated browser fixture is missing.' };
     } else {
       result = pdf ? await checkPdf(origin, fetcher, headers, readPdf) : await checkJobSearch(origin, fetcher, headers, env);
     }
