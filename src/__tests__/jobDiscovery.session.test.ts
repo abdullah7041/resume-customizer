@@ -31,3 +31,13 @@ for (const [name, request] of [
     await expect(request()).rejects.toMatchObject({ code: 'auth/session-changed' });
   });
 }
+
+it('restores feed history by an exact CV digest without posting any CV text to search', async () => {
+  const text = 'private experience'.repeat(1200);
+  const { fingerprintText } = await import('@/lib/match/assessmentContext');
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ checks: {} }) } as Response);
+  await searchJobs({ targetRoles: ['Engineer'], offset: 0, followedOnly: false, activeCV: { id: 'cv', language: 'en', text } }, new AbortController().signal);
+  const body = String(vi.mocked(fetch).mock.calls[0][1]?.body);
+  expect(body).not.toContain('private experience');
+  expect(JSON.parse(body).cv).toEqual({ id: 'cv', language: 'en', revision: await fingerprintText(text) });
+});

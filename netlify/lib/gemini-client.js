@@ -1,3 +1,4 @@
+import { labelOptimizeSources } from './optimize-source-labels.js';
 import { executeAiContract } from './ai-contracts/executor.js';
 import { MAX_PARSE_INPUT_CHARS } from './ai-contracts/contracts/index.js';
 import { MODELS } from './model-registry.js';
@@ -137,6 +138,7 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
 
   try {
     console.log(`[OpenRouter] Optimizing with ${MODELS.flash} (resume: ${trimmedResume.length} chars, JD: ${trimmedJD.length} chars)`);
+    const labels = labelOptimizeSources(options.evidenceSources ?? []);
     const result = await executeAiContract(contractId, {
       resumeText: trimmedResume,
       jobDescription: trimmedJD,
@@ -144,13 +146,13 @@ export async function optimizeResume(resumeText, jobDescription, language = 'en'
       vulnerabilities,
       userClarifications,
       userHardStops,
-      evidenceSources: options.evidenceSources || [],
+      evidenceSources: labels.sources,
     }, {
       ...options,
       featureName: options.featureName || 'optimize_resume',
     });
     console.log('[OpenRouter] Optimize contract validated');
-    return suppressHardStopClaims(result, userHardStops);
+    return suppressHardStopClaims(labels.restore(result), userHardStops);
   } catch (error) {
     console.error('[OpenRouter] Error in optimizeResume:', summarizeErrorForLog(error));
     throw error;

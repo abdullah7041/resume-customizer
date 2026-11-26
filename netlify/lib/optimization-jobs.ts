@@ -3,7 +3,7 @@ import { getRedis } from './redis-cache.js';
 import { jobRuntime } from './job-runtime.js';
 
 // Covers the 15-minute worker lifetime and Netlify's delayed invocation retries.
-// ponytail: ownership is bounded to this window; cross-day replay needs durable billing operation IDs.
+// A separate non-expiring marker protects uncertain debits after the private job expires.
 const CLAIM_TTL = 20 * 60;
 const RESULT_TTL = 600;
 export type OptimizationJob = {
@@ -33,19 +33,39 @@ export function newOptimizationJob(body: string): OptimizationJob {
   return { operationId: randomUUID(), secret: randomBytes(32).toString('hex'), issuedAt: Date.now(),
     inputHash: createHash('sha256').update(body).digest('hex'), body, state: 'queued' };
 }
-export async function readOptimizationJob(key: string): Promise<OptimizationJob | null> {
-  return redis().get<OptimizationJob>(key);
+type BillingHold = Pick<OptimizationJob, 'operationId' | 'error'> & { state: 'failed' };
+
+export async function readOptimizationJob(key: string): Promise<OptimizationJob | BillingHold | null> {
+  const [job, marker] = await redis().mget<[OptimizationJob | null, string | null]>(key, key + ':debit');
+  if (!marker || (job?.operationId === marker && job.state === 'running')) return job;
+  return { operationId: marker, state: 'failed', error: {
+    status: 503, code: 'OPTIMIZE_BILLING_RECONCILIATION', billingStateUnknown: true, retryable: false,
+    error: 'The previous charge needs review. Contact support with this reference.',
+  } };
+}
+
+/** Exactly one paid debit may begin for this account/input. No CV, email or bearer token is retained. */
+export async function beginOptimizationDebit(key: string, operationId: string | undefined): Promise<boolean> {
+  if (!operationId) return false;
+  return await redis().eval(`
+    local raw = redis.call('GET', KEYS[1])
+    if not raw then return 0 end
+    local job = cjson.decode(raw)
+    if job.operationId ~= ARGV[1] or job.state ~= 'running' then return 0 end
+    if not redis.call('SET', KEYS[2], ARGV[1], 'NX') then return 0 end
+    return 1`, [key, key + ':debit'], [operationId]) === 1;
 }
 export async function claimOptimizationJob(key: string, job: OptimizationJob): Promise<boolean> {
   return await redis().eval(`
+    if redis.call('EXISTS', KEYS[2]) == 1 then return 0 end
     local raw = redis.call('GET', KEYS[1])
     if raw then
       local old = cjson.decode(raw)
-      if old.state == 'queued' or old.state == 'running' or
+      if old.state ~= 'failed' or
         (old.state == 'failed' and old.error.billingStateUnknown) then return 0 end
     end
     redis.call('SET', KEYS[1], ARGV[1], 'EX', ARGV[2])
-    return 1`, [key], [JSON.stringify(job), CLAIM_TTL]) === 1;
+    return 1`, [key, key + ':debit'], [JSON.stringify(job), CLAIM_TTL]) === 1;
 }
 function envelopeSignature(envelope: Omit<OptimizationEnvelope, 'signature'>, secret: string): string {
   return createHmac('sha256', secret).update('watheq:optimization-job:v1\n' + JSON.stringify(envelope)).digest('hex');
@@ -85,8 +105,12 @@ export async function finishOptimizationJob(key: string, job: OptimizationJob): 
     if not raw then return 0 end
     local old = cjson.decode(raw)
     if old.operationId ~= ARGV[1] or old.state ~= 'running' then return 0 end
+    local marker = redis.call('GET', KEYS[2])
+    if marker and marker ~= ARGV[1] then return 0 end
     redis.call('SET', KEYS[1], ARGV[2], 'EX', ARGV[3])
-    return 1`, [key], [job.operationId, JSON.stringify(job), job.state === 'succeeded' ? RESULT_TTL : CLAIM_TTL]) === 1;
+    if marker and ARGV[4] == 'release' then redis.call('DEL', KEYS[2]) end
+    return 1`, [key, key + ':debit'], [job.operationId, JSON.stringify(job), job.state === 'succeeded' ? RESULT_TTL : CLAIM_TTL,
+      job.state === 'succeeded' || job.error?.code === 'OPTIMIZE_DEBIT_DECLINED' ? 'release' : 'retain']) === 1;
 }
 export async function dispatchOptimizationJob(key: string, job: OptimizationJob, headers: Record<string, string>, rawUrl?: string): Promise<void> {
   const siteUrl = jobRuntime(rawUrl).origin;

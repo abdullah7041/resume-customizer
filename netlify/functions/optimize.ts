@@ -4,9 +4,11 @@ import { optimizeResume } from "../lib/gemini-client.js";
 import { checkFreePreviewRateLimit } from "../lib/rate-limiter.js";
 import dispatchOptimization from './optimize-stream.js';
 import { OptimizeRequestSchema, formatZodError } from "../lib/resume-schemas.js";
-import { initSentry, captureError, summarizeErrorForLog } from "../lib/sentry.js";
+import { initSentry, captureError } from "../lib/sentry.js";
 import { checkCredits, consumeCredits, isEmailVerified } from "../lib/credit-manager.js";
 import { getSupabaseClient } from "../lib/supabase-client.js";
+import { beginOptimizationDebit } from '../lib/optimization-jobs.js';
+import { publicOptimizeCode } from '../lib/optimize-error-code.js';
 import { getClientIP } from "../lib/ip-utils.js";
 import { detectVulnerabilities } from "../lib/vulnerability-detector.js";
 import { buildOptimizeCacheKey, getCached, setCached } from "../lib/redis-cache.js";
@@ -32,7 +34,7 @@ async function attachLiveCredits<T extends Record<string, unknown>>(
   }
 }
 
-export const runOptimization = async (event: HandlerEvent) => {
+export const runOptimization = async (event: HandlerEvent, deploy?: { context: string; id: string }) => {
   let billingStateUnknown = false;
   let stage = 'cache';
   let evidenceFailures: Record<string, number> | undefined;
@@ -289,18 +291,27 @@ export const runOptimization = async (event: HandlerEvent) => {
 
     // Consume credits AFTER successful optimization
     stage = 'billing';
-    billingStateUnknown = !freePreview && Boolean(userEmail);
+    const operationId = event.headers['x-watheq-operation-id'];
+    if (!freePreview && userEmail) {
+      // A lost marker acknowledgement is also uncertain. Never proceed to debit in that case.
+      billingStateUnknown = true;
+      if (!await beginOptimizationDebit(cacheKey + ':job', operationId)) throw Object.assign(
+        new Error('Optimization charge is already held or worker ownership expired.'),
+        { code: 'OPTIMIZE_BILLING_RECONCILIATION', status: 503 });
+    }
     const creditResult = freePreview || !userEmail
       ? { success: true, creditsRemaining: null }
-      : await consumeCredits(userEmail, 'optimize');
+      : await consumeCredits(userEmail, 'optimize', null, operationId);
 
     if (!freePreview && userEmail && creditResult.success === false) {
+      billingStateUnknown = false;
       console.warn('[optimize] Credit consumption failed post-generation - balance raced to insufficient');
       return {
         statusCode: 403,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           error: "Insufficient credits",
+          code: 'OPTIMIZE_DEBIT_DECLINED', billingStateUnknown: false,
           creditsRequired: 5,
           creditsAvailable: creditResult.creditsRemaining ?? 0,
           creditsNeeded: Math.max(0, 5 - (creditResult.creditsRemaining ?? 0))
@@ -403,16 +414,17 @@ export const runOptimization = async (event: HandlerEvent) => {
     };
 
   } catch (error) {
-    const errorDetails = error as any;
-    console.error("Optimization error:", summarizeErrorForLog(error));
+    const errorDetails = error as { name?: string; status?: number; code?: string; retryable?: boolean } | null;
 
     // Preserve actionable pre-charge failures and keep unexpected errors generic.
     const isTimeout = errorDetails?.name === 'TimeoutError' || errorDetails?.status === 504;
-    const status = isTimeout ? 504 : [422, 502].includes(errorDetails?.status) ? errorDetails.status : 500;
-    const code = typeof errorDetails?.code === 'string' && /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(errorDetails.code)
-      ? errorDetails.code : isTimeout ? 'OPTIMIZE_TIMEOUT' : 'OPTIMIZE_FAILED';
-    captureError(new Error('Optimization failed'), { function: 'optimize', stage,
-      status, code, evidenceFailures, operationId: event.headers['x-watheq-operation-id'] });
+    const status = isTimeout ? 504 : (errorDetails?.status === 422 || errorDetails?.status === 502 || errorDetails?.status === 503) ? errorDetails.status : 500;
+    const code = publicOptimizeCode(errorDetails?.code, isTimeout);
+    const diagnostic = { function: 'optimize', stage, status, code, evidenceFailures,
+      operationId: event.headers['x-watheq-operation-id'], deployContext: deploy?.context, deployId: deploy?.id,
+      recovery: billingStateUnknown ? 'reconciliation' : 'before-charge' };
+    console.error('[optimize] Operation failed', diagnostic);
+    captureError(new Error('Optimization failed'), diagnostic);
 
     return {
       statusCode: status,
@@ -432,6 +444,7 @@ export const runOptimization = async (event: HandlerEvent) => {
         code,
         retryable: isTimeout || errorDetails?.retryable === true,
         billingStateUnknown,
+        reported: true,
       }),
     };
   }

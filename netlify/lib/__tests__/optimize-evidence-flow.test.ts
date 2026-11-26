@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('../optimization-jobs.js', async importOriginal => ({
   ...await importOriginal<typeof import('../optimization-jobs.js')>(),
-  readOptimizationJob: mocks.readJob, claimOptimizationWorker: mocks.claimWorker, finishOptimizationJob: mocks.finishJob,
+  beginOptimizationDebit: vi.fn().mockResolvedValue(true), readOptimizationJob: mocks.readJob, claimOptimizationWorker: mocks.claimWorker, finishOptimizationJob: mocks.finishJob,
 }));
 vi.mock('../gemini-client.js', () => ({ optimizeResume: mocks.optimizeResume }));
 vi.mock('../ai-contracts/executor.js', () => ({ executeAiContract: mocks.executeAiContract }));

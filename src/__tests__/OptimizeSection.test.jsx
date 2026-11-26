@@ -334,11 +334,11 @@ describe('OptimizeSection', () => {
             assessment: { context, jobSnapshot: jobDescription, requestId: 'fictional-run', createdAt: '2026-10-04', result: null } };
         renderWithProviders(<OptimizeSection resumeText={resumeText} jobDescription={jobDescription} assessmentKey={context.key} assessmentCurrent />);
         fireEvent.click(screen.getByText('export.evidenceReport.title'));
+        fireEvent.click(screen.getByText('export.evidenceReport.jobSnapshot'));
         expect(screen.getByRole('blockquote', { name: 'export.evidenceReport.jobSnapshot' })).toHaveTextContent(jobDescription);
-        fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.add' }));
-        fireEvent.change(screen.getByRole('textbox', { name: 'export.evidenceReport.requirement' }), { target: { value: jobDescription } });
-        fireEvent.change(screen.getByRole('combobox', { name: 'export.evidenceReport.source' }), { target: { value: source.id } });
+        fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.confirm' }));
         fireEvent.click(screen.getByRole('button', { name: 'export.evidenceReport.review' }));
+        fireEvent.click(await screen.findByText('export.evidenceReport.fileContents'));
         const preview = await screen.findByRole('textbox', { name: 'export.evidenceReport.preview' });
         const report = JSON.parse(preview.value);
         expect(report.status).toBe('current');

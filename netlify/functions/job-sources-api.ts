@@ -20,7 +20,7 @@ import { z } from 'zod';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
-import { resolveCompany } from '../lib/ats/probe.js';
+import { canonicalCareersUrl, resolveCompany } from '../lib/ats/probe.js';
 import { getProvider } from '../lib/ats/index.js';
 import type { AtsSource } from '../lib/ats/types.js';
 import { buildCacheKey, getCached, setCached } from '../lib/redis-cache.js';
@@ -44,15 +44,16 @@ const SOURCES = [
 
 const ResolveSchema = z.object({
   action: z.literal('resolve'),
-  query: z.string().trim().min(2).max(300),
+  query: z.string().trim().min(2).max(2048),
 });
 
 const TrackSchema = z.object({
   action: z.literal('track'),
   source: z.enum(SOURCES),
-  token: z.string().trim().min(1).max(200),
+  token: z.string().trim().min(1).max(2048),
   displayName: z.string().trim().min(1).max(120),
   careersUrl: z.string().trim().max(2048).optional(),
+  coverageRequestUrl: z.string().trim().max(2048).optional(),
 });
 
 const UntrackSchema = z.object({
@@ -65,7 +66,9 @@ const RecrawlSchema = z.object({
 });
 
 const RequirementsSchema = z.object({ action: z.literal('requirements'), postingIds: z.array(z.string().uuid()).max(500) });
-const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema, RequirementsSchema]);
+const RequestCoverageSchema = z.object({ action: z.literal('request_coverage'), careersUrl: z.string().max(2048) });
+const CoverageListSchema = z.object({ action: z.literal('list_coverage') });
+const RequestSchema = z.discriminatedUnion('action', [ResolveSchema, TrackSchema, UntrackSchema, RecrawlSchema, RequirementsSchema, RequestCoverageSchema, CoverageListSchema]);
 
 /** Keep manual refreshes on the same company lease as scheduled collection. */
 const MIN_MINUTES_BETWEEN_MANUAL_CRAWLS = 60;
@@ -105,6 +108,19 @@ const baseHandler: Handler = async (event) => {
     switch (parsed.data.action) {
       case 'resolve':
         return await handleResolve(parsed.data.query);
+      case 'request_coverage': {
+        const careersUrl = canonicalCareersUrl(parsed.data.careersUrl);
+        if (!careersUrl) return { statusCode: 400, headers: jsonHeaders, body: errorBody(400, 'coverage/invalid-url', 'Enter a public HTTPS careers page.') };
+        const { error } = await supabase.from('company_coverage_requests').upsert({ user_id: user.id, careers_url: careersUrl }, { onConflict: 'user_id,careers_url', ignoreDuplicates: true });
+        if (error) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'coverage/save-failed', 'Could not save the careers page. Try again.') };
+        return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ careersUrl }) };
+      }
+      case 'list_coverage': {
+        const { data, error } = await supabase.from('company_coverage_status')
+          .select('careers_url,company').eq('user_id', user.id).order('requested_at', {ascending: false});
+        if (error) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'coverage/read-failed', 'Could not load your saved careers pages.') };
+        return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ requests: data }) };
+      }
       case 'track':
         return await handleTrack(supabase, user.id, parsed.data, event.rawUrl);
       case 'untrack':
@@ -134,6 +150,7 @@ async function handleResolve(query: string) {
       candidates: report.candidates,
       unreliable: report.unreliable,
       exhausted: report.exhausted,
+      coverageUrl: report.coverageUrl,
       fallback: report.exhausted ? 'paste_job_url' : null,
     }),
   };
@@ -164,11 +181,12 @@ interface TrackInput {
   token: string;
   displayName: string;
   careersUrl?: string;
+  coverageRequestUrl?: string;
 }
 
 async function handleTrack(supabase: Supabase, userId: string, input: TrackInput, rawUrl?: string) {
   const provider = getProvider(input.source);
-  if (input.source !== 'jsonld' && (!provider || !provider.isValidToken(input.token))) {
+  if (!provider || !provider.isValidToken(input.token)) {
     return { statusCode: 400, headers: jsonHeaders, body: errorBody(400, 'source/invalid-token', 'That token is not valid for this job board.') };
   }
 
@@ -183,16 +201,29 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
   }
 
   if ((count ?? 0) >= MAX_TRACKED_COMPANIES) {
-    return {
+    const existing = await supabase.from('user_tracked_companies').select('company_id,ats_companies!inner(id)')
+      .eq('user_id', userId).eq('ats_companies.source', input.source).eq('ats_companies.token', input.token).maybeSingle();
+    if (existing.error) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'sources/unavailable', 'Could not read followed companies.') };
+    if (!existing.data) return {
       statusCode: 409,
       headers: jsonHeaders,
       body: errorBody(409, 'sources/limit-reached', `You can track up to ${MAX_TRACKED_COMPANIES} companies. Remove one to add another.`),
     };
   }
 
+  let coverageUrl: string | undefined;
+  if (input.coverageRequestUrl) {
+    coverageUrl = canonicalCareersUrl(input.coverageRequestUrl);
+    if (!coverageUrl) return { statusCode: 400, headers: jsonHeaders, body: errorBody(400, 'coverage/invalid-url', 'Enter a public HTTPS careers page.') };
+    const report = await resolveCompany(coverageUrl);
+    if (!report.candidates.some(candidate => candidate.source === input.source && candidate.token === input.token)) {
+      return { statusCode: 409, headers: jsonHeaders, body: errorBody(409, 'coverage/board-mismatch', 'Could not verify this board for the saved careers page. Check coverage again.') };
+    }
+  }
+
   // The registry is shared: a company another user already added is reused rather
   // than duplicated, which is what keeps crawl cost tied to distinct companies.
-  const { data: company, error: upsertError } = await supabase
+  const { error: upsertError } = await supabase
     .from('ats_companies')
     .upsert(
       {
@@ -201,12 +232,12 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
         display_name: input.displayName,
         careers_url: input.careersUrl ?? null,
       },
-      { onConflict: 'source,token', ignoreDuplicates: false },
-    )
-    .select('id, source, token, display_name, last_fetched_at')
-    .single();
+      { onConflict: 'source,token', ignoreDuplicates: true },
+    );
+  const { data: company, error: readError } = await supabase.from('ats_companies')
+    .select('id, source, token, display_name, last_fetched_at').eq('source', input.source).eq('token', input.token).single();
 
-  if (upsertError || !company) {
+  if (upsertError || readError || !company) {
     console.error('[JobSources] Company upsert failed:', summarizeErrorForLog(upsertError));
     return { statusCode: 500, headers: jsonHeaders, body: errorBody(500, 'server/error', 'Could not add that company') };
   }
@@ -218,6 +249,12 @@ async function handleTrack(supabase: Supabase, userId: string, input: TrackInput
   if (trackError) {
     console.error('[JobSources] Track failed:', summarizeErrorForLog(trackError));
     return { statusCode: 500, headers: jsonHeaders, body: errorBody(500, 'server/error', 'Could not track that company') };
+  }
+
+  if (coverageUrl) {
+    const { error } = await supabase.from('company_coverage_requests').update({ company_id: company.id })
+      .eq('user_id', userId).eq('careers_url', coverageUrl).is('company_id', null);
+    if (error) return { statusCode: 503, headers: jsonHeaders, body: errorBody(503, 'coverage/link-failed', 'Company followed. Retry to update the saved page.') };
   }
 
   // Cold start: without an immediate crawl the feed sits empty until the next cron

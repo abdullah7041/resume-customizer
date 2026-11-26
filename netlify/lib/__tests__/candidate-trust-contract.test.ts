@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({ optimizeResume: vi.fn(), getCached: vi.fn(), s
   checkCredits: vi.fn(), consumeCredits: vi.fn(), getUser: vi.fn(), readJob: vi.fn(), claimWorker: vi.fn(), finishJob: vi.fn() }));
 vi.mock('../optimization-jobs.js', async importOriginal => ({
   ...await importOriginal<typeof import('../optimization-jobs.js')>(),
-  readOptimizationJob: mocks.readJob, claimOptimizationWorker: mocks.claimWorker, finishOptimizationJob: mocks.finishJob,
+  beginOptimizationDebit: vi.fn().mockResolvedValue(true), readOptimizationJob: mocks.readJob, claimOptimizationWorker: mocks.claimWorker, finishOptimizationJob: mocks.finishJob,
 }));
 vi.mock('../gemini-client.js' , () => ({ optimizeResume: mocks.optimizeResume }));
 vi.mock('../redis-cache.js', () => ({ buildOptimizeCacheKey: () => 'candidate-trust', getCached: mocks.getCached, setCached: mocks.setCached }));
