@@ -6,7 +6,7 @@ vi.mock('@/components/sections/JobFeedSection',()=>({default:()=>null}));
 vi.mock('@/components/sections/JobAlertSettings',()=>({JobAlertSettings:()=>null}));
 vi.mock('@/components/sections/PipelineSection',()=>({PipelineSection:()=> <div>Saved applications workspace</div>}));
 vi.mock('@/services/jobSearch',()=>({searchJobs:mocks.search}));
-vi.mock('@/services/jobFeed',()=>({fetchServerSearchIntent:mocks.serverIntent,getPostingDescription:vi.fn(async()=> 'Job description'),saveSearchIntent:vi.fn(async()=>({error:null})),listFeedState:vi.fn(async()=>new Map()),setFeedState:vi.fn(),trackCompany:mocks.track,verifyFeedPosting:mocks.verify}));
+vi.mock('@/services/jobFeed',()=>({listCoverageRequests:vi.fn(async()=>({data:{requests:[]},error:null})),fetchServerSearchIntent:mocks.serverIntent,getPostingDescription:vi.fn(async()=> 'Job description'),saveSearchIntent:vi.fn(async()=>({error:null})),listFeedState:vi.fn(async()=>new Map()),setFeedState:vi.fn(),trackCompany:mocks.track,verifyFeedPosting:mocks.verify}));
 vi.mock('@/services/pipeline',()=>({createJobApplication:mocks.save}));
 vi.mock('@/lib/stores/resumeStore',()=>({useSearchIntent:()=>mocks.intent,useResumeStore:{getState:()=>({setSearchIntent:mocks.setIntent})}}));
 vi.mock('@/lib/resumeLibrary',()=>({useResumeLibraryStore:(select:(s:unknown)=>unknown)=>select({activeResumeId:'cv',entries:[{id:'cv',fingerprint:'v1',name:'My CV',plainText:'AI experience'}]})}));
@@ -33,7 +33,7 @@ it('confirms following immediately and keeps unknown categories off job cards',a
  render(<JobsFirstSection onToast={mocks.notify}/>); await screen.findByText('AI Engineer');
  expect(screen.queryByText(/Unclassified/)).not.toBeInTheDocument();
  fireEvent.click(screen.getByRole('button',{name:'Explore companies'}));
- fireEvent.click(await screen.findByRole('button',{name:'Follow company'}));
+ fireEvent.click(await screen.findByRole('button',{name:'Follow jobs'}));
  await screen.findByRole('button',{name:'Following'});
  expect(mocks.notify).toHaveBeenCalledWith(expect.objectContaining({type:'success',title:expect.stringContaining('Company followed')}));
 });
@@ -41,7 +41,7 @@ it('searches the verified directory directly before probing an external board',a
  mocks.search.mockResolvedValue({postings:[posting],companies:[company,{...company,id:'other',display_name:'Other employer',sector:'Healthcare'}],nextOffset:null});
  render(<JobsFirstSection/>); await screen.findByText('AI Engineer');
  fireEvent.click(screen.getByRole('button',{name:'Explore companies'}));
- fireEvent.change(screen.getByRole('textbox',{name:'Search verified companies'}),{target:{value:'Software'}});
+ fireEvent.change(screen.getByRole('textbox',{name:'Search companies'}),{target:{value:'Software'}});
  expect(screen.getByRole('heading',{name:'Example employer'})).toBeVisible();
  expect(screen.queryByRole('heading',{name:'Other employer'})).not.toBeInTheDocument();
 });
@@ -65,22 +65,49 @@ it('saving a job is explicit and repeated clicks cannot submit twice',async()=>{
  expect(screen.getByRole('button',{name:'Saved'})).toBeDisabled();
  expect(screen.getByRole('link',{name:'Apply on employer site'})).toHaveAttribute('href',posting.applyUrl);
 });
+it('restores a completed individual check after filters and remount, without another verification', async () => {
+ const { fingerprintText } = await import('@/lib/match/assessmentContext');
+ const revision = await fingerprintText('Job description');
+ const match = { score: 83 };
+ const page = { postings: [posting], companies: [], nextOffset: null };
+ mocks.search.mockResolvedValueOnce(page).mockResolvedValue({ ...page, checks: { job: { status: 'ready', match, jobRevision: revision } } });
+ mocks.verify.mockResolvedValue({ results: [{ match }], jobRevision: revision, failures: [] });
+ const view = render(<JobsFirstSection onMatchPosting={mocks.handoff}/>);
+ fireEvent.click(await screen.findByRole('button', { name: 'Check this job' }));
+ await screen.findByText('CV alignment · 83%');
+ fireEvent.change(screen.getByRole('combobox', { name: 'Published within' }), { target: { value: '30' } });
+ await screen.findByText('CV alignment · 83%');
+ view.unmount();
+ render(<JobsFirstSection onMatchPosting={mocks.handoff}/>);
+ await screen.findByText('CV alignment · 83%');
+ fireEvent.click(screen.getByRole('button', { name: 'Review & tailor' }));
+ await waitFor(() => expect(mocks.handoff).toHaveBeenCalledWith(expect.objectContaining({ match })));
+ expect(mocks.verify).toHaveBeenCalledOnce();
+});
+it('offers a recheck without showing a previous score for a changed CV or posting', async () => {
+ mocks.search.mockResolvedValue({ postings: [posting], companies: [], checks: { job: { status: 'stale' } }, nextOffset: null });
+ render(<JobsFirstSection/>);
+ await screen.findByText('Needs recheck');
+ expect(screen.queryByText(/CV alignment ·/)).not.toBeInTheDocument();
+ expect(screen.getByRole('button', { name: 'Check this job' })).toBeEnabled();
+ expect(mocks.verify).not.toHaveBeenCalled();
+});
 
 it('continues to unchecked jobs after ten descriptions are unavailable',async()=>{
  mocks.search.mockResolvedValue({postings:Array.from({length:20},(_,index)=>({...posting,id:'job'+index})),companies:[],nextOffset:null});
  mocks.verify.mockResolvedValue({results:[],failures:[{code:'missing_description'}]});
  render(<JobsFirstSection/>);await screen.findAllByText('AI Engineer');
  fireEvent.click(screen.getByRole('button',{name:'Check my matches (up to 10)'}));
- await screen.findByText('10 CV checks completed');
+ await screen.findByText('0 CV checks completed · 10 need attention');
  fireEvent.click(screen.getByRole('button',{name:'Check my matches (up to 10)'}));
- await screen.findByText('20 CV checks completed');
+ await screen.findByText('0 CV checks completed · 20 need attention');
  expect(new Set(mocks.verify.mock.calls.map(call=>call[0])).size).toBe(20);
 });
 it('marks an interrupted match request as failed and offers an explicit retry',async()=>{
  mocks.verify.mockRejectedValue(new Error('Connection interrupted'));
  render(<JobsFirstSection/>);await screen.findByText('AI Engineer');
  fireEvent.click(screen.getByRole('button',{name:'Check my matches (up to 10)'}));
- await screen.findByText('1 CV checks completed');
+ await screen.findByText('0 CV checks completed · 1 need attention');
  expect(screen.getByRole('button',{name:'Retry failed checks'})).toBeEnabled();
  expect(screen.queryByText('CV alignment · 0%')).not.toBeInTheDocument();
 });

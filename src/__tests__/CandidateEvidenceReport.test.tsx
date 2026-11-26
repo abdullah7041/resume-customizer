@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { CandidateEvidenceReport } from '@/components/sections/optimize/CandidateEvidenceReport';
 import { createAssessmentContext, fingerprintText } from '@/lib/match/assessmentContext';
 import type { EvidenceReportInput } from '@/types/evidence-report';
+import { privateStorage } from '@/lib/auth/privateSession';
+import { suggestRequirementRows } from '@/lib/optimize/evidenceSuggestions';
 import english from '@/locales/en/export.json';
 import arabic from '@/locales/ar/export.json';
 
@@ -39,7 +41,7 @@ describe('candidate controlled report panel', () => {
     expect(screen.getByRole('checkbox')).toBeChecked();
     const jobDescription = identity === 'context' ? 'Build APIs. Lead teams.' : input.jobDescription;
     const context = await createAssessmentContext({ resumeText: input.resumeText, jobDescription, language: 'en', kind: 'optimize', isOptimized: false, rubricVersion: 'optimize-v1' });
-    const run = { ...input.run!, assessment: { ...input.run!.assessment!, context, requestId: identity === 'request' ? 'next-request' : input.run!.assessment!.requestId } };
+    const run = { ...input.run!, assessment: { ...input.run!.assessment!, context, jobSnapshot: jobDescription, requestId: identity === 'request' ? 'next-request' : input.run!.assessment!.requestId } };
     rerender(<CandidateEvidenceReport {...input} jobDescription={jobDescription} run={run} />);
     expect(screen.queryByRole('textbox', { name: messages.requirement })).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox')).not.toBeChecked();
@@ -55,8 +57,11 @@ describe('candidate controlled report panel', () => {
     fireEvent.change(screen.getByRole('textbox', { name: messages.requirement }), { target: { value: 'Build APIs.' } });
     expect(screen.getAllByRole('option')).toHaveLength(2);
     fireEvent.change(screen.getByRole('combobox', { name: messages.source }), { target: { value: 'resume' } });
+    fireEvent.click(screen.getAllByRole('button', { name: messages.confirm }).at(-1)!);
     fireEvent.click(screen.getByRole('button', { name: messages.review }));
+    fireEvent.click(await screen.findByText(messages.fileContents));
     const preview = await screen.findByRole('textbox', { name: messages.preview });
+    expect(JSON.parse((preview as HTMLTextAreaElement).value).requirements).toHaveLength(1);
     expect((preview as HTMLTextAreaElement).value).toContain('candidate_associated');
     expect((preview as HTMLTextAreaElement).value).not.toContain('Private confidential detail');
     fireEvent.click(checkbox);
@@ -75,6 +80,7 @@ describe('candidate controlled report panel', () => {
     const { rerender } = render(<CandidateEvidenceReport {...input} />);
     fireEvent.click(screen.getByText(messages.title));
     fireEvent.click(screen.getByRole('button', { name: messages.review }));
+    fireEvent.click(await screen.findByText(messages.fileContents));
     const preview = await screen.findByRole('textbox', { name: messages.preview });
     const exact = (preview as HTMLTextAreaElement).value;
     fireEvent.click(screen.getByRole('button', { name: messages.download }));
@@ -90,7 +96,7 @@ describe('candidate controlled report panel', () => {
     expect(revokeUrl).not.toHaveBeenCalled();
     rerender(<CandidateEvidenceReport {...input} jobDescription="Changed job" assessmentCurrent={false} />);
     expect(screen.queryByRole('button', { name: messages.download })).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent(messages.changed);
+    expect(screen.getByRole('note')).toHaveTextContent(messages.historical);
     vi.unstubAllGlobals();
   });
 
@@ -100,7 +106,7 @@ describe('candidate controlled report panel', () => {
     fireEvent.click(screen.getByText(english.export.evidenceReport.title));
     fireEvent.click(screen.getByRole('button', { name: english.export.evidenceReport.review }));
     rerender(<CandidateEvidenceReport {...input} jobDescription="Changed during hashing" assessmentCurrent={false} />);
-    await waitFor(() => expect(screen.getByRole('button', { name: english.export.evidenceReport.review })).not.toBeDisabled());
+    await waitFor(() => expect(screen.queryByRole('button', { name: english.export.evidenceReport.review })).not.toBeInTheDocument());
     expect(screen.queryByRole('textbox', { name: english.export.evidenceReport.preview })).not.toBeInTheDocument();
   });
 
@@ -110,7 +116,7 @@ describe('candidate controlled report panel', () => {
     fireEvent.click(screen.getByText(english.export.evidenceReport.title));
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: english.export.evidenceReport.review }));
-    expect(await screen.findByRole('textbox', { name: english.export.evidenceReport.preview })).toBeInTheDocument();
+    expect(await screen.findByText(english.export.evidenceReport.noReviewed)).toBeInTheDocument();
   });
 
   it('renders only the valid choice but rejects its duplicate raw ID', async () => {
@@ -123,10 +129,57 @@ describe('candidate controlled report panel', () => {
     fireEvent.change(screen.getByRole('textbox', { name: messages.requirement }), { target: { value: 'Build APIs.' } });
     expect(screen.getAllByRole('option')).toHaveLength(2);
     fireEvent.change(screen.getByRole('combobox', { name: messages.source }), { target: { value: 'resume' } });
+    fireEvent.click(screen.getAllByRole('button', { name: messages.confirm }).at(-1)!);
     fireEvent.click(screen.getByRole('button', { name: messages.review }));
+    fireEvent.click(await screen.findByText(messages.fileContents));
     const preview = await screen.findByRole('textbox', { name: messages.preview });
     expect((preview as HTMLTextAreaElement).value).toContain('"status": "invalid_selection"');
     expect((preview as HTMLTextAreaElement).value).not.toContain('candidate_associated');
   });
 
+
+  it('opens a candidate-authored CV draft, preserves pending changes, and does not alter the reviewed quote', async () => {
+    const input = await props();
+    const messages = english.export.evidenceReport;
+    const navigate = vi.fn();
+    window.addEventListener('watheq:navigate-tab', navigate);
+    try {
+      render(<CandidateEvidenceReport {...input} />);
+      fireEvent.click(screen.getByText(messages.title));
+      fireEvent.click(screen.getByRole('button', { name: messages.reviewBullet }));
+      fireEvent.change(screen.getByRole('textbox', { name: messages.draftLabel }), { target: { value: 'Built reporting APIs for the sales team.' } });
+      privateStorage.setItem('watheq:pasteDraft', 'Another draft');
+      fireEvent.click(screen.getByRole('button', { name: messages.openDraft }));
+      expect(screen.getByRole('status')).toHaveTextContent(messages.existingDraft);
+      expect(navigate).not.toHaveBeenCalled();
+      privateStorage.removeItem('watheq:pasteDraft');
+      fireEvent.click(screen.getByRole('button', { name: messages.openDraft }));
+      expect(privateStorage.getItem('watheq:pasteDraft')).toBe('Built reporting APIs for the sales team.');
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(input.resumeText)).toBeVisible();
+    } finally {
+      privateStorage.removeItem('watheq:pasteDraft');
+      window.removeEventListener('watheq:navigate-tab', navigate);
+    }
+  });
+
+  it('distinguishes supported and missing passages and selects only literal requirements after an Arabic heading', async () => {
+    const sources = (await props()).sources;
+    const jd = 'عن الشركة\nنطور خدمات التقنية\nالمؤهلات\nBuild APIs for reporting.\nإجادة تحليل بيانات المبيعات.\nالمزايا\nتأمين طبي شامل.';
+    const rows = suggestRequirementRows(jd, sources[0].text, sources);
+    expect(rows.map(row => row.requirement)).toEqual(['Build APIs for reporting', 'إجادة تحليل بيانات المبيعات']);
+    expect(rows[0].evidence?.sourceId).toBe('resume');
+    expect(rows[1].evidence).toBeUndefined();
+  });
+
+  it('offers the existing refresh flow on stale assessments and hides current sources', async () => {
+    const refresh = vi.fn();
+    render(<CandidateEvidenceReport {...await props()} assessmentCurrent={false} onRefresh={refresh} refreshCost={0} />);
+    const messages = english.export.evidenceReport;
+    fireEvent.click(screen.getByText(messages.title));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(messages.free) }));
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: messages.review })).toBeNull();
+  });
 });

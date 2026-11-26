@@ -49,6 +49,9 @@
         "pending": "Optimization is still processing",
         "retrieve": "Check for results",
         "copied": "Support reference copied",
+        "reviewEvidence": "Review your CV evidence",
+        "openCv": "Open my CV",
+        "noEvidence": "No suggested rewrite could be traced to your CV. Add a concrete example from your work before trying again. No credits were charged.",
         "copy": "Copy support reference"
       }
     }

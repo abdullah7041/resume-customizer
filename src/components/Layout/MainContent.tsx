@@ -793,6 +793,7 @@ export default function MainContent() {
   const [isInterrogating, setIsInterrogating] = useState(false);
   const [optimizationFailure, setOptimizationFailure] = useState<string | null>(null);
   const [optimizationReference, setOptimizationReference] = useState<string | null>(null);
+  const [noVerifiedEdits, setNoVerifiedEdits] = useState(false);
   const [optimizationPending, setOptimizationPending] = useState(false);
   const [clarificationError, setClarificationError] = useState<string | null>(null);
   const completedClarificationContext = useRef('');
@@ -2321,7 +2322,12 @@ export default function MainContent() {
         const pending = error.code === 'OPTIMIZE_JOB_PENDING';
         setOptimizationPending(pending);
         setOptimizationReference(typeof error.operationId === 'string' ? error.operationId : null);
-        setOptimizationFailure(error?.message ?? 'Optimization failed');
+        const noEdits = error.code === 'OPTIMIZE_NO_VERIFIED_EDITS';
+        setNoVerifiedEdits(noEdits);
+        const failureMessage = noEdits
+          ? t('sections.optimize.failure.noEvidence', 'No suggested rewrite could be traced to your CV. Add a concrete example from your work before trying again. No credits were charged.')
+          : error?.message ?? 'Optimization failed';
+        setOptimizationFailure(failureMessage);
         useResumeStore.getState().setOptimizeRun({
           status: 'failed',
           finishedAt: new Date().toISOString(),
@@ -2346,9 +2352,9 @@ export default function MainContent() {
 
         pushToast(
           {
-            type: pending ? "info" : "danger",
-            title: pending ? t("sections.optimize.failure.pending", "Optimization is still processing") : t("toasts.optimizationFailed"),
-            description: descriptionParts.filter(Boolean).join(" • "),
+            type: pending || noEdits ? "info" : "danger",
+            title: noEdits ? t("sections.optimize.failure.reviewEvidence", "Review your CV evidence") : pending ? t("sections.optimize.failure.pending", "Optimization is still processing") : t("toasts.optimizationFailed"),
+            description: noEdits ? failureMessage : descriptionParts.filter(Boolean).join(" • "),
           },
           { id: TOAST_IDS.optimize }
         );
@@ -3176,9 +3182,10 @@ export default function MainContent() {
           {activeTab === "optimize" && flags.optimize && (
             <LazyErrorBoundary label="Optimize section">
               {optimizationFailure && (
-                <div role={optimizationPending ? "status" : "alert"} aria-label={optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')} className="mb-4 rounded-xl border border-red-500/30 bg-red-50 p-4 text-red-900 dark:bg-red-500/10 dark:text-red-100">
-                  <p className="font-semibold">{optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')}</p>
+                <div role={optimizationPending || noVerifiedEdits ? "status" : "alert"} aria-label={noVerifiedEdits ? t('sections.optimize.failure.reviewEvidence', 'Review your CV evidence') : optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')} className={`mb-4 rounded-xl border p-4 ${noVerifiedEdits || optimizationPending ? 'border-line bg-surface text-ink' : 'border-red-500/30 bg-red-50 text-red-900 dark:bg-red-500/10 dark:text-red-100'}`}>
+                  <p className="font-semibold">{noVerifiedEdits ? t('sections.optimize.failure.reviewEvidence', 'Review your CV evidence') : optimizationPending ? t('sections.optimize.failure.pending', 'Optimization is still processing') : t('sections.optimize.failure.title', 'Optimization failed')}</p>
                   <p className="mt-1 text-sm">{optimizationFailure}</p>
+                  {noVerifiedEdits && <GlassButton variant="secondary" onClick={() => setActiveTab('resume')}>{t('sections.optimize.failure.openCv', 'Open my CV')}</GlassButton>}
                   {optimizationReference && <p className="mt-1 break-all text-sm">{t('sections.optimize.failure.reference', 'Support reference')}: {optimizationReference}</p>}
                   <GlassButton variant="secondary" className="mt-3" disabled={isOptimizing || isCheckingClarifications} onClick={() => {
                     const args = retryOptimizeArgs.current;

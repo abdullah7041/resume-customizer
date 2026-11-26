@@ -11,6 +11,9 @@ import { NAME_PROBEABLE, URL_ONLY } from './index.js';
 import { parseWorkdayUrl, formatWorkdayToken, workday } from './workday.js';
 import { jsonld } from './jsonld.js';
 import type { AtsSource } from './types.js';
+import { assertPublicHttpUrl } from '../safe-fetch.js';
+import { SAUDI_STARTER_COMPANIES } from '../../../src/lib/jobs/saudiStarterCompanies.js';
+import { normalizeText, looseArabicKey } from '../../../src/lib/jobs/normalize.js';
 
 /**
  * Control tokens, deliberately of different shapes.
@@ -41,6 +44,7 @@ export interface ResolutionCandidate {
 }
 
 export interface ResolutionReport {
+  coverageUrl?: string;
   candidates: ResolutionCandidate[];
   /** Providers whose control probe answered, and whose results were therefore dropped. */
   unreliable: AtsSource[];
@@ -78,7 +82,10 @@ export async function resolveCompany(input: string): Promise<ResolutionReport> {
   const trimmed = input.trim();
   const candidates: ResolutionCandidate[] = [];
 
+  let urlSource: AtsSource | undefined;
   if (/^https?:\/\//i.test(trimmed)) {
+    const page = canonicalCareersUrl(trimmed);
+    if (!page) return { candidates: [], unreliable: [], exhausted: true };
     const coords = parseWorkdayUrl(trimmed);
     if (coords) {
       const token = formatWorkdayToken(coords);
@@ -87,15 +94,29 @@ export async function resolveCompany(input: string): Promise<ResolutionReport> {
         return { candidates: [{ source: 'workday', token, jobCount: result.count }], unreliable: [], exhausted: false };
       }
     }
+    const host = new URL(page).hostname;
+    if (/^(?:boards|job-boards)\.(?:eu\.)?greenhouse\.io$/.test(host)) urlSource = 'greenhouse';
+    else if (host === 'jobs.ashbyhq.com') urlSource = 'ashby';
+    else if (host === 'apply.workable.com') urlSource = 'workable';
+    else if (/^jobs\.(?:eu\.)?lever\.co$/.test(host)) urlSource = 'lever';
+    else if (/^[a-z0-9-]+\.pinpointhq\.com$/.test(host)) urlSource = 'pinpoint';
+    // An employer URL proves no relationship to a similarly named ATS tenant.
+    if (!urlSource) return tierTwo(page, []);
   }
 
-  const handle = toHandle(trimmed);
+  const arabicKey = looseArabicKey(trimmed);
+  const normalized = normalizeText(trimmed);
+  const known = SAUDI_STARTER_COMPANIES.find(company =>
+    normalizeText(company.displayName) === normalized ||
+    normalizeText(company.displayNameAr) === normalized ||
+    (arabicKey.length > 1 && looseArabicKey(company.displayNameAr) === arabicKey));
+  const handle = known?.token ?? toHandle(trimmed);
   if (!handle) return await tierTwo(trimmed, []);
 
   const { usable, unreliable } = await reliableProviders();
 
   await Promise.all(
-    usable.map(async (provider) => {
+    usable.filter(provider => !(known || urlSource) || provider.source === (known?.source ?? urlSource)).map(async (provider) => {
       try {
         const result = await provider.probe(handle);
         if (result.found) {
@@ -124,14 +145,28 @@ async function tierTwo(input: string, unreliable: AtsSource[]): Promise<Resoluti
     return { candidates: [], unreliable, exhausted: true };
   }
 
-  const result = await jsonld.probe(input);
-  if (!result.found) return { candidates: [], unreliable, exhausted: true };
+  const result = await jsonld.fetchPostings({source: 'jsonld', token: input});
+  if (!result.ok) return { candidates: [], unreliable, exhausted: true, coverageUrl: canonicalCareersUrl(input) };
 
   return {
-    candidates: [{ source: 'jsonld', token: input, jobCount: result.count }],
+    candidates: [{ source: 'jsonld', token: input, jobCount: result.postings.length }],
     unreliable,
     exhausted: false,
   };
+}
+
+export function canonicalCareersUrl(input: string): string | undefined {
+  try {
+    const url = assertPublicHttpUrl(input);
+    if (url.protocol !== 'https:' || !url.hostname.includes('.')) return;
+    url.hash = '';
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^utm_|^(fbclid|gclid)$/i.test(key)) url.searchParams.delete(key);
+    }
+    url.searchParams.sort();
+    const canonical = url.href.replace(/\/(?=\?|$)/, '');
+    return canonical.length <= 2048 ? canonical : undefined;
+  } catch { return; }
 }
 
 /**
@@ -143,7 +178,7 @@ export function toHandle(input: string): string {
   if (/^https?:\/\//i.test(input)) {
     try {
       const url = new URL(input);
-      const known = /(?:boards|job-boards)\.(?:eu\.)?greenhouse\.io|jobs\.ashbyhq\.com|apply\.workable\.com|jobs\.lever\.co/;
+      const known = /^(?:(?:boards|job-boards)\.(?:eu\.)?greenhouse\.io|jobs\.ashbyhq\.com|apply\.workable\.com|jobs\.(?:eu\.)?lever\.co)$/;
       if (known.test(url.hostname)) {
         return url.pathname.split('/').filter(Boolean)[0] ?? '';
       }

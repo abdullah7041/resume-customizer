@@ -2,12 +2,15 @@ import type { Handler } from '@netlify/functions';
 import { z } from 'zod';
 import { withRateLimit } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
-import { classifyEmployer, searchPostings } from '../lib/job-search.js';
+import { classifyEmployer, FEED_MATCH_CONTRACT, searchPostings } from '../lib/job-search.js';
 import { initSentry, captureError } from '../lib/sentry.js';
 import type { FeedPosting } from '../../src/lib/jobs/types.js';
 initSentry();
 const schema = z.object({ targetRoles: z.array(z.string().trim().min(1).max(120)).max(10), locations: z.array(z.string().max(100)).max(10).optional(), seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(), followedOnly: z.boolean().default(false), offset: z.number().int().min(0).max(100000).default(0), limit: z.number().int().min(1).max(50).default(20), maxAgeDays: z.number().min(1).max(365).optional() });
-const json = (statusCode: number, body: unknown) => ({ statusCode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+const searchSchema = schema.extend({ cv: z.object({
+    id: z.string().min(1).max(200), revision: z.string().regex(/^[a-f0-9]{64}$/), language: z.enum(['en', 'ar']),
+}).optional() });
+const json = (statusCode: number, body: unknown) => ({ statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }, body: JSON.stringify(body) });
 const baseHandler: Handler = async (event) => {
     try {
         if (event.httpMethod !== 'POST')
@@ -26,7 +29,7 @@ const baseHandler: Handler = async (event) => {
         catch {
             return json(400, { status: 400, code: 'invalid', message: 'Invalid search' });
         }
-        const parsed = schema.safeParse(input);
+        const parsed = searchSchema.safeParse(input);
         if (!parsed.success)
             return json(400, { status: 400, code: 'invalid', message: 'Invalid search' });
         if (process.env.JOB_CATALOGUE_ENABLED !== 'true')
@@ -46,10 +49,13 @@ const baseHandler: Handler = async (event) => {
         const ids = parsed.data.followedOnly ? trackedIds : [...new Set([...trackedIds, ...companies.map(row => row.id as string)])];
         const names = new Map(companies.map(row => [row.id, row.display_name]));
         if (trackedIds.length) {
-            const followed = await db.from('ats_companies').select('id,display_name').in('id', trackedIds);
+            const followed = await db.from('ats_companies').select('id,display_name,company_category,sector,classification_source,classification_verified_at,last_status,last_fetched_at,source,token').in('id', trackedIds);
             if (followed.error)
                 throw followed.error;
-            followed.data?.forEach(row => names.set(row.id, row.display_name));
+            for (const row of followed.data ?? []) {
+                if (!names.has(row.id)) companies.push({ ...classifyEmployer(row), followed: true });
+                names.set(row.id, row.display_name);
+            }
         }
         if (!parsed.data.targetRoles.length) return json(200, {postings:[], nextOffset:null, companies});
         const postings: FeedPosting[] = [];
@@ -65,7 +71,20 @@ const baseHandler: Handler = async (event) => {
             if ((result.data?.length ?? 0) < 500)
                 break;
         }
-        return json(200, { ...searchPostings(postings, parsed.data, parsed.data), companies });
+        const page = searchPostings(postings, parsed.data, parsed.data);
+        const cv = parsed.data.cv;
+        if (!cv || !page.postings.length) return json(200, { ...page, companies });
+        const history = await db.rpc('read_feed_checks', {
+            p_user: user.id, p_postings: page.postings.map(posting => posting.id),
+            p_resume: cv.id, p_revision: cv.revision, p_language: cv.language, p_contract: FEED_MATCH_CONTRACT,
+        });
+        if (history.error) {
+            captureError(new Error('Feed check history read failed'), { function: 'job-search' });
+            return json(200, { ...page, companies, historyUnavailable: true });
+        }
+        const checks = Object.fromEntries((history.data ?? []).map((row: { posting_id: string; job_revision: string | null; match: unknown }) =>
+            [row.posting_id, row.match ? { status: 'ready', match: row.match, jobRevision: row.job_revision } : { status: 'stale' }]));
+        return json(200, { ...page, companies, checks });
     }
     catch {
         captureError(new Error('Job search failed'), { function: 'job-search' });

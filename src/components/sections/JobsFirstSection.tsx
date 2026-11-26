@@ -2,6 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Bookmark, Building2, Check, CheckCircle2, ChevronRight, ExternalLink, FileText, LoaderCircle, MapPin, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import JobFeedSection from '@/components/sections/JobFeedSection';
+import { SAUDI_STARTER_COMPANIES } from '@/lib/jobs/saudiStarterCompanies';
+import { normalizeText } from '@/lib/jobs/normalize';
 import { CompanyLookup } from '@/components/sections/CompanyLookup';
 import { JobAlertSettings } from '@/components/sections/JobAlertSettings';
 import { searchJobs, type JobSearchPage } from '@/services/jobSearch';
@@ -11,6 +13,7 @@ import { getPrivateSessionRevision } from '@/lib/auth/privateSession';
 import { useResumeLibraryStore } from '@/lib/resumeLibrary';
 import { useSearchIntent, useResumeStore } from '@/lib/stores/resumeStore';
 import { postingAge } from '@/lib/jobs/age';
+import { fingerprintText } from '@/lib/match/assessmentContext';
 import type { FeedPosting } from '@/lib/jobs/types';
 import type { MatchResult } from '@/types/analysis';
 
@@ -20,13 +23,13 @@ type Props = {
   onMatchPosting?: (input: { jobDescription: string; companyName: string; jobTitle: string; match?: MatchResult }) => void;
   onToast?: (notice: Notice) => void;
 };
-type CheckResult = { status: 'checking' | 'ready' | 'failed'; match?: MatchResult; jobFingerprint?: string; failureCode?: string };
+type CheckResult = { status: 'checking' | 'ready' | 'failed' | 'stale'; match?: MatchResult; jobRevision?: string; historySaved?: boolean; failureCode?: string };
 const buttonClass = 'inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 const primaryClass = `${buttonClass} bg-emerald-700 text-white hover:bg-emerald-800`;
 const outlineClass = `${buttonClass} border border-emerald-700/35 bg-surface text-ink hover:bg-emerald-500/10`;
 
 export default function JobsFirstSection(props: Props) {
-  return import.meta.env.VITE_JOB_CATALOGUE_ENABLED === 'true' ? <CatalogueFeed {...props} /> : <JobFeedSection onMatchPosting={props.onMatchPosting} />;
+  return import.meta.env.VITE_JOB_CATALOGUE_ENABLED === 'true' ? <CatalogueFeed key={getPrivateSessionRevision()} {...props} /> : <JobFeedSection onMatchPosting={props.onMatchPosting} />;
 }
 
 function CatalogueFeed({ onMatchPosting, onToast }: Props) {
@@ -38,6 +41,8 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
   const entries = useResumeLibraryStore(state => state.entries);
   const activeId = useResumeLibraryStore(state => state.activeResumeId);
   const resume = entries.find(entry => entry.id === activeId);
+  const resumeId = resume?.id;
+  const resumeText = resume?.plainText;
   const [roles, setRoles] = useState(intent?.targetRoles.join(', ') ?? '');
   const [location, setLocation] = useState(intent?.locations?.[0] ?? '');
   const editedSearch = useRef(false);
@@ -97,9 +102,12 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
     const controller = new AbortController();
     setLoading(true); setError('');
     setPage(previous => previous ? { ...previous, postings: [], nextOffset: null } : null);
-    void searchJobs({ targetRoles: query.roles, locations: query.locations, seniority: intent?.seniority, followedOnly, offset, ...(age ? { maxAgeDays: Number(age) } : {}) }, controller.signal).then(result => {
+    const activeCV = resumeId && resumeText ? { id: resumeId, text: resumeText, language: ar ? 'ar' as const : 'en' as const } : undefined;
+    checkController.current?.abort();
+    void searchJobs({ targetRoles: query.roles, locations: query.locations, seniority: intent?.seniority, followedOnly, offset, activeCV, ...(age ? { maxAgeDays: Number(age) } : {}) }, controller.signal).then(result => {
       if (controller.signal.aborted) return;
       setPage(result);
+      setChecks(result.checks ?? {});
       if (searchRequested.current) {
         searchRequested.current = false;
         notify('success', text(`${result.postings.length} jobs shown for your search`, `نعرض ${result.postings.length} وظيفة لبحثك`));
@@ -108,15 +116,19 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
       if (!controller.signal.aborted) { setError(cause instanceof Error ? cause.message : text('Search failed. Try again.', 'تعذر البحث. حاول مجدداً.')); searchRequested.current = false; }
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [query, followedOnly, age, offset, refresh, intent?.seniority, notify, text]);
+  }, [query, followedOnly, age, offset, refresh, intent?.seniority, resumeId, resumeText, ar, notify, text]);
 
-  async function checkJobs(retryFailed = false) {
+  async function checkJobs(retryFailed = false, postingId?: string) {
     if (!resume || loading) return;
     const { id, fingerprint, plainText } = resume;
     checkController.current?.abort();
     const controller = new AbortController(); checkController.current = controller;
     const key = current.current;
-    const candidates = (page?.postings ?? []).filter(posting => retryFailed ? checks[posting.id]?.status === 'failed' : !checks[posting.id]).slice(0, 10);
+    const candidates = (page?.postings ?? []).filter(posting => {
+      const status = checks[posting.id]?.status;
+      if (postingId) return posting.id === postingId && status !== 'ready' && status !== 'checking';
+      return retryFailed ? status === 'failed' : !status || status === 'stale';
+    }).slice(0, 10);
     let next = 0; let failures = 0;
     setBatchSize(candidates.length);
     setChecks(previous => ({ ...previous, ...Object.fromEntries(candidates.map(posting => [posting.id, { status: 'checking' as const }])) }));
@@ -129,7 +141,7 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
           if (controller.signal.aborted || !isCurrent(key)) return;
           const match = result.results[0];
           if (!match) failures++;
-          setChecks(previous => ({ ...previous, [posting.id]: match ? { status: 'ready', match: match.match, jobFingerprint: result.jobFingerprint } : { status: 'failed', failureCode: result.failures[0]?.code } }));
+          setChecks(previous => ({ ...previous, [posting.id]: match ? { status: 'ready', match: match.match, jobRevision: result.jobRevision, historySaved: match.historySaved } : { status: 'failed', failureCode: result.failures[0]?.code } }));
         } catch {
           if (controller.signal.aborted || !isCurrent(key)) return;
           failures++;
@@ -154,9 +166,9 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
       if (action === 'tailor') {
         const check = checks[posting.id];
         let match: MatchResult | undefined;
-        if (check?.jobFingerprint && globalThis.crypto?.subtle) {
-          const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(description.trim().slice(0, 5000)));
-          if (Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('') === check.jobFingerprint) match = check.match;
+        if (check?.status === 'ready' && check.jobRevision && globalThis.crypto?.subtle) {
+          if (await fingerprintText(description) === check.jobRevision) match = check.match;
+          else if (isCurrent(key)) setChecks(previous => ({ ...previous, [posting.id]: { status: 'stale' } }));
         }
         if (!isCurrent(key)) return;
         notify('success', text('Job ready for review and tailoring', 'الوظيفة جاهزة للمراجعة والتخصيص'));
@@ -189,13 +201,16 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
   }
 
   const checking = Object.values(checks).filter(check => check.status === 'checking').length;
-  const checked = Object.values(checks).filter(check => check.status !== 'checking').length;
-  const canCheck = page?.postings.some(posting => !checks[posting.id]);
+  const checked = Object.values(checks).filter(check => check.status === 'ready').length;
+  const failed = Object.values(checks).filter(check => check.status === 'failed').length;
+  const summary = text(`${checked} CV checks completed`, `${checked} فحوص مكتملة`)
+    + (failed ? text(` · ${failed} need attention`, ` · ${failed} تحتاج متابعة`) : '');
+  const canCheck = page?.postings.some(posting => !checks[posting.id] || checks[posting.id].status === 'stale');
   const canRetry = page?.postings.some(posting => checks[posting.id]?.status === 'failed');
   const catalogue = new Map(page?.companies.map(company => [company.id, company]));
   const companyType = (category: string) => ({ startup: text('Startup', 'ناشئة'), scaleup: text('Scaleup', 'سريعة النمو'), enterprise: text('Enterprise', 'مؤسسة كبيرة'), public_sector: text('Public sector', 'قطاع حكومي') }[category] ?? '');
-  const companyNeedle = companyQuery.trim().toLocaleLowerCase();
-  const companies = (page?.companies ?? []).filter(company => (!companyCategory || company.company_category === companyCategory) && `${company.display_name} ${company.sector ?? ''} ${companyType(company.company_category)} ${company.token}`.toLocaleLowerCase().includes(companyNeedle));
+  const companyNeedle = normalizeText(companyQuery);
+  const companies = (page?.companies ?? []).filter(company => (!companyCategory || company.company_category === companyCategory) && normalizeText(`${company.display_name} ${company.sector ?? ''} ${companyType(company.company_category)} ${company.token} ${SAUDI_STARTER_COMPANIES.find(entry => entry.source === company.source && entry.token === company.token)?.displayNameAr ?? ''}`).includes(companyNeedle));
   const arrowClass = `h-4 w-4 shrink-0 ${ar ? 'rotate-180' : ''}`;
 
   return <section className="jobs-workspace space-y-4 text-ink" dir={ar ? 'rtl' : 'ltr'} aria-label={text('Jobs worth your time', 'وظائف تستحق وقتك')}>
@@ -206,28 +221,27 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
     <div className={`grid min-w-0 gap-4 ${tab === 'applications' ? '' : 'xl:grid-cols-[minmax(0,1fr)_250px]'}`}>
       <div className="min-w-0 space-y-4 rounded-2xl border border-line bg-surface p-3 sm:p-4">
         <nav className="flex flex-wrap gap-1 border-b border-line pb-2" aria-label={text('Jobs navigation', 'تصفح الوظائف')}>
-          {([['jobs', text('For you', 'لك')], ['companies', text('Explore companies', 'استكشف الشركات')], ['applications', text('Applications', 'طلباتي')]] as const).map(([value, label]) => <button key={value} className={`${buttonClass} ${tab === value ? 'bg-emerald-700 text-white shadow-sm' : 'text-ink hover:bg-emerald-500/10'}`} aria-pressed={tab === value} onClick={() => { setTab(value); setError(''); }}>{label}</button>)}
+          {([['jobs', text('For you', 'لك')], ['companies', text('Explore companies', 'استكشف الشركات')], ['applications', text('Applications', 'طلباتي')]] as const).map(([value, label]) => <button key={value} className={`${buttonClass} ${tab === value ? 'bg-emerald-700 text-white shadow-sm' : 'text-ink hover:bg-emerald-500/10'}`} aria-pressed={tab === value} onClick={() => { setTab(value); setError(''); setCompanyQuery(''); }}>{label}</button>)}
         </nav>
         {tab === 'applications' ? <div className="space-y-4">
           <button className={outlineClass} onClick={() => setTab('jobs')}><ArrowLeft className={arrowClass} aria-hidden="true" />{text('Back to jobs', 'العودة للوظائف')}</button>
           <Suspense fallback={<p role="status">{text('Loading applications…', 'جارٍ تحميل الطلبات…')}</p>}><Applications /></Suspense>
         </div> : tab === 'companies' ? <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">{text('Discover companies', 'اكتشف الشركات')}</h3><span className="text-xs text-ink-muted">{text(`${page?.companies.length ?? 0} verified employers`, `${page?.companies.length ?? 0} صاحب عمل موثق`)}</span></div>
-          <label className="flex items-center gap-2 rounded-lg border border-line bg-background px-3"><Search className="h-4 w-4 text-ink-muted" aria-hidden="true" /><input aria-label={text('Search verified companies', 'ابحث في الشركات الموثقة')} className="min-h-11 min-w-0 flex-1 bg-transparent text-sm outline-none" value={companyQuery} placeholder={text('Search companies or sectors', 'ابحث باسم الشركة أو القطاع')} onChange={event => setCompanyQuery(event.target.value)} /></label>
+          <CompanyLookup key={getPrivateSessionRevision()} onQueryChange={value => { setCompanyQuery(value); setCompanyCategory(''); }} onFollowed={() => setRefresh(value => value + 1)} directory={page?.companies} />
           <div className="flex flex-wrap gap-2" aria-label={text('Company categories', 'فئات الشركات')}>
             {['', 'startup', 'scaleup', 'enterprise', 'public_sector'].map(category => <button key={category} className={`${buttonClass} ${companyCategory === category ? 'bg-emerald-700 text-white' : 'bg-emerald-500/10 text-ink'}`} aria-pressed={companyCategory === category} onClick={() => setCompanyCategory(category)}>{category ? companyType(category) : text('All companies', 'كل الشركات')}</button>)}
           </div>
           {error && <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-sm text-destructive">{error}</p>}
           {feedback && <p role="status" className="text-sm text-ink-muted">{feedback.title}</p>}
           {loading && !page?.companies.length && <p role="status">{text('Loading verified companies…', 'جارٍ تحميل الشركات الموثقة…')}</p>}
-          {!loading && !error && !companies.length && <p className="text-sm text-ink-muted">{text('No verified companies match this search. Try another name or the careers-page search below.', 'لا توجد شركات موثقة بهذا البحث. جرّب اسماً آخر أو رابط التوظيف أدناه.')}</p>}
+          {!loading && !error && !companies.length && <p className="text-sm text-ink-muted">{text('No companies in the directory match these filters.', 'لا توجد شركات في الدليل تطابق هذه التصفية.')}</p>}
           <div className="grid gap-3 sm:grid-cols-2">{companies.map(company => <article key={company.id} className="space-y-3 rounded-xl border border-line bg-background p-4">
             <div className="flex items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-lg font-bold text-white" aria-hidden="true">{company.display_name.slice(0, 1)}</span><h3 className="font-semibold">{company.display_name}</h3></div>
             <div className="flex flex-wrap gap-1.5">{companyType(company.company_category) && <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-xs font-medium">{companyType(company.company_category)}</span>}{company.sector && <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-xs">{company.sector}</span>}</div>
             <p className="text-xs text-ink-muted">{company.last_status === 'ok' ? text('Board checked', 'تم فحص المصدر') : text('Board needs checking', 'المصدر بحاجة للفحص')} · {company.last_fetched_at ? new Date(company.last_fetched_at).toLocaleString(ar ? 'ar-SA' : 'en-GB') : text('Not checked yet', 'لم يُفحص بعد')}</p>
-            <button className={outlineClass} disabled={company.followed || busy !== null} onClick={() => void follow(company)}>{busy === `follow:${company.id}` ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : company.followed ? <Check className="h-4 w-4" aria-hidden="true" /> : null}{company.followed ? text('Following', 'تتابعها') : busy === `follow:${company.id}` ? text('Following company…', 'جارٍ متابعة الشركة…') : text('Follow company', 'تابع الشركة')}</button>
+            <button className={outlineClass} disabled={company.followed || busy !== null} onClick={() => void follow(company)}>{busy === `follow:${company.id}` ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : company.followed ? <Check className="h-4 w-4" aria-hidden="true" /> : null}{company.followed ? text('Following', 'تتابعها') : busy === `follow:${company.id}` ? text('Following company…', 'جارٍ متابعة الشركة…') : text('Follow jobs', 'تابع الوظائف')}</button>
           </article>)}</div>
-          <CompanyLookup onFollowed={() => setRefresh(value => value + 1)} />
         </div> : <>
           <form className="grid items-end gap-2 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto]" onSubmit={event => {
             event.preventDefault();
@@ -256,7 +270,7 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
           {feedback && <p role="status" aria-live="polite" className="text-sm text-ink-muted">{feedback.title}</p>}
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-background px-3 py-2" aria-live="polite">
             <button className={outlineClass} disabled={!resume || !canCheck || checking > 0 || loading} onClick={() => void checkJobs()}>{checking ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-4 w-4" aria-hidden="true" />}{text('Check my matches (up to 10)', 'افحص التوافق (حتى 10)')}</button>
-            <p className="text-xs font-medium" role="status">{checking > 0 ? text(`Checking your CV · ${batchSize - checking} of ${batchSize} finished`, `فحص سيرتك · اكتمل ${batchSize - checking} من ${batchSize}`) : loading ? text('Finding relevant jobs…', 'جارٍ البحث عن وظائف مناسبة…') : text(`${checked} CV checks completed`, `${checked} فحوص مكتملة`)}</p>
+            <p className="text-xs font-medium" role="status">{checking > 0 ? text(`Checking your CV · ${batchSize - checking} of ${batchSize} finished`, `فحص سيرتك · اكتمل ${batchSize - checking} من ${batchSize}`) : loading ? text('Finding relevant jobs…', 'جارٍ البحث عن وظائف مناسبة…') : summary}</p>
             {checking > 0 && <progress className="h-2 min-w-24 flex-1 accent-emerald-700" max={batchSize} value={batchSize - checking} aria-label={text('CV check progress', 'تقدم فحص السيرة')} />}
             {canRetry && <button className={`${buttonClass} underline`} disabled={checking > 0 || loading} onClick={() => void checkJobs(true)}>{text('Retry failed checks', 'أعد محاولة الفحوص المتعثرة')}</button>}
           </div>
@@ -269,7 +283,11 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
             return <article key={posting.id} className="grid gap-3 rounded-xl border border-line bg-background p-3 transition-shadow hover:shadow-sm lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.3fr)_minmax(0,1.15fr)_148px] lg:items-center lg:gap-4 sm:p-4">
               <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-700 font-bold text-white" aria-hidden="true">{posting.companyName.slice(0, 1)}</span><span className="text-sm font-semibold leading-snug">{posting.companyName}</span></div>
               <div className="min-w-0 space-y-1.5 lg:border-s lg:border-line lg:ps-4"><h3 className="font-bold leading-snug">{posting.title}</h3><p className="flex items-start gap-1 text-xs text-ink-muted"><MapPin className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />{posting.location}</p><div className="flex flex-wrap gap-1">{company && companyType(company.company_category) && <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium">{companyType(company.company_category)}</span>}{company?.sector && <span className="rounded-full bg-emerald-500/12 px-2 py-0.5 text-[11px]">{company.sector}</span>}</div><p className="text-[11px] text-ink-muted">{date.iso ? `${date.kind === 'posted' ? text('Published', 'نُشرت') : text('First seen', 'رصدناها لأول مرة')} ${new Date(date.iso).toLocaleDateString(ar ? 'ar-SA' : 'en-GB')}` : text('Publication date unavailable', 'تاريخ النشر غير متاح')}</p></div>
-              <div className="min-w-0 space-y-1.5 lg:border-s lg:border-line lg:ps-4"><p role="status" className="text-xs">{check?.status === 'checking' ? <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><LoaderCircle className="h-3 w-3 animate-spin" aria-hidden="true" />{text('Checking against your CV…', 'جارٍ فحص التوافق مع سيرتك…')}</span> : check?.status === 'failed' ? <span className="text-amber-700 dark:text-amber-300">{check.failureCode === 'missing_description' ? text('No complete description to check', 'لا يوجد وصف كامل للفحص') : check.failureCode === 'limit_reached' ? text('Daily check limit reached', 'بلغت حد الفحص اليومي') : text('Check failed. Retry available.', 'تعذر الفحص. يمكنك المحاولة مجدداً.')}</span> : match ? <><span className={`mb-1 inline-block rounded-full px-2 py-0.5 font-semibold ${match.score >= 75 ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200' : 'bg-amber-500/15 text-amber-900 dark:text-amber-200'}`}>{match.score >= 75 ? text('Strong alignment', 'توافق قوي') : text('Review alignment', 'راجع التوافق')}</span><span className="block font-medium">{text('CV alignment', 'توافق السيرة')} · {match.score}%</span></> : <span className="rounded-full bg-ink/5 px-2 py-1 text-ink-muted">{text('Not checked against your CV', 'لم يُفحص التوافق مع سيرتك')}</span>}</p>
+<div className="min-w-0 space-y-1.5 lg:border-s lg:border-line lg:ps-4"><p role="status" className="text-xs">{check?.status === 'checking' ? <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300"><LoaderCircle className="h-3 w-3 animate-spin" aria-hidden="true" />{text('Checking against your CV…', 'جارٍ فحص التوافق مع سيرتك…')}</span> : check?.status === 'failed' ? <span className="text-amber-700 dark:text-amber-300">{check.failureCode === 'missing_description' ? text('No complete description to check', 'لا يوجد وصف كامل للفحص') : check.failureCode === 'limit_reached' ? text('Daily check limit reached', 'بلغت حد الفحص اليومي') : text('Check failed. Retry available.', 'تعذر الفحص. يمكنك المحاولة مجدداً.')}</span> : match ? <><span className={`mb-1 inline-block rounded-full px-2 py-0.5 font-semibold ${match.score >= 75 ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200' : 'bg-amber-500/15 text-amber-900 dark:text-amber-200'}`}>{match.score >= 75 ? text('Strong alignment', 'توافق قوي') : text('Review alignment', 'راجع التوافق')}</span><span className="block font-medium">{text('CV alignment', 'توافق السيرة')} · {match.score}%</span></> : <span className="rounded-full bg-ink/5 px-2 py-1 text-ink-muted">{check?.status === 'stale' ? text('Needs recheck', 'يحتاج إلى إعادة الفحص') : page.historyUnavailable ? text('Saved check unavailable', 'الفحص المحفوظ غير متاح') : text('Not checked against your CV', 'لم يُفحص التوافق مع سيرتك')}</span>}</p>
+                {check?.historySaved === false && <p role="status" className="text-xs text-amber-700">{text('Result available here. Could not save this check.', 'النتيجة متاحة هنا. تعذر حفظ هذا الفحص.')}</p>}
+                {!match && <button className={outlineClass} disabled={!resume || checking > 0 || loading} onClick={() => void checkJobs(false, posting.id)}>
+                  {text('Check this job', 'افحص هذه الوظيفة')}
+                </button>}
                 {match?.summary_bullets?.[0] && <p className="text-xs leading-relaxed"><strong>{text('Evidence: ', 'الدليل: ')}</strong>{match.summary_bullets[0]}</p>}{match?.gapAnalysis?.[0] && <p className="text-xs leading-relaxed"><strong>{text('Gap: ', 'الفجوة: ')}</strong>{match.gapAnalysis[0].requirement}</p>}
               </div>
               <div className="flex flex-wrap gap-2 lg:flex-col"><button className={primaryClass} disabled={!onMatchPosting || busy !== null} onClick={() => void act(posting, 'tailor')}>{busy === `tailor:${posting.id}` ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}{busy === `tailor:${posting.id}` ? text('Preparing…', 'جارٍ التجهيز…') : text('Review & tailor', 'راجع وخصّص')}<ChevronRight className={arrowClass} aria-hidden="true" /></button><button className={outlineClass} disabled={busy !== null || saved.has(posting.id)} onClick={() => void act(posting, 'save')}>{busy === `save:${posting.id}` ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : saved.has(posting.id) ? <Check className="h-4 w-4" aria-hidden="true" /> : <Bookmark className="h-4 w-4" aria-hidden="true" />}{saved.has(posting.id) ? text('Saved', 'محفوظة') : busy === `save:${posting.id}` ? text('Saving…', 'جارٍ الحفظ…') : text('Save', 'حفظ')}</button><a className="inline-flex min-h-8 items-center justify-center gap-1 text-xs text-ink-muted underline underline-offset-2" href={posting.applyUrl} target="_blank" rel="noopener noreferrer" onClick={() => notify('info', text('Employer page opened. Confirm Applied in Applications after submitting.', 'فتحنا صفحة صاحب العمل. أكد التقديم في طلباتي بعد إرساله.'))}>{text('Apply on employer site', 'قدّم في موقع صاحب العمل')}<ExternalLink className="h-3 w-3" aria-hidden="true" /></a></div>

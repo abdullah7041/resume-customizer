@@ -4,7 +4,7 @@ const mocks=vi.hoisted(()=>({from:vi.fn(),fetch:vi.fn(),resolve:vi.fn(),getUser:
 vi.mock('../../lib/supabase-client.js',()=>({getSupabaseClient:()=>({auth:{getUser:mocks.getUser},from:mocks.from})}));
 vi.mock('../../lib/rate-limiter.js',()=>({withRateLimit:(_key:string,handler:Handler)=>handler}));
 vi.mock('../../lib/sentry.js',()=>({initSentry:vi.fn(),captureError:vi.fn(),summarizeErrorForLog:()=>({message:'failed'})}));
-vi.mock('../../lib/ats/probe.js',()=>({resolveCompany:mocks.resolve}));
+vi.mock('../../lib/ats/probe.js',async(importOriginal)=>({...await importOriginal<typeof import('../../lib/ats/probe.js')>(),resolveCompany:mocks.resolve}));
 vi.mock('../../lib/ats/index.js',()=>({getProvider:()=>({isValidToken:()=>true})}));
 vi.mock('../../lib/redis-cache.js',()=>({buildCacheKey:vi.fn(),getCached:vi.fn(),setCached:vi.fn()}));
 import {handler} from '../job-sources-api.js';
@@ -38,4 +38,16 @@ it('returns verified resolver candidates and explicit exhausted fallback without
  mocks.resolve.mockResolvedValue({candidates:[],unreliable:['workable'],exhausted:true});
  const result=await call({action:'resolve',query:'Unknown employer'});
  expect(JSON.parse(result.body ?? '{}')).toMatchObject({candidates:[],unreliable:['workable'],exhausted:true,fallback:'paste_job_url'});
+});
+
+it('records a canonical coverage request under the authenticated user without starting a crawl', async()=>{
+ const result=await call({action:'request_coverage',careersUrl:'https://CAREERS.example.org/jobs/?utm_source=test#openings',userId:'another'});
+ expect(result.statusCode).toBe(200);
+ expect(mocks.writes).toHaveBeenCalledWith('company_coverage_requests',{user_id:'owner',careers_url:'https://careers.example.org/jobs'});
+ expect(mocks.fetch).not.toHaveBeenCalled();
+});
+
+it.each(['http://example.org/jobs','https://localhost/jobs','https://127.0.0.1/jobs','https://user:password@example.org/jobs'])('rejects an unsuitable saved page', async url=>{
+ expect((await call({action:'request_coverage',careersUrl:url})).statusCode).toBe(400);
+ expect(mocks.writes).not.toHaveBeenCalled();
 });

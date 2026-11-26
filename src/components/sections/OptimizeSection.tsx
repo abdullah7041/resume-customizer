@@ -46,6 +46,7 @@ import { JobVariantsBar } from './JobVariantsBar';
 import { CharacterResultsCompanion } from '@/components/shared/CharacterResultsCompanion';
 import { GuestValidationPrompt } from '@/components/Feedback/GuestValidationPrompt';
 import { createAssessmentContext } from '@/lib/match/assessmentContext';
+import { FEATURE_COSTS } from '@/types/credits';
 import { CandidateEvidenceReport } from '@/components/sections/optimize/CandidateEvidenceReport';
 import type { CachedAnalysis } from '@/types/templates';
 import type { EditEvidence, EvidenceInputOmissions, EvidenceSource } from '@/types/optimization-evidence';
@@ -1153,9 +1154,11 @@ export function OptimizeSection({
 
   return (
     <div className="space-y-6">
-      {optimizeRun?.assessment && <CandidateEvidenceReport resumeText={resumeText ?? ''} jobDescription={jobDescription}
+      {(optimizeRun?.assessment || optimizeRun?.status === 'succeeded') && <CandidateEvidenceReport resumeText={resumeText ?? ''} jobDescription={jobDescription}
         language={isArabic ? 'ar' : 'en'} assessmentCurrent={assessmentCurrent} run={optimizeRun}
-        sources={evidenceSources ?? []} cards={optimizations ?? []} omissions={omissions} />}
+        sources={evidenceData?.evidenceSources ?? []} cards={optimizations ?? []} omissions={omissions}
+        onRefresh={handleGenerate} refreshDisabled={isBusy || !hasResume || !jobDescription.trim() || creditsLoading}
+        refreshCost={isGuestMode && hasFreePreviewRun() ? 0 : FEATURE_COSTS.optimize} />}
       {omissions && (omissions.resumeCharacters !== 0 || omissions.clarificationCharacters !== 0) && (
         <p role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-950 dark:text-amber-100">
           {t('optimization.inputOmitted', { defaultValue: 'Some supplied input was omitted before analysis: {{resume}} resume characters and {{clarifications}} answer characters. The suggestions did not evaluate that omitted text.',

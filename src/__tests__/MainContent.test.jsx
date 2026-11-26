@@ -1520,6 +1520,24 @@ describe("MainContent resume parsing", () => {
     expect(screen.queryByRole('alert', { name: 'Optimization failed' })).not.toBeInTheDocument();
   });
 
+  it('offers a CV review and support reference after an uncharged evidence rejection', async () => {
+    localStorage.setItem('watheq:lastActiveTab', 'optimize');
+    localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Parsed resume', sections: [] }));
+    localStorage.setItem('watheq:lastJobDescription', 'Analytics role');
+    generateClarificationsMock.mockResolvedValue({ clarifications: [] });
+    const operationId = '12345678-1234-4234-8234-123456789012';
+    optimizeResumeStreamMock.mockRejectedValueOnce(Object.assign(new Error('Unverified edits'), {
+      code: 'OPTIMIZE_NO_VERIFIED_EDITS', status: 422, jobFailed: true, isBillingStateUnknown: false, operationId,
+    }));
+    render(<MainContent />);
+    fireEvent.click(await screen.findByRole('button', { name: /run optimize/i }));
+    const notice = await screen.findByRole('status', { name: 'Review your CV evidence' });
+    expect(notice).toHaveTextContent('No credits were charged');
+    expect(notice).toHaveTextContent(operationId);
+    fireEvent.click(screen.getByRole('button', { name: 'Open my CV' }));
+    expect(optimizeResumeStreamMock).toHaveBeenCalledTimes(1);
+  });
+
   it.each([false, true])('retrieves an uncertain operation and permits a new run only after known-safe failure (%s)', async (terminalFailure) => {
     localStorage.setItem('watheq:lastActiveTab', 'optimize');
     localStorage.setItem('watheq:resumeData', JSON.stringify({ plainText: 'Parsed resume', sections: [] }));

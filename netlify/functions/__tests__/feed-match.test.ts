@@ -28,7 +28,7 @@ const { handler } = await import('../feed-match.js');
 
 function query(result: unknown) {
   const chain: Record<string, unknown> = {};
-  for (const method of ['select', 'eq', 'in', 'is']) chain[method] = vi.fn(() => chain);
+  for (const method of ['select', 'eq', 'in', 'is', 'upsert', 'match']) chain[method] = vi.fn(() => chain);
   chain.maybeSingle = vi.fn().mockResolvedValue(result);
   chain.then = (resolve: (value: unknown) => void) => resolve(result);
   return chain;
@@ -55,6 +55,34 @@ beforeEach(() => {
 });
 
 describe('feed-match', () => {
+  it('reopens the durable result after Redis expires without spending provider quota', async () => {
+    const history = query({ data: { match: { score: 83 } }, error: null });
+    fromMock.mockImplementation((table: string) => table === 'user_tracked_companies' ? query({ data: [{ company_id: 'company' }] })
+      : table === 'user_job_feed_checks' ? history : query({ data: { description: 'A specific role' } }));
+    const response = await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'cv', fingerprint: 'claimed', text: 'Documented experience' }] });
+    expect(JSON.parse(response.body!).results[0].match.score).toBe(83);
+    expect(history.match).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1', resume_id: 'cv', contract: 'feed-match-v2' }));
+    expect(processMatchOnlyMock).not.toHaveBeenCalled();
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+    expect(getCachedMock).not.toHaveBeenCalled();
+  });
+  it('records the full posting and CV revision for the authenticated owner even on a cache hit', async () => {
+    const saved = query({ data: null, error: null });
+    const { createHash } = await import('node:crypto');
+    const digest = (value: string) => createHash('sha256').update(value).digest('hex');
+    const description = 'job'.repeat(2000);
+    const text = 'resume'.repeat(3000);
+    fromMock.mockImplementation((table: string) => table === 'user_tracked_companies'
+      ? query({ data: [{ company_id: 'company' }] })
+      : table === 'user_job_feed_checks' ? saved : query({ data: { description } }));
+    getCachedMock.mockResolvedValue({ score: 77 });
+    await invoke({ postingId: '11111111-1111-4111-8111-111111111111', resumes: [{ id: 'cv', fingerprint: 'claimed', text }] });
+    expect(saved.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'user-1', resume_id: 'cv', resume_revision: digest(text),
+      job_revision: digest(description), match: { score: 77 }, language: 'en',
+    }));
+    expect(checkRateLimitMock).not.toHaveBeenCalled();
+  });
   it('authorizes open catalogue jobs without follows only when catalogue discovery is enabled', async () => {
     vi.stubEnv('JOB_CATALOGUE_ENABLED', 'true');
     const posting = query({ data: { id: 'posting-1', description: 'AI engineering experience required.' }, error: null });
