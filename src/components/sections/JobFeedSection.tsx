@@ -1,3 +1,4 @@
+import { reportUserOutcome } from '@/lib/utils/userOutcome';
 import { JobAlertSettings } from '@/components/sections/JobAlertSettings';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
@@ -130,6 +131,8 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
    * rather than a single boolean so one row's spinner never appears on another's.
    */
   const [savingPostingId, setSavingPostingId] = useState<string | null>(null);
+  const matchRequest = useRef(0);
+  useEffect(() => () => { matchRequest.current++; }, []);
   const [matchingPostingId, setMatchingPostingId] = useState<string | null>(null);
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
   const [serverIntent, setServerIntent] = useState<FeedIntent | null>(null);
@@ -316,50 +319,56 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
     // clock — "Updated just now" beside "Could not load your feed" is a lie the
     // user has no way to see through.
     const finish = (ok: boolean) => {
+      if (!ok) reportUserOutcome('feed_load_failed');
       setLoading(false);
       setRefreshing(false);
       if (ok) setLastLoadedAt(Date.now());
     };
 
-    const { companies: tracked, error: companiesError } = await listTrackedCompanies();
-    if (companiesError) {
+    try {
+      const { companies: tracked, error: companiesError } = await listTrackedCompanies();
+      if (companiesError) {
+        setLoadFailed(true);
+        finish(false);
+        return;
+      }
+
+      const [{ postings: open, error: postingsError }, state, seen, profileIntent] = await Promise.all([
+        listOpenPostings(tracked),
+        listFeedState(),
+        readLastFeedSeenAt(),
+        fetchServerSearchIntent(),
+      ]);
+
+      if (postingsError) {
+        setLoadFailed(true);
+        finish(false);
+        return;
+      }
+
+      setCompanies(tracked);
+      setPostings(open);
+      // Requirements are keyed by the current JD server-side; every reload revalidates them.
+      void loadJobRequirements(open.map((posting) => posting.id)).then(({ data, error }) => {
+        // Never keep stale requirement evidence after a failed refresh. An empty
+        // map retains deterministic title filtering until a verified JD arrives.
+        setRequirements(error ? {} : (data?.requirements ?? {}));
+      });
+      setFeedStateMap(state);
+      setLastSeenAt(seen);
+      setServerIntent(profileIntent);
+      // A company filter that outlives the company it names silently empties the
+      // feed, so selections are pruned against whatever is still followed.
+      const trackedIds = new Set(tracked.map((company) => company.companyId));
+      setSelectedCompanyIds((previous) => {
+        const next = new Set([...previous].filter((id) => trackedIds.has(id)));
+        return next.size === previous.size ? previous : next;
+      });
+      finish(true);
+    } catch {
       setLoadFailed(true);
       finish(false);
-      return;
     }
-
-    const [{ postings: open, error: postingsError }, state, seen, profileIntent] = await Promise.all([
-      listOpenPostings(tracked),
-      listFeedState(),
-      readLastFeedSeenAt(),
-      fetchServerSearchIntent(),
-    ]);
-
-    if (postingsError) {
-      setLoadFailed(true);
-      finish(false);
-      return;
-    }
-
-    setCompanies(tracked);
-    setPostings(open);
-    // Requirements are keyed by the current JD server-side; every reload revalidates them.
-    void loadJobRequirements(open.map((posting) => posting.id)).then(({ data, error }) => {
-      // Never keep stale requirement evidence after a failed refresh. An empty
-      // map retains deterministic title filtering until a verified JD arrives.
-      setRequirements(error ? {} : (data?.requirements ?? {}));
-    });
-    setFeedStateMap(state);
-    setLastSeenAt(seen);
-    setServerIntent(profileIntent);
-    // A company filter that outlives the company it names silently empties the
-    // feed, so selections are pruned against whatever is still followed.
-    const trackedIds = new Set(tracked.map((company) => company.companyId));
-    setSelectedCompanyIds((previous) => {
-      const next = new Set([...previous].filter((id) => trackedIds.has(id)));
-      return next.size === previous.size ? previous : next;
-    });
-    finish(!postingsError);
   }, []);
 
   const handleRefresh = useCallback(() => {
@@ -521,7 +530,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         [{ id: resume.id, fingerprint: resume.fingerprint, text: resume.plainText }],
         language,
         controller.signal,
-      );
+      ).catch(() => ({ results: [], failures: [{ code: 'request_failed', resumeId: resume.id }], error: 'request_failed', jobFingerprint: undefined }));
       if (cancelled) return;
       inFlight.delete(requestKey);
       const matches = result.results.filter(verified => verified.resumeId === resume.id).flatMap((verified): ClassifiedFeedMatch[] => {
@@ -580,6 +589,14 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const verificationFailed = verificationCandidates.filter(
     scored => ['failed', 'timed_out'].includes(verifiedByPosting[verificationKey(scored.posting.id)]?.status ?? ''),
   ).length;
+  const verificationBlocked = !!activeLibraryResume && verificationFailed > 0 && verificationPending === 0
+    && !selectedCompanyIds.size && verificationCandidates.every(scored => {
+      const check = verifiedByPosting[verificationKey(scored.posting.id)];
+      return check && ['failed', 'timed_out'].includes(check.status) && !['limit_reached', 'missing_description'].includes(check.failureCode ?? '');
+    });
+  useEffect(() => {
+    if (verificationBlocked) reportUserOutcome('feed_verification_failed');
+  }, [verificationBlocked]);
   const verificationChecked = verificationCandidates.length - verificationPending;
   const verificationTimedOut = verificationCandidates.filter(scored => verifiedByPosting[verificationKey(scored.posting.id)]?.status === 'timed_out').length;
   const verificationQuotaReached = verificationCandidates.some(scored => verifiedByPosting[verificationKey(scored.posting.id)]?.failureCode === 'limit_reached');
@@ -855,7 +872,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
         // that could never succeed. They save fine; the pipeline card simply omits the
         // description section it has no text for.
         const description = await getPostingDescription(scored.posting.id);
-        if (description === null) {
+        if (description == null) {
           setError(
             t(
               'jobFeed.errors.descriptionUnavailableSave',
@@ -894,15 +911,19 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
   const handleMatch = useCallback(
     async (scored: VerifiedScoredPosting) => {
       if (!onMatchPosting) return;
+      const request = ++matchRequest.current;
       setMatchingPostingId(scored.posting.id);
       try {
         if (scored.bestMatch) activateResume(scored.bestMatch.resumeId);
-        const description = await getPostingDescription(scored.posting.id);
+        const description = await getPostingDescription(scored.posting.id).catch(() => null);
+
+        if (request !== matchRequest.current) return;
+        if (!description?.trim()) reportUserOutcome(description === undefined ? 'job_handoff_mismatch' : 'job_handoff_missing');
 
         // null is a failed READ; '' is a board that publishes no body. Collapsing
         // them with `?? ''` reported a Supabase error as "this posting has no
         // description", sending the user off to paste text that does exist.
-        if (description === null) {
+        if (description == null) {
           // Its own string: the save wording ("the posting was not saved") is a
           // non-sequitur here — the user pressed Check the match, and nothing was
           // being saved.
@@ -922,7 +943,7 @@ export function JobFeedSection({ onMatchPosting }: JobFeedSectionProps) {
           match: scored.bestMatch?.match,
         });
       } finally {
-        setMatchingPostingId(null);
+        if (request === matchRequest.current) setMatchingPostingId(null);
       }
     },
     [activateResume, onMatchPosting, t],

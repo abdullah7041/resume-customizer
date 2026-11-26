@@ -1,4 +1,6 @@
 import * as Sentry from "@sentry/node";
+import signals from "../../src/types/autofix-signals.json";
+import deploy from "./deploy-context.json";
 
 let initialized = false;
 
@@ -16,8 +18,8 @@ export function initSentry() {
 
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
-        environment: process.env.CONTEXT || 'development', // Netlify env
-        release: process.env.COMMIT_REF || process.env.DEPLOY_ID,
+        environment: process.env.CONTEXT || deploy.context,
+        release: process.env.COMMIT_REF || deploy.commit || process.env.DEPLOY_ID,
         tracesSampleRate: 0.1,
     });
 
@@ -147,9 +149,13 @@ export function redactForLog(value: unknown): unknown {
 export function captureError(error: Error | unknown, context?: Record<string, unknown>) {
     const extra = sanitizeSentryContext(context) as Record<string, unknown> | undefined;
     const operationId = extra?.operationId;
-    Sentry.captureException(error, { extra,
-        ...(typeof operationId === 'string' && operationId !== REDACTED ? { tags: { operationId } } : {}),
-    });
+    const tags: Record<string, string> = {};
+    if (typeof operationId === 'string' && operationId !== REDACTED) tags.operationId = operationId;
+    if (typeof extra?.function === 'string' && signals.functions.includes(extra.function)) {
+        tags['watheq.origin'] = 'user-function';
+        tags['watheq.function'] = extra.function;
+    }
+    Sentry.captureException(error, { extra, ...(Object.keys(tags).length ? { tags } : {}) });
 }
 
 export async function flushSentry(): Promise<void> {

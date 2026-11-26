@@ -1,3 +1,5 @@
+const outcome = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/utils/userOutcome', () => ({ reportUserOutcome: outcome }));
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -433,6 +435,7 @@ describe('render stability', () => {
     render(<JobFeedSection />);
 
     expect(await screen.findByText('Could not load your feed. Try again.')).toBeInTheDocument();
+    expect(outcome).toHaveBeenCalledWith('feed_load_failed');
     expect(mockListTracked).toHaveBeenCalledTimes(1);
   });
 });

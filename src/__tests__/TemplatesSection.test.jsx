@@ -690,7 +690,7 @@ describe('TemplatesSection', () => {
                 expect(screen.getByRole('group', { name: 'PDF export options' })).toHaveTextContent('Download DOCX');
                 expect(toCanvas).not.toHaveBeenCalled();
                 expect(Sentry.captureException).toHaveBeenCalledWith(expect.objectContaining({ message: 'pdf/export-failed' }), {
-                    tags: { area: 'pdf-export', templateId: 'modern-professional', stage: 'request', code: 'export_failed', status: '500' },
+                    fingerprint: ['pdf_export_failed'], tags: { 'watheq.outcome': 'pdf_export_failed', area: 'pdf-export', templateId: 'modern-professional', stage: 'request', code: 'export_failed', status: '500' },
                     extra: { httpStatus: 500, operationId: expect.stringMatching(/^[a-f0-9-]{36}$/i) },
                 });
                 expect(globalThis.fetch.mock.calls[0][1].headers['x-watheq-operation-id']).toBe(Sentry.captureException.mock.calls[0][1].extra.operationId);
@@ -772,7 +772,7 @@ describe('TemplatesSection', () => {
                 addPage: vi.fn(),
                 setFillColor: vi.fn(),
                 rect: vi.fn(),
-                save: vi.fn(),
+                output: vi.fn(() => new Blob(['image-only PDF'])),
             };
             let capturedClone;
             let captureHost;
@@ -798,7 +798,8 @@ describe('TemplatesSection', () => {
 
                 fireEvent.click(await screen.findByRole('button', { name: 'Download image-only PDF' }));
 
-                await waitFor(() => expect(pdf.save).toHaveBeenCalled());
+                await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/\.pdf$/)));
+                expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ tags: { 'watheq.outcome': 'pdf_raster_only' } }));
                 await waitFor(() => expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Image-only PDF prepared — text cannot be selected.'));
                 expect(captureHost).toHaveAttribute('data-pdf-capture-host', 'true');
                 expect(capturedClone.style.left).not.toBe('-9999px');

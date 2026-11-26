@@ -1,0 +1,16 @@
+name: Autofix qualification
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/autofix*.yml'
+      - 'scripts/autofix/**'
+      - 'netlify/functions/autofix-alert.ts'
+permissions: {contents: read}
+jobs:
+  synthetic-incident:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - run: bash scripts/autofix/qualify.sh
