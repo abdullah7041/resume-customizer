@@ -20,12 +20,13 @@
       "hosted": "Apple Pay or other payment methods",
       "useCard": "Pay by card",
       "walletDevice": "To use Apple Pay, open checkout in Safari on an Apple Pay–compatible device.",
-      "wallet": "Pay with Apple Pay",
+      "wallet": "Choose digital wallet",
       "bank": "Complete bank verification",
       "popup": "Allow the bank verification window and try again.",
       "error": "Card verification could not be completed. Please try again."
     },
     "checkout": {
+      "walletError": "The payment could not be completed. Try again or choose another payment method.",
       "walletUnavailable": "Apple Pay could not load. Try again or pay by card.",
       "sandboxSuccess": "Test payment verified. No spendable credits were added.",
       "title": "Buy credits",

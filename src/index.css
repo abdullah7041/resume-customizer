@@ -5,18 +5,6 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@supports (-webkit-appearance: -apple-pay-button) {
-  .watheq-apple-pay {
-    -webkit-appearance: -apple-pay-button;
-    -apple-pay-button-style: black;
-    -apple-pay-button-type: pay;
-  }
-
-  .watheq-apple-pay > span {
-    @apply sr-only;
-  }
-}
-
 @theme inline {
   --color-background: var(--shadcn-background);
   --color-foreground: var(--shadcn-foreground);

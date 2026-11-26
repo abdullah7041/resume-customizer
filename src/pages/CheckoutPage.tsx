@@ -16,7 +16,9 @@ const containerId = 'watheq-payment-form';
 const referenceSchema = z.object({
   paymentId: z.uuid(),
   orderId: geideaGuid.optional(),
-  cancelled: z.boolean().optional(),
+  cancelled: z.boolean().optional(), // Older history entries store the SDK callback here.
+  method: z.enum(['apple-pay', 'hosted']).optional(),
+  callback: z.enum(['success', 'error', 'cancel']).optional(),
 });
 type Reference = z.infer<typeof referenceSchema>;
 type CheckoutLanguage = 'ar' | 'en';
@@ -30,7 +32,11 @@ function readReference(ownerId: string): Reference | null {
   const paymentId = params.get('payment') ?? params.get('paymentId');
   const orderId = geideaGuid.safeParse(params.get('orderId')).data;
   const saved = window.history.state?.watheqPayment;
-  return referenceSchema.safeParse(paymentId ? { paymentId, orderId } : saved?.ownerId === ownerId ? saved : null).data ?? null;
+  const owned = saved?.ownerId === ownerId ? saved : null;
+  const value = paymentId
+    ? { ...(owned?.paymentId === paymentId ? owned : {}), paymentId, ...(orderId && { orderId }) }
+    : owned;
+  return referenceSchema.safeParse(value).data ?? null;
 }
 
 function saveReference(ownerId: string, reference: Reference | null) {
@@ -43,7 +49,8 @@ function outcome(payment: PaymentStatus, reference: Reference) {
     if (payment.environment === 'sandbox') return 'sandboxSuccess';
     if (payment.creditsGranted) return 'success';
   }
-  if (payment.status === 'cancelled' || (payment.noOrder && reference.cancelled)) return 'cancelled';
+  if (payment.status === 'cancelled' || (payment.noOrder && (reference.cancelled || reference.callback === 'cancel'))) return 'cancelled';
+  if (payment.noOrder && reference.callback === 'error') return 'walletError';
   if (payment.status === 'failed') return 'failed';
   if (payment.noOrder && payment.expired) return 'expired';
   return null;
@@ -66,7 +73,7 @@ function PaymentPanel({ ownerId, language, config, express }: { express: boolean
     try { return wallet?.canMakePayments() === true; }
     catch { return false; }
   });
-  const [walletSelected, setWalletSelected] = useState(false);
+  const [method, setMethod] = useState<Reference['method']>();
   const [attempt, setAttempt] = useState(0);
   const [formReady, setFormReady] = useState(false);
   const [startupError, setStartupError] = useState(false);
@@ -76,7 +83,7 @@ function PaymentPanel({ ownerId, language, config, express }: { express: boolean
   const createRequest = useRef<Promise<PaymentCheckout> | null>(null);
   const lastRefreshed = useRef<PaymentStatus | null>(null);
   const enabled = config?.enabled;
-  const formTitle = express ? 'Apple Pay' : t('pricing.checkout.formTitle');
+  const formTitle = method === 'apple-pay' ? 'Apple Pay' : t('pricing.checkout.formTitle');
 
   useEffect(() => {
     if (reference || !createRequest.current) saveReference(ownerId, reference);
@@ -85,62 +92,67 @@ function PaymentPanel({ ownerId, language, config, express }: { express: boolean
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!walletSelected || reference || invalidReturn || !enabled || !host) return;
+    if (!method || reference || invalidReturn || !enabled || !host) return;
     let active = true;
     let finished = false;
 
-    async function mountForm(container: HTMLDivElement) {
-      createRequest.current ??= createPayment(language, express ? 'apple-pay' : 'hosted').catch((error: unknown) => {
+    async function mountForm(container: HTMLDivElement, method: NonNullable<Reference['method']>) {
+      createRequest.current ??= createPayment(language, method).catch((error: unknown) => {
         createRequest.current = null;
         throw error;
       });
       const { paymentId, sessionId } = await createRequest.current;
       if (!active) return;
 
-      saveReference(ownerId, { paymentId });
-      const finish = (payload: unknown, cancelled = false) => {
+      saveReference(ownerId, { paymentId, method });
+      const finish = (payload: unknown, callback: NonNullable<Reference['callback']>) => {
         if (!active || finished) return;
         finished = true;
         const orderId = z.object({ orderId: geideaGuid }).safeParse(payload).data?.orderId;
-        const completed = { paymentId, orderId, cancelled };
+        const completed = { paymentId, orderId, method, callback };
+        setResult(null);
         saveReference(ownerId, completed);
         setReference(completed);
       };
 
+      const success = (payload: unknown) => finish(payload, 'success');
+      const error = (payload: unknown) => finish(payload, 'error');
+      const cancel = (payload: unknown) => finish(payload, 'cancel');
       try {
-        if (express) {
+        if (method === 'apple-pay') {
           const Checkout = await loadExpressCheckout();
           if (!active) return;
           const checkout = await new Checkout().create({
-            sessionId, onSuccess: finish, onError: finish, onCancel: payload => finish(payload, true),
+            sessionId, onSuccess: success, onError: error, onCancel: cancel,
           });
           if (!active) return;
           checkout.mount(`#${containerId}`);
         } else {
           const Checkout = await loadHostedCheckout();
           if (!active) return;
-          new Checkout(finish, finish, payload => finish(payload, true)).startPayment(sessionId, null, containerId);
+          new Checkout(success, error, cancel).startPayment(sessionId, null, containerId);
         }
+        if (finished) return;
         const iframe = container.querySelector('iframe');
         if (!iframe) {
           setStartupError(true);
           return;
         }
         iframe.title = formTitle;
-        if (!finished) setFormReady(true);
+        setFormReady(true);
       } catch {
         if (active) setStartupError(true);
       }
     }
 
-    void mountForm(host).catch(() => {
+    void mountForm(host, method).catch(() => {
       if (active) setStartupError(true);
     });
     return () => {
       active = false;
       host.replaceChildren();
     };
-  }, [express, attempt, walletSelected, enabled, formTitle, invalidReturn, language, ownerId, reference]);
+  }, [attempt, method, enabled, formTitle, invalidReturn, language, ownerId, reference]);
 
   useEffect(() => {
     if (!reference) return;
@@ -159,10 +171,14 @@ function PaymentPanel({ ownerId, language, config, express }: { express: boolean
           window.clearTimeout(slowCheck);
           return;
         }
-        if (enabled && status.noOrder && status.sessionId && payment.cancelled === undefined && !payment.orderId) {
+        // Before the trial, hosted checkout was the only resumable SDK session.
+        // An untagged trial session is ambiguous. Keep reconciling until it settles or expires.
+        const savedMethod = payment.method ?? (returnedPayment().get('walletTest') === '1' ? undefined : 'hosted');
+        const canResume = savedMethod === 'hosted' || (savedMethod === 'apple-pay' && express && supportsApplePay);
+        if (canResume && enabled && status.noOrder && status.sessionId && !payment.callback && payment.cancelled === undefined && !payment.orderId) {
           createRequest.current = Promise.resolve({ paymentId: payment.paymentId, sessionId: status.sessionId, environment: status.environment });
           setCheckingLonger(false);
-          setWalletSelected(!express || supportsApplePay);
+          setMethod(savedMethod);
           setReference(null);
           return;
         }
@@ -197,7 +213,10 @@ function PaymentPanel({ ownerId, language, config, express }: { express: boolean
   }, [result, refetch]);
 
   function retry() {
-    if (!startupError) createRequest.current = null;
+    if (!startupError) {
+      createRequest.current = null;
+      setMethod(undefined);
+    }
     setFormReady(false);
     setStartupError(false);
     setResult(null);
@@ -207,22 +226,22 @@ function PaymentPanel({ ownerId, language, config, express }: { express: boolean
   }
 
   const finalStatus = reference && result ? outcome(result, reference) : null;
-  const canRetry = enabled && (startupError || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
+  const canRetry = enabled && ((!reference && startupError) || finalStatus === 'walletError' || finalStatus === 'failed' || finalStatus === 'cancelled' || finalStatus === 'expired');
   const statusMessage = lookupError ?? (invalidReturn ? 'invalid' : reference
     ? finalStatus ?? (checkingLonger ? 'pendingLonger' : 'pending')
-    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? (express ? 'walletUnavailable' : 'error') : walletSelected && !formReady ? 'loading' : null);
+    : !config ? 'loading' : !enabled ? 'disabled' : startupError ? (method === 'apple-pay' ? 'walletUnavailable' : 'error') : method && !formReady ? 'loading' : null);
   const isSandbox = (result?.environment ?? config?.environment) === 'sandbox' && Boolean(enabled || result);
 
   return <>
     {isSandbox && <p className="rounded-lg bg-amber-100 p-3 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">{t('pricing.checkout.sandbox')}</p>}
-    {enabled && !reference && !invalidReturn && !walletSelected && <DirectCardForm language={language}
-      express={express} onWallet={!express || supportsApplePay ? () => setWalletSelected(true) : undefined}
+    {enabled && !reference && !invalidReturn && !method && <DirectCardForm language={language}
+      express={express} onWallet={!express || supportsApplePay ? () => setMethod(express ? 'apple-pay' : 'hosted') : undefined}
       remember={(paymentId, orderId) => saveReference(ownerId, { paymentId, orderId })}
       onSubmitted={(paymentId, orderId) => setReference({ paymentId, orderId })} />}
     <div id={containerId} ref={hostRef} className="min-w-0 [&>iframe]:block [&>iframe]:max-w-full [&>iframe]:border-0" hidden={!formReady || Boolean(reference)} />
     <p role="status" className="empty:sr-only">{statusMessage && t(`pricing.checkout.${statusMessage}`)}</p>
-    {express && walletSelected && !reference && <button type="button" className={linkClass} onClick={() => {
-      setWalletSelected(false);
+    {method === 'apple-pay' && startupError && !reference && <button type="button" className={linkClass} onClick={() => {
+      setMethod(undefined);
       createRequest.current = null;
       setFormReady(false);
       setStartupError(false);

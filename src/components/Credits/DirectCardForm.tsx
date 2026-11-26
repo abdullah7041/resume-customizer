@@ -112,7 +112,7 @@ export function DirectCardForm({ language, onSubmitted, remember, onWallet, expr
       </div>
       <button className="min-h-11 w-full rounded-lg bg-emerald-800 font-semibold text-white disabled:opacity-60">{t(busy ? 'pricing.card.bank' : 'pricing.card.pay')}</button>
       {onWallet ? <button type="button" lang={language} onClick={onWallet}
-        className={express ? 'watheq-apple-pay min-h-11 w-full rounded-lg bg-black text-white' : 'min-h-11 w-full rounded-lg border border-line'}>
+        className="min-h-11 w-full rounded-lg border border-line">
         <span>{t(express ? 'pricing.card.wallet' : 'pricing.card.hosted')}</span>
       </button>
         : <p className="text-sm text-ink-muted">{t('pricing.card.walletDevice')}</p>}

@@ -86,6 +86,7 @@ describe('customer checkout', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'pricing.card.wallet' }));
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en', 'apple-pay');
     await waitFor(() => expect(screen.getByTitle('Apple Pay')).toBeVisible());
+    expect(screen.queryByRole('button', { name: 'pricing.card.useCard' })).toBeNull();
     expect(create).toHaveBeenCalledWith(expect.objectContaining({ sessionId }));
     expect(mount).toHaveBeenCalledWith('#watheq-payment-form');
     expect(createPayment).toHaveBeenCalledExactlyOnceWith('en', 'apple-pay');
@@ -105,7 +106,7 @@ describe('customer checkout', () => {
 
   it('reopens the same unpaid session after refresh', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000002';
-    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId } }, '', '/checkout?walletTest=1');
+    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId, method: 'apple-pay' } }, '', '/checkout?walletTest=1');
     readPaymentStatus.mockResolvedValue({ ...pending, noOrder: true, expired: false, sessionId });
     const create = vi.fn(async () => ({ mount: mountWallet }));
     loadExpressCheckout.mockResolvedValue(class { create = create; });
@@ -115,6 +116,48 @@ describe('customer checkout', () => {
     expect(createPayment).not.toHaveBeenCalled();
   });
 
+  it.each(['hosted', undefined])('recovers a hosted session after access changes (saved method %s)', async method => {
+    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId, method } }, '', method ? '/checkout?walletTest=1' : '/checkout');
+    readPaymentStatus.mockResolvedValue({ ...pending, noOrder: true, sessionId: paymentId });
+    loadHostedCheckout.mockResolvedValue(class { startPayment() { mountWallet('#watheq-payment-form'); } });
+    render(<CheckoutPage />);
+    await waitFor(() => expect(screen.getByTitle('Secure payment')).toBeVisible());
+    expect(loadExpressCheckout).not.toHaveBeenCalled();
+    expect(createPayment).not.toHaveBeenCalled();
+  });
+
+  it('keeps an ambiguous legacy trial session in reconciliation', async () => {
+    window.history.replaceState({ watheqPayment: { ownerId: 'user', paymentId } }, '', '/checkout?walletTest=1');
+    readPaymentStatus.mockResolvedValue({ ...pending, noOrder: true, sessionId: paymentId });
+    render(<CheckoutPage />);
+    await waitFor(() => expect(readPaymentStatus).toHaveBeenCalled());
+    expect(screen.getByText('We’re confirming your payment…')).toBeVisible();
+    expect(loadHostedCheckout).not.toHaveBeenCalled();
+    expect(loadExpressCheckout).not.toHaveBeenCalled();
+  });
+
+  it('offers another method only after a wallet error reconciles to no order', async () => {
+    let fail!: (payload: unknown) => void;
+    let reconcile!: (status: typeof pending & { noOrder: boolean }) => void;
+    loadExpressCheckout.mockResolvedValue(class {
+      async create(options: { onError: typeof fail }) { fail = options.onError; return { mount: mountWallet }; }
+    });
+    createPayment.mockResolvedValue({ paymentId, sessionId: paymentId });
+    readPaymentStatus.mockImplementation(() => new Promise(resolve => { reconcile = resolve; }));
+    render(<CheckoutPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'pricing.card.wallet' }));
+    await screen.findByTitle('Apple Pay');
+    act(() => fail({}));
+    await waitFor(() => expect(readPaymentStatus).toHaveBeenCalled());
+    expect(window.history.state.watheqPayment).toMatchObject({ paymentId, method: 'apple-pay', callback: 'error' });
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    expect(screen.queryByLabelText('pricing.card.number')).toBeNull();
+    await act(async () => reconcile({ ...pending, noOrder: true }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    expect(await screen.findByLabelText('pricing.card.number')).toBeVisible();
+    expect(createPayment).toHaveBeenCalledTimes(1);
+  });
+
   it('retries an SDK startup failure with the original unpaid session', async () => {
     const sessionId = '00000000-0000-4000-8000-000000000002';
     createPayment.mockResolvedValue({ paymentId, sessionId, environment: 'live' });
@@ -122,6 +165,7 @@ describe('customer checkout', () => {
       .mockResolvedValueOnce(class { async create() { return { mount: mountWallet }; } });
     render(<CheckoutPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'pricing.card.wallet' }));
+    expect(await screen.findByRole('button', { name: 'pricing.card.useCard' })).toBeVisible();
     fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
     await waitFor(() => expect(screen.getByTitle('Apple Pay')).toBeVisible());
     expect(createPayment).toHaveBeenCalledTimes(1);
