@@ -7,11 +7,13 @@ if (!isCheckout) Sentry.init({
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration({
+      beforeErrorSampling: event => !event.tags?.['watheq.outcome'],
       maskAllText: true,  // Privacy: mask PII in session replays
       blockAllMedia: true,
     }),
   ],
-  environment: import.meta.env.MODE,
+  environment: import.meta.env.VITE_DEPLOY_CONTEXT || import.meta.env.MODE,
+  initialScope: { tags: { 'watheq.origin': 'browser' } },
   release: import.meta.env.VITE_SENTRY_RELEASE,
   sendDefaultPii: false,
 

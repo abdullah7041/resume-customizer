@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { scrubSentryEvent } from '@/lib/utils/scrubSentryEvent';
 
 describe('scrubSentryEvent', () => {
+  it('retains only fixed technical data for an autofix outcome', () => {
+    const event = {
+      type: undefined, release: 'release-sha', environment: 'production',
+      tags: { 'watheq.outcome': 'pdf_raster_only', private: 'customer text' },
+      user: { email: 'customer@example.test' }, message: 'private résumé text',
+      extra: { job: 'private job' }, breadcrumbs: [{ message: 'private action' }],
+    } satisfies ErrorEvent;
+    expect(scrubSentryEvent(event)).toEqual({
+      type: undefined, event_id: undefined, timestamp: undefined, platform: 'javascript',
+      level: 'error', environment: 'production', release: 'release-sha', message: 'pdf_raster_only',
+      fingerprint: ['watheq-outcome','pdf_raster_only'],
+      tags: { 'watheq.origin': 'browser', 'watheq.outcome': 'pdf_raster_only' },
+    });
+  });
   it('redacts an email in an event message', () => {
     const event = { type: undefined, message: 'Failed to parse jane.doe@example.com' } satisfies ErrorEvent;
 

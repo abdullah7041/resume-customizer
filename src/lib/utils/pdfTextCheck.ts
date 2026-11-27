@@ -3,7 +3,7 @@ import { loadPdfjs } from '@/lib/utils/resumeText';
 import { captureTextPdfBlocks, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 
 export interface ExpectedPdfText { fields: Array<{ id: string; text: string }> }
-export type PdfTextCheckReason = 'reader_unavailable' | 'reader_error' | 'timeout' | 'empty_file' | 'page_limit' | 'empty_text' | 'invalid_text' | 'text_mismatch' | 'empty_expected';
+export type PdfTextCheckReason = 'reader_unavailable' | 'reader_error' | 'timeout' | 'corrupt' | 'raster_only' | 'empty_file' | 'page_limit' | 'empty_text' | 'invalid_text' | 'text_mismatch' | 'empty_expected';
 export type PdfTextCheck = { state: 'text_checked' | 'unverified'; missingFieldIds: string[]; reason?: PdfTextCheckReason };
 
 // PDF.js may insert layout whitespace between scripts, punctuation and combining marks.
@@ -52,16 +52,50 @@ export async function checkPdfBlob(blob: Blob, expected: ExpectedPdfText): Promi
       if (stopped) return unverified('timeout');
       if (document.numPages > 20) return unverified('page_limit');
       const parts: string[] = [];
+      let hasImage = false;
+      let visible: boolean | undefined;
       for (let number = 1; number <= document.numPages; number += 1) {
         if (stopped) return unverified('timeout');
         const page = await document.getPage(number);
-        try { parts.push((await page.getTextContent()).items.map(item => item.str ?? '').join(' ')); }
+        try {
+          // A PDF can contain perfectly extractable white text, or a white raster.
+          // Check a bounded thumbnail until one page actually shows ink.
+          if (!visible && document.canvasFactory) {
+            const unit = page.getViewport({ scale: 1 });
+            const viewport = page.getViewport({ scale: 384 / Math.max(unit.width, unit.height) });
+            const surface = document.canvasFactory.create(Math.max(1, Math.ceil(viewport.width)), Math.max(1, Math.ceil(viewport.height)));
+            try {
+              await page.render({ canvasContext: surface.context, viewport, background: '#fff' }).promise;
+              const pixels = surface.context.getImageData(0, 0, surface.canvas.width, surface.canvas.height).data;
+              visible = false;
+              for (let i = 0; i < pixels.length; i += 4) {
+                if (pixels[i + 3] && Math.min(pixels[i], pixels[i + 1], pixels[i + 2]) < 250) {
+                  visible = true;
+                  break;
+                }
+              }
+            } finally { document.canvasFactory.destroy(surface); }
+          }
+          const text = (await page.getTextContent()).items.map(item => item.str ?? '').join(' ');
+          parts.push(text);
+          if (!text.trim() && !hasImage) {
+            const operators = await page.getOperatorList();
+            const imageOperators = Object.entries(pdfjs.OPS).filter(([name]) => /^paint(?:Inline)?Image/.test(name)).map(([, value]) => value);
+            hasImage = operators.fnArray.some((op: number) => imageOperators.includes(op));
+          }
+        }
         finally { page.cleanup?.(); }
+      }
+      if (visible === false) return unverified('empty_text');
+      if (parts.every(part => !part.trim())) {
+        if (hasImage) return unverified('raster_only');
+        if (visible) return unverified('invalid_text');
       }
       return comparePdfText(parts.join(' '), expected);
     };
     return await Promise.race([check(), timeout]);
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.name === 'InvalidPDFException') return unverified('corrupt');
     return unverified(timedOut ? 'timeout' : 'reader_error');
   } finally {
     stopped = true;

@@ -5,6 +5,7 @@ import { getSupabaseClient } from '../lib/supabase-client.js';
 import { classifyEmployer, FEED_MATCH_CONTRACT, searchPostings } from '../lib/job-search.js';
 import { initSentry, captureError } from '../lib/sentry.js';
 import type { FeedPosting } from '../../src/lib/jobs/types.js';
+import { autofixProbeStatus } from '../lib/autofix-probe.js';
 initSentry();
 const schema = z.object({ targetRoles: z.array(z.string().trim().min(1).max(120)).max(10), locations: z.array(z.string().max(100)).max(10).optional(), seniority: z.enum(['junior', 'mid', 'senior', 'lead', 'manager']).optional(), followedOnly: z.boolean().default(false), offset: z.number().int().min(0).max(100000).default(0), limit: z.number().int().min(1).max(50).default(20), maxAgeDays: z.number().min(1).max(365).optional() });
 const searchSchema = schema.extend({ cv: z.object({
@@ -12,6 +13,8 @@ const searchSchema = schema.extend({ cv: z.object({
 }).optional() });
 const json = (statusCode: number, body: unknown) => ({ statusCode, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }, body: JSON.stringify(body) });
 const baseHandler: Handler = async (event) => {
+    const probe = autofixProbeStatus(event.headers['x-watheq-autofix-probe']);
+    if (probe === 'rejected') return json(403, { status: 403, code: 'probe', message: 'Synthetic probe unavailable' });
     try {
         if (event.httpMethod !== 'POST')
             return json(405, { status: 405, code: 'method', message: 'Method not allowed' });
@@ -87,7 +90,7 @@ const baseHandler: Handler = async (event) => {
         return json(200, { ...page, companies, checks });
     }
     catch {
-        captureError(new Error('Job search failed'), { function: 'job-search' });
+        captureError(new Error('Job search failed'), probe === 'authorized' ? { synthetic: true } : { function: 'job-search' });
         return json(503, { status: 503, code: 'search_failed', message: 'Could not search jobs. Try again.' });
     }
 };

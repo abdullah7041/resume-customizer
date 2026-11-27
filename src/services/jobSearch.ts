@@ -31,13 +31,15 @@ export async function searchJobs(input: FeedIntent & {
     const { data } = await supabase.auth.getSession();
     assertPrivateSession(revision, data.session?.user?.id ?? null);
     if (!data.session)
-        throw new Error('Sign in to search jobs');
+        throw Object.assign(new Error('Sign in to search jobs'), { status: 401 });
     const { activeCV, ...filters } = input;
     const cv = activeCV && { id: activeCV.id, revision: await fingerprintText(activeCV.text.trim()), language: activeCV.language };
     const response = await fetch('/.netlify/functions/job-search', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session.access_token}` }, body: JSON.stringify({ ...filters, cv }), signal });
     const result = await response.json();
     assertPrivateSession(revision, data.session.user.id);
     if (!response.ok)
-        throw new Error(result.message ?? 'Could not search jobs');
+        throw Object.assign(new Error(result.message ?? 'Could not search jobs'), { status: response.status });
+    if (!Array.isArray(result?.postings) || !Array.isArray(result?.companies))
+        throw new Error('Could not read search results');
     return result;
 }

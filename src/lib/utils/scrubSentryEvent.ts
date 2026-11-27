@@ -1,4 +1,5 @@
 import type { ErrorEvent } from '@sentry/react';
+import signals from '@/types/autofix-signals.json';
 
 const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
@@ -14,6 +15,15 @@ function redactText(input: string): string {
 
 /** Strip likely-PII from a Sentry error event before it is sent. */
 export function scrubSentryEvent(event: ErrorEvent): ErrorEvent {
+  const outcome = event.tags?.['watheq.outcome'];
+  if (typeof outcome === 'string' && signals.outcomes.includes(outcome)) {
+    return {
+      type: event.type, event_id: event.event_id, timestamp: event.timestamp, platform: 'javascript',
+      level: 'error', environment: event.environment, release: event.release,
+      message: outcome, fingerprint: ['watheq-outcome', outcome],
+      tags: { 'watheq.origin': 'browser', 'watheq.outcome': outcome },
+    };
+  }
   if (event.message) event.message = redactText(event.message);
 
   for (const value of event.exception?.values ?? []) {

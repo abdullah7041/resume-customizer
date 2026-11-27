@@ -1,0 +1,136 @@
+name: Watheq incident repair
+on:
+  workflow_dispatch:
+    inputs:
+      issue: {required: true, type: string}
+      release: {required: true, type: string}
+      signal: {required: true, type: string}
+      kind: {required: true, type: string}
+      location: {required: false, type: string, default: none}
+permissions: {}
+concurrency:
+  group: watheq-autofix-${{ inputs.issue }}
+  cancel-in-progress: false
+env:
+  ISSUE: ${{ inputs.issue }}
+  RELEASE: ${{ inputs.release }}
+  SIGNAL: ${{ inputs.signal }}
+  KIND: ${{ inputs.kind }}
+  LOCATION: ${{ inputs.location }}
+jobs:
+  claim:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: {contents: write, pull-requests: read}
+    outputs:
+      new: ${{ steps.claim.outputs.new }}
+      known: ${{ steps.revision.outputs.known }}
+      base: ${{ steps.revision.outputs.base }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, fetch-depth: 0, persist-credentials: false}
+      - id: claim
+        run: python3 scripts/autofix/incident.py claim
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - id: revision
+        if: steps.claim.outputs.new == 'true'
+        run: |
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [[ "$RELEASE" != unknown ]] && git merge-base --is-ancestor "$RELEASE" HEAD; then
+            echo 'known=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'known=false' >> "$GITHUB_OUTPUT"
+          fi
+  repair:
+    needs: claim
+    if: needs.claim.outputs.new == 'true' && needs.claim.outputs.known == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: autofix
+    permissions: {contents: read}
+    outputs:
+      status: ${{ steps.final.outputs.status }}
+      artifact: candidate-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ needs.claim.outputs.base }}', fetch-depth: 0, persist-credentials: false}
+      - id: budget
+        run: python3 scripts/autofix/incident.py budget
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.AUTOFIX_OPENROUTER_KEY }}
+      - id: agent
+        if: steps.budget.outputs.status == 'ready'
+        run: bash scripts/autofix/repair.sh
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.AUTOFIX_OPENROUTER_KEY }}
+      - id: remaining
+        if: always() && steps.budget.outputs.status == 'ready' && steps.agent.outputs.status != 'candidate'
+        run: python3 scripts/autofix/incident.py budget
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.AUTOFIX_OPENROUTER_KEY }}
+      - id: final
+        if: always()
+        env:
+          BEFORE: ${{ steps.budget.outputs.status }}
+          AFTER: ${{ steps.remaining.outputs.status }}
+          RESULT: ${{ steps.agent.outputs.status }}
+        run: |
+          status=${RESULT:-unverified}
+          if [[ "$BEFORE" != ready ]]; then status=${BEFORE:-unverified}; fi
+          if [[ "$AFTER" == budget_exhausted ]]; then status=budget_exhausted; fi
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: steps.final.outputs.status == 'candidate'
+        with:
+          name: candidate-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/repair/
+          retention-days: 3
+          if-no-files-found: error
+  verify:
+    needs: [claim, repair]
+    if: needs.repair.outputs.status == 'candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ needs.claim.outputs.base }}', fetch-depth: 0, persist-credentials: false}
+      - uses: actions/download-artifact@v4
+        with: {name: '${{ needs.repair.outputs.artifact }}', path: '${{ runner.temp }}/repair'}
+      - run: bash scripts/autofix/verify.sh
+        env:
+          BASE_SHA: ${{ needs.claim.outputs.base }}
+  publish:
+    needs: [claim, repair, verify]
+    runs-on: ubuntu-latest
+    environment: autofix
+    permissions: {contents: read}
+    outputs:
+      url: ${{ steps.publish.outputs.url }}
+      status: ${{ steps.publish.outputs.status }}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: '${{ needs.claim.outputs.base }}', persist-credentials: false}
+      - uses: actions/download-artifact@v4
+        with: {name: '${{ needs.repair.outputs.artifact }}', path: '${{ runner.temp }}/repair'}
+      - id: publish
+        run: bash scripts/autofix/publish.sh
+        env:
+          GH_TOKEN: ${{ secrets.AUTOFIX_PR_TOKEN }}
+          BASE_SHA: ${{ needs.claim.outputs.base }}
+  report:
+    needs: [claim, repair, verify, publish]
+    if: always() && needs.claim.outputs.new == 'true'
+    runs-on: ubuntu-latest
+    environment: autofix
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - run: python3 scripts/autofix/incident.py report
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.AUTOFIX_TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.AUTOFIX_TELEGRAM_CHAT }}
+          PR_URL: ${{ needs.publish.outputs.url }}
+          STATUS: ${{ needs.claim.outputs.known != 'true' && 'unknown_release' || needs.publish.outputs.status || (needs.publish.result == 'failure' && 'publication_failed') || (needs.verify.result == 'failure' && 'verification_failed') || needs.repair.outputs.status }}

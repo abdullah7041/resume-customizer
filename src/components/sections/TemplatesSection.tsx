@@ -43,6 +43,7 @@ import { PageBreakOverlay, A4_PAGE_HEIGHT_PX } from "../ui/PageBreakIndicator";
 import { useResumeLanguage } from "../../hooks/useResumeLanguage";
 import { directionFromLanguage } from "../../lib/utils/resumeDirection";
 import { createExportSnapshot, reviewExport } from '@/lib/optimize/exportPreflight';
+import { pdfOutcome, reportUserOutcome, type UserOutcome } from '@/lib/utils/userOutcome';
 import { checkPdfBlob, expectedPdfText } from '@/lib/utils/pdfTextCheck';
 import { captureStyledPdfSnapshot, cloneVisiblePdfPreview } from '@/lib/utils/textPdfSnapshot';
 import { containsArabic } from '@/lib/utils/arabicTextUtils';
@@ -521,9 +522,9 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
     let stage = 'prepare';
     let httpStatus: number | undefined;
     const operationId = crypto.randomUUID();
-    const reportFailure = (code: string) => Sentry.captureException(new Error('pdf/export-failed'), {
-      tags: { area: 'pdf-export', templateId: attempt.templateId, stage, code, status: String(httpStatus ?? 0) },
-      extra: { httpStatus, operationId },
+    const reportFailure = (code: string, outcome: UserOutcome = 'pdf_export_failed') => Sentry.captureException(new Error('pdf/export-failed'), {
+      tags: { 'watheq.outcome': outcome, area: 'pdf-export', templateId: attempt.templateId, stage, code, status: String(httpStatus ?? 0) },
+      fingerprint: [outcome], extra: { httpStatus, operationId },
     });
 
     try {
@@ -662,7 +663,13 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       stage = 'response';
       const blob = await response.blob();
       if (!isCurrentExport(attempt.id)) return;
-      if (!blob || blob.size === 0) throw new Error('[PDFDownload] Server returned an empty PDF');
+      if (!blob.size) {
+        reportFailure('empty_file', 'pdf_corrupt');
+        setPdfRecovery(attempt);
+        setExportError(exportFailureMessage);
+        analytics.trackExportFailed(attempt.templateId, 'pdf', 'empty_file');
+        return;
+      }
       stage = 'text_check';
       const quality = await checkPdfBlob(blob, expectedPdfText(exportResume, previewSnapshot));
       if (!isCurrentExport(attempt.id)) return;
@@ -672,7 +679,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         setExportError(readerUnavailable
           ? t('sections.templates.export.verificationUnavailable', 'PDF text verification is temporarily unavailable. Retry PDF or choose another export option.')
           : t('sections.templates.export.unverified', 'Selectable text could not be verified. Review this PDF before using it.'));
-        reportFailure('text_unverified');
+        reportFailure('text_unverified', pdfOutcome(quality.reason));
         analytics.trackExportFailed(attempt.templateId, 'pdf_unverified', quality.reason ?? 'text_check');
         return;
       }
@@ -738,6 +745,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         let code: unknown;
         try { code = (await response.json() as { code?: unknown }).code; } catch { /* Bounded local recovery copy. */ }
         if (!current()) return;
+        reportUserOutcome('pdf_export_failed');
         setExportError(code === 'pdf/text-unsupported'
           ? t('sections.templates.export.textUnsupported', 'Text PDF cannot safely render this content. Combined Arabic marks, compatibility ligatures, unsupported scripts or ASCII hyphens before Arabic-Indic or Eastern Arabic digits may need another export option.')
           : code === 'pdf/text-font-unavailable'
@@ -747,10 +755,11 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       }
       const blob = await response.blob();
       if (!current()) return;
-      if (!blob.size) { setExportError(exportFailureMessage); return; }
+      if (!blob.size) { reportUserOutcome('pdf_corrupt'); setExportError(exportFailureMessage); return; }
       const quality = await checkPdfBlob(blob, expectedPdfText(attempt.resume, attempt.preview));
       if (!current()) return;
       if (quality.state !== 'text_checked') {
+        reportUserOutcome(pdfOutcome(quality.reason));
         setExportError(t('sections.templates.export.textUnverified', 'Text PDF did not pass the text check. Choose another export option.'));
         return;
       }
@@ -778,7 +787,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
       requestValueMomentFeedbackPrompt('export_success');
       useResumeStore.getState().setHasDownloaded(true);
     } catch {
-      if (current()) setExportError(exportFailureMessage);
+      if (current()) { reportUserOutcome('pdf_export_failed'); setExportError(exportFailureMessage); }
     } finally {
       if (isCurrentExport(attempt.id)) setIsDownloading(false);
     }
@@ -963,7 +972,16 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         const filename = getSmartFilename(exportResume, attempt.templateId, 'pdf');
         const finalFilename = typeof filename === 'string' && filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
         if (!isCurrentExport(attempt.id)) return;
-        pdf.save(finalFilename);
+        const blob = pdf.output('blob');
+        const quality = await checkPdfBlob(blob, expectedPdfText(exportResume, previewSnapshot));
+        if (!isCurrentExport(attempt.id)) return;
+        const outcome = pdfOutcome(quality.reason);
+        if (outcome === 'pdf_corrupt' || outcome === 'pdf_blank') {
+          reportUserOutcome(outcome);
+          setExportError(exportFailureMessage);
+          return;
+        }
+        saveAs(blob, finalFilename);
 
         analytics.trackExportSuccess(attempt.templateId, 'pdf_image');
         setPdfRecovery(null);
@@ -975,6 +993,7 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
         if (!isCurrentExport(attempt.id)) return;
         console.error('[PDFDownload] Client-side fallback also failed:', summarizeErrorForConsole(clientErr));
         const isBlankCanvas = clientErr instanceof Error && clientErr.message.includes('blank canvas');
+        reportUserOutcome(isBlankCanvas ? 'pdf_blank' : 'pdf_export_failed');
         const isTimeout = clientErr instanceof Error && clientErr.message === 'CLIENT_FALLBACK_TIMEOUT';
         analytics.trackExportFailed(
           attempt.templateId,

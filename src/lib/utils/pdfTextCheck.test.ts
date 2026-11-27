@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { checkPdfBlob, comparePdfText, expectedPdfText } from './pdfTextCheck';
 import { loadPdfjs } from './resumeText';
@@ -87,9 +88,9 @@ describe('PDF selectable text check', () => {
   });
 
   it('marks an image-only PDF unverified', async () => {
-    const pdf = { numPages: 1, getPage: vi.fn().mockResolvedValue({ getTextContent: () => Promise.resolve({ items: [] }) }), destroy: vi.fn().mockResolvedValue(undefined) };
-    vi.mocked(loadPdfjs).mockResolvedValue({ getDocument: () => ({ promise: Promise.resolve(pdf), destroy: vi.fn() }) } as never);
-    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', reason: 'empty_text', missingFieldIds: ['name', 'year'] });
+    const pdf = { numPages: 1, getPage: vi.fn().mockResolvedValue({ getTextContent: () => Promise.resolve({ items: [] }), getOperatorList: async () => ({ fnArray: [85] }) }), destroy: vi.fn().mockResolvedValue(undefined) };
+    vi.mocked(loadPdfjs).mockResolvedValue({ OPS: { paintImageXObject: 85 }, getDocument: () => ({ promise: Promise.resolve(pdf), destroy: vi.fn() }) } as never);
+    expect(await checkPdfBlob(blob, expected)).toEqual({ state: 'unverified', reason: 'raster_only', missingFieldIds: ['name', 'year'] });
   });
 
   it('times out stalled extraction and destroys the task', async () => {
@@ -111,3 +112,43 @@ describe('PDF selectable text check', () => {
     expect(await result).toEqual({ state: 'text_checked', missingFieldIds: [] });
   });
 });
+
+// Run outside Vitest's PDF.js alias. These are final serialized files, including the raster fallback format.
+it('checks real selectable, corrupt, visually blank and image-only PDFs with PDF.js', () => {
+  const program = `
+    import { jsPDF } from 'jspdf';
+    import { checkPdfBlob } from './src/lib/utils/pdfTextCheck.ts';
+    const expected = { fields: [{ id: 'name', text: 'Fixture' }] };
+    const inspect = async (blob) => { const result = await checkPdfBlob(blob, expected); return result.reason ?? result.state; };
+    const { readFileSync } = await import('node:fs');
+    const font = readFileSync('netlify/assets/fonts/DejaVuSans.ttf').toString('base64');
+    function fixturePdf() {
+      const doc = new jsPDF();
+      doc.addFileToVFS('Fixture.ttf', font);
+      doc.addFont('Fixture.ttf', 'Fixture', 'normal');
+      doc.setFont('Fixture', 'normal');
+      return doc;
+    }
+    const pdf = fixturePdf();
+    pdf.text('Fixture', 10, 20);
+    const whiteText = fixturePdf();
+    whiteText.setTextColor(255,255,255);
+    whiteText.text('Fixture', 10, 20);
+    const image = (shade) => {
+      const doc = new jsPDF();
+      const pixels = new Uint8ClampedArray(16).fill(shade);
+      for (let i = 3; i < pixels.length; i += 4) pixels[i] = 255;
+      doc.addImage({data:pixels,width:2,height:2},'RGBA',10,10,40,40);
+      return doc.output('blob');
+    };
+    const cases = [pdf.output('blob'), new Blob(['this is not a PDF']), new jsPDF().output('blob'),
+      whiteText.output('blob'), image(255), image(0)];
+    const outcomes = [];
+    for (const item of cases) outcomes.push(await inspect(item));
+    const arabic = new Blob([readFileSync('scripts/pdf-qualification/fixtures/minimal-mixed.pdf')]);
+    outcomes.push((await checkPdfBlob(arabic, { fields: [{ id: 'name', text: 'اسم' }] })).state);
+    console.log(JSON.stringify(outcomes));
+  `;
+  const output = execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', program], { encoding: 'utf8', timeout: 45000 });
+  expect(JSON.parse(output.trim().split('\n').at(-1)!)).toEqual(['text_checked', 'corrupt', 'empty_text', 'empty_text', 'empty_text', 'raster_only', 'text_checked']);
+}, 50000);

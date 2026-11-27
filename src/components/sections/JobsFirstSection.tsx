@@ -1,3 +1,4 @@
+import { reportUserOutcome } from '@/lib/utils/userOutcome';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Bookmark, Building2, Check, CheckCircle2, ChevronRight, ExternalLink, FileText, LoaderCircle, MapPin, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -113,7 +114,11 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
         notify('success', text(`${result.postings.length} jobs shown for your search`, `نعرض ${result.postings.length} وظيفة لبحثك`));
       }
     }).catch(cause => {
-      if (!controller.signal.aborted) { setError(cause instanceof Error ? cause.message : text('Search failed. Try again.', 'تعذر البحث. حاول مجدداً.')); searchRequested.current = false; }
+      if (!controller.signal.aborted && cause?.name !== 'AbortError') {
+        if (cause?.status !== 401 && cause?.status !== 403) reportUserOutcome('feed_load_failed');
+        setError(cause instanceof Error ? cause.message : text('Search failed. Try again.', 'تعذر البحث. حاول مجدداً.'));
+        searchRequested.current = false;
+      }
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [query, followedOnly, age, offset, refresh, intent?.seniority, resumeId, resumeText, ar, notify, text]);
@@ -129,7 +134,7 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
       if (postingId) return posting.id === postingId && status !== 'ready' && status !== 'checking';
       return retryFailed ? status === 'failed' : !status || status === 'stale';
     }).slice(0, 10);
-    let next = 0; let failures = 0;
+    let next = 0; let failures = 0; let technicalFailure = false;
     setBatchSize(candidates.length);
     setChecks(previous => ({ ...previous, ...Object.fromEntries(candidates.map(posting => [posting.id, { status: 'checking' as const }])) }));
     notify('info', text(`Checking ${candidates.length} jobs against your CV`, `نفحص ${candidates.length} وظائف مقابل سيرتك`));
@@ -140,16 +145,20 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
           const result = await verifyFeedPosting(posting.id, [{ id, fingerprint, text: plainText }], i18n.language, controller.signal);
           if (controller.signal.aborted || !isCurrent(key)) return;
           const match = result.results[0];
-          if (!match) failures++;
+          if (!match) {
+            failures++;
+            if (!result.failures.some(failure => ['missing_description', 'limit_reached'].includes(failure.code))) technicalFailure = true;
+          }
           setChecks(previous => ({ ...previous, [posting.id]: match ? { status: 'ready', match: match.match, jobRevision: result.jobRevision, historySaved: match.historySaved } : { status: 'failed', failureCode: result.failures[0]?.code } }));
         } catch {
           if (controller.signal.aborted || !isCurrent(key)) return;
-          failures++;
+          failures++; technicalFailure = true;
           setChecks(previous => ({ ...previous, [posting.id]: { status: 'failed', failureCode: 'request_failed' } }));
         }
       }
     }
     await Promise.all([worker(), worker()]);
+    if (technicalFailure && !controller.signal.aborted && isCurrent(key)) reportUserOutcome('feed_verification_failed');
     if (!controller.signal.aborted && isCurrent(key)) notify(failures ? 'info' : 'success', text(
       `${candidates.length - failures} CV checks ready${failures ? ` · ${failures} need attention` : ''}`,
       `${candidates.length - failures} فحوص جاهزة${failures ? ` · ${failures} تحتاج متابعة` : ''}`
@@ -160,9 +169,10 @@ function CatalogueFeed({ onMatchPosting, onToast }: Props) {
     if (busy) return;
     const key = current.current; setBusy(`${action}:${posting.id}`); setError('');
     try {
-      const description = await getPostingDescription(posting.id);
+      const description = await getPostingDescription(posting.id).catch(() => null);
       if (!isCurrent(key)) return;
-      if (description === null || (action === 'tailor' && !description)) throw new Error(text('The job description is unavailable. Open the employer posting or try again.', 'وصف الوظيفة غير متاح. افتح إعلان صاحب العمل أو حاول مجدداً.'));
+      if (action === 'tailor' && !description?.trim()) reportUserOutcome(description === undefined ? 'job_handoff_mismatch' : 'job_handoff_missing');
+      if (description == null || (action === 'tailor' && !description.trim())) throw new Error(text('The job description is unavailable. Open the employer posting or try again.', 'وصف الوظيفة غير متاح. افتح إعلان صاحب العمل أو حاول مجدداً.'));
       if (action === 'tailor') {
         const check = checks[posting.id];
         let match: MatchResult | undefined;

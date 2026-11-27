@@ -13,6 +13,8 @@
   functionTimeout = 120
 
 [build]
+  # Bot branches have already been tested in isolation. Build them on production after a human merge.
+  ignore = '''if [[ "$CONTEXT" != production && ( "$HEAD" == codex/autofix-* || "$BRANCH" == codex/autofix-* ) ]]; then exit 0; fi; git diff --quiet "$CACHED_COMMIT_REF" "$COMMIT_REF" -- . 2>/dev/null || exit 1'''
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"

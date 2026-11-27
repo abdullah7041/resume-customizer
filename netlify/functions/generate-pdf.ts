@@ -12,6 +12,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
+import { autofixProbeStatus } from '../lib/autofix-probe.js';
 initSentry();
 
 
@@ -236,11 +237,14 @@ const baseHandler: Handler = async (event) => {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  const probe = autofixProbeStatus(event.headers['x-watheq-autofix-probe']);
+  if (probe === 'rejected') return { statusCode: 403, body: 'Synthetic probe unavailable' };
+
   let page: Page | null = null; // Declare outside try block for cleanup access
   const requestedOperation = event.headers['x-watheq-operation-id'];
   const operationId = typeof requestedOperation === 'string' && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(requestedOperation) ? requestedOperation : randomUUID();
   let stage = 'validate';
-  const reportFailure = (status: number, code: string) => captureError(new Error('PDF export failed'), { function: 'generate-pdf', operationId, stage, status, code });
+  const reportFailure = (status: number, code: string) => captureError(new Error('PDF export failed'), { ...(probe === 'authorized' ? { synthetic: true } : { function: 'generate-pdf' }), operationId, stage, status, code });
 
   try {
     const textError = (status: number, code: string, message: string) => {

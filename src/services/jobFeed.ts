@@ -338,10 +338,10 @@ export async function listOpenPostings(
  * boards rather than a transient error. Collapsing both into `''` is what let a
  * caller tell those users to "try again in a moment" forever.
  */
-export async function getPostingDescription(postingId: string): Promise<string | null> {
+export async function getPostingDescription(postingId: string): Promise<string | null | undefined> {
   const { data, error } = await supabase
     .from(POSTINGS_TABLE)
-    .select('description, apply_url')
+    .select('id, description, apply_url')
     .eq('id', postingId)
     .maybeSingle();
 
@@ -349,7 +349,11 @@ export async function getPostingDescription(postingId: string): Promise<string |
     console.error('[JobFeed] Failed to load description:', summarizeError(error));
     return null;
   }
-  const posting = data as { description?: string; apply_url?: string } | null;
+  const posting = data as { id: string; description?: string; apply_url?: string } | null;
+  if (posting && posting.id !== postingId) {
+    // A different row must never supply text for the selected posting.
+    return undefined;
+  }
   if (posting?.description?.trim()) return posting.description;
   if (!posting?.apply_url) return '';
   const imported = await importJobFromUrl(posting.apply_url);

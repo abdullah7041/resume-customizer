@@ -1,0 +1,40 @@
+{
+  "browser": ["parseResume", "analyzeResumeWithAI", "optimizeResume", "refineBullet", "analyzeVision2030", "analyzeResumeTruthCheck", "optimize", "pdf-extract", "render"],
+  "outcomes": [
+    "feed_load_failed",
+    "feed_verification_failed",
+    "job_handoff_missing",
+    "job_handoff_mismatch",
+    "pdf_corrupt",
+    "pdf_blank",
+    "pdf_raster_only",
+    "pdf_text_mismatch",
+    "pdf_verification_failed",
+    "pdf_export_failed"
+  ],
+  "functions": [
+    "ai-match",
+    "batch-api",
+    "extract-job-metadata",
+    "extract-resume-json",
+    "feed-match",
+    "generate-clarifications",
+    "generate-cover-letter",
+    "generate-pdf",
+    "import-job-url",
+    "job-alert-test",
+    "job-search",
+    "job-sources-api",
+    "onboard-extract",
+    "optimize",
+    "optimize-background",
+    "optimize-dispatch",
+    "parse-resume",
+    "predict-questions",
+    "refine-bullet",
+    "resume-truth-check",
+    "user-credits",
+    "user-data-api",
+    "vision2030-alignment"
+  ]
+}

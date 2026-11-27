@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 const mocks=vi.hoisted(()=>({search:vi.fn(),verify:vi.fn(),save:vi.fn(),handoff:vi.fn(),setIntent:vi.fn(),intent:null as {targetRoles:string[]} | null,serverIntent:vi.fn(),track:vi.fn(),notify:vi.fn()}));
+const outcome = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/utils/userOutcome', () => ({ reportUserOutcome: outcome }));
 vi.mock('react-i18next',()=>({useTranslation:()=>({t:(_key:string,fallback:string)=>fallback,i18n:{language:'en'}})}));
 vi.mock('@/components/sections/JobFeedSection',()=>({default:()=>null}));
 vi.mock('@/components/sections/JobAlertSettings',()=>({JobAlertSettings:()=>null}));
@@ -133,4 +135,17 @@ it('keeps user edits when saved server preferences arrive late',async()=>{
  resolveIntent({targetRoles:['Old role']});
  await waitFor(()=>expect(screen.getByRole('textbox',{name:'Target roles'})).toHaveValue('My chosen role'));
  expect(mocks.search.mock.calls.every(call=>!call[0].targetRoles.includes('Old role'))).toBe(true);
+});
+
+it('reports a failed catalogue request without the query or server error', async () => {
+ mocks.search.mockRejectedValue(new Error('private query'));
+ render(<JobsFirstSection/>);
+ await screen.findByRole('alert');
+ expect(outcome).toHaveBeenCalledWith('feed_load_failed');
+});
+it('accepts a successful empty catalogue without reporting an incident', async () => {
+ mocks.search.mockResolvedValue({ postings: [], companies: [], nextOffset: null });
+ render(<JobsFirstSection/>);
+ await screen.findByText(/No jobs match these filters/);
+ expect(outcome).not.toHaveBeenCalled();
 });

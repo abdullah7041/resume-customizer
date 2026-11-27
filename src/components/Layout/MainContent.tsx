@@ -78,6 +78,7 @@ import type { ResumeSchema } from '@/types/resume';
 import { emitHRSuperSaudEvent } from "@/features/hr-super-saud/events";
 import { useHRSuperSaud } from "@/features/hr-super-saud/HRSuperSaudProvider";
 import { useUserCredits } from "../../hooks/useUserCredits";
+import { reportUserOutcome } from "@/lib/utils/userOutcome";
 import { useFeatureFlags } from "@/hooks/useFeatureFlag";
 import { useExitPresence } from "@/hooks/useExitPresence";
 import { cn } from "@/lib/utils/cn";
@@ -1308,6 +1309,17 @@ export default function MainContent() {
    * the analysis — that spends one of the user's credits on a posting they have
    * only just clicked, and the Match tab already has the button for it.
    */
+  const [pendingFeedDescription, setPendingFeedDescription] = useState<string | null>(null);
+  const matchDescription = activeResumeId && projectedResumeId.current !== activeResumeId ? '' : jobDescription;
+  useEffect(() => {
+    if (pendingFeedDescription === null) return;
+    if (flags.aiMatch) {
+      if (activeTab !== 'match' || !matchDescription) reportUserOutcome('job_handoff_missing');
+      else if (matchDescription !== pendingFeedDescription) reportUserOutcome('job_handoff_mismatch');
+    }
+    setPendingFeedDescription(null);
+  }, [pendingFeedDescription, activeTab, flags.aiMatch, matchDescription]);
+
   const handleFeedMatchPosting = useCallback(
     ({ jobDescription: postingDescription, companyName, jobTitle, match }: { jobDescription: string; companyName: string; jobTitle: string; match?: MatchResult }) => {
       if (!hasResume) {
@@ -1328,6 +1340,7 @@ export default function MainContent() {
         return;
       }
 
+      setPendingFeedDescription(trimmed);
       setJobDescription(trimmed);
       if (typeof window !== "undefined") {
         privateStorage.setItem(JOB_STORAGE_KEY, trimmed);
@@ -3135,7 +3148,7 @@ export default function MainContent() {
                   onClear={handleClearMatch}
                   historicalMatch={historicalMatch}
                   onJobDescriptionChange={setJobDescription}
-                  jobDescription={activeResumeId && projectedResumeId.current !== activeResumeId ? '' : jobDescription}
+                  jobDescription={matchDescription}
                   resumeContextKey={activeResumeId ? `${activeResumeId}:${libraryEntries.find(entry => entry.id === activeResumeId)?.fingerprint ?? ''}` : undefined}
                   extractedMetadata={extractedMetadata}
                   onJobSaved={handleJobSavedToPipeline}
