@@ -799,7 +799,7 @@ describe('TemplatesSection', () => {
                 fireEvent.click(await screen.findByRole('button', { name: 'Download image-only PDF' }));
 
                 await waitFor(() => expect(saveAs).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/\.pdf$/)));
-                expect(Sentry.captureException).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ tags: { 'watheq.outcome': 'pdf_raster_only' } }));
+                expect(Sentry.captureException).not.toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ tags: expect.objectContaining({ 'watheq.outcome': 'pdf_raster_only' }) }));
                 await waitFor(() => expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Image-only PDF prepared — text cannot be selected.'));
                 expect(captureHost).toHaveAttribute('data-pdf-capture-host', 'true');
                 expect(capturedClone.style.left).not.toBe('-9999px');

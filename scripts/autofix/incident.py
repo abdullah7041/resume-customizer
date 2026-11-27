@@ -97,7 +97,7 @@ def telegram(message):
 
 
 STATUS = {
-    "budget_exhausted": "The monthly repair budget is exhausted. No model call was started.",
+    "budget_exhausted": "The monthly repair budget is exhausted.",
     "budget_unconfirmed": "Could not confirm a dedicated OpenRouter key capped at $5 monthly. Investigation paused.",
     "unknown_release": "The event did not identify a deployed commit on main. Investigation needs a release SHA.",
     "unreproduced": "A regression could not be reproduced and fixed with sample data.",

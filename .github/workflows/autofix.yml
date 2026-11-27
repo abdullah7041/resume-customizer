@@ -25,9 +25,10 @@ jobs:
     outputs:
       new: ${{ steps.claim.outputs.new }}
       known: ${{ steps.revision.outputs.known }}
+      base: ${{ steps.revision.outputs.base }}
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 0, persist-credentials: false}
+        with: {ref: main, fetch-depth: 0, persist-credentials: false}
       - id: claim
         run: python3 scripts/autofix/incident.py claim
         env:
@@ -35,7 +36,8 @@ jobs:
       - id: revision
         if: steps.claim.outputs.new == 'true'
         run: |
-          if [[ "$RELEASE" != unknown ]] && git merge-base --is-ancestor "$RELEASE" "$GITHUB_SHA"; then
+          echo "base=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [[ "$RELEASE" != unknown ]] && git merge-base --is-ancestor "$RELEASE" HEAD; then
             echo 'known=true' >> "$GITHUB_OUTPUT"
           else
             echo 'known=false' >> "$GITHUB_OUTPUT"
@@ -49,9 +51,10 @@ jobs:
     permissions: {contents: read}
     outputs:
       status: ${{ steps.final.outputs.status }}
+      artifact: candidate-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 0, persist-credentials: false}
+        with: {ref: '${{ needs.claim.outputs.base }}', fetch-depth: 0, persist-credentials: false}
       - id: budget
         run: python3 scripts/autofix/incident.py budget
         env:
@@ -85,21 +88,21 @@ jobs:
           retention-days: 3
           if-no-files-found: error
   verify:
-    needs: repair
+    needs: [claim, repair]
     if: needs.repair.outputs.status == 'candidate'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions: {contents: read}
     steps:
       - uses: actions/checkout@v4
-        with: {fetch-depth: 0, persist-credentials: false}
+        with: {ref: '${{ needs.claim.outputs.base }}', fetch-depth: 0, persist-credentials: false}
       - uses: actions/download-artifact@v4
-        with: {name: 'candidate-${{ github.run_attempt }}', path: '${{ runner.temp }}/repair'}
+        with: {name: '${{ needs.repair.outputs.artifact }}', path: '${{ runner.temp }}/repair'}
       - run: bash scripts/autofix/verify.sh
         env:
-          BASE_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ needs.claim.outputs.base }}
   publish:
-    needs: verify
+    needs: [claim, repair, verify]
     runs-on: ubuntu-latest
     environment: autofix
     permissions: {contents: read}
@@ -108,14 +111,14 @@ jobs:
       status: ${{ steps.publish.outputs.status }}
     steps:
       - uses: actions/checkout@v4
-        with: {persist-credentials: false}
+        with: {ref: '${{ needs.claim.outputs.base }}', persist-credentials: false}
       - uses: actions/download-artifact@v4
-        with: {name: 'candidate-${{ github.run_attempt }}', path: '${{ runner.temp }}/repair'}
+        with: {name: '${{ needs.repair.outputs.artifact }}', path: '${{ runner.temp }}/repair'}
       - id: publish
         run: bash scripts/autofix/publish.sh
         env:
           GH_TOKEN: ${{ secrets.AUTOFIX_PR_TOKEN }}
-          BASE_SHA: ${{ github.sha }}
+          BASE_SHA: ${{ needs.claim.outputs.base }}
   report:
     needs: [claim, repair, verify, publish]
     if: always() && needs.claim.outputs.new == 'true'

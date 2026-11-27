@@ -981,8 +981,6 @@ export default function TemplateGallery({ resumeData: propResumeData, optimizati
           setExportError(exportFailureMessage);
           return;
         }
-        // This renderer writes one canvas image per page and never adds a text layer.
-        reportUserOutcome('pdf_raster_only');
         saveAs(blob, finalFilename);
 
         analytics.trackExportSuccess(attempt.templateId, 'pdf_image');
