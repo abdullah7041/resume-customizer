@@ -271,8 +271,9 @@ export async function checkCredits(email, feature, options = {}) {
  * @param {number} [amount] - Optional custom amount (defaults to FEATURE_COSTS[feature])
  * @returns {Promise<{success: boolean, creditsRemaining: number, debitId?: string}>}
  */
-export async function consumeCredits(email, feature, amount = null) {
+export async function consumeCredits(email, feature, amount = null, operationId = null) {
   const supabase = getSupabaseClient();
+  const operationMetadata = feature === 'optimize' && operationId ? { operation_id: operationId } : {};
   const creditsToConsume = amount !== null ? amount : FEATURE_COSTS[feature];
 
   if (creditsToConsume === undefined) {
@@ -310,7 +311,7 @@ export async function consumeCredits(email, feature, amount = null) {
     }
     Promise.resolve(supabase.from('credit_transactions').insert({
       email, feature, amount: -creditsToConsume, credits_before: remaining + creditsToConsume,
-      credits_after: remaining, transaction_type: 'consumption', metadata: { debit_id: data?.debit_id ?? null },
+      credits_after: remaining, transaction_type: 'consumption', metadata: { debit_id: data?.debit_id ?? null, ...operationMetadata },
     })).catch((error) => console.error('[CreditManager] Failed to log consumption:', summarizeErrorForLog(error)));
     try {
       const { completeReferral } = await import('./referral-manager.js');
@@ -365,6 +366,7 @@ export async function consumeCredits(email, feature, amount = null) {
         transaction_type: 'consumption',
         metadata: {
           timestamp: new Date().toISOString(),
+          ...operationMetadata,
         },
       })
   ).catch((logError) => {

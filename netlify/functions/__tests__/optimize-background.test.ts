@@ -68,6 +68,17 @@ describe('background optimization ownership and delivery', () => {
     expect(mocks.finish).toHaveBeenLastCalledWith(key, expect.objectContaining({ state: 'failed', error: expect.objectContaining({ billingStateUnknown: true }) }));
     expect(mocks.run).toHaveBeenCalledTimes(1);
   });
+  it('recovers a lost storage write for the same running operation without repeating the billed pipeline', async () => {
+    mocks.read.mockResolvedValueOnce(job).mockResolvedValueOnce({ ...job, state: 'running' });
+    mocks.finish.mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValueOnce(true);
+    await handler(request(), { deploy: { context: 'production', id: 'ab'.repeat(12), published: true } });
+    expect(mocks.finish).toHaveBeenCalledTimes(2);
+    expect(mocks.finish.mock.calls[0]).toEqual(mocks.finish.mock.calls[1]);
+    expect(mocks.run).toHaveBeenCalledTimes(1);
+    expect(mocks.capture).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({
+      code: 'OPTIMIZE_RESULT_RECOVERED', deployContext: 'production', recovery: 'recovered',
+    }));
+  });
   it('preserves an explicitly known-safe pre-charge failure', async () => {
     mocks.run.mockResolvedValue({ statusCode: 504, body: JSON.stringify({ error: 'Provider timed out', retryable: true, billingStateUnknown: false }) });
     await handler(request());

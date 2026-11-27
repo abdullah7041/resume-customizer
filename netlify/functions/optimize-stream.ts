@@ -271,7 +271,8 @@ export default async function handler(request: Request): Promise<Response> {
     if (error instanceof Error && 'status' in error && error.status === 413) {
       return Response.json({ error: error.message, billingStateUnknown: job?.state === 'queued' }, { status: 413 });
     }
-    captureError(error, { function: 'optimize-dispatch' });
+    captureError(error, { function: 'optimize-dispatch', stage: 'queue', code: 'OPTIMIZE_DISPATCH_FAILED',
+      status: 503, operationId: job?.operationId });
     return Response.json({ error: 'Could not queue optimization. Please retry without changing your inputs.', billingStateUnknown: true }, { status: 503 });
   }
 }

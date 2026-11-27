@@ -45,6 +45,7 @@ export interface ResolutionCandidate {
 }
 
 export interface ResolutionReport {
+  coverageUrl?: string;
   candidates: ResolutionCandidate[];
   unreliable: string[];
   exhausted: boolean;
@@ -93,11 +94,25 @@ export function resolveCompany(query: string) {
   return callSourcesApi<ResolutionReport>({ action: 'resolve', query });
 }
 
+export interface CoverageRequest {
+  careers_url: string;
+  company: { id: string; display_name: string; source: string; token: string } | null;
+}
+
+export function listCoverageRequests() {
+  return callSourcesApi<{requests: CoverageRequest[]}>({action: 'list_coverage'});
+}
+
+export function requestCompanyCoverage(careersUrl: string) {
+  return callSourcesApi<{careersUrl: string}>({action: 'request_coverage', careersUrl});
+}
+
 export function trackCompany(input: {
   source: string;
   token: string;
   displayName: string;
   careersUrl?: string;
+  coverageRequestUrl?: string;
 }) {
   return callSourcesApi<{ company: { id: string }; crawlDispatched: boolean; request?: CrawlRequest }>({
     action: 'track',
@@ -126,6 +141,7 @@ export function recrawlTrackedCompanies() {
 }
 
 export interface VerifiedFeedMatch {
+  historySaved?: boolean;
   resumeId: string;
   resumeFingerprint: string;
   cached: boolean;
@@ -139,6 +155,7 @@ interface VerificationFailure {
 }
 
 type VerificationResponse = {
+  jobRevision?: string;
   jobFingerprint?: string;
   results: VerifiedFeedMatch[];
   failures: VerificationFailure[];
@@ -149,7 +166,7 @@ export async function verifyFeedPosting(
   resumes: Array<{ id: string; fingerprint: string; text: string }>,
   language: string,
   signal?: AbortSignal,
-): Promise<{ results: VerifiedFeedMatch[]; failures: VerificationFailure[]; error: string | null; jobFingerprint?: string }> {
+): Promise<{ results: VerifiedFeedMatch[]; failures: VerificationFailure[]; error: string | null; jobFingerprint?: string; jobRevision?: string }> {
   // One request represents exactly one resume-job pair. Two workers keep the
   // browser below the product's AI concurrency ceiling while still letting a
   // cached pair behind a quota failure surface normally.
@@ -158,6 +175,7 @@ export async function verifyFeedPosting(
   const results: VerifiedFeedMatch[] = [];
   const failures: VerificationFailure[] = [];
   let jobFingerprint: string | undefined;
+  let jobRevision: string | undefined;
   let next = 0;
 
   const worker = async () => {
@@ -167,7 +185,7 @@ export async function verifyFeedPosting(
         const response = await fetch('/.netlify/functions/feed-match', {
           method: 'POST',
           headers,
-          body: JSON.stringify({ postingId, resumes: [resume], language: language === 'ar' ? 'ar' : 'en' }),
+          body: JSON.stringify({ postingId, resumes: [resume], language: language.startsWith('ar') ? 'ar' : 'en' }),
           signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(35_000)]) : AbortSignal.timeout(35_000),
         });
         if (!response.ok) {
@@ -177,6 +195,7 @@ export async function verifyFeedPosting(
         }
         const body = await response.json() as VerificationResponse;
         jobFingerprint = body.jobFingerprint;
+        jobRevision = body.jobRevision;
         results.push(...(body.results ?? []));
         failures.push(...(body.failures ?? []));
       } catch (error) {
@@ -187,7 +206,7 @@ export async function verifyFeedPosting(
   };
 
   await Promise.all(Array.from({ length: Math.min(2, resumes.length) }, () => worker()));
-  return { results, failures, error: null, jobFingerprint };
+  return { results, failures, error: null, jobFingerprint, jobRevision };
 }
 
 export async function loadJobRequirements(postingIds: string[]) {

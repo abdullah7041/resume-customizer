@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/node";
 import signals from "../../src/types/autofix-signals.json";
 import deploy from "./deploy-context.json";
+import { publicOptimizeCode } from './optimize-error-code.js';
 
 let initialized = false;
 
@@ -20,6 +21,19 @@ export function initSentry() {
         dsn: process.env.SENTRY_DSN,
         environment: process.env.CONTEXT || deploy.context,
         release: process.env.COMMIT_REF || deploy.commit || process.env.DEPLOY_ID,
+        beforeSend(event) {
+            if (event.tags?.workflow !== 'optimize') return event;
+            const context = event.tags.netlifyContext;
+            if (typeof context === 'string') event.environment = context;
+            const deploy = event.tags.netlifyDeploy;
+            if (typeof deploy === 'string' && !/^[a-f0-9]{40}$/.test(event.release ?? '')) event.release = deploy;
+            // Automatic HTTP breadcrumbs and request context can contain candidate input.
+            delete event.request;
+            delete event.breadcrumbs;
+            delete event.user;
+            delete event.transaction;
+            return event;
+        },
         tracesSampleRate: 0.1,
     });
 
@@ -154,6 +168,19 @@ export function captureError(error: Error | unknown, context?: Record<string, un
     if (typeof extra?.function === 'string' && signals.functions.includes(extra.function)) {
         tags['watheq.origin'] = 'user-function';
         tags['watheq.function'] = extra.function;
+    }
+    if (context?.function === 'optimize' || context?.function === 'optimize-background' || context?.function === 'optimize-dispatch') {
+        const stage = typeof context.stage === 'string' && /^(queue|cache|provider|evidence|scoring|billing|delivery|claim|pipeline|persist-result|persist-failure)$/.test(context.stage) ? context.stage : 'pipeline';
+        const code = publicOptimizeCode(context.code);
+        Object.assign(tags, { workflow: 'optimize', stage, code });
+        if (typeof context.deployContext === 'string' && ['production', 'deploy-preview', 'branch-deploy', 'dev'].includes(context.deployContext)) tags.netlifyContext = context.deployContext;
+        if (typeof context.deployId === 'string' && /^[a-f0-9]{24}$/.test(context.deployId)) tags.netlifyDeploy = context.deployId;
+        if (typeof context.recovery === 'string' && ['recovered', 'reconciliation', 'before-charge'].includes(context.recovery)) tags.recovery = context.recovery;
+        Sentry.captureException(new Error(`Optimize ${stage}: ${code}`), {
+            fingerprint: ['optimize', stage, code], tags,
+            extra: { status: context.status, evidenceFailures: extra?.evidenceFailures },
+        });
+        return;
     }
     Sentry.captureException(error, { extra, ...(Object.keys(tags).length ? { tags } : {}) });
 }

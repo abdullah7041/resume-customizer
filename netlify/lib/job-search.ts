@@ -4,6 +4,8 @@ import { withinAgeWindow } from '../../src/lib/jobs/age.js';
 import type { FeedIntent, FeedPosting } from '../../src/lib/jobs/types.js';
 import classifications from '../../src/lib/jobs/employer-classifications.json';
 
+export const FEED_MATCH_CONTRACT = 'feed-match-v2';
+
 /** Reviewed primary-source metadata; identity is the ATS pair, never a display name. */
 export function classifyEmployer<T extends {
     source?: string; token?: string; company_category?: string; sector?: string | null;

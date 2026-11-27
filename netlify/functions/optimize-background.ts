@@ -1,4 +1,4 @@
-import type { HandlerEvent } from '@netlify/functions';
+import type { Context, HandlerEvent } from '@netlify/functions';
 import { runOptimization } from './optimize.js';
 import { hasCurrentEvidenceCards } from '../lib/optimize-cards.js';
 import { claimOptimizationWorker, finishOptimizationJob, readOptimizationJob, verifyOptimizationEnvelope,
@@ -14,11 +14,12 @@ const EnvelopeSchema = z.object({
 initSentry();
 
 // The -background filename gives Netlify 15 minutes, independent of the HTTP dispatcher.
-export default async function handler(request: Request): Promise<Response> {
+export default async function handler(request: Request, context?: Pick<Context, 'deploy'>): Promise<Response> {
   let job: OptimizationJob | null = null;
   let envelope: OptimizationEnvelope | undefined;
   let claimed = false;
   let stage = 'claim';
+  const deployTags = { deployContext: context?.deploy?.context, deployId: context?.deploy?.id };
   try {
     if (request.method !== 'POST') return new Response(null);
     let input: unknown;
@@ -26,8 +27,10 @@ export default async function handler(request: Request): Promise<Response> {
     const parsed = EnvelopeSchema.safeParse(input);
     if (!parsed.success) return new Response(null);
     envelope = parsed.data;
-    job = await readOptimizationJob(envelope.jobKey);
-    if (!job || !verifyOptimizationEnvelope(envelope, job)) return new Response(null);
+    const queued = await readOptimizationJob(envelope.jobKey);
+    if (!queued || queued.state !== 'queued') return new Response(null);
+    job = queued;
+    if (!verifyOptimizationEnvelope(envelope, job)) return new Response(null);
     claimed = await claimOptimizationWorker(envelope.jobKey, job.operationId);
     if (!claimed) return new Response(null);
 
@@ -39,32 +42,46 @@ export default async function handler(request: Request): Promise<Response> {
     };
     // Invoke the existing validated/billed pipeline IN PROCESS, never via its 30s HTTP endpoint.
     stage = 'pipeline';
-    const response = await runOptimization(event);
+    const response = await runOptimization(event, context?.deploy);
     const payload = JSON.parse(response.body || '{}') as Record<string, unknown>;
     if (response.statusCode === 200 && hasCurrentEvidenceCards(payload)) {
       // Required storage: a successful paid response must remain retrievable even
       // when the pipeline's optional cache write failed.
       stage = 'persist-result';
-      if (!await finishOptimizationJob(envelope.jobKey, { ...job, state: 'succeeded', result: { ...payload, operationId: job.operationId } })) {
+      const completed = { ...job, state: 'succeeded' as const, result: { ...payload, operationId: job.operationId } };
+      let retained: boolean;
+      try {
+        retained = await finishOptimizationJob(envelope.jobKey, completed);
+      } catch {
+        // A lost acknowledgement may mean the first write succeeded. Replay only
+        // the fenced write, never the pipeline that already consumed credits.
+        const stored = await readOptimizationJob(envelope.jobKey);
+        retained = stored?.operationId === job.operationId && (stored.state === 'succeeded'
+          || (stored.state === 'running' && await finishOptimizationJob(envelope.jobKey, completed)));
+        if (retained) captureError(new Error('Result delivery recovered'), { ...deployTags, function: 'optimize-background',
+          operationId: job.operationId, stage, status: 200, code: 'OPTIMIZE_RESULT_RECOVERED', recovery: 'recovered' });
+      }
+      if (!retained) {
         throw new Error('Optimization result was not retained.');
       }
     } else {
       const safe = payload.billingStateUnknown === false || [400, 401, 403, 429].includes(response.statusCode);
       const code = typeof payload.code === 'string' && /^[A-Za-z0-9][A-Za-z0-9_/-]{0,99}$/.test(payload.code) ? payload.code : 'OPTIMIZE_FAILED';
-      if (response.statusCode >= 500 || response.statusCode === 200) captureError(new Error('Optimization failed'), { function: 'optimize-background', operationId: job.operationId,
-        stage, status: response.statusCode, code });
+      if (payload.reported !== true && (response.statusCode >= 500 || response.statusCode === 200)) captureError(new Error('Optimization failed'), { ...deployTags, function: 'optimize-background', operationId: job.operationId,
+        stage, recovery: safe ? 'before-charge' : 'reconciliation', status: response.statusCode, code });
       stage = 'persist-failure';
-      await finishOptimizationJob(envelope.jobKey, { ...job, state: 'failed', error: {
+      const written = await finishOptimizationJob(envelope.jobKey, { ...job, state: 'failed', error: {
         error: typeof payload.error === 'string' ? payload.error : 'Optimization failed.',
         status: response.statusCode >= 400 ? response.statusCode : 500,
         code,
         billingStateUnknown: !safe, retryable: safe && payload.retryable === true,
       } });
+      if (!written) throw new Error('Failed outcome could not be retained.');
     }
   } catch (error) {
     console.error('[optimize-background] Worker failed:', summarizeErrorForLog(error));
-    captureError(new Error('Optimization worker failed'), { function: 'optimize-background', operationId: job?.operationId,
-      stage, status: 503, code: 'OPTIMIZE_WORKER_FAILED' });
+    captureError(new Error('Optimization worker failed'), { ...deployTags, function: 'optimize-background', operationId: job?.operationId,
+      stage, status: 503, code: 'OPTIMIZE_WORKER_FAILED', recovery: 'reconciliation' });
     if (claimed && job && envelope) {
       try {
         await finishOptimizationJob(envelope.jobKey, { ...job, state: 'failed', error: {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { init } from '@sentry/node';
 
 const { captureExceptionMock, flushMock } = vi.hoisted(() => ({
   captureExceptionMock: vi.fn(),
@@ -11,9 +12,36 @@ vi.mock('@sentry/node', () => ({
   init: vi.fn(),
 }));
 
-const { captureError, flushSentry, sanitizeSentryContext, redactForLog, summarizeErrorForLog } = await import('../sentry.js');
+const { captureError, initSentry, flushSentry, sanitizeSentryContext, redactForLog, summarizeErrorForLog } = await import('../sentry.js');
 
 describe('sentry context redaction', () => {
+  it('groups production failures by stage and cause and drops private SDK request metadata', async () => {
+    initSentry();
+    const operationId = '31e7fedf-f455-457b-94cf-932f4f38f98c';
+    captureError(new Error('PRIVATE provider body'), { function: 'optimize', stage: 'evidence', code: 'OPTIMIZE_NO_VERIFIED_EDITS',
+      status: 422, operationId, deployContext: 'production', deployId: 'a'.repeat(24), recovery: 'before-charge' });
+    const [error, captured] = captureExceptionMock.mock.lastCall!;
+    expect(error.message).toBe('Optimize evidence: OPTIMIZE_NO_VERIFIED_EDITS');
+    expect(captured.fingerprint).toEqual(['optimize', 'evidence', 'OPTIMIZE_NO_VERIFIED_EDITS']);
+    expect(captured.tags).toMatchObject({ operationId, stage: 'evidence', recovery: 'before-charge' });
+    const beforeSend = vi.mocked(init).mock.calls[0][0]!.beforeSend!;
+    const event = await beforeSend({ type: undefined, tags: captured.tags, request: { data: 'PRIVATE' },
+      breadcrumbs: [{ message: 'PRIVATE' }], user: { email: 'PRIVATE' } }, {});
+    expect(event).toMatchObject({ environment: 'production', release: 'a'.repeat(24) });
+    expect(JSON.stringify(event)).not.toContain('PRIVATE');
+  });
+  it('groups dispatcher failures and strips their request data', async () => {
+    initSentry();
+    captureError(new Error('PRIVATE dispatch error'), { function: 'optimize-dispatch', stage: 'queue', code: 'OPTIMIZE_DISPATCH_FAILED' });
+    const [error, captured] = captureExceptionMock.mock.lastCall!;
+    expect(error.message).toBe('Optimize queue: OPTIMIZE_DISPATCH_FAILED');
+    expect(captured.fingerprint).toEqual(['optimize', 'queue', 'OPTIMIZE_DISPATCH_FAILED']);
+    expect(captured.tags.workflow).toBe('optimize');
+    const beforeSend = vi.mocked(init).mock.calls[0][0]!.beforeSend!;
+    const event = await beforeSend({ type: undefined, tags: captured.tags, request: { data: 'PRIVATE' },
+      breadcrumbs: [{ message: 'PRIVATE' }] }, {});
+    expect(JSON.stringify(event)).not.toContain('PRIVATE');
+  });
   it('bounds telemetry delivery without changing a worker outcome on transport failure', async () => {
     flushMock.mockRejectedValueOnce(new Error('Telemetry unavailable'));
     await expect(flushSentry()).resolves.toBeUndefined();

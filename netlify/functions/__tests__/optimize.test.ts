@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { HandlerEvent, HandlerResponse } from '@netlify/functions';
 import dispatchOptimization from '../optimize-stream.js';
 
+vi.mock('../../lib/optimization-jobs.js', () => ({ beginOptimizationDebit: vi.fn().mockResolvedValue(true) }));
 vi.mock('../optimize-stream.js', () => ({ default: vi.fn() }));
 
 // Mock dependencies BEFORE importing handler
@@ -76,6 +77,7 @@ import { optimizeResume } from '../../lib/gemini-client.js';
 import { buildOptimizeCacheKey, getCached, setCached } from '../../lib/redis-cache.js';
 import { checkCredits, consumeCredits } from '../../lib/credit-manager.js';
 import { captureError } from '../../lib/sentry.js';
+import { beginOptimizationDebit } from '../../lib/optimization-jobs.js';
 
 // Import handler after mocks
 const { runOptimization: handler, handler: dispatchHandler } = await import('../optimize.js');
@@ -118,8 +120,19 @@ describe('optimize function', () => {
         expect(JSON.parse(response.body)).toMatchObject({ billingStateUnknown: true });
     });
 
+    it('preserves the operation without charging if the worker cannot claim the debit', async () => {
+        vi.mocked(beginOptimizationDebit).mockResolvedValueOnce(false);
+        const response = await handler({ httpMethod: 'POST', headers: TEST_HEADERS,
+            body: JSON.stringify({ resumeText: 'Resume text', jobText: 'Target job' }) } as unknown as HandlerEvent);
+        expect(response.statusCode).toBe(503);
+        expect(JSON.parse(response.body)).toMatchObject({ code: 'OPTIMIZE_BILLING_RECONCILIATION', billingStateUnknown: true });
+        expect(consumeCredits).not.toHaveBeenCalled();
+    });
+
     it('reports provider timeouts with a stable code and no private error text', async () => {
-        vi.mocked(optimizeResume).mockRejectedValueOnce(Object.assign(new Error('Private provider response'), { name: 'TimeoutError' }));
+        vi.mocked(optimizeResume).mockRejectedValueOnce(Object.assign(new Error('Private provider response'), {
+            name: 'TimeoutError', code: 'AI_PRIVATE_PROVIDER_DATA',
+        }));
         const event = { httpMethod: 'POST', headers: TEST_HEADERS,
             body: JSON.stringify({ resumeText: 'Private resume text', jobText: 'Private target job' }) } as unknown as HandlerEvent;
         const response = await handler(event);

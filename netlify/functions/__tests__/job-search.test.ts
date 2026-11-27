@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import type { HandlerEvent, HandlerContext, HandlerResponse } from '@netlify/functions';
-const mocks = vi.hoisted(() => ({ user:vi.fn(), from:vi.fn(), companies:[] as Record<string,unknown>[] }));
+const mocks = vi.hoisted(() => ({ user:vi.fn(), from:vi.fn(), rpc: vi.fn(), companies:[] as Record<string,unknown>[] }));
 vi.mock('../../lib/rate-limiter.js',()=>({withRateLimit:(_key:string,handler:unknown)=>handler}));
 vi.mock('../../lib/sentry.js',()=>({initSentry:vi.fn(),captureError:vi.fn()}));
-vi.mock('../../lib/supabase-client.js',()=>({getSupabaseClient:()=>({auth:{getUser:mocks.user},from:mocks.from})}));
+vi.mock('../../lib/supabase-client.js',()=>({getSupabaseClient:()=>({auth:{getUser:mocks.user},from:mocks.from,rpc:mocks.rpc})}));
 import { handler } from '../job-search.js';
 const invoke = async(body:unknown) => await handler({httpMethod:'POST',headers:{authorization:'Bearer fixture'},body:JSON.stringify(body)} as unknown as HandlerEvent,{} as HandlerContext,()=>{}) as HandlerResponse;
 beforeEach(()=>{
@@ -33,6 +33,16 @@ it('rejects missing authentication before reading the catalogue',async()=>{
  mocks.user.mockResolvedValue({data:{user:null},error:null});
  expect((await invoke({targetRoles:['AI Engineer']})).statusCode).toBe(401);
  expect(mocks.from).not.toHaveBeenCalled();
+});
+it('restores only the authenticated owner and visible posting IDs; a changed input hides the previous match', async () => {
+ const cv = { id: 'library-cv', revision: 'a'.repeat(64), language: 'ar' };
+ mocks.rpc.mockResolvedValueOnce({ data: [{ posting_id: 'job', job_revision: 'current', match: { score: 77 } }] });
+ const lookup = () => invoke({ targetRoles: ['AI Engineer'], cv, userId: 'someone-else' });
+ expect(JSON.parse((await lookup()).body!).checks.job).toEqual({ status: 'ready', match: { score: 77 }, jobRevision: 'current' });
+ expect(mocks.rpc).toHaveBeenCalledWith('read_feed_checks', { p_user: 'user', p_postings: ['job'],
+   p_resume: cv.id, p_revision: cv.revision, p_language: 'ar', p_contract: 'feed-match-v2' });
+ mocks.rpc.mockResolvedValueOnce({ data: [{ posting_id: 'job', job_revision: null, match: null }] });
+ expect(JSON.parse((await lookup()).body!).checks.job).toEqual({ status: 'stale' });
 });
 it('rejects invalid page sizes and returns an unavailable status while rollout is disabled',async()=>{
  expect((await invoke({targetRoles:['AI Engineer'],limit:500})).statusCode).toBe(400);

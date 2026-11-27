@@ -5,11 +5,11 @@ import { processMatchOnly } from '../lib/gemini-client.js';
 import { buildCacheKey, getCached, setCached } from '../lib/redis-cache.js';
 import { checkCostBearingRateLimitForIdentifier } from '../lib/rate-limiter.js';
 import { getSupabaseClient } from '../lib/supabase-client.js';
+import { FEED_MATCH_CONTRACT } from '../lib/job-search.js';
 import { initSentry, captureError, summarizeErrorForLog } from '../lib/sentry.js';
 
 initSentry();
 
-const CONTRACT_VERSION = 'feed-match-v2';
 const MAX_MATCH_RESUME_CHARS = 15_000;
 const MAX_MATCH_JOB_CHARS = 5_000;
 const jsonHeaders = { 'Content-Type': 'application/json' };
@@ -64,21 +64,38 @@ export const handler: Handler = async (event) => {
       .is('closed_at', null)
       .maybeSingle();
     if (postingError) return failure(503, 'service_unavailable', 'Could not load posting');
-    const jobText = typeof posting?.description === 'string' ? posting.description.trim() : '';
+    const description = typeof posting?.description === 'string' ? posting.description : '';
+    const jobText = description.trim();
     if (!jobText) return failure(422, 'missing_description', 'This posting has no complete job description to verify.');
     const matchedJobText = jobText.slice(0, MAX_MATCH_JOB_CHARS);
     const jobFingerprint = createHash('sha256').update(matchedJobText).digest('hex');
+    const jobRevision = createHash('sha256').update(description).digest('hex');
     const outcomes = await Promise.all(parsed.data.resumes.map(async (resume) => {
       const matchedResumeText = resume.text.slice(0, MAX_MATCH_RESUME_CHARS);
       const resumeFingerprint = createHash('sha256').update(matchedResumeText).digest('hex');
-      const cacheKey = buildCacheKey(CONTRACT_VERSION, {
+      const resumeRevision = createHash('sha256').update(resume.text).digest('hex');
+      const identity = { user_id: user.id, posting_id: parsed.data.postingId, resume_id: resume.id,
+        resume_revision: resumeRevision, job_revision: jobRevision, language: parsed.data.language, contract: FEED_MATCH_CONTRACT };
+      const cacheKey = buildCacheKey(FEED_MATCH_CONTRACT, {
         userId: user.id,
         resumeFingerprint,
         jobFingerprint,
         language: parsed.data.language,
       });
+      const history = await supabase.from('user_job_feed_checks').select('match').match(identity).maybeSingle();
+      if (history.data?.match) return { ok: true as const, resumeId: resume.id, resumeFingerprint, cached: true, match: history.data.match };
+      const record = async (match: MatchResult, cached: boolean) => {
+        const { error } = await supabase.from('user_job_feed_checks').upsert({ ...identity, match });
+        if (error) captureError(new Error('Feed check history write failed'), { function: 'feed-match' });
+        return { ok: true as const, resumeId: resume.id, resumeFingerprint, cached, match, historySaved: !error };
+      };
       const cached = await getCached<MatchResult>(cacheKey);
-      if (cached) return { ok: true as const, resumeId: resume.id, resumeFingerprint, cached: true, match: cached };
+      if (cached) return record(cached, true);
+      if (history.error) {
+        captureError(new Error('Feed check history read failed'), { function: 'feed-match' });
+        return { ok: false as const, resumeId: resume.id, code: 'history_unavailable',
+          error: 'Could not read your saved CV check. Try again.' };
+      }
 
       const rate = await checkCostBearingRateLimitForIdentifier('feed-match', user.id);
       if (!rate.allowed) {
@@ -97,7 +114,7 @@ export const handler: Handler = async (event) => {
           timeoutMs: 30_000,
         });
         await setCached(cacheKey, match, 86_400);
-        return { ok: true as const, resumeId: resume.id, resumeFingerprint, cached: false, match };
+        return record(match, false);
       } catch (error) {
         return { ok: false as const, resumeId: resume.id, code: 'match_failed', error: summarizeErrorForLog(error) };
       }
@@ -109,6 +126,7 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({
         postingId: parsed.data.postingId,
         jobFingerprint,
+        jobRevision,
         results: outcomes.filter(outcome => outcome.ok),
         failures: outcomes.filter(outcome => !outcome.ok),
       }),
