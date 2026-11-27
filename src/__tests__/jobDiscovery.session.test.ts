@@ -35,7 +35,7 @@ for (const [name, request] of [
 it('restores feed history by an exact CV digest without posting any CV text to search', async () => {
   const text = 'private experience'.repeat(1200);
   const { fingerprintText } = await import('@/lib/match/assessmentContext');
-  vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ checks: {} }) } as Response);
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ postings: [], companies: [], nextOffset: null, checks: {} }) } as Response);
   await searchJobs({ targetRoles: ['Engineer'], offset: 0, followedOnly: false, activeCV: { id: 'cv', language: 'en', text } }, new AbortController().signal);
   const body = String(vi.mocked(fetch).mock.calls[0][1]?.body);
   expect(body).not.toContain('private experience');
